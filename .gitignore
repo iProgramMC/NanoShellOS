@@ -1,0 +1,27 @@
+#probably not necessary but a good thing to add just in case
+.git/*
+
+#directories I don't want added
+build/*
+cp/*
+lol/*
+keep/*
+tools/*
+src1/*
+sdk1/*
+sdk/nsmake/.vs/*
+sdk/nsmake/*.suo
+sdk/nsmake/nsmake/*.filters
+sdk/nsmake/nsmake/*.user
+sdk/nsmake/nsmake/x64/*
+sdk/nsmake/nsmake/Debug/*
+sdk/nsmake/nsmake/Release/*
+sdk/nsmake/x64/*
+sdk/nsmake/Debug/*
+sdk/nsmake/Release/*
+nanoshell_initrd
+disk.vhd
+disk.vdi
+disk.qcow2
+help/*
+nanoshell.cfg

@@ -1,0 +1,2 @@
+call build
+call run 

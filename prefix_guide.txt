@@ -1,0 +1,15 @@
+Prefixes:
+
+Ke  - Kernel misc
+Ki  - Kernel unitialization
+Co  - Console
+St  - Storage abstraction
+Vid - Video
+Kb  - Keyboard
+Isr - Interrupt Service Request (exceptions)
+Irq - Interrupt Request (PIC)
+Elf - ELF related
+Fat - FAT32 file system related
+Fs  - Virtual file system internal
+Fi  - File system (user API)
+Mm  - Memory Manager
