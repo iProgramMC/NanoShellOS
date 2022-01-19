@@ -370,7 +370,7 @@ void StIdeInitialize()
 			LogMsg("Drive %d found, marking as available.", i);
 			g_ideDriveAvailable[i] = true;
 			
-			LogMsg("Info about drive %d", i);
+			/*LogMsg("Info about drive %d", i);
 			LogMsg(" * DataStructRev:       %d", data.DataStructRev);
 			LogMsg(" * MultiwordDmaSupport: %d", data.MultiwordDmaSupport);
 			LogMsg(" * UltraDmaSupport:     %d", data.UltraDmaSupport);
@@ -381,11 +381,11 @@ void StIdeInitialize()
 			LogMsg(" * FeatureSet2:         %d", data.FeatureSet2);
 			LogMsg(" * FeatureSet3:         %d", data.FeatureSet3);
 			LogMsg(" * IntegrityByte:       %d", data.IntegrityByte);
-			LogMsg(" * CheckSum:            %d", data.CheckSum);
+			LogMsg(" * CheckSum:            %d", data.CheckSum);*/
 		}
 	}
 	
-	LogMsg("Probing done.");
+	//LogMsg("Probing done.");
 }
 
 static bool StIdeIsAvailable (uint8_t did)

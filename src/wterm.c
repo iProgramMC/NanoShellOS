@@ -69,6 +69,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			break;
 	}
 }
+extern void ShellInit(void);
 //! NOTE: arg is a pointer to an array of 4 ints.
 void TerminalHostTask(int arg)
 {
@@ -79,8 +80,8 @@ void TerminalHostTask(int arg)
 	Window *pWindow = CreateWindow(
 		"nsterm", 
 		array[0], array[1], 
-		array[2] * 6 + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
-		array[3] * 8 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
+		array[2] *  8 + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
+		array[3] * 10 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
 		TerminalHostProc,
 		0);
 	if (!pWindow)
@@ -106,8 +107,8 @@ void TerminalHostTask(int arg)
 	basic_console.color = 0x1F;//green background
 	basic_console.curX = basic_console.curY = 0;
 	basic_console.pushOrWrap = 0; //wrap for now
-	basic_console.cwidth = 6;
-	basic_console.cheight = 8;
+	basic_console.cwidth  = 8;
+	basic_console.cheight = 10;
 	basic_console.curX = 0;
 	basic_console.curY = 0;
 	
@@ -116,6 +117,11 @@ void TerminalHostTask(int arg)
 	g_currentConsole = &basic_console;
 	
 	pWindow->m_consoleToFocusKeyInputsTo = &basic_console;
+	
+	CoClearScreen(&basic_console);
+	basic_console.curX = 0;
+	basic_console.curY = 0;
+	ShellExecuteCommand ("ver");
 	
 	int confusion = 0;
 	Task* pTask = KeStartTask(ShellRun, (int)(&basic_console),  &confusion);
@@ -130,8 +136,6 @@ void TerminalHostTask(int arg)
 	
 	pWindow->m_pSubThread = pTask;
 	
-	CoClearScreen(&basic_console);
-	ShellExecuteCommand ("ver");
 	//LogMsg("Select this window and type something.");
 	
 	ShellInit();

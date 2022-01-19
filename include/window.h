@@ -168,8 +168,10 @@ typedef struct ControlStruct
 }
 Control;
 
-#define WF_NOCLOSE 0x00000001
-#define WF_FROZEN  0x00000002
+#define WF_NOCLOSE  0x00000001
+#define WF_FROZEN   0x00000002
+#define WF_NOTITLE  0x00000004
+#define WF_NOBORDER 0x00000008
 
 typedef struct WindowStruct
 {

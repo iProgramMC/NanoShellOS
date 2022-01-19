@@ -64,6 +64,7 @@ void UpdateDirectoryListing (Window* pWindow)
 
 char g_cabinetExecutableToExecute[PATH_MAX+4];
 
+//TODO FIXME: Spawn a console window if the ELF file is not marked as using the GUI.
 void LaunchExecutable (int argument)
 {
 	//The argument is assumed to point to a valid const char*.
@@ -82,12 +83,15 @@ void LaunchExecutable (int argument)
 	int fd = FiOpen (filename, O_RDONLY | O_EXEC);
 	if (fd < 0)
 	{
-		LogMsg("Got error %d while trying to open %s", fd, filename);
+		//LogMsg("Got error %d while trying to open %s", fd, filename);
+		char buffer[1024];
+		sprintf (buffer, "Got error %d while trying to open %s", fd, filename);
+		MessageBox(NULL, buffer, "File cabinet", MB_OK | ICON_ERROR << 16);
 		return;
 	}
 	
 	int length = FiTellSize (fd);
-	LogMsg("File Length: %d", length);
+	//LogMsg("File Length: %d", length);
 	char* pData = (char*)MmAllocate(length + 1);
 	pData[length] = 0;
 	
@@ -95,12 +99,13 @@ void LaunchExecutable (int argument)
 	
 	FiClose (fd);
 	
-	LogMsg("Executing...");
+	//LogMsg("Executing...");
 	ElfExecute(pData, length);
 	
 	MmFree(pData);
 }
 
+//TODO FIXME
 void CdBack(Window* pWindow)
 {
 	for (int i = PATH_MAX - 1; i >= 0; i--)
@@ -138,7 +143,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			{
 				FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 				const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
-				LogMsg("Double clicked element: %s", pFileName);
+				//LogMsg("Double clicked element: %s", pFileName);
 				
 				FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
 				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
@@ -157,7 +162,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							strcat (g_cabinetCWD, "/");
 						strcat (g_cabinetCWD, pFileName);
 						
-						FileNode* pPrev = FsResolvePath (cwd_copy), *pCurrent = FsResolvePath (g_cabinetCWD);
+						FileNode *pCurrent = FsResolvePath (g_cabinetCWD);
 						if (!pCurrent)
 						{
 							memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
@@ -242,7 +247,10 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, 0);
 	
 	if (!pWindow)
-		DebugLogMsg("Hey, the window couldn't be created");
+	{
+		MessageBox(NULL, "Hey, the window couldn't be created. File " __FILE__ ".", "Cabinet", MB_OK | ICON_STOP << 16);
+		return;
+	}
 	
 	// setup:
 	//ShowWindow(pWindow);

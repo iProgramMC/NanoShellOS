@@ -389,6 +389,14 @@ int GetScreenSizeY()
 	if (!g_vbeData) return 0;
 	return g_vbeData->m_height;
 }
+int GetScreenWidth()
+{
+	return g_mainScreenVBEData.m_width;
+}
+int GetScreenHeight()
+{
+	return g_mainScreenVBEData.m_height;
+}
 int GetWidth (Rectangle* rect)
 {
 	return rect->right - rect->left;
@@ -470,11 +478,14 @@ void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 	{
 		if (g_currentCursor && g_isMouseVisible)
 		{
+			//inside the rectangle?
 			if ((int)x >= g_mouseX - g_currentCursor->leftOffs &&
 				(int)y >= g_mouseY - g_currentCursor->topOffs  &&
 				(int)x <  g_mouseX + g_currentCursor->width  - g_currentCursor->leftOffs &&
 				(int)y <  g_mouseY + g_currentCursor->height - g_currentCursor->topOffs)
 			{
+				if (!g_currentCursor->m_transparency) return;
+				//check the pixel
 				int mx = x - g_mouseX + g_currentCursor->leftOffs;
 				int my = y - g_mouseY + g_currentCursor->topOffs;
 				int index = my * g_currentCursor->width + mx;
@@ -966,7 +977,8 @@ void VidShiftScreen (int howMuch)
 // Stuff
 #if 1
 
-void RenderCursor(void)
+__attribute__((always_inline))
+static inline void RenderCursorTransparent(void)
 {
 	if (g_vbeData->m_bitdepth == 2)
 	{
@@ -1034,6 +1046,120 @@ void RenderCursor(void)
 		}
 	}
 }
+__attribute__((always_inline))
+static inline void RenderCursorOpaque(void)
+{
+	if (g_vbeData->m_bitdepth == 2)
+	{
+		//NEW: Optimization
+		int ys =                         - g_currentCursor->topOffs + g_mouseY;
+		int ye = g_currentCursor->height - g_currentCursor->topOffs + g_mouseY;
+		int kys = 0, kzs = 0;
+		if (ys < 0)
+		{
+			kys -= ys * g_currentCursor->width;
+			kzs -= ys;
+			ys = 0;
+		}
+		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
+		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
+		int off = 0;
+		if (xs < 0)
+		{
+			off = -xs;
+			xs = 0;
+		}
+		if (xe >= GetScreenSizeX())
+			xe = GetScreenSizeX() - 1;
+		int xd = (xe - xs) * sizeof(uint32_t);
+		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
+		{
+			ky = kz * g_currentCursor->width + off;
+			//just memcpy shit
+			memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
+		}
+	}
+	else//use the slower but more reliable method:
+	{
+		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
+		{
+			if (ky < 0) {
+				i += ky;
+				ky = 0;
+			}
+			for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
+			{
+				if (kx < 0) {
+					j += kx;
+					kx = 0;
+				}
+				int id = i * g_currentCursor->width + j;
+				//int kx = j + g_mouseX - g_currentCursor->leftOffs,
+				//	ky = i + g_mouseY - g_currentCursor->topOffs;
+				if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
+				VidPlotPixelIgnoreCursorChecksChecked (
+					kx,
+					ky,
+					g_currentCursor->bitmap[id]
+				);
+			}
+		}
+	}
+}
+void RenderCursor(void)
+{
+	if (g_currentCursor->m_transparency)
+		RenderCursorTransparent();
+	else
+		RenderCursorOpaque();
+}
+
+__attribute__((always_inline))
+static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
+{
+	for (int i = 0; i < g_currentCursor->height; i++)
+	{
+		for (int j = 0; j < g_currentCursor->width; j++)
+		{
+			int id = i * g_currentCursor->width + j;
+			if (g_currentCursor->bitmap[id] != TRANSPARENT)
+			{
+				int kx = j + oldX - g_currentCursor->leftOffs,
+					ky = i + oldY - g_currentCursor->topOffs;
+				if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
+				VidPlotPixelCheckCursor (
+				//VidPlotPixelInline(
+					kx, ky, VidReadPixelInline (kx, ky)
+				);
+			}
+		}
+	}
+}
+__attribute__((always_inline))
+static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
+{
+	for (int i = 0; i < g_currentCursor->height; i++)
+	{
+		for (int j = 0; j < g_currentCursor->width; j++)
+		{
+			int kx = j + oldX - g_currentCursor->leftOffs,
+				ky = i + oldY - g_currentCursor->topOffs;
+			if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
+			VidPlotPixelCheckCursor (
+			//VidPlotPixelInline(
+				kx, ky, VidReadPixelInline (kx, ky)
+			);
+		}
+	}
+}
+
+void RedrawOldPixels(int oldX, int oldY)
+{
+	if (g_currentCursor->m_transparency)
+		RedrawOldPixelsTransparent(oldX, oldY);
+	else
+		RedrawOldPixelsOpaque     (oldX, oldY);
+}
 
 void SetMousePos (unsigned newX, unsigned newY)
 {
@@ -1058,28 +1184,7 @@ void SetMousePos (unsigned newX, unsigned newY)
 	RenderCursor();
 	
 	//Redraw all the pixels under where the cursor was previously:
-	for (int i = 0; i < g_currentCursor->height; i++)
-	{
-		for (int j = 0; j < g_currentCursor->width; j++)
-		{
-			bool condition = true;
-			if (g_currentCursor->m_transparency)
-			{
-				int id = i * g_currentCursor->width + j;
-				condition = g_currentCursor->bitmap[id] != TRANSPARENT;
-			}
-			if (condition)
-			{
-				int kx = j + oldX - g_currentCursor->leftOffs,
-					ky = i + oldY - g_currentCursor->topOffs;
-				if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
-				VidPlotPixelCheckCursor (
-				//VidPlotPixelInline(
-					kx, ky, VidReadPixelInline (kx, ky)
-				);
-			}
-		}
-	}
+	RedrawOldPixels(oldX, oldY);
 	//TODO: check flags here
 	
 	g_vbeData = backup;

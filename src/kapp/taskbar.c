@@ -1,0 +1,108 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+       Launcher Application module
+******************************************/
+
+#include <wbuiltin.h>
+#include <wterm.h>
+#include <vfs.h>
+#include <elf.h>
+
+#define TASKBAR_WIDTH (GetScreenWidth()) + 2
+#define TASKBAR_HEIGHT TITLE_BAR_HEIGHT + 14 // padding around button: 4 px, padding around text: 2 px
+#define TASKBAR_BUTTON_WIDTH 60
+#define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
+
+enum {
+	TASKBAR_HELLO = 0x1,
+	TASKBAR_START_TEXT,
+};
+
+void LaunchLauncher()
+{
+	int errorCode = 0;
+	Task* pTask;
+	
+	//create the program manager task.
+	errorCode = 0;
+	pTask = KeStartTask(LauncherEntry, 0, &errorCode);
+	DebugLogMsg("Created launcher task. pointer returned:%x, errorcode:%x", pTask, errorCode);
+}
+
+void UpdateTaskbar (Window* pWindow)
+{
+	char buffer[1024];
+	
+	//TODO: Window buttons.
+	
+	sprintf(buffer, "<-- Click this button to start.  FPS: %d", GetWindowManagerFPS());
+	SetLabelText(pWindow, TASKBAR_START_TEXT, buffer);
+}
+
+void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
+	switch (messageType)
+	{
+		case EVENT_CREATE: {
+			Rectangle r;
+			
+			RECT (r, 4, 2, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Start", TASKBAR_HELLO, 0, 0);
+			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 2, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXTCENTER, r, "<-- Click this button to start.", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED);
+			break;
+		}
+		case EVENT_UPDATE: {
+			UpdateTaskbar(pWindow);
+			break;
+		}
+		case EVENT_PAINT: {
+			
+			break;
+		}
+		case EVENT_COMMAND: {
+			switch (parm1)
+			{
+				case TASKBAR_HELLO:
+					LaunchLauncher();
+					break;
+			}
+			break;
+		}
+		default:
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+	}
+}
+
+void TaskbarEntry(__attribute__((unused)) int arg)
+{
+	// create ourself a window:
+	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT, sh = GetScreenHeight();
+	int wx = -2, wy = (sh - wh)+2;
+	
+	Window* pWindow = CreateWindow ("Task Bar", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
+	
+	if (!pWindow)
+		DebugLogMsg("Hey, the taskbar couldn't be created.  Why?");
+	
+	// setup:
+	//ShowWindow(pWindow);
+	
+	// event loop:
+#if THREADING_ENABLED
+	int timeout = 0;
+	while (HandleMessages (pWindow))
+	{
+		if (timeout == 0)
+		{
+			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
+			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
+			timeout = 100;
+		}
+		timeout--;
+	}
+#endif
+}

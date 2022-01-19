@@ -23,6 +23,8 @@
 #include <wcall.h>
 #include <window.h>
 
+//TODO FIXME: Add a global VFS lock.
+
 extern void FsMountFatPartitions (void);
 
 __attribute__((noreturn))
@@ -41,78 +43,6 @@ void KePrintSystemVersion()
 	LogMsg("NanoShell (TM), January 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam, GetNumPhysPages() * 4);
 }
-void TestAllocFunctions()
-{
-	void *pPage = MmAllocateSinglePage();
-	LogMsg("pPage address: 0x%x", pPage);
-	MmFreePage(pPage);
-	
-	// try allocating something:
-	void *a = MmAllocate (8100); // 2 pages
-	void *b = MmAllocate(12000); // 3 pages
-	
-	*((uint32_t*)a) = 0xAAAA;
-	*((uint32_t*)b) = 0xBBBB;
-	
-	LogMsg("A: 0x%x, B: 0x%x, Av: 0x%x, Bv: 0x%x", a, b, *((uint32_t*)a), *((uint32_t*)b));
-	
-	MmFree(a);
-	void *c = MmAllocate(12000); //3 pages, should not have same address as a
-	void *d = MmAllocate (4000); //only one page, it should have the same addr as a
-	*((uint32_t*)c) = 0xCCCC;
-	*((uint32_t*)d) = 0xDDDD;
-	LogMsg("C: 0x%x, D: 0x%x, Cv: 0x%x, Dv: 0x%x, Bv: 0x%x", a, b, *((uint32_t*)c), *((uint32_t*)d), *((uint32_t*)b));
-	
-	MmFree(a);
-	MmFree(b);
-	MmFree(c);
-	MmFree(d);
-	a = b = c = d = NULL;
-}
-void TestHeapFunctions()
-{
-	// print a hello string, so we know that the 0xC0000000 memory range (where kernel is located) is ok
-	LogMsg("Testing out the heap functions!  Heap size: %d", GetHeapSize());
-	
-	// let's try allocating something:
-	void* aa = MmAllocate (1024);
-	LogMsg("   Got pointer: 0x%x", aa);
-	
-	// print out what we've allocated so far
-	MmDebugDump();
-	
-	// try writing to there
-	*((uint32_t*)aa + 50) = 0x12345678;
-	
-	// and reading
-	LogMsg("   What we just wrote at 0x%x: 0x%x", aa, *((uint32_t*)aa + 50));
-	
-	// and finally, free the thing:
-	MmFree(aa);
-}
-void TestHeap()
-{
-	Heap testHeap;
-	AllocateHeap (&testHeap, 64);
-	UseHeap (&testHeap);
-	TestHeapFunctions();
-	FreeHeap (&testHeap);
-}
-void FreeTypeThing()
-{
-	LogMsgNoCr("\nType something! >");
-	
-	char test[2];
-	test[1] = '\0';
-	while (1)
-	{
-		char k = KbWaitForKeyAndGet();
-		test[0] = k;
-		LogMsgNoCr(test);
-		hlt;
-	}
-}
-
 void KiPerformRamCheck()
 {
 	if (g_nKbExtRam < 8192)
@@ -208,12 +138,6 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	// Initialize the FAT partitions.
 	FsMountFatPartitions();
 	
-	//LogMsg("C_MAX_TASKS: %d", C_MAX_TASKS);
-	//LogMsg("Sizeof Task: %d", sizeof(Task)); <-- Currently 80 bytes.
-	
-	// Initialize the IDT, after all the stuff that may not be interrupted
-	// got executed.
-	
 	//print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())
 	{
@@ -221,13 +145,10 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 		textMode = true;
 	}
 	
-	//TestAllocFunctions();
-	//ElfPerformTest();
 	KePrintSystemInfo();
-	//TestHeap();
 	
-	//MmDebugDump();
-	//FreeTypeThing();
+	LogMsg("Type 'w' to start up the GUI!");
+	
 	ShellInit();
 	
 	if (textMode)

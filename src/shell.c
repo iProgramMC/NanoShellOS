@@ -72,7 +72,7 @@ typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom
 
 void GraphicsTest()
 {
-	g_debugConsole.color = 0x2F;
+	g_currentConsole->color = 0x2F;
 	CoClearScreen(g_currentConsole);
 	
 	//demonstrate some of the apis that the kernel provides:
@@ -95,7 +95,7 @@ void GraphicsTest()
 	
 	LogMsg("Test complete.  Strike a key to exit.");
 	CoGetChar();
-	g_debugConsole.color = 0x1F;
+	g_currentConsole->color = 0x1F;
 }
 
 int  g_nextTaskNum    = 0;
@@ -544,7 +544,7 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "cls") == 0)
 	{
 		CoClearScreen (g_currentConsole);
-		g_debugConsole.curX = g_debugConsole.curY = 0;
+		g_currentConsole->curX = g_currentConsole->curY = 0;
 	}
 	else if (strcmp (token, "ver") == 0)
 	{
@@ -695,7 +695,7 @@ void ShellExecuteCommand(char* p)
 			else if (c2 >= 'A' && c2 <= 'F') c2 -= 'A'-0xA;
 			else if (c2 >= 'a' && c2 <= 'f') c2 -= 'a'-0xA;
 			
-			g_debugConsole.color = c1 << 4 | c2;
+			g_currentConsole->color = c1 << 4 | c2;
 		}
 	}
 	else if (strcmp (token, "sysinfo") == 0)

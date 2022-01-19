@@ -1187,7 +1187,7 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	{
 		//No, free this and return.
 		LogMsg("Probed drive %d partition %d for FAT32 file system.  It's not FAT32.", driveID, partitionStart);
-		LogMsg("Its system ID is '%s'.", pFat32->m_bpb.m_sSystemID);
+		//LogMsg("Its system ID is '%s'.", pFat32->m_bpb.m_sSystemID);
 		pFat32->m_bMounted = false;
 		return MOUNT_ERR_NOT_FAT32;
 	}

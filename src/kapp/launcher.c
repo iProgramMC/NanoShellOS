@@ -117,10 +117,10 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			
 			// Add the system icon.
 			RECT(r, START_X, START_Y+0*DIST_ITEMS, 32, 32);
-			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON1, ICON_COMPUTER, 0);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON1, ICON_BOMB, 0);
 			
 			RECT(r, STEXT_X, START_Y+0*DIST_ITEMS, 200, 32);
-			AddControl(pWindow, CONTROL_CLICKLABEL, r, "System", LAUNCHER_SYSTEM, 0, 0);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "System Monitor", LAUNCHER_SYSTEM, 0, 0);
 			
 			// Add the notepad icon.
 			RECT(r, START_X, START_Y+1*DIST_ITEMS, 32, 32);
@@ -131,10 +131,10 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			
 			// Add the notepad icon.
 			RECT(r, START_X, START_Y+2*DIST_ITEMS, 32, 32);
-			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON3, ICON_NOTES, 0);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON3, ICON_KEYBOARD2, 0);
 			
 			RECT(r, STEXT_X, START_Y+2*DIST_ITEMS, 200, 32);
-			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Notepad", LAUNCHER_NOTEPAD, 0, 0);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Text Shell", LAUNCHER_NOTEPAD, 0, 0);
 			
 			// Add the paint icon.
 			RECT(r, START_X, START_Y+3*DIST_ITEMS, 32, 32);
@@ -215,7 +215,7 @@ void LauncherEntry(__attribute__((unused)) int arg)
 	int ww = 400, wh = 260, sw = GetScreenSizeX(), sh = GetScreenSizeY();
 	int wx = (sw - ww) / 2, wy = (sh - wh) / 2;
 	
-	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, LauncherProgramProc, WF_NOCLOSE);
+	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, LauncherProgramProc, 0);//WF_NOCLOSE);
 	
 	if (!pWindow)
 		DebugLogMsg("Hey, the main launcher window couldn't be created");

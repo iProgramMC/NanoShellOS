@@ -89,14 +89,24 @@ VBEData;
 void VidSetVBEData(VBEData* pData);
 
 /**
- * Gets the screen width.
+ * Gets the width of the current VBE context.
  */
 int GetScreenSizeX();
 
 /**
- * Gets the screen height.
+ * Gets the height of the current VBE context.
  */
 int GetScreenSizeY();
+
+/**
+ * Gets the screen width.
+ */
+int GetScreenWidth();
+
+/**
+ * Gets the screen height.
+ */
+int GetScreenHeight();
 
 /**
  * Gets the width (distance between right and left) of the rectangle.

@@ -577,7 +577,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	
 	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
 	
-	if (!(window->m_flags & WF_FROZEN))
+	// if we're not frozen AND we have a title to drag on
+	if (!(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
 	{
 		if (!window->m_isBeingDragged)
 		{
@@ -763,11 +764,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	//CreateTestWindows();
 	UpdateDepthBuffer();
 	
-	//VidSetFont(FONT_BASIC);
+	VidSetFont(FONT_BASIC);
 	//VidSetFont(FONT_TAMSYN_BOLD);
 	//VidSetFont(FONT_TAMSYN_REGULAR);
 	//VidSetFont(FONT_FAMISANS);
-	VidSetFont(FONT_GLCD);
+	//VidSetFont(FONT_GLCD);
 	
 	WindowCallInitialize ();
 	
@@ -779,10 +780,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	int errorCode = 0;
 	Task* pTask;
 	
-	//create the program manager task.
+	//create the taskbar task.
 	errorCode = 0;
-	pTask = KeStartTask(LauncherEntry, 0, &errorCode);
-	DebugLogMsg("Created launcher task. pointer returned:%x, errorcode:%x", pTask, errorCode);
+	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
+	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 #endif
 	
 	int timeout = 10;
@@ -1381,7 +1382,7 @@ void RenderWindow (Window* pWindow)
 	int o = 0;
 	int x2 = x + tw, y2 = y + th;
 	
-	while (y < 0)
+	while (y < -1)
 	{
 		o += pWindow->m_vbeData.m_width;
 		y++;
@@ -1418,40 +1419,37 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
-	//! X adjusts the size of the dropshadow on the window.
-	recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-	recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-	
 	Rectangle rectb = recta;
 	
-	//VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
-	VidDrawRectangle(WINDOW_EDGE_COLOR, recta);
-	
-	for (int i = 0; i < WINDOW_RIGHT_SIDE_THICKNESS; i++) {
-		//recta.left++;  recta.top++;
-		recta.right++; recta.bottom++;
-		VidDrawHLine(WINDOW_EDGE_COLOR, recta.left, recta.right, recta.bottom);
-		VidDrawVLine(WINDOW_EDGE_COLOR, recta.top, recta.bottom, recta.right);
+	if (!(pWindow->m_flags & WF_NOBORDER))
+	{
+		//! X adjusts the size of the dropshadow on the window.
+		recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
+		recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
+		
+		rectb = recta;
+		
+		//VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
+		VidDrawRectangle(WINDOW_EDGE_COLOR, recta);
+		
+		for (int i = 0; i < WINDOW_RIGHT_SIDE_THICKNESS; i++) {
+			//recta.left++;  recta.top++;
+			recta.right++; recta.bottom++;
+			VidDrawHLine(WINDOW_EDGE_COLOR, recta.left, recta.right, recta.bottom);
+			VidDrawVLine(WINDOW_EDGE_COLOR, recta.top, recta.bottom, recta.right);
+		}
+		
+		//draw a white border thing:
+		rectb.left++;
+		rectb.top ++;
+		rectb.right--;
+		rectb.bottom--;
+		//VidDrawRectangle(WINDOW_TITLE_TEXT_COLOR, rectb);
+		VidDrawHLine (WINDOW_TITLE_TEXT_COLOR,     rectb.left, rectb.right, rectb.top);
+		VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.left, rectb.right, rectb.bottom);
+		VidDrawVLine (WINDOW_TITLE_TEXT_COLOR,     rectb.top, rectb.bottom, rectb.left);
+		VidDrawVLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.top, rectb.bottom, rectb.right);
 	}
-	
-	//draw a white border thing:
-	rectb.left++;
-	rectb.top ++;
-	rectb.right--;
-	rectb.bottom--;
-	//VidDrawRectangle(WINDOW_TITLE_TEXT_COLOR, rectb);
-	VidDrawHLine (WINDOW_TITLE_TEXT_COLOR,     rectb.left, rectb.right, rectb.top);
-	VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.left, rectb.right, rectb.bottom);
-	VidDrawVLine (WINDOW_TITLE_TEXT_COLOR,     rectb.top, rectb.bottom, rectb.left);
-	VidDrawVLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.top, rectb.bottom, rectb.right);
-	
-	Rectangle rectc = rectb;
-	rectc.left++;
-	rectc.top += TITLE_BAR_HEIGHT;
-	rectc.right--;
-	rectc.bottom--;
-	
-	VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
 	/*
 	rectc.left++;
 	rectc.top++;
@@ -1459,25 +1457,36 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	rectc.bottom--;
 	VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);*/
 	
-	//draw the window title:
-	rectb.left++;
-	rectb.top ++;
-	rectb.right--;
-	rectb.bottom = rectb.top + TITLE_BAR_HEIGHT + 1;
+	if (!(pWindow->m_flags & WF_NOTITLE))
+	{
+		Rectangle rectc = rectb;
+		rectc.left++;
+		rectc.top += TITLE_BAR_HEIGHT;
+		rectc.right--;
+		rectc.bottom--;
+		
+		VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
+		
+		//draw the window title:
+		rectb.left++;
+		rectb.top ++;
+		rectb.right--;
+		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT + 1;
+		
+		//todo: gradients?
+		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
+		VidFillRectVGradient(
+			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
+			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
+			rectb.left,
+			rectb.top,
+			rectb.right,
+			rectb.bottom
+		);
 	
-	//todo: gradients?
-	//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
-	VidFillRectVGradient(
-		pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
-		pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
-		rectb.left,
-		rectb.top,
-		rectb.right,
-		rectb.bottom
-	);
-	
-	VidTextOut(pWindow->m_title, rectb.left + 2, rectb.top + 3, WINDOW_TITLE_TEXT_COLOR_SHADOW, TRANSPARENT);
-	VidTextOut(pWindow->m_title, rectb.left + 1, rectb.top + 2, WINDOW_TITLE_TEXT_COLOR, TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + 2, rectb.top + 3, WINDOW_TITLE_TEXT_COLOR_SHADOW, TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + 1, rectb.top + 2, WINDOW_TITLE_TEXT_COLOR, TRANSPARENT);
+	}
 	
 #undef X
 }

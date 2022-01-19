@@ -27,5 +27,6 @@ void ListTestTask (int argument);
 void CabinetEntry (int argument);
 void SystemMonitorEntry(int argument);
 void LauncherEntry(int arg);
+void TaskbarEntry(int arg);
 
 #endif//_WBUILTIN_H
