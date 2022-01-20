@@ -16,7 +16,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+along with this program.  If not, see [the GNU licenses](https://www.gnu.org/licenses/).
 
 This software is licensed under the GNU General Public License V3.
 
@@ -24,6 +24,11 @@ This software is licensed under the GNU General Public License V3.
 #### Be warned that building this is not for the average Linux user nor is it for the faint of heart.  Soon I'll work on a way to compile this in an easier way.
 
 ## Goals
+
+Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
+I'm not particularly concerned with safety, any app is free to do anything.
+
+Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
 
 - [x] Hello World
 #### Primordial tasks
