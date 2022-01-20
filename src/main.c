@@ -73,6 +73,8 @@ multiboot_info_t* g_pMultibootInfo;
 extern uint8_t g_TestingFloppyImage[];
 
 void FpuTest();
+
+extern uint32_t e_temporary1, e_temporary2;
 __attribute__((noreturn))
 void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 {

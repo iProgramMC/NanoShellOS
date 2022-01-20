@@ -36,6 +36,9 @@
 #define WINDOW_TITLE_TEXT_COLOR_SHADOW 0xFF00003F
 #define WINDOW_TITLE_TEXT_COLOR 0x00FFFFFF
 
+#define WINDOW_MIN_WIDTH 200 //that's already very small.
+#define WINDOW_MIN_HEIGHT 15
+
 enum {
 	EVENT_NULL,
 	EVENT_CREATE,
@@ -145,6 +148,12 @@ typedef struct
 }
 ScrollBarData;
 
+typedef struct
+{
+	bool m_clicked;
+}
+ButtonData;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -161,6 +170,7 @@ typedef struct ControlStruct
 	{
 		ListViewData  m_listViewData;
 		ScrollBarData m_scrollBarData;
+		ButtonData    m_buttonData;
 	};
 	
 	//event handler

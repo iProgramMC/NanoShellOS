@@ -713,28 +713,17 @@ void WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 {
 	switch (eventType)
 	{
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
 			Rectangle r = this->m_rect;
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 			{
 				//send a command event to the window:
-				//WindowRegisterEvent(pWindow, EVENT_COMMAND, this->m_parm1, this->m_parm2);
 				pWindow->m_callback (pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
 			}
-		}
-		//! fallthrough intentional - need the button to redraw itself as pushing back up
-		case EVENT_PAINT:
-	#pragma GCC diagnostic pop
-		{
-			//draw a green rectangle:
-			//VidFillRectangle(0xFF00, this->m_rect);
-			RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-			//then fill in the text:
-			VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			
+			this->m_buttonData.m_clicked = false;
+			WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
@@ -743,13 +732,27 @@ void WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			if (RectangleContains (&r, &p))
 			{
+				this->m_buttonData.m_clicked = true;
+				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			if (this->m_buttonData.m_clicked)
+			{
+				Rectangle r = this->m_rect;
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
-				
 				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
-				//then fill in the text:
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			}
+			else
+			{
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			}
+			
 			break;
 		}
 	}
@@ -759,28 +762,17 @@ void WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 {
 	switch (eventType)
 	{
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
 			Rectangle r = this->m_rect;
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 			{
 				//send a command event to the window:
-				//WindowRegisterEvent(pWindow, EVENT_COMMAND, this->m_parm1, this->m_parm2);
 				pWindow->m_callback (pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
 			}
-		}
-		//! fallthrough intentional - need the button to redraw itself as pushing back up
-		case EVENT_PAINT:
-	#pragma GCC diagnostic pop
-		{
-			//draw a green rectangle:
-			//VidFillRectangle(0xFF00, this->m_rect);
-			RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-			//then fill in the text:
-			VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			
+			this->m_buttonData.m_clicked = false;
+			WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
@@ -789,13 +781,28 @@ void WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			if (RectangleContains (&r, &p))
 			{
+				this->m_buttonData.m_clicked = true;
+				WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			//draw a green rectangle:
+			if (this->m_buttonData.m_clicked)
+			{
+				Rectangle r = this->m_rect;
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
-				
 				RenderButtonShapeSmall (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
-				//then fill in the text:
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			}
+			else
+			{
+				RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			}
+			
 			break;
 		}
 	}

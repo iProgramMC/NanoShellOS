@@ -446,7 +446,7 @@ void* MmSetupPage(int i, uint32_t* pPhysOut, const char* callFile, int callLine)
 #ifdef RANDOMIZE_MALLOCED_MEMORY
 	for (int i = 0; i < 1024; i++)
 	{
-		*((uint32_t*)retaddr + i) = i * 0x01010101;
+		*((uint32_t*)retaddr + i) = (i & 0xFF) * 0x01010101U;
 	}
 #endif
 	

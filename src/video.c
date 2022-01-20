@@ -1076,7 +1076,7 @@ static inline void RenderCursorOpaque(void)
 		{
 			ky = kz * g_currentCursor->width + off;
 			//just memcpy shit
-			memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
+			align4_memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
 		}
 	}
 	else//use the slower but more reliable method:

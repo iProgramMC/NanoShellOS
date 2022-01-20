@@ -1368,18 +1368,19 @@ inline void blpx2ver (unsigned x, unsigned y, unsigned color)
 __attribute__((always_inline))
 inline void blpxinl(unsigned x, unsigned y, unsigned color)
 {
-	if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
+	//if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
 	{
 		blpx2cp (x, y, color);
 		blpx2ver(x, y, color);
 	}
 }
+
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
-	int sx = GetScreenSizeX(), sy = GetScreenSizeY();
+	int sx = GetScreenWidth(), sy = GetScreenHeight();
 	
 	int windIndex = pWindow - g_windows;
 	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
@@ -1394,27 +1395,87 @@ void RenderWindow (Window* pWindow)
 		o += pWindow->m_vbeData.m_width;
 		y++;
 	}
-	
-	for (int j = y; j != y2; j++)
+	short n = GetWindowIndexInDepthBuffer (x, y);
+	if (n == -1)
 	{
-		if (j >= sy) break;
-		for (int i = x; i != x2; i++)
+		UpdateDepthBuffer();
+	}
+	
+	bool isAboveEverything = true;
+	
+	// we still gotta decide...
+	if (!pWindow->m_isSelected)
+	{
+		for (int j = y; j < y2; j += WINDOW_MIN_WIDTH-1)
 		{
-			if (i < sx && i > 0)
+			if (j >= sy) break;
+			for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
 			{
 				short n = GetWindowIndexInDepthBuffer (i, j);
-				if (n == -1)
+				if (n != windIndex)
 				{
-					UpdateDepthBuffer();
-					n = GetWindowIndexInDepthBuffer (i, j);
-				}
-				if (n == windIndex)
-				{
-					//if (texture[o] != TRANSPARENT)
-					blpxinl (i, j, texture[o]);
+					isAboveEverything = false;
+					break;
 				}
 			}
-			o++;
+		}
+	}
+	
+	if (isAboveEverything)
+	{
+		//optimization
+		int ys = pWindow->m_rect.top;
+		int ye = ys + pWindow->m_vbeData.m_height;
+		int kys = 0, kzs = 0;
+		if (ys < 0)
+		{
+			kys -= ys * pWindow->m_vbeData.m_width;
+			kzs -= ys;
+			ys = 0;
+		}
+		if (ye > GetScreenHeight())
+			ye = GetScreenHeight();
+		int xs = pWindow->m_rect.left;
+		int xe = xs + pWindow->m_vbeData.m_width;
+		int off = 0;
+		if (xs < 0)
+		{
+			off = -xs;
+			xs = 0;
+		}
+		if (xe >= GetScreenWidth())
+			xe =  GetScreenWidth();
+		
+		int xd = (xe - xs) * sizeof (uint32_t);
+		int oms = y * g_mainScreenVBEData.m_pitch32 + xs,
+		    omc = y * g_mainScreenVBEData.m_width + xs;
+		for (int y = ys, ky = kys, kz = kzs; y != ye; y++, kz++)
+		{
+			ky = kz * pWindow->m_vbeData.m_width + off;
+			//just memcpy shit
+			align4_memcpy(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			align4_memcpy(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			oms += g_mainScreenVBEData.m_pitch32;
+			omc += g_mainScreenVBEData.m_width;
+		}
+	}
+	else
+	{
+		for (int j = y; j != y2; j++)
+		{
+			if (j >= sy) break;
+			for (int i = x; i != x2; i++)
+			{
+				if (i < sx && i > 0)
+				{
+					short n = GetWindowIndexInDepthBuffer (i, j);
+					if (n == windIndex)
+					{
+						blpxinl (i, j, texture[o]);
+					}
+				}
+				o++;
+			}
 		}
 	}
 	//FREE_LOCK(g_screenLock);

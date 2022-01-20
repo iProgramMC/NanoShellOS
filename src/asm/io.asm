@@ -19,22 +19,46 @@ extern e_frameBitsetVirt
 
 ; PORT I/O
 ReadPort:	
-	mov edx, [esp + 4]
-	in al, dx
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	in   al,  dx
+	
+	mov  esp, ebp
+	pop  ebp
 	ret
 WritePort:
-	mov edx, [esp + 4]
-	mov al, [esp + 8]
-	out dx, al
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	mov  al,  [ebp + 12]
+	out  dx,  al
+	
+	mov  esp, ebp
+	pop  ebp
 	ret
 ReadPortW:
-	mov edx, [esp + 4]
-	in ax, dx
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	in   ax,  dx
+	
+	mov  esp, ebp
+	pop  ebp
 	ret
 WritePortW:
-	mov edx, [esp + 4]
-	mov ax, [esp + 8]
-	out dx, ax
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	mov  ax,  [ebp + 12]
+	out  dx,  ax
+	
+	mov  esp, ebp
+	pop  ebp
 	ret
 	
 	
@@ -42,17 +66,37 @@ extern fast_memcpy
 extern not_fast_memcpy
 ; Not Fast
 not_fast_memcpy:
-	mov esi, [esp + 8]
-	mov edi, [esp + 4]
-	mov ecx, [esp + 12]
+	push ebp
+	mov  ebp, esp
+	
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
 	rep movsb
+	
+	pop edi
+	pop esi
+	
+	mov esp, ebp
+	pop ebp
 	ret
 	
 extern fast_memset
 fast_memset:
-	mov esi, [esp + 8]
-	mov edi, [esp + 4]
-	mov ecx, [esp + 12]
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
 	
 	and esi, 0xFF
 	mov eax, esi
@@ -72,13 +116,26 @@ fast_memset:
 		sub ecx, 4
 		jnz .some_loop
 	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
 	ret
 
 
 fast_memcpy:
-	mov esi, [esp + 8]
-	mov edi, [esp + 4]
-	mov ecx, [esp + 12]
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
 	
 	push ebp
 	prefetchnta [esi]
@@ -107,13 +164,134 @@ fast_memcpy:
 		
 	; done!
 	pop ebp
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
+	
+global align4_memcpy
+global align8_memcpy
+global align16_memcpy
+align4_memcpy:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
+	push ebp
+	prefetchnta [esi]
+	.some_loop:
+		prefetchnta [esi+4]
+		mov eax, [esi]
+		mov [edi   ], eax
+		add esi, 4
+		add edi, 4
+		sub ecx, 4
+		jnz .some_loop
+		
+	; done!
+	pop ebp
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
+align8_memcpy:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
+	push ebp
+	prefetchnta [esi]
+	.some_loop:
+		prefetchnta [esi+8]
+		mov eax, [esi]
+		mov ebx, [esi+4]
+		mov [edi  ], eax
+		mov [edi+4], ebx
+		add esi, 8
+		add edi, 8
+		sub ecx, 8
+		jnz .some_loop
+		
+	; done!
+	pop ebp
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
+align16_memcpy:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov edi, [ebp + 08h]
+	mov esi, [ebp + 0Ch]
+	mov ecx, [ebp + 10h]
+	
+	push ebp
+	prefetchnta [esi]
+	.some_loop:
+		prefetchnta [esi+16]
+		mov eax, [esi]
+		mov ebx, [esi+4]
+		mov edx, [esi+8]
+		mov ebp, [esi+12]
+		mov [edi   ], eax
+		mov [edi+4 ], ebx
+		mov [edi+8 ], edx
+		mov [edi+12], ebp
+		add esi, 16
+		add edi, 16
+		sub ecx, 16
+		jnz .some_loop
+		
+	; done!
+	pop ebp
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
 	ret
 	
 
 ; Functions for DRIVERS/VGA.H
 ; https://wiki.osdev.org/VGA_Fonts#Get_from_VGA_RAM_directly
 WriteFont8px:
-	mov esi, [esp + 4]
+	push ebp
+	mov  ebp, esp
+	
+	mov esi, [ebp + 8]
 	mov edi, 0xC00A0000
 	;in: edi=4k buffer
 	;out: buffer filled with font
@@ -150,10 +328,16 @@ WriteFont8px:
 	out	dx, ax
 	mov	ax, 0E06h
 	out	dx, ax
+	
+	mov esp, ebp
+	pop ebp
 	ret
 	
 WriteFont16px:
-	mov esi, [esp + 4]
+	push ebp
+	mov  ebp, esp
+	
+	mov esi, [ebp + 8]
 	mov edi, 0xC00A0000
 	;in: edi=4k buffer
 	;out: buffer filled with font
@@ -191,13 +375,23 @@ WriteFont16px:
 	out	dx, ax
 	mov	ax, 0E06h
 	out	dx, ax
+	
+	mov esp, ebp
+	pop ebp
 	ret
 
 global KeIdtLoad
 ; requires a phys address.
 KeIdtLoad:
-	mov edx, [esp + 4]
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
 	lidt [edx]
+	
+	mov  esp, ebp
+	pop  ebp
+	
 	sti
 	ret
 
@@ -219,6 +413,8 @@ global g_cpuidBrandingInfo
 	
 global KeCPUID
 KeCPUID:
+	PUSH EBX
+	
 	MOV EAX, 0 ; First leaf of CPUID
 	
 	CPUID
@@ -258,6 +454,8 @@ KeCPUID:
 	
 	XOR EAX, EAX
 	MOV [g_cpuidBrandingInfo+48], AL
+	
+	POP EBX
 	
 	RET
 

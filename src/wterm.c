@@ -7,7 +7,7 @@
 #include <wterm.h>
 
 #define DebugLogMsg  SLogMsg
-extern Console *g_currentConsole;
+extern Console *g_currentConsole, g_debugConsole;
 void ShellExecuteCommand(char* p);
 void CoRefreshChar (Console *this, int x, int y);
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
@@ -27,12 +27,12 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 		case EVENT_DESTROY:
 		{
 			// Kill the subordinate task.
-			
 			if (pWindow->m_pSubThread)
+			{
 				KeKillTask(pWindow->m_pSubThread);//kill that first
+			}
 			pWindow->m_pSubThread = NULL;
 			
-			LogMsg("Sub task killed! Exitting...");
 			if (pConsole->textBuffer)
 			{
 				MmFree(pConsole->textBuffer);

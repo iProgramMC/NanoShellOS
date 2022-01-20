@@ -65,6 +65,7 @@ void IsrExceptionCommon(int code, Registers* pRegs) {
 	g_currentConsole = &g_debugConsole;
 	VidSetVBEData(NULL);
 	VidSetFont(FONT_TAMSYN_BOLD);
+	
 	if (g_hasAlreadyThrownException)
 	{
 		LogMsg("SEVERE ERROR: Already threw an exception.");
