@@ -162,6 +162,7 @@ bool g_createLock = false;
 bool g_shutdownSentDestroySignals = false;
 bool g_shutdownWaiting 			  = false;
 bool g_shutdownRequest 			  = false;
+bool g_shutdownSentCloseSignals   = false;
 
 void VersionProgramTask(int argument);
 void IconTestTask   (int argument);
@@ -877,16 +878,20 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			g_shutdownRequest = false;
 			g_shutdownWaiting = true;
 			
-			SLogMsg("Sending kill messages to windows...");
+			//VidSetFont(FONT_TAMSYN_REGULAR);
+			
+			//LogMsg("Sending kill messages to windows...");
 			for (int i = 0; i < WINDOWS_MAX; i++)
 			{
 				WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
 			}
+			
+			shutdownTimeout = 2500;
 		}
 		if (g_shutdownWaiting)
 		{
 			shutdownTimeout--;
-			//LogMsg("(Waiting for all windows to shut down... -- %d ticks left.)", shutdownTimeout);
+			LogMsgNoCr("\r(Waiting for all windows to shut down... -- %d ticks left.)", shutdownTimeout);
 			bool noMoreWindows = true;
 			for (int i = 0; i < WINDOWS_MAX; i++)
 			{
@@ -898,9 +903,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 			if (noMoreWindows)
 			{
-				//LogMsg("All windows have shutdown gracefully?  Quitting...");
-				//LogMsg("STATUS: We survived!  Exitting in a brief moment.");
-				//g_windowManagerRunning = false;
+				LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
+				LogMsg("STATUS: We survived!  Exitting in a brief moment.");
+				g_windowManagerRunning = false;
 				
 				// On Shutdown:
 				g_shutdownWaiting = false;
@@ -910,13 +915,15 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			//Shutdown timeout equals zero.  If there are any windows still up, force-kill them.
 			if (shutdownTimeout <= 0)
 			{
-				LogMsg("Window TIMEOUT (no response, all tasks dead/froze due to crash?)! Forcing *EMERGENCY EXIT* now! (Applying defibrillator)");
+				LogMsg("\nWindow TIMEOUT (no response, all tasks dead/froze due to crash?)! Forcing *EMERGENCY EXIT* now! (Applying defibrillator)");
 				for (int i = 0; i < WINDOWS_MAX; i++)
 				{
 					if (g_windows[i].m_used)
 					{
 						if (g_windows[i].m_pOwnerThread)
 							KeKillTask (g_windows[i].m_pOwnerThread);
+						if (g_windows[i].m_pSubThread)
+							KeKillTask (g_windows[i].m_pSubThread);
 						
 						ReadyToDestroyWindow (&g_windows[i]);
 					}

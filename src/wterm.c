@@ -24,6 +24,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			break;
 		}
 		case EVENT_CLOSE:
+		case EVENT_DESTROY:
 		{
 			// Kill the subordinate task.
 			
@@ -32,38 +33,53 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			pWindow->m_pSubThread = NULL;
 			
 			LogMsg("Sub task killed! Exitting...");
-			DefaultWindowProc(pWindow, messageType, parm1, parm2);
-			
-			break;
-		}
-		case EVENT_UPDATE:
-		case EVENT_PAINT:
-		{
-			//re-draw every character.
-			if (pConsole->textBuffer)
-			{
-				for (int j = 0; j < pConsole->height; j++)
-				{
-					for (int i = 0; i < pConsole->width; i++)
-					{
-						//CoPlotChar(pConsole, i, j, pConsole->textBuffer[i + j * pConsole->width]);
-						CoRefreshChar(pConsole, i, j);
-					}
-				}
-			}
-			else
-			{
-				VidTextOut ("No console buffer associated with this.", 10, 20, 0xFFFFFF, TRANSPARENT);
-			}
-			break;
-		}
-		case EVENT_DESTROY:
 			if (pConsole->textBuffer)
 			{
 				MmFree(pConsole->textBuffer);
 				pConsole->textBuffer = NULL;
 			}
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			
 			break;
+		}
+		case EVENT_PAINT:
+	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+			if (pConsole)
+			{
+				pConsole->m_dirty = true;
+			}
+	#pragma GCC diagnostic pop
+		case EVENT_UPDATE:
+		{
+			if (pConsole)
+			{
+				if (pConsole->m_dirty)
+				{
+					pConsole->m_dirty = false;
+					//re-draw every character.
+					if (pConsole->textBuffer)
+					{
+						for (int j = 0; j < pConsole->height; j++)
+						{
+							for (int i = 0; i < pConsole->width; i++)
+							{
+								//CoPlotChar(pConsole, i, j, pConsole->textBuffer[i + j * pConsole->width]);
+								CoRefreshChar(pConsole, i, j);
+							}
+						}
+					}
+					else
+					{
+						VidTextOut ("No console buffer associated with this.", 10, 20, 0xFFFFFF, TRANSPARENT);
+					}
+				}
+			}
+			else
+			{
+				VidTextOut ("No console associated with this.", 10, 20, 0xFFFFFF, TRANSPARENT);
+			}
+			break;
+		}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			break;
@@ -139,12 +155,17 @@ void TerminalHostTask(int arg)
 	//LogMsg("Select this window and type something.");
 	
 	ShellInit();
+	int timeout = 50;
 	while (HandleMessages (pWindow))
 	{
-		if (basic_console.m_dirty)
+		timeout--;
+		if (timeout == 0)
 		{
-			basic_console.m_dirty = false;
-			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
+			timeout = 20;
+			if (basic_console.m_dirty)
+			{
+				WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
+			}
 		}
 	}
 	

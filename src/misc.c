@@ -11,6 +11,133 @@
 #include <print.h>
 #include <string.h>
 
+#define CURRENT_YEAR 2022
+
+// Real Time
+#if 1
+TimeStruct g_time;
+
+TimeStruct* TmReadTime()
+{
+	return &g_time;
+}
+
+int TmCmosReadRegister(int reg) {
+	WritePort(0x70,reg);
+	return ReadPort(0x71);
+}
+void TmCmosWriteRegister(int reg, int data) {
+	WritePort(0x70,reg);
+	WritePort(0x71,data);
+}
+
+void TmGetTime (TimeStruct* pStruct) {
+	do 
+	{
+		pStruct->statusA = TmCmosReadRegister(0x0A);
+	} 
+	while (pStruct->statusA & C_UPDATE_IN_PROGRESS_FLAG);
+	pStruct->seconds = TmCmosReadRegister(0x00);
+	pStruct->minutes = TmCmosReadRegister(0x02);
+	pStruct->hours   = TmCmosReadRegister(0x04);
+	pStruct->day     = TmCmosReadRegister(0x07);
+	pStruct->month   = TmCmosReadRegister(0x08);
+	pStruct->year    = TmCmosReadRegister(0x09);
+	TimeStruct placeholder;
+	do 
+	{
+		placeholder.seconds = pStruct->seconds; 
+		placeholder.minutes = pStruct->minutes; 
+		placeholder.hours   = pStruct->hours  ; 
+		placeholder.day     = pStruct->day    ; 
+		placeholder.month   = pStruct->month  ; 
+		placeholder.year    = pStruct->year   ;
+		
+		do 
+		{
+			pStruct->statusA = TmCmosReadRegister(0x0A);
+		} 
+		while (pStruct->statusA & C_UPDATE_IN_PROGRESS_FLAG);
+		
+		pStruct->seconds = TmCmosReadRegister(0x00);
+		pStruct->minutes = TmCmosReadRegister(0x02);
+		pStruct->hours   = TmCmosReadRegister(0x04);
+		pStruct->day     = TmCmosReadRegister(0x07);
+		pStruct->month   = TmCmosReadRegister(0x08);
+		pStruct->year    = TmCmosReadRegister(0x09);
+		
+	}
+	while (!(
+		placeholder.seconds == pStruct->seconds &&
+		placeholder.minutes == pStruct->minutes &&
+		placeholder.hours   == pStruct->hours   &&
+		placeholder.day     == pStruct->day     &&
+		placeholder.month   == pStruct->month   &&
+		placeholder.year    == pStruct->year
+	));
+	
+	pStruct->statusB = TmCmosReadRegister(0x0B);
+	if (!(pStruct->statusB & 0x04))//BCD mode
+	{
+		pStruct->seconds = BCD_TO_BIN(pStruct->seconds);
+		pStruct->minutes = BCD_TO_BIN(pStruct->minutes);
+		pStruct->day = BCD_TO_BIN(pStruct->day);
+		pStruct->month = BCD_TO_BIN(pStruct->month);
+		pStruct->year = BCD_TO_BIN(pStruct->year);
+		pStruct->hours= ( (pStruct->hours&0xF)+(((pStruct->hours&0x70)/16)*10))|(pStruct->hours&0x80);
+	}
+	
+	//convert 12h to 24h
+	if (!(pStruct->statusB & 0x02) && (pStruct->hours & 0x80))
+		pStruct->hours = ((pStruct->hours & 0x7f)+12)%24;
+	//calculate full year
+	pStruct->year += 2000;
+	if(pStruct->year<CURRENT_YEAR)pStruct->year+=100;
+}
+
+const char* g_monthNamesShort = 
+	"Non\0Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec\0";
+
+void TmPrintTime(TimeStruct* pStruct) {
+	char hr[3],mn[3],sc[3];
+	hr[0] = '0' + pStruct->hours/10;
+	hr[1] = '0' + pStruct->hours%10;
+	hr[2] = 0;
+	mn[0] = '0' + pStruct->minutes/10;
+	mn[1] = '0' + pStruct->minutes%10;
+	mn[2] = 0;
+	sc[0] = '0' + pStruct->seconds/10;
+	sc[1] = '0' + pStruct->seconds%10;
+	sc[2] = 0;
+	
+	LogMsg("Current time: %d %s %d  %s:%s:%s", 
+		pStruct->day, &g_monthNamesShort[4*pStruct->month],
+		pStruct->year,
+		hr,mn,sc);
+}
+void TmPrintTimeFormatted(char* buffer, TimeStruct* pStruct) {
+	char hr[3],mn[3],sc[3];
+	hr[0] = '0' + pStruct->hours/10;
+	hr[1] = '0' + pStruct->hours%10;
+	hr[2] = 0;
+	mn[0] = '0' + pStruct->minutes/10;
+	mn[1] = '0' + pStruct->minutes%10;
+	mn[2] = 0;
+	sc[0] = '0' + pStruct->seconds/10;
+	sc[1] = '0' + pStruct->seconds%10;
+	sc[2] = 0;
+	
+	sprintf(
+		buffer,
+		"Current time: %d %s %d  %s:%s:%s", 
+		pStruct->day, &g_monthNamesShort[4*pStruct->month],
+		pStruct->year,
+		hr,mn,sc);
+}
+#endif
+
+// Run Time
+#if 1
 extern multiboot_info_t* g_pMultibootInfo;//main.c
 
 int g_nRtcTicks = 0;
@@ -31,6 +158,10 @@ int GetRawTickCount()
 {
 	return g_nRtcTicks;
 }
+#endif
+
+// Kernel shutdown and restart
+#if 1
 __attribute__((noreturn))
 void KeRestartSystem(void)
 {
@@ -50,7 +181,10 @@ void KeRestartSystem(void)
 		KeStopSystem();
 	}
 }
+#endif
 
+// Random Number Generator
+#if 1
 // basic garbage rand():
 int GetRandom()
 {
@@ -70,7 +204,10 @@ int GetRandom()
 	//lastly, return.
 	return hi;
 }
+#endif
 
+// CPUIDFeatureBits
+#if 1
 extern uint32_t g_cpuidLastLeaf;
 extern char g_cpuidNameEBX[];
 extern char g_cpuidBrandingInfo[];
@@ -88,7 +225,10 @@ CPUIDFeatureBits GetCPUFeatureBits()
 {
 	return g_cpuidFeatureBits;
 }
+#endif
 
+// Time Formatting
+#if 1
 //note: recommend an output buffer of at least 50 chars
 void FormatTime(char* output, int formatType, int seconds)
 {
@@ -134,7 +274,10 @@ void FormatTime(char* output, int formatType, int seconds)
 		}
 	}
 }
+#endif
 
+// System Information
+#if 1
 void KePrintMemoryMapInfo()
 {
 	multiboot_info_t* mbi = g_pMultibootInfo;
@@ -236,6 +379,5 @@ void KePrintSystemInfo()
 	LogMsg("\x01\x0D       S    S "      "\x01\x0C ");
 	LogMsg("\x01\x0D        SSSS  "      "\x01\x0C ");
 	LogMsg("\x01\x0F");
-	/**/
-	//Last Line Of Code Written In 2021
 }
+#endif

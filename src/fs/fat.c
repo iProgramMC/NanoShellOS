@@ -1186,7 +1186,7 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	if (strcmp (pFat32->m_bpb.m_sSystemID, "FAT32") != 0)
 	{
 		//No, free this and return.
-		LogMsg("Probed drive %d partition %d for FAT32 file system.  It's not FAT32.", driveID, partitionStart);
+		//LogMsg("Probed drive %d partition %d for FAT32 file system.  It's not FAT32.", driveID, partitionStart);
 		//LogMsg("Its system ID is '%s'.", pFat32->m_bpb.m_sSystemID);
 		pFat32->m_bMounted = false;
 		return MOUNT_ERR_NOT_FAT32;
@@ -1202,21 +1202,21 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	pFat32->m_pbFatModified   = (bool*)MmAllocate (pFat32->m_bpb.m_nSectorsPerFat32);
 	memset(pFat32->m_pbFatModified, 0, pFat32->m_bpb.m_nSectorsPerFat32);
 	
-	LogMsgNoCr ("Loading file system from drive(%d)partition(%d).  Please wait.", driveID, partitionStart);
+	//LogMsgNoCr ("Loading file system from drive(%d)partition(%d).  Please wait.", driveID, partitionStart);
 	for (uint32_t sectorI = 0; sectorI < pFat32->m_bpb.m_nSectorsPerFat32; sectorI++)
 	{
 		FatGetSector (pFat32, (uint8_t*)(pFat32->m_pFat + sectorI*128), pFat32->m_fatBeginSector + sectorI, 1);
 	}
 	
-	LogMsg(" Done!");
+	//LogMsg(" Done!");
 	
-	LogMsgNoCr("Reading root directory to mount in the vfs...");
+	//LogMsgNoCr("Reading root directory to mount in the vfs...");
 	
 	char out_path[128];
 	out_path[0] = '?', out_path[1] = 0;
 	FatMountRootDir(pFat32, out_path);
 	
-	LogMsg("Done!  Available at '%s'", out_path);
+	LogMsg("Mounted '%s'.", out_path);
 	
 	return MOUNT_SUCCESS;
 }

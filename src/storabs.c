@@ -354,7 +354,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 
 void StIdeInitialize()
 {
-	LogMsg("Probing for available IDE drives...");
+	//LogMsg("Probing for available IDE drives...");
 	
 	for (int i = 0; i < 4; i++)
 	{
@@ -363,11 +363,11 @@ void StIdeInitialize()
 		
 		if (error_code != DEVERR_SUCCESS)
 		{
-			LogMsg("Could not locate drive %d.  Assuming unavailable.  Error Code: %x", i, error_code);
+			//LogMsg("Could not locate drive %d.  Assuming unavailable.  Error Code: %x", i, error_code);
 		}
 		else
 		{
-			LogMsg("Drive %d found, marking as available.", i);
+			//LogMsg("Drive %d found, marking as available.", i);
 			g_ideDriveAvailable[i] = true;
 			
 			/*LogMsg("Info about drive %d", i);

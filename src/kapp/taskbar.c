@@ -10,14 +10,16 @@
 #include <vfs.h>
 #include <elf.h>
 
-#define TASKBAR_WIDTH (GetScreenWidth()) + 2
+#define TASKBAR_WIDTH (GetScreenWidth())
 #define TASKBAR_HEIGHT TITLE_BAR_HEIGHT + 14 // padding around button: 4 px, padding around text: 2 px
 #define TASKBAR_BUTTON_WIDTH 60
 #define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
+#define TASKBAR_TIME_THING_WIDTH 90
 
 enum {
 	TASKBAR_HELLO = 0x1,
 	TASKBAR_START_TEXT,
+	TASKBAR_TIME_TEXT,
 };
 
 void LaunchLauncher()
@@ -37,8 +39,14 @@ void UpdateTaskbar (Window* pWindow)
 	
 	//TODO: Window buttons.
 	
+	// FPS
 	sprintf(buffer, "<-- Click this button to start.  FPS: %d", GetWindowManagerFPS());
 	SetLabelText(pWindow, TASKBAR_START_TEXT, buffer);
+	
+	// Time
+	TimeStruct* time = TmReadTime();
+	sprintf(buffer, "%02d:%02d:%02d", time->hours, time->minutes, time->seconds);
+	SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
 }
 
 void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -53,6 +61,9 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			AddControl(pWindow, CONTROL_BUTTON, r, "Start", TASKBAR_HELLO, 0, 0);
 			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 2, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "<-- Click this button to start.", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED);
+			RECT (r, GetScreenWidth() - 2 - TASKBAR_TIME_THING_WIDTH, 2, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED |TEXTSTYLE_HCENTERED);
+			
 			break;
 		}
 		case EVENT_UPDATE: {
@@ -81,7 +92,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
 	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT, sh = GetScreenHeight();
-	int wx = -2, wy = (sh - wh)+2;
+	int wx = 0, wy = (sh - wh)+2;
 	
 	Window* pWindow = CreateWindow ("Task Bar", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
 	

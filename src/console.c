@@ -151,7 +151,6 @@ void CoPlotChar (Console *this, int x, int y, char c) {
 }
 void CoRefreshChar (Console *this, int x, int y) {
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
-	this->m_dirty = true;
 	VBEData* backup = g_vbeData;
 	if (this->type == CONSOLE_TYPE_WINDOW)
 	{

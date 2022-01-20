@@ -9,6 +9,25 @@
 
 #define RTC_TICKS_PER_SECOND 256
 
+#define C_UPDATE_IN_PROGRESS_FLAG  0X80
+
+// (0x20 would represent 20, not 32)
+#define BCD_TO_BIN(x) (x&0x0F)+((x>>4)*10)
+
+typedef struct
+{
+	int seconds,
+		minutes,
+		hours,
+		weekday,
+		day,
+		month,
+		year,
+		statusA,
+		statusB;
+}
+TimeStruct;
+
 typedef struct
 {
 	unsigned char m_steppingID : 4;
@@ -96,5 +115,15 @@ enum
  * Formats time as seconds into a string.  Recommend a size of at least 128.
  */
 void FormatTime(char* output, int formatType, int seconds);
+
+/**
+ * Reads the time into a TimeStruct.  Use this in the RTC timer tick.
+ */
+void TmGetTime (TimeStruct* pStruct);
+
+/**
+ * Gets the current time.
+ */
+TimeStruct* TmReadTime();
 
 #endif//_MISC_H

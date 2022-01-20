@@ -284,18 +284,24 @@ void KeClockInit()
 }
 
 extern int g_nRtcTicks;//misc.c
+
 /**
  * RTC interrupt routine.
  */
 void IrqClock()
 {
-	//LogMsg("Clock!");
-	g_nRtcTicks++;
 	//acknowledge interrupt
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
 	//also read register C, may be useful later:
 	WritePort(0x70, 0x0C);
-	__attribute__((unused)) char flags = ReadPort(0x71);
-	//LogMsgNoCr("R");
+	
+	char flags = ReadPort(0x71);
+	if (flags & (1 << 4))
+	{
+		//HACK: Done so that it wouldn't drift anymore.
+		g_nRtcTicks = ((g_nRtcTicks / RTC_TICKS_PER_SECOND)+1) * RTC_TICKS_PER_SECOND;
+		TmGetTime(TmReadTime());
+	}
+	g_nRtcTicks++;
 }
