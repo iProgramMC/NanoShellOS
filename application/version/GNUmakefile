@@ -41,7 +41,7 @@ O_FILES := $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_FILE
 		   $(patsubst $(BUILD)/$(LIBSRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_FILES_LIB),$(BUILD)/$(file:.c=.o))) \
 		   $(patsubst $(BUILD)/$(LIBSRC)/%.o, $(BUILD)/%.o, $(foreach file,$(S_FILES_LIB),$(BUILD)/$(file:.asm=.o)))
 
-TARGET := cabinet.nse
+TARGET := ver.nse
 
 default: $(O_FILES)
 	$(CC) $(CLFLAGS_BEG) -o $(TARGET) $(CLFLAGS_MID) $(O_FILES) $(CLFLAGS_END)
@@ -60,4 +60,4 @@ $(BUILD)/%.o: $(LIBSRC)/%.c
 # Make Clean
 clean: 
 		$(RM) $(BUILD)/*
-		$(RM) ./cabinet.nse
+		$(RM) ./ver.nse

@@ -2,6 +2,12 @@
 .git/*
 
 #directories I don't want added
+application/hellowindow/build/*
+application/hellowindow/HelloWindow.nse
+application/helloworld/build/*
+application/helloworld/HelloWorld.nse
+application/version/build/*
+application/version/Version.nse
 build/*
 cp/*
 lol/*
