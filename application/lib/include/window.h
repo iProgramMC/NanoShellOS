@@ -10,6 +10,8 @@
 
 #define TITLE_BAR_HEIGHT 11
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
+#define EVENT_QUEUE_MAX 256
+#define WINDOW_TITLE_MAX 250
 
 //WORK: Add in your icons here in this enum:
 enum 
@@ -71,7 +73,6 @@ enum {
 	EVENT_KEYPRESS,
 	EVENT_MAX
 };
-
 enum {
 	//A null control.  Does nothing.
 	CONTROL_NONE,
@@ -94,6 +95,12 @@ enum {
 	//A clickable button which triggers an event based on this->m_parm1
 	//with its comboID as its first parm.
 	CONTROL_BUTTON_EVENT,
+	//A list view.  Complicated.
+	CONTROL_LISTVIEW,
+	//A vertical scroll bar.
+	CONTROL_VSCROLLBAR,
+	//A horizontal scroll bar.
+	CONTROL_HSCROLLBAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -121,12 +128,45 @@ enum
 #define MB_YESNO              0x00000004 //The message box contains two push buttons: Yes, and No.
 #define MB_RETRYCANCEL        0x00000005 //The message box contains two push buttons: Retry and Cancel.
 #define MB_CANCELTRYCONTINUE  0x00000006 //The message box contains three push buttons: Cancel, Retry, and Continue.
-
+#define MB_RESTART            0x00000007 //The message box contains one push button: Restart.
 
 struct WindowStruct;
 struct ControlStruct;
 typedef void (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
 typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
+
+typedef struct
+{
+	int  m_icon;//can be blank
+	char m_contents [128];
+}
+ListItem;
+
+#define LIST_ITEM_HEIGHT 16
+
+typedef struct
+{
+	bool m_hasIcons;
+	int  m_elementCount, m_capacity;
+	int  m_scrollY;
+	int  m_highlightedElementIdx;
+	ListItem *m_pItems;
+}
+ListViewData;
+
+typedef struct
+{
+	bool m_isBeingDragged, m_clickedBefore;
+	bool m_yMinButton, m_yMaxButton;
+	int  m_min, m_max, m_pos, m_dbi;
+}
+ScrollBarData;
+
+typedef struct
+{
+	bool m_clicked;
+}
+ButtonData;
 
 typedef struct ControlStruct
 {
@@ -139,15 +179,23 @@ typedef struct ControlStruct
 	Rectangle m_rect;
 	bool      m_bMarkedForDeletion;
 	
+	//data for controls:
+	union
+	{
+		ListViewData  m_listViewData;
+		ScrollBarData m_scrollBarData;
+		ButtonData    m_buttonData;
+	};
+	
 	//event handler
 	WidgetEventHandler OnEvent;
 }
 Control;
 
-#define WF_NOCLOSE 0x00000001
-#define WF_FROZEN  0x00000002
-
-#define EVENT_QUEUE_MAX 256
+#define WF_NOCLOSE  0x00000001
+#define WF_FROZEN   0x00000002
+#define WF_NOTITLE  0x00000004
+#define WF_NOBORDER 0x00000008
 
 typedef struct WindowStruct
 {
@@ -180,6 +228,12 @@ typedef struct WindowStruct
 	int        m_controlArrayLen;
 	
 	void*      m_data; //user data
+	
+	//currently void because we don't have Task defined yet
+	void      *m_pOwnerThread, 
+	          *m_pSubThread;//in case you ever want to use this
+	
+	void*      m_consoleToFocusKeyInputsTo; //currently void because we don't have Console defined yet
 } Window;
 
 #define CALLBACK 

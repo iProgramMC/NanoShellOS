@@ -16,6 +16,8 @@ typedef char byte;
 typedef char BYTE;
 typedef unsigned uint;
 
+extern void KeTaskDone();
+
 #define false 0
 #define true 1
 

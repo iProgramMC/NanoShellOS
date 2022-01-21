@@ -4,6 +4,9 @@
 
            Memory Manager module
 ******************************************/
+
+//#define MULTITASKED_WINDOW_MANAGER
+
 #include <memory.h>
 #include <print.h>
 #include <string.h>
@@ -459,7 +462,7 @@ void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int cal
 	// For 4096 bytes we can use ANY hole in the pageframes list, and we
 	// really do not care.
 	
-	ACQUIRE_LOCK (g_memoryLock);
+	ACQUIRE_LOCK (g_memoryPriLock);
 	
 	int heapSize = GetHeapSize();
 	for (int i = 0; i < heapSize; i++)
@@ -473,7 +476,7 @@ void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int cal
 	// No more page frames?!
 	LogMsg("WARNING: No more page entries");
 	
-	ACQUIRE_LOCK (g_memoryLock);
+	ACQUIRE_LOCK (g_memoryPriLock);
 	
 	return NULL;
 }
@@ -528,7 +531,7 @@ void *MmAllocatePhyD (size_t size, const char* callFile, int callLine, uint32_t*
 	if (size <= 0x1000) //worth one page:
 		return MmAllocateSinglePagePhyD(physAddresses, callFile, callLine);
 	else {
-		ACQUIRE_LOCK (g_memoryLock);
+		ACQUIRE_LOCK (g_memoryPriLock);
 		//more than one page, take matters into our own hands:
 		int numPagesNeeded = ((size - 1) >> 12) + 1;
 		//ex: if we wanted 6100 bytes, we'd take 6100-1=6099, then divide that by 4096 (we get 1) and add 1
@@ -573,12 +576,12 @@ void *MmAllocatePhyD (size_t size, const char* callFile, int callLine, uint32_t*
 					if (pPhysOut)
 						pPhysOut++;
 				}
-				FREE_LOCK (g_memoryLock);
+				FREE_LOCK (g_memoryPriLock);
 				return pointer;
 			}
 		_label_continue:;
 		}
-		FREE_LOCK (g_memoryLock);
+		FREE_LOCK (g_memoryPriLock);
 		return NULL; //no continuous addressed pages are left.
 	}
 }

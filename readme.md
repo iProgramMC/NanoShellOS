@@ -71,7 +71,7 @@ Not supported.  Could be supported soon, but currently not supported.
 
 #### Preparation
 
-Create the `build` folder.  Inside it create the folders `asm`, `kapp`, `fs` and `icons`.
+Create the `build` folder.  Inside it create the folders `asm`, `kapp`, `fs`, `nooptimiz` and `icons`.
 
 Create the `tools` directory.  Download [the i686-elf GCC+binutils](https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-windows.zip), and extract it into `tools/i686-gcc/`.
 Also download NASM and place it inside `tools/nasm` so that it is reachable at `tools/nasm/nasm.exe`.

@@ -9,13 +9,6 @@
 %ifdef enable
 
 section .data
-global g_testingElfStart, g_testingElfEnd, g_testingElf
-
-g_testingElfStart:
-g_testingElf:
-	incbin 'application/helloworld/main.nse'
-g_testingElfEnd:
-
 global g_initrdStart, g_initrd, g_initrdEnd
 
 g_initrdStart:

@@ -300,5 +300,10 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
  */
 int GetWindowManagerFPS();
 
+/**
+ * Call the WindowCallback of a window.
+ */
+int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
+
 
 #endif//_WINDOW_H

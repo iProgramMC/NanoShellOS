@@ -1,34 +1,76 @@
 #include <nanoshell.h>
 #include <window.h>
 
-#define VERSION_BUTTON_OK_COMBO 0x1000
+#define CHART_RANDOMIZE 0x1000
+
+#define CHART_WINDOW_WIDTH  (320)
+#define CHART_WINDOW_HEIGHT (240)
+
+#define CHART_AREA (CHART_WINDOW_HEIGHT - 6)
+#define CHART_AREA_WIDTH (CHART_WINDOW_WIDTH - 50)
+
+// simple shitty RNG
+int g_randGen = 0x9521af17;
+
+int Random (void)
+{
+	g_randGen += (int)0xe120fc15;
+	uint64_t tmp = (uint64_t)g_randGen * 0x4a39b70d;
+	uint32_t m1 = (tmp >> 32) ^ tmp;
+	tmp = (uint64_t)m1 * 0x12fad5c9;
+	uint32_t m2 = (tmp >> 32) ^ tmp;
+	return m2 & 0x7FFFFFFF;//make it always positive.
+}
+
+int g_ChartPoints[6];
+
+void GenerateChartPoints()
+{
+	for (uint32_t i = 0; i < ARRAY_COUNT(g_ChartPoints); i++)
+	{
+		g_ChartPoints [i] = Random () % CHART_AREA;
+	}
+}
+
+void RenderChart()
+{
+	for (uint32_t i = 0; i < ARRAY_COUNT(g_ChartPoints) - 1; i++)
+	{
+		int point1 = g_ChartPoints[i+0] + TITLE_BAR_HEIGHT + 30, 
+		    point2 = g_ChartPoints[i+1] + TITLE_BAR_HEIGHT + 30;
+		VidDrawLine(0x00FF00 /*Green*/, 
+					3 + (i+0) * (CHART_AREA_WIDTH / ARRAY_COUNT(g_ChartPoints)), point1,
+					3 + (i+1) * (CHART_AREA_WIDTH / ARRAY_COUNT(g_ChartPoints)), point2);
+	}
+}
+
 void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
-		case EVENT_PAINT:
+		case EVENT_CREATE:
 		{
 			Rectangle r;
-			RECT(r, 0, TITLE_BAR_HEIGHT, 320, 20);
+			RECT(r, 3, TITLE_BAR_HEIGHT + 3, CHART_WINDOW_WIDTH - 6, 25);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Randomize!", CHART_RANDOMIZE, 0, 0);
 			
-			//parm1 is the button number that we're being fed in EVENT_COMMAND
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "NanoShell Operating System 3rd Edition", 1, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
-			
-			RECT(r, 0, TITLE_BAR_HEIGHT+20, 320, 50);
-			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, ICON_NANOSHELL, 0);
-			
-			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 10);
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
-			
-			RECT(r, (320-70)/2, TITLE_BAR_HEIGHT+85, 70, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "OK", VERSION_BUTTON_OK_COMBO, 0, 0);
+			GenerateChartPoints();
 			
 			break;
 		}
+		case EVENT_PAINT:
+		{
+			RenderChart();
+			break;
+		}
 		case EVENT_COMMAND:
-			if (parm1 == VERSION_BUTTON_OK_COMBO)
+			if (parm1 == CHART_RANDOMIZE)
 			{
-				DestroyWindow(pWindow);
+				// Randomize
+				GenerateChartPoints();
+				
+				// Request a paint
+				WndProc(pWindow, EVENT_PAINT, 0, 0);
 			}
 			break;
 		default:
@@ -39,7 +81,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 int main ()
 {
-	Window* pWindow = CreateWindow ("NanoShell Version Applet", 150, 150, 320, 115 + TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow ("Chart Demo", 150, 150, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT + TITLE_BAR_HEIGHT, WndProc, 0);
 	
 	if (!pWindow)
 		return 1;

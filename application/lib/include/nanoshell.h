@@ -10,6 +10,8 @@ typedef uint8_t bool;
 #define false 0
 #define true 1
 
+#define ARRAY_COUNT(array) (sizeof(array)/sizeof(*array))
+
 //basic memoryoperations:
 int memcmp(const void* ap, const void* bp, size_t size);
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size);

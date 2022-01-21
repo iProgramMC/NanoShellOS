@@ -553,7 +553,7 @@ go_back:
 				
 				// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
 				if (isDoubleClick && elementHighlightAttempt != -1)
-					pWindow->m_callback (pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
 				
 				eventType = EVENT_PAINT;
 				goto go_back;
@@ -720,7 +720,7 @@ void WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 			{
 				//send a command event to the window:
-				pWindow->m_callback (pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
 			}
 			this->m_buttonData.m_clicked = false;
 			WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -769,7 +769,7 @@ void WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 			{
 				//send a command event to the window:
-				pWindow->m_callback (pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+				CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
 			}
 			this->m_buttonData.m_clicked = false;
 			WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -820,7 +820,7 @@ void WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			{
 				//send a command event to the window:
 				//WindowRegisterEvent(pWindow, EVENT_COMMAND, this->m_parm1, this->m_parm2);
-				pWindow->m_callback (pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
 			}
 		}
 		//! fallthrough intentional - need the button to redraw itself as pushing back up

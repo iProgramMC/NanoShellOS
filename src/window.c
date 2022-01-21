@@ -1589,6 +1589,16 @@ bool IsEventDestinedForControlsToo(int type)
 	}
 	return false;
 }
+
+//ugly hax to make calling window callback not need to preserve edi, esi, ebx
+//this was not an issue with no optimization but is now
+int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2)
+{
+	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
+	return eq * eqp1 * eqp2;
+}
+
+int someValue = 0;
 bool HandleMessages(Window* pWindow)
 {
 	// grab the lock
@@ -1612,7 +1622,7 @@ bool HandleMessages(Window* pWindow)
 			PaintWindowBackgroundAndBorder(pWindow);
 		}
 		
-		pWindow->m_callback(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
+		someValue = CallWindowCallback(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
 		
 		if (IsEventDestinedForControlsToo(pWindow->m_eventQueue[i]))
 			ControlProcessEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);

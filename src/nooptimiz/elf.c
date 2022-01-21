@@ -21,9 +21,6 @@ typedef struct
 }
 ElfProcess;
 
-extern char g_testingElfStart, g_testingElfEnd;
-extern char g_testingElf;
-
 bool ElfCheckHeader(ElfHeader* pHeader)
 {
 	if (!pHeader) return false;
@@ -187,10 +184,4 @@ int ElfExecute (void *pElfFile, size_t size)
 	ElfCleanup (&proc);
 	
 	return ELF_ERROR_NONE;
-}
-
-void ElfPerformTest()
-{
-	int sz = &g_testingElfEnd - &g_testingElfStart;
-	ElfExecute (&g_testingElf, sz);
 }
