@@ -24,6 +24,7 @@ void SetFocusedConsole(Console *pConsole)
 
 const unsigned char KeyboardMap[256] =
 {
+	// shift not pressed.
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
   '9', '0', '-', '=', '\b',	/* Backspace */
   '\t',			/* Tab */
@@ -52,6 +53,8 @@ const unsigned char KeyboardMap[256] =
     0,	/* Right Arrow */
   '+',
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	
+	// shift pressed.
 	0,  0, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
   '(', ')', '_', '+', '\b',	/* Backspace */
   '\t',			/* Tab */
@@ -238,10 +241,57 @@ bool ShiftPressed()
 	return (KbGetKeyState(KEY_LSHIFT) == KEY_PRESSED ||
 			KbGetKeyState(KEY_RSHIFT) == KEY_PRESSED);
 }
+bool g_virtualMouseEnabled = true;
+int  g_virtualMouseSpeed = 5;
+bool g_virtualMouseHadUpdatesBefore = false;
+
+extern Cursor* g_currentCursor;
+extern bool g_mouseInitted;
+//mappings: F11-Left Click, F12-Right Click, F9-make it slower, F10-make it faster
+void UpdateFakeMouse()
+{
+	if (!g_currentCursor)
+	{
+		g_mouseInitted = true;
+		SetDefaultCursor();
+		SetMouseVisible (true);
+		SetMousePos (GetScreenSizeX() / 2, GetScreenSizeY() / 2);
+	}
+	
+	int mflags = 
+		((keyboardState[KEY_F11] == KEY_PRESSED) * MOUSE_FLAG_L_BUTTON) | 
+		((keyboardState[KEY_F12] == KEY_PRESSED) * MOUSE_FLAG_R_BUTTON);
+	
+	if (keyboardState[KEY_F9]  == KEY_PRESSED) g_virtualMouseSpeed--;
+	if (keyboardState[KEY_F10] == KEY_PRESSED) g_virtualMouseSpeed++;
+	
+	//TODO: maybe some kind of OSD?
+	
+	int dirX = 0, dirY = 0;
+	
+	dirY += g_virtualMouseSpeed * (keyboardState[KEY_ARROW_UP]    == KEY_PRESSED);
+	dirY -= g_virtualMouseSpeed * (keyboardState[KEY_ARROW_DOWN]  == KEY_PRESSED);
+	dirX -= g_virtualMouseSpeed * (keyboardState[KEY_ARROW_LEFT]  == KEY_PRESSED);
+	dirX += g_virtualMouseSpeed * (keyboardState[KEY_ARROW_RIGHT] == KEY_PRESSED);
+	
+	if (dirX < 0) mflags |= (1 << 4);
+	if (dirY < 0) mflags |= (1 << 5);
+	
+	// If we have movement/clicks, or if we HAD them but don't (we still need to inform kernel about releases)
+	if (dirX || dirY || mflags || g_virtualMouseHadUpdatesBefore)
+	{
+		OnUpdateMouse (mflags, dirX, dirY, 0);
+		g_virtualMouseHadUpdatesBefore = false;
+	}
+	// If we have movement/clicks right now, tell our later selves to also send an update when releasing movements.
+	if (dirX || dirY || mflags)
+	{
+		g_virtualMouseHadUpdatesBefore = true;
+	}
+}
 
 void IrqKeyboard(UNUSED int e[50])
 {
-	//LogMsg("Keyboard!");
 	// acknowledge interrupt:
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
@@ -260,18 +310,16 @@ void IrqKeyboard(UNUSED int e[50])
 		}
 		else
 		{
-			if (keycode == KEY_F11)
-			{
-				SLogMsgNoCr("\nHello:");
-				for(int a=0; a<50; a++)
-				{
-					SLogMsgNoCr(" %x", e[a]);
-				}
-				SLogMsg("");
-				//MmDebugDump();
-			}
-			keyboardState[keycode & SCANCODE_NOTREL] = KEY_PRESSED;
-			KbAddKeyToBuffer(KeyboardMap[(keycode & SCANCODE_NOTREL) + (ShiftPressed() ? 0x80 : 0x00)]);
+			//test
+			int kc = keycode & SCANCODE_NOTREL;
+			
+			keyboardState[kc] = KEY_PRESSED;
+			KbAddKeyToBuffer(KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)]);
+		}
+		
+		if (g_virtualMouseEnabled)
+		{
+			UpdateFakeMouse();
 		}
 	}
 }

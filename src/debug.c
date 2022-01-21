@@ -95,7 +95,6 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	LogMsg("-> 0x%x %s", pRegs->eip, TransformTag (pTag, pRegs->eip), GetMemoryRangeString (pRegs->eip));
 	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
 	{
-		LogMsgNoCr("EBP: %x   ", stk);
 		LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
 		// TODO: addr2line implementation?
 		LogMsg("");

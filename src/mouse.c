@@ -30,7 +30,7 @@ bool IsMouseAvailable()
 void MouseWaitN (uint8_t type, const char* waiter, int waiterL)
 {
 	if (!g_mouseAvailable) return;
-	uint32_t _timeout = 1000000;
+	uint32_t _timeout = 100000;
 	
 	if (type == 0)
 	{
@@ -185,10 +185,12 @@ void MouseInit()
 	
 	// Enable the auxiliary mouse device
 	MouseWait (1);
+	if (!g_mouseAvailable) return;
 	WritePort (0x64, 0xA8);
 	
 	// Enable the interrupts
 	MouseWait (1);
+	if (!g_mouseAvailable) return;
 	WritePort (0x64, 0x20);
 	
 	uint8_t b = ReadPort (0x60);
@@ -201,8 +203,10 @@ void MouseInit()
 	_status = (b | 2);
 	
 	MouseWait (1);
+	if (!g_mouseAvailable) return;
 	WritePort (0x64, 0x60);
 	MouseWait (1);
+	if (!g_mouseAvailable) return;
 	WritePort (0x60, _status);
 	
 	//reset mouse

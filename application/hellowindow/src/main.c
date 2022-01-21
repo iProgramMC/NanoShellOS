@@ -6,7 +6,7 @@
 #define CHART_WINDOW_WIDTH  (320)
 #define CHART_WINDOW_HEIGHT (240)
 
-#define CHART_AREA (CHART_WINDOW_HEIGHT - 6)
+#define CHART_AREA (CHART_WINDOW_HEIGHT - 36)
 #define CHART_AREA_WIDTH (CHART_WINDOW_WIDTH - 50)
 
 // simple shitty RNG
@@ -32,15 +32,16 @@ void GenerateChartPoints()
 	}
 }
 
-void RenderChart()
+void RenderChart(uint32_t color)
 {
+	//VidFillRect(0xFFFFFF, 2, TITLE_BAR_HEIGHT+2+30, GetScreenSizeX()-2, GetScreenSizeY()-2);
 	for (uint32_t i = 0; i < ARRAY_COUNT(g_ChartPoints) - 1; i++)
 	{
 		int point1 = g_ChartPoints[i+0] + TITLE_BAR_HEIGHT + 30, 
 		    point2 = g_ChartPoints[i+1] + TITLE_BAR_HEIGHT + 30;
-		VidDrawLine(0x00FF00 /*Green*/, 
-					3 + (i+0) * (CHART_AREA_WIDTH / ARRAY_COUNT(g_ChartPoints)), point1,
-					3 + (i+1) * (CHART_AREA_WIDTH / ARRAY_COUNT(g_ChartPoints)), point2);
+		VidDrawLine(color /*Green*/, 
+					3 + (i+0) * CHART_AREA_WIDTH / (ARRAY_COUNT(g_ChartPoints)-1), point1,
+					3 + (i+1) * CHART_AREA_WIDTH / (ARRAY_COUNT(g_ChartPoints)-1), point2);
 	}
 }
 
@@ -60,12 +61,15 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 		}
 		case EVENT_PAINT:
 		{
-			RenderChart();
+			RenderChart(0x00FF00);
 			break;
 		}
 		case EVENT_COMMAND:
 			if (parm1 == CHART_RANDOMIZE)
 			{
+				// Un-render the chart.
+				RenderChart(WINDOW_BACKGD_COLOR);
+				
 				// Randomize
 				GenerateChartPoints();
 				

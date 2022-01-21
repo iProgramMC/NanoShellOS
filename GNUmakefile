@@ -16,7 +16,10 @@ BDIR=./build
 CC=i686-elf-gcc
 CFLAGS_BEG=-DTEST
 
-CFLAGS=-I$(IDIR) -I$(BDIR) -ffreestanding -g -O2 -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
+#O2=-O2
+O2=-O0
+
+CFLAGS=-I$(IDIR) -I$(BDIR) -ffreestanding -g $(O2) -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
 
 # TODO: Make everything capable of being compiled under -O2 without affecting system stability.
 CFLAGS_NOOPTIMIZ=-I$(IDIR) -I$(BDIR) -ffreestanding -g -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
