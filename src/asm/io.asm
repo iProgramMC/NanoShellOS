@@ -173,9 +173,35 @@ fast_memcpy:
 	pop ebp
 	ret
 	
+global memset_ints
 global align4_memcpy
 global align8_memcpy
 global align16_memcpy
+memset_ints:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
+	.some_loop:
+		mov [edi], esi
+		add edi, 4
+		dec ecx
+		jnz .some_loop
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
 align4_memcpy:
 	push ebp
 	mov  ebp, esp

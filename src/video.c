@@ -512,37 +512,11 @@ void VidPrintTestingPattern()
 void VidFillScreen(unsigned color)
 {
 	g_vbeData->m_dirty = 1;
-	int color2 = color;
 	bool alsoToTheCopy = (g_vbeData == &g_mainScreenVBEData);
-	switch (g_vbeData->m_bitdepth)
-	{
-		case 0:
-			color2 = VidColor32to8(color);
-			for (int y = 0; y < GetScreenSizeY(); y++) 
-				for (int x = 0; x < GetScreenSizeX(); x++)
-				{
-					g_vbeData->m_framebuffer8 [x + y * g_vbeData->m_pitch  ] = color2;
-					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
-				}
-			break;
-		case 1:
-			color2 = VidColor32to16(color);
-			for (int y = 0; y < GetScreenSizeY(); y++) 
-				for (int x = 0; x < GetScreenSizeX(); x++)
-				{
-					g_vbeData->m_framebuffer16[x + y * g_vbeData->m_pitch16] = color2;
-					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
-				}
-			break;
-		case 2:
-			for (int y = 0; y < GetScreenSizeY(); y++) 
-				for (int x = 0; x < GetScreenSizeX(); x++)
-				{
-					g_vbeData->m_framebuffer32[x + y * g_vbeData->m_pitch32] = color;
-					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
-				}
-			break;
-	}
+	
+	memset_ints (g_vbeData->m_framebuffer32, color, g_vbeData->m_pitch32 * g_vbeData->m_height);
+	if (alsoToTheCopy)
+		memset_ints (g_framebufferCopy, color, g_vbeData->m_width * g_vbeData->m_height);
 }
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 {
@@ -552,10 +526,24 @@ void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
 	if (bottom >= GetScreenSizeY()) bottom = GetScreenSizeY() - 1;
 	
+	int yoffs = top * g_vbeData->m_pitch32;
+	int start = yoffs + left;
+	int xs = right-left+1;
 	for (int y = top; y <= bottom; y++)
 	{
-		for (int x = left; x <= right; x++)
-			VidPlotPixelInline(x, y, color);
+		memset_ints (&g_vbeData->m_framebuffer32[start], color, xs);
+		start += g_vbeData->m_pitch32;
+	}
+	if (g_vbeData == &g_mainScreenVBEData)
+	{
+		yoffs = top * g_vbeData->m_width;
+		start = yoffs + left;
+		xs = right-left+1;
+		for (int y = top; y <= bottom; y++)
+		{
+			memset_ints (&g_framebufferCopy[start], color, xs);
+			start += g_vbeData->m_width;
+		}
 	}
 }
 void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
@@ -1061,6 +1049,8 @@ static inline void RenderCursorOpaque(void)
 			kzs -= ys;
 			ys = 0;
 		}
+		if (ye >= GetScreenSizeY())
+			ye =  GetScreenSizeY() - 1;
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1070,7 +1060,7 @@ static inline void RenderCursorOpaque(void)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe = GetScreenSizeX() - 1;
+			xe =  GetScreenSizeX() - 1;
 		int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -1117,6 +1107,7 @@ void RenderCursor(void)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
 {
+	// We have no other choice but to do this.
 	for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
@@ -1151,6 +1142,40 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 			);
 		}
 	}
+	
+	// Draw over the Y coordinate.
+	
+	// Did we move down?
+	/*if (oldY < g_mouseY)
+	{
+		int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
+		int top  = oldY - g_currentCursor->topOffs,  bottom= top  + g_currentCursor->height;
+		int topUpTo = g_mouseY - g_currentCursor->topOffs;
+		if (top < 0) top = 0;
+		if (topUpTo < 0) topUpTo = 0;
+		if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
+		if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+		if (left < 0) left = 0;
+		if (left >= GetScreenWidth()) left = GetScreenWidth();
+		if (right < 0) right = 0;
+		if (right >= GetScreenWidth()) right = GetScreenWidth();
+		int xs = right-left+1;
+		int yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+		int startcp = yoffscp + left,           startfb = yoffsfb + left;
+		for (int y = top; y < topUpTo; y++)
+		{
+			align4_memcpy(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+			startcp += g_vbeData->m_width;
+			startfb += g_vbeData->m_pitch32;
+		}
+		
+		// If there's no difference on the X coordinate, stop.
+		if (oldX == g_mouseY) return;
+	}
+	// Did we move up?
+	else if (oldY > g_mouseY)
+	{
+	}*/
 }
 
 void RedrawOldPixels(int oldX, int oldY)
