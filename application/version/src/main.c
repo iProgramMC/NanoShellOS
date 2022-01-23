@@ -6,7 +6,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
-		case EVENT_PAINT:
+		case EVENT_CREATE:
 		{
 			Rectangle r;
 			RECT(r, 0, TITLE_BAR_HEIGHT, 320, 20);
