@@ -655,9 +655,366 @@ go_back:
 				MmFree (pData->m_pItems);
 				pData->m_pItems = NULL;
 			}
-			//also free the pData itself.
-			MmFree (pData);
-			this->m_dataPtr = NULL;
+			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			break;
+		}
+	}
+}
+#endif
+
+// Menu Bar.
+#if 1
+
+// If a menu bar item has no children, clicking it will trigger an EVENT_COMMAND to the parent window
+// with the comboID the menu bar item was given.
+
+// Note that having multiple menu items with the same comboID, just like having more than one control with
+// the same comboID, is undefined as per specification.
+
+// Please note that the menu bar comboIDs are not necessarily related to the control comboIDs normally.
+// Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
+// in parm1, and the menu item's comboID in parm2.
+
+void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comboID)
+{
+	// Call the generic initializor for the menu bar tree item.
+	this->m_comboID          = comboID;
+	this->m_childrenCount    = 0;
+	this->m_childrenCapacity = 4;
+	this->m_childrenArray    = (MenuBarTreeItem*)MmAllocate (this->m_childrenCapacity * sizeof (MenuBarTreeItem));
+	memset (this->m_childrenArray, 0, 4 * sizeof (MenuBarTreeItem));
+	this->m_text[0]          = 0;
+	this->m_isOpen           = false;
+}
+bool WidgetMenuBar_TryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comboID_as, const char* text)
+{
+	if (this->m_comboID == comboID_to)
+	{
+		// Can it fit now?
+		if (this->m_childrenCount >= this->m_childrenCapacity)
+		{
+			// Doesn't fit.  Need to expand.
+			MenuBarTreeItem* new = (MenuBarTreeItem*)MmAllocate (this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
+			memset (new, 0, this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
+			memcpy (new, this->m_childrenArray, this->m_childrenCapacity * sizeof (MenuBarTreeItem));
+			this->m_childrenCapacity *= 2;
+			
+			// Get rid of the old one.  We've moved.
+			MmFree (this->m_childrenArray);
+			
+			this->m_childrenArray = new;
+		}
+		
+		//If we've expanded or otherwise can fit our new item into, add it.
+		MenuBarTreeItem* pItem = this->m_childrenArray + this->m_childrenCount;
+		this->m_childrenCount++;
+		
+		strcpy (pItem->m_text, text);
+		pItem->m_comboID = comboID_as;
+		pItem->m_childrenCount = 0;
+		
+		//Allocate a default of 2 items.
+		pItem->m_childrenCapacity = 2;
+		pItem->m_childrenArray    = (MenuBarTreeItem*)MmAllocate (2 * sizeof (MenuBarTreeItem));
+		memset (pItem->m_childrenArray, 0, 2 * sizeof (MenuBarTreeItem));
+		
+		//We were able to add it.  Leave and tell the caller that we did it.
+		return true;
+	}
+	else
+	{
+		//try adding it to one of the children:
+		for (int i = 0; i < this->m_childrenCount; i++)
+		{
+			if (WidgetMenuBar_TryAddItemTo(&this->m_childrenArray[i], comboID_to, comboID_as, text))
+				return true;//just added it, no need to add it anymore
+		}
+		return false;//couldn't add here, try another branch
+	}
+}
+void WidgetMenuBar_AddMenuBarItem (Control* this, int comboID_to, int comboID_as, const char* text)
+{
+	WidgetMenuBar_TryAddItemTo(&this->m_menuBarData.m_root, comboID_to, comboID_as, text);
+}
+void WidgetMenuBar_InitializeRoot (Control* this)
+{
+	// Call the generic initializor for the menu bar tree item with a comboID of zero.
+	WidgetMenuBar_InitializeMenuBarItemAsEmpty (&this->m_menuBarData.m_root, 0);
+}
+void WidgetMenuBar_RenderSubMenu (MenuBarTreeItem* this, int x, int y)
+{
+	// calculate the width and height of the menu
+	if (this->m_childrenCount == 0) return;
+	int width = 1, height = 1;
+	
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight = 0;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		
+		if ((width-20) < twidth) width = twidth + 20;
+		height += theight + 2;
+	}
+	
+	// Render the base rectangle.
+	VidFillRect(0xFFFFFF, x, y, x+width, y+height);
+	VidDrawRect(0x000000, x, y, x+width, y+height);
+	
+	height++;
+	
+	// Draw the text.
+	int ypos = 1;
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight = 0;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		if (this->m_childrenArray[i].m_isOpen)
+		{
+			VidFillRect(0x7F, x + 1, y + ypos, x + 1 + width, y + ypos + theight);
+			VidTextOut(this->m_childrenArray[i].m_text, x + 6, y + ypos + 1, 0xFFFFFF, TRANSPARENT);
+			
+			// Render the sub-menu above this menu.
+		}
+		else
+		{
+			VidTextOut(this->m_childrenArray[i].m_text, x + 6, y + ypos + 1, 0, TRANSPARENT);
+		}
+		
+		ypos += theight + 2;
+	}
+	
+	// Render the open submenu.
+	ypos = 1;
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight = 0;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		if (this->m_childrenArray[i].m_isOpen)
+		{
+			// Render the sub-menu above this menu.
+			WidgetMenuBar_RenderSubMenu(&this->m_childrenArray[i], x + width - 2, y + ypos);
+		}
+		
+		ypos += theight;
+	}
+	
+	height++;
+}
+void WidgetMenuBar_CheckChildHighlight (MenuBarTreeItem* this, Point mousePos, int x, int y)
+{
+	// calculate the width and height of the menu
+	if (this->m_childrenCount == 0) return;
+	int width = 1, height = 1;
+	
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		
+		if ((width-20) < twidth) width = twidth + 20;
+		height += theight;
+	}
+	height++;
+	
+	// Draw the text.
+	int ypos = 1;
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		
+		Rectangle rect = { x + 1, y + ypos, x + 1 + width, y + ypos + theight };
+		
+		if (RectangleContains(&rect, &mousePos))
+		{
+			for (int i = 0; i < this->m_childrenCount; i++)
+			{
+				this->m_childrenArray[i].m_isOpen = false;
+			}
+			this->m_childrenArray[i].m_isOpen = true;
+			
+			// Check this child for any highlights too.
+			WidgetMenuBar_CheckChildHighlight(&this->m_childrenArray[i], mousePos, x + width - 2, y + ypos);
+			
+			return;
+		}
+		
+		ypos += theight;
+	}
+}
+void WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(MenuBarTreeItem* this, Control* pControl, Window* pWindow)
+{
+	if (!this->m_childrenCount)
+	{
+		CallWindowCallback (pWindow, EVENT_COMMAND, pControl->m_comboID, this->m_comboID);
+		return;
+	}
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		MenuBarTreeItem* pChild = &this->m_childrenArray[i];
+		if (pChild->m_isOpen)
+		{
+			// attempt to call:
+			WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent (pChild, pControl, pWindow);
+		}
+		pChild->m_isOpen = false;
+	}
+}
+void WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	Rectangle menu_bar_rect;
+	menu_bar_rect.left   = 2;
+	menu_bar_rect.top    = 2 + TITLE_BAR_HEIGHT;
+	menu_bar_rect.right  = pWindow->m_vbeData.m_width;
+	menu_bar_rect.bottom = menu_bar_rect.top + TITLE_BAR_HEIGHT;
+	
+	switch (eventType)
+	{
+		case EVENT_CREATE:
+		{
+			// Initialize the root.
+			WidgetMenuBar_InitializeRoot(this);
+			
+			// Add some testing elements to the menubar.  A comboID of zero means you're adding to the root.
+			WidgetMenuBar_AddMenuBarItem (this, 0, 1, "Widget");
+			WidgetMenuBar_AddMenuBarItem (this, 0, 2, "Menu");
+			WidgetMenuBar_AddMenuBarItem (this, 0, 3, "Bar");
+			WidgetMenuBar_AddMenuBarItem (this, 0, 4, "Help");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 5, "About");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 6, "More");
+			//WidgetMenuBar_AddMenuBarItem (this, 6, 7, "Hi!");
+			//WidgetMenuBar_AddMenuBarItem (this, 6, 8, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 7, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 9, "TEST!");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 8, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 2,20, "AAAAAAAAA!");
+			WidgetMenuBar_AddMenuBarItem (this, 3,21, "BBBBBBBBB!");
+			WidgetMenuBar_AddMenuBarItem (this, 3,22, "CCCCCCCCC!");
+			WidgetMenuBar_AddMenuBarItem (this, 4,23, "DDDDDDDDD!");
+			WidgetMenuBar_AddMenuBarItem (this, 4,24, "EEEEEEEEE!");
+			WidgetMenuBar_AddMenuBarItem (this, 4,25, "About!");
+			WidgetMenuBar_AddMenuBarItem (this, 2,26, "TEST1!");
+			WidgetMenuBar_AddMenuBarItem (this, 2,27, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this, 2,28, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this, 1,36, "TEST1!");
+			WidgetMenuBar_AddMenuBarItem (this, 1,37, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this, 1,38, "TEST3!");
+			//WidgetMenuBar_AddMenuBarItem (this, 2,11, "Hello!");
+			
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			// Render the root.  If any children are opened, draw them.
+			VidFillRectangle (0x00FF00, menu_bar_rect);
+			
+			if (this->m_menuBarData.m_root.m_childrenArray)
+			{
+				int current_x = 8;
+				for (int i = 0; i < this->m_menuBarData.m_root.m_childrenCount; i++)
+				{
+					int width, height;
+					MenuBarTreeItem* pChild = &this->m_menuBarData.m_root.m_childrenArray[i];
+					const char* pText = pChild->m_text;
+					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
+					
+					width += 20;
+					
+					if (pChild->m_isOpen)
+					{
+						Rectangle rect;
+						rect.left   = menu_bar_rect.left + current_x;
+						rect.right  = menu_bar_rect.left + current_x + width;
+						rect.top    = menu_bar_rect.top  + 2;
+						rect.bottom = menu_bar_rect.bottom;
+						
+						VidFillRectangle (0x7F, rect);
+						
+						VidTextOut (pText, menu_bar_rect.left + current_x + 10, menu_bar_rect.top + 2, 0xFFFFFF, TRANSPARENT);
+						//render the child menu as well:
+						
+						WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);
+					}
+					else
+						VidTextOut (pText, menu_bar_rect.left + current_x + 10, menu_bar_rect.top + 2, 0, TRANSPARENT);
+					
+					current_x += width;
+				}
+			}
+			
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Point p = {GET_X_PARM(parm1), GET_Y_PARM(parm1)};
+			// Determine what item we've clicked.
+			if (this->m_menuBarData.m_root.m_childrenArray)
+			{
+				int  current_x = 8;
+				bool needsUpdate = false;
+				for (int i = 0; i < this->m_menuBarData.m_root.m_childrenCount; i++)
+				{
+					int width, height;
+					MenuBarTreeItem* pChild = &this->m_menuBarData.m_root.m_childrenArray[i];
+					const char* pText = pChild->m_text;
+					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
+					
+					width += 20;
+					
+					Rectangle rect;
+					rect.left   = menu_bar_rect.left + current_x;
+					rect.right  = menu_bar_rect.left + current_x + width;
+					rect.top    = menu_bar_rect.top  + 2;
+					rect.bottom = menu_bar_rect.bottom;
+					
+					if (RectangleContains (&rect, &p))
+					{
+						for (int i = 0; i < this->m_menuBarData.m_root.m_childrenCount; i++)
+						{
+							MenuBarTreeItem* pChild = &this->m_menuBarData.m_root.m_childrenArray[i];
+							pChild->m_isOpen = false;
+						}
+						// Open this and call the paint event.
+						pChild->m_isOpen = true;
+						// Close out all of this child's children
+						for (int i = 0; i < pChild->m_childrenCount; i++)
+						{
+							pChild->m_childrenArray[i].m_isOpen = false;
+						}
+						
+						//WidgetMenuBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+						//break;
+						needsUpdate = true;
+					}
+					
+					if (pChild->m_isOpen)
+					{
+						//Check if the child has any children we need to highlight.
+						WidgetMenuBar_CheckChildHighlight(pChild, p, menu_bar_rect.left + current_x, menu_bar_rect.bottom);
+						needsUpdate = true;
+					}
+					
+					current_x += width;
+					if (needsUpdate) break;
+				}
+				if (needsUpdate)
+					CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+			}
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			// Unopen all the controls. TODO
+			if (this->m_menuBarData.m_root.m_childrenArray)
+			{
+				WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(&this->m_menuBarData.m_root, this, pWindow);
+				CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+			}
 			break;
 		}
 	}
@@ -665,6 +1022,8 @@ go_back:
 #endif
 
 // Misc setters
+#if 1
+
 void SetLabelText (Window *pWindow, int comboID, const char* pText)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -676,6 +1035,8 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText)
 		}
 	}
 }
+
+#endif
 
 // Basic controls
 #if 1
@@ -866,6 +1227,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetListView_OnEvent,
 	WidgetVScrollBar_OnEvent,
 	WidgetHScrollBar_OnEvent,
+	WidgetMenuBar_OnEvent,
 	NULL
 };
 WidgetEventHandler GetWidgetOnEventFunction (int type)

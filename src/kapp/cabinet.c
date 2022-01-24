@@ -233,7 +233,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			break;
 		}
-		
+		//TODO: Fix crash when shutting down cabinet?
+		//TODO: SysMon crashes too? (c0103389)  Perhaps it's a widget dispose bug? (they both have listview widgets)
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}

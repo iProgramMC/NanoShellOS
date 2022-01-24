@@ -181,6 +181,7 @@ void IrqMouse()
 
 void MouseInit()
 {
+	//return;//don't have it for now
 	uint8_t _status;
 	
 	// Enable the auxiliary mouse device

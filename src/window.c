@@ -233,46 +233,29 @@ short GetWindowIndexInDepthBuffer (int x, int y)
 //TODO: make this really work
 void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int index)
 {
-	//if (!framebuffer)
+	int hx = GetScreenSizeX(), hy = GetScreenSizeY();
+	int idxl = r.left, idxr = r.right;
+	if (idxl < 0) idxl = 0;
+	if (idxr < 0) idxr = 0;
+	if (idxl >= hx) return;//completely OOB
+	if (idxr >= hx) idxr = hx;
+	int gap = idxr - idxl;
+	if (gap <= 0) return;//it will never be bigger than zero if it is now
+	int gapdiv2 = gap / 2;
+	idxl += hx * r.top;
+	for (int y = r.top; y < r.bottom; y++)
 	{
-		int hx = GetScreenSizeX(), hy = GetScreenSizeY();
-		for (int y = r.top; y < r.bottom; y++)
-		{
-			if (y >= hy) break;//no point.
-			if (y < 0) continue;
-			for (int x = r.left; x < r.right; x++)
-			{
-				int idx = GetScreenSizeX() * y + x;
-				if (x < 0) continue;
-				if (x >= hx) break;//no point.
-				
-				g_windowDepthBuffer[idx] = index;
-			}		
-		}
+		if (y >= hy) break;//no point.
+		if (y < 0) continue;
+		memset_ints(&g_windowDepthBuffer[idxl], index<<16|index, gapdiv2);
+		g_windowDepthBuffer[idxr-1] = index;
+		
+		idxl += hx;
 	}
-	/*else
-	{
-		int hx = GetScreenSizeX(), hy = GetScreenSizeY();
-		for (int y = r.top; y < r.bottom; y++)
-		{
-			if (y >= hy) break;//no point.
-			if (y < 0) continue;
-			for (int x = r.left; x < r.right; x++)
-			{
-				int idx = GetScreenSizeX() * y + x;
-				if (x < 0) continue;
-				if (x >= hx) break;//no point.
-				
-				if (*framebuffer != TRANSPARENT)
-					g_windowDepthBuffer[idx] = index;
-				framebuffer++;
-			}		
-		}
-	}*/
 }
 void UpdateDepthBuffer (void)
 {
-	memset (g_windowDepthBuffer, 0xFF, g_windowDepthBufferSzBytes);
+	memset_ints (g_windowDepthBuffer, 0xFFFFFFFF, g_windowDepthBufferSzBytes/4);
 	
 	for (int i = 0; i < WINDOWS_MAX; i++)
 	{
@@ -332,20 +315,20 @@ void WindowManagerShutdown()
 
 void HideWindow (Window* pWindow)
 {
+	//SLogMsg("Updating depth buffer");
 	pWindow->m_hidden = true;
 	UpdateDepthBuffer();
 	
 	//redraw the background and all the things underneath:
+	//SLogMsg("Redrawing background");
 	RedrawBackground(pWindow->m_rect);
 	
 	// draw the windows below it
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
 	
 	//higher = faster, but may miss some smaller windows
-	//a precision of 10 is a-ok if the window will never go beyond 11x11 in size
-	#define PRECISION 10
-	for (int y = pWindow->m_rect.top; y <= pWindow->m_rect.bottom; y += PRECISION) {
-		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += PRECISION) {
+	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += WINDOW_MIN_HEIGHT-1) {
+		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += WINDOW_MIN_WIDTH-1) {
 			short h = GetWindowIndexInDepthBuffer(x,y);
 			if (h == -1) continue;
 			//check if it's present in the windowDrawList
@@ -739,6 +722,7 @@ void WindowManagerOnShutdown(void)
 
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
+	g_debugConsole.curY = 0;
 	g_clickQueueSize = 0;
 	// load background?
 	memset (&g_windows, 0, sizeof (g_windows));
@@ -1406,10 +1390,10 @@ void RenderWindow (Window* pWindow)
 	// we still gotta decide...
 	if (!pWindow->m_isSelected)
 	{
-		for (int j = y; j < y2; j += WINDOW_MIN_WIDTH-1)
+		for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
 		{
 			if (j >= sy) break;
-			for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
+			for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
 			{
 				short n = GetWindowIndexInDepthBuffer (i, j);
 				if (n != windIndex)
@@ -1461,18 +1445,26 @@ void RenderWindow (Window* pWindow)
 	}
 	else
 	{
+		int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
+		//int yofffb = y * pitch,            yoffcp = y * pitch;
+		int  offfb,                         offcp;
 		for (int j = y; j != y2; j++)
 		{
 			if (j >= sy) break;
+			offfb = j * pitch + x, offcp = j * width + x;
 			for (int i = x; i != x2; i++)
 			{
 				if (i < sx && i > 0)
 				{
-					short n = GetWindowIndexInDepthBuffer (i, j);
+					short n = g_windowDepthBuffer [offcp];//GetWindowIndexInDepthBuffer (i, j);
 					if (n == windIndex)
 					{
-						blpxinl (i, j, texture[o]);
+						g_framebufferCopy         [offcp] = texture[o];
+						g_vbeData->m_framebuffer32[offfb] = texture[o];
+						//blpxinl (i, j, texture[o]);
 					}
+					offcp++;
+					offfb++;
 				}
 				o++;
 			}
@@ -1597,6 +1589,15 @@ int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, int eq
 	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
 	return eq * eqp1 * eqp2;
 }
+int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2)
+{
+	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
+	
+	if (IsEventDestinedForControlsToo(eq))
+		ControlProcessEvent(pWindow, eq, eqp1, eqp2);
+	
+	return eq * eqp1 * eqp2;
+}
 
 int someValue = 0;
 bool HandleMessages(Window* pWindow)
@@ -1622,10 +1623,7 @@ bool HandleMessages(Window* pWindow)
 			PaintWindowBackgroundAndBorder(pWindow);
 		}
 		
-		someValue = CallWindowCallback(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
-		
-		if (IsEventDestinedForControlsToo(pWindow->m_eventQueue[i]))
-			ControlProcessEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
+		someValue = CallWindowCallbackAndControls(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
 		
 		//reset to main screen
 		VidSetVBEData (NULL);

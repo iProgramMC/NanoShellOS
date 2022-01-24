@@ -87,6 +87,8 @@ enum {
 	CONTROL_VSCROLLBAR,
 	//A horizontal scroll bar.
 	CONTROL_HSCROLLBAR,
+	//A menu bar attached to the top of a window.
+	CONTROL_MENUBAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -148,11 +150,29 @@ typedef struct
 }
 ScrollBarData;
 
+typedef struct tagMenuBarTreeItem
+{
+	int  m_comboID;//can be searchable
+	int  m_childrenCount,
+	     m_childrenCapacity;//if childrenCount reaches this and we need to add another, double this
+	struct tagMenuBarTreeItem* m_childrenArray;
+	char m_text [104];
+	//if this value is set, it gets drawn if this is an item part of the root tree, or the parent is open too.
+	bool m_isOpen;
+}
+MenuBarTreeItem;
+
 typedef struct
 {
 	bool m_clicked;
 }
 ButtonData;
+
+typedef struct
+{
+	MenuBarTreeItem m_root;
+}
+MenuBarData;
 
 typedef struct ControlStruct
 {
@@ -171,6 +191,7 @@ typedef struct ControlStruct
 		ListViewData  m_listViewData;
 		ScrollBarData m_scrollBarData;
 		ButtonData    m_buttonData;
+		MenuBarData   m_menuBarData;
 	};
 	
 	//event handler
@@ -304,6 +325,11 @@ int GetWindowManagerFPS();
  * Call the WindowCallback of a window.
  */
 int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
+
+/**
+ * Call the WindowCallback of a window and its controls.
+ */
+int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
 
 
 #endif//_WINDOW_H

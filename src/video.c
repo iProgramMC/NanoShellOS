@@ -39,9 +39,32 @@ int g_mouseX = 0, g_mouseY = 0;
 
 
 #define X 0X00FFFFFF,
+#define S 0X007F7F7F,
 #define B 0XFF000000,
 #define o TRANSPARENT,
 
+/*uint32_t g_cursorColorsNoShadow[] = 
+{
+	B o o o o o o o o o o
+	B B o o o o o o o o o
+	B X B o o o o o o o o
+	B X X B o o o o o o o
+	B X X X B o o o o o o
+	B X X X X B o o o o o
+	B X X X X X B o o o o
+	B X X X X X X B o o o
+	B X X X X X X X B o o
+	B X X X X X X X X B o
+	B X X X X X B B B B B
+	B X X B X X B S S S S
+	B X B S B X X B o o o
+	B B S o B X X B o o o
+	B S o o S B X X B o o
+	S o o o o B X X B o o
+	o o o o o S B X X B o
+	o o o o o o B X X B o
+	o o o o o o S B B S o
+};*/
 uint32_t g_cursorColors[] = 
 {
 	B o o o o o o o o o o o
@@ -54,17 +77,16 @@ uint32_t g_cursorColors[] =
 	B X X X X X X B o o o o
 	B X X X X X X X B o o o
 	B X X X X X X X X B o o
-	B X X X X X X X X X B o
-	B X X X X X X B B B B B
-	B X X X B X X B o o o o
-	B X X B B X X B o o o o
-	B X B o o B X X B o o o
-	B B o o o B X X B o o o
-	B o o o o o B X X B o o
+	B X X X X X B B B B B o
+	B X X B X X B S S S S S
+	B X B S B X X B o o o o
+	B B S S B X X B S o o o
+	B S S o o B X X B o o o
+	o S o o o B X X B S o o
 	o o o o o o B X X B o o
-	o o o o o o o B X X B o
-	o o o o o o o B X X B o
-	o o o o o o o o B B o o
+	o o o o o o B X X B S o
+	o o o o o o o B B S S o
+	o o o o o o o o S S o o
 };
 uint32_t g_waitCursorColors[] = 
 {
@@ -93,7 +115,9 @@ uint32_t g_waitCursorColors[] =
 };
 
 Cursor g_defaultCursor = {
-	12, 21, 0, 0, 
+	//11, 19, 0, 0, 
+	//g_cursorColorsNoShadow,
+	12, 20, 0, 0, 
 	g_cursorColors,
 	true
 };
@@ -1129,7 +1153,7 @@ static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 {
-	for (int i = 0; i < g_currentCursor->height; i++)
+	/*for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
 		{
@@ -1141,41 +1165,103 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 				kx, ky, VidReadPixelInline (kx, ky)
 			);
 		}
-	}
+	}*/
 	
 	// Draw over the Y coordinate.
 	
-	// Did we move down?
-	/*if (oldY < g_mouseY)
+	int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
+	int top  = oldY - g_currentCursor->topOffs,  bottom= top  + g_currentCursor->height;
+	int topUpTo = g_mouseY - g_currentCursor->topOffs;
+	if (top < 0) top = 0;
+	if (topUpTo < 0) topUpTo = 0;
+	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
+	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+	if (left < 0) left = 0;
+	if (left >= GetScreenWidth()) left = GetScreenWidth();
+	if (right < 0) right = 0;
+	if (right >= GetScreenWidth()) right = GetScreenWidth();
+	int xs = right-left+1;
+	int yoffscp, yoffsfb;
+	int startcp, startfb;
+	if (xs > 0)
 	{
-		int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
-		int top  = oldY - g_currentCursor->topOffs,  bottom= top  + g_currentCursor->height;
-		int topUpTo = g_mouseY - g_currentCursor->topOffs;
-		if (top < 0) top = 0;
-		if (topUpTo < 0) topUpTo = 0;
-		if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
-		if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
-		if (left < 0) left = 0;
-		if (left >= GetScreenWidth()) left = GetScreenWidth();
-		if (right < 0) right = 0;
-		if (right >= GetScreenWidth()) right = GetScreenWidth();
-		int xs = right-left+1;
-		int yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
-		int startcp = yoffscp + left,           startfb = yoffsfb + left;
-		for (int y = top; y < topUpTo; y++)
+		// Did we move down?
+		if (oldY < g_mouseY)
 		{
-			align4_memcpy(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
-			startcp += g_vbeData->m_width;
-			startfb += g_vbeData->m_pitch32;
+			yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+			startcp = yoffscp + left,           startfb = yoffsfb + left;
+			//SLogMsg("top:%d topUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", top, topUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < topUpTo; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+			
 		}
-		
-		// If there's no difference on the X coordinate, stop.
-		if (oldX == g_mouseY) return;
+		// Did we move up?
+		else if (oldY > g_mouseY)
+		{
+			topUpTo = g_mouseY - g_currentCursor->topOffs;
+			int bottomUpTo = topUpTo + g_currentCursor->height;
+			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
+			startcp = yoffscp + left,                  startfb = yoffsfb + left;
+			for (int y = bottomUpTo; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
 	}
-	// Did we move up?
-	else if (oldY > g_mouseY)
+	
+	// Did we move right?
+	if (oldX < g_mouseX)
 	{
-	}*/
+		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
+		if (leftUpTo < 0) leftUpTo = 0;
+		if (leftUpTo >= GetScreenWidth()) leftUpTo = GetScreenWidth();
+		
+		xs = leftUpTo-left;
+		if (xs > 0)
+		{
+			startcp = yoffscp + left, startfb = yoffsfb + left;
+			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
+	}
+	// Did we move left?
+	else if (oldX > g_mouseX)
+	{
+		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
+		int rightUpTo = leftUpTo +  g_currentCursor->width;
+		if (rightUpTo < 0) rightUpTo = 0;
+		if (rightUpTo >= GetScreenWidth()) rightUpTo = GetScreenWidth();
+		
+		xs = right-rightUpTo;
+		if (xs > 0)
+		{
+			startcp = yoffscp + rightUpTo, startfb = yoffsfb + rightUpTo;
+			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
+	}
 }
 
 void RedrawOldPixels(int oldX, int oldY)

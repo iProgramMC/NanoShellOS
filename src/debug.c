@@ -93,12 +93,19 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	//__asm__ volatile ("movl %%ebp, %0"::"r"(stk));
 	LogMsg("Stack trace:");
 	LogMsg("-> 0x%x %s", pRegs->eip, TransformTag (pTag, pRegs->eip), GetMemoryRangeString (pRegs->eip));
+	int count = 50;
 	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
 	{
 		LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
 		// TODO: addr2line implementation?
 		LogMsg("");
 		stk = stk->ebp;
+		count--;
+		if (count == 0)
+		{
+			LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
+			break;
+		}
 	}
 	LogMsg("DEBUG: Use 'addr2line' to figure out the calls.");
 	LogMsg("You can type 'addr2line -e kernel.bin', then type in each of these addresses.");

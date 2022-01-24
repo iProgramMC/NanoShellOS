@@ -30,6 +30,7 @@ void fast_memcpy(void* restrict dest, const void* restrict src, int size);//alig
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
 
 void memset_ints(void* restrict dest, uint32_t src, int num_ints);
+void memcpy_ints(void* restrict dest, const void* restrict src, int num_ints);
 
 void align4_memcpy(void* restrict dest, const void* restrict src, int size);
 void align8_memcpy(void* restrict dest, const void* restrict src, int size);

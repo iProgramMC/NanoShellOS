@@ -14,7 +14,7 @@
 #define TASKBAR_HEIGHT TITLE_BAR_HEIGHT + 14 // padding around button: 4 px, padding around text: 2 px
 #define TASKBAR_BUTTON_WIDTH 60
 #define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
-#define TASKBAR_TIME_THING_WIDTH 90
+#define TASKBAR_TIME_THING_WIDTH 60
 
 enum {
 	TASKBAR_HELLO = 0x1,

@@ -174,6 +174,7 @@ fast_memcpy:
 	ret
 	
 global memset_ints
+global memcpy_ints
 global align4_memcpy
 global align8_memcpy
 global align16_memcpy
@@ -194,6 +195,39 @@ memset_ints:
 		add edi, 4
 		dec ecx
 		jnz .some_loop
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
+memcpy_ints:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
+	push ebp
+	prefetchnta [esi]
+	.some_loop:
+		prefetchnta [esi+4]
+		mov eax, [esi]
+		mov [edi   ], eax
+		add esi, 4
+		add edi, 4
+		dec ecx
+		jnz .some_loop
+		
+	; done!
+	pop ebp
 	
 	pop edi
 	pop esi

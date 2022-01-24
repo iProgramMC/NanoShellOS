@@ -1,6 +1,6 @@
 /*****************************************
 		NanoShell Operating System
-		  (C) 2021 iProgramInCpp
+	   (C)  2021-2022 iProgramInCpp
 
  Kernel initialization and startup module
 ******************************************/
@@ -42,6 +42,9 @@ void KePrintSystemVersion()
 {
 	LogMsg("NanoShell (TM), January 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam, GetNumPhysPages() * 4);
+	LogMsg("Built on: %s", 
+		#include <icons/__time.h>
+	);
 }
 void KiPerformRamCheck()
 {
@@ -125,22 +128,57 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	
 	//KePrintMemoryMapInfo();
 	// Initialize the task scheduler
+	LogMsg("Initializing task scheduler...");
 	KiTaskSystemInitialize();
 	
 	
 	// Initialize the ramdisk
+	LogMsg("Initializing initrd...");
 	FsInitializeInitRd(g_initrdStart);
 	// Initialize the IDE driver
+	LogMsg("Initializing IDE drives...");
 	StIdeInitialize ();
+	
+	// Initialize the FAT partitions.
+	LogMsg("Mounting FAT partitions...");
+	FsMountFatPartitions();
 	
 	//Initialize the mouse driver too
 	sti;
 	if (VidIsAvailable())
-		MouseInit();
-	// Initialize the FAT partitions.
-	FsMountFatPartitions();
+	{
+		LogMsg("Press any key to initialize the PS/2 mouse (skip if you're running on real hardware).  If you don't, you will still be able to use the mouse cursor anyway via the arrow keys.");
+		LogMsg("Key mappings: F9 - Slow down mouse, F10 - Speed up mouse, F11 - Left click, F12 - Right click, Arrow Keys - Move cursor");
+		LogMsg("If you press a key within approximately 5 seconds the PS/2 mouse driver will initialize, potentially freezing your system if you don't have a PS/2 mouse installed, so be careful!!.");
+		
+		// Wait 5 seconds.
+		bool choseToInit = false;
+		for (int i = 0; i < 5; i++)
+		{
+			// Wait 1 second.
+			int startTick = GetTickCount();
+			while (startTick + 1000 > GetTickCount()) 
+			{
+				if (!KbIsBufferEmpty())
+				{
+					//They pressed a key.  Skip the mouse init.
+					choseToInit = true;
+					break;
+				}
+			}
+			if (choseToInit) break;
+			LogMsgNoCr(".");
+		}
+		
+		if (choseToInit)
+		{
+			LogMsg("Initializing!  (If on real hardware, you have been warned!!)");
+			MouseInit();
+		}
+	}
 	
 	//print the hello text, to see if the OS booted ok
+	LogMsg("OS appears to have initialized successfully.");
 	if (!VidIsAvailable())
 	{
 		LogMsg("\n\x01\x0CWARNING\x01\x0F: Running NanoShell in text mode is deprecated and will be removed in the future.\n");
@@ -159,4 +197,162 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 		WindowManagerTask (0);
 	LogMsg("Kernel ready to shutdown.");
 	KeStopSystem();
-}
+} 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

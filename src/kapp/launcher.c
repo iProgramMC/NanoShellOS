@@ -97,6 +97,7 @@ enum {
 	LAUNCHER_ICON4,
 	LAUNCHER_ICON5,
 	
+	LAUNCHER_MENUBAR  = 0xFE,
 	LAUNCHER_SHUTDOWN = 0xFF,
 };
 
@@ -112,6 +113,11 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			#define DIST_ITEMS 36
 			// Add a label welcoming the user to NanoShell.
 			Rectangle r;
+			
+			RECT(r, 0, 0, 0, 0);
+			//AddControl (pWindow, CONTROL_MENUBAR, r, NULL, LAUNCHER_MENUBAR, 0, 0);
+			
+			
 			RECT(r, START_X, 20, 200, 20);
 			AddControl (pWindow, CONTROL_TEXT, r, "Welcome to NanoShell!", LAUNCHER_LABEL1, 0, TRANSPARENT);
 			
@@ -122,7 +128,7 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			RECT(r, STEXT_X, START_Y+0*DIST_ITEMS, 200, 32);
 			AddControl(pWindow, CONTROL_CLICKLABEL, r, "System Monitor", LAUNCHER_SYSTEM, 0, 0);
 			
-			// Add the notepad icon.
+			// Add the file cabinet icon.
 			RECT(r, START_X, START_Y+1*DIST_ITEMS, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON2, ICON_CABINET, 0);
 			
@@ -201,6 +207,9 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 					VidTextOut("*click*", randomX, randomY, randomColor, TRANSPARENT);
 					break;
 				}*/
+				default:
+					LogMsg("Unknown command.  Parm1: %d Parm2: %d", parm1, parm2);
+					break;
 			}
 			break;
 		}
