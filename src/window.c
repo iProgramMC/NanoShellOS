@@ -327,8 +327,8 @@ void HideWindow (Window* pWindow)
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
 	
 	//higher = faster, but may miss some smaller windows
-	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += WINDOW_MIN_HEIGHT-1) {
-		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += WINDOW_MIN_WIDTH-1) {
+	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += 1) {
+		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += 1) {
 			short h = GetWindowIndexInDepthBuffer(x,y);
 			if (h == -1) continue;
 			//check if it's present in the windowDrawList
@@ -722,6 +722,12 @@ void WindowManagerOnShutdown(void)
 
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
+	if (g_windowManagerRunning)
+	{
+		LogMsg("Cannot start up window manager again.");
+		return;
+	}
+	
 	g_debugConsole.curY = 0;
 	g_clickQueueSize = 0;
 	// load background?
@@ -1058,15 +1064,48 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 	// Go backwards, because some controls might spawn other controls
 	// They may want to be checked AFTER their children controls, so
 	// we just go backwards.
+	
+	//Prioritise menu bar, as it's always at the top
+	Control* pMenuBar = NULL;
+	
+	WidgetEventHandler pHandler = GetWidgetOnEventFunction(CONTROL_MENUBAR);
 	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
 	{
 		if (pWindow->m_pControlArray[i].m_active)
 		{
 			Control* p = &pWindow->m_pControlArray[i];
-			if (p->OnEvent)
-				p->OnEvent(p, eventType, parm1, parm2, pWindow);
+			if (p->OnEvent == pHandler)
+			{
+				pMenuBar = &pWindow->m_pControlArray[i];
+				break;
+			}
 		}
 	}
+	
+	if (eventType != EVENT_PAINT && eventType != EVENT_CLICKCURSOR)
+		if (pMenuBar)
+			if (pMenuBar->OnEvent)
+				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
+					return;
+	
+	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
+	{
+		if (&pWindow->m_pControlArray[i] == pMenuBar) continue; // Skip over the menu bar.
+		
+		if (pWindow->m_pControlArray[i].m_active)
+		{
+			Control* p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent)
+				if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
+					return;
+		}
+	}
+	
+	if (eventType == EVENT_PAINT || eventType == EVENT_CLICKCURSOR)
+		if (pMenuBar)
+			if (pMenuBar->OnEvent)
+				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
+					return;
 }
 
 #endif
@@ -1402,6 +1441,16 @@ void RenderWindow (Window* pWindow)
 					break;
 				}
 			}
+			short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
+			if (n != windIndex)
+			{
+				isAboveEverything = false;
+			}
+		}
+		short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
+		if (n != windIndex)
+		{
+			isAboveEverything = false;
 		}
 	}
 	
@@ -1446,7 +1495,6 @@ void RenderWindow (Window* pWindow)
 	else
 	{
 		int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
-		//int yofffb = y * pitch,            yoffcp = y * pitch;
 		int  offfb,                         offcp;
 		for (int j = y; j != y2; j++)
 		{
@@ -1454,14 +1502,13 @@ void RenderWindow (Window* pWindow)
 			offfb = j * pitch + x, offcp = j * width + x;
 			for (int i = x; i != x2; i++)
 			{
-				if (i < sx && i > 0)
+				if (i < sx && i >= 0)
 				{
-					short n = g_windowDepthBuffer [offcp];//GetWindowIndexInDepthBuffer (i, j);
+					short n = g_windowDepthBuffer [offcp];
 					if (n == windIndex)
 					{
 						g_framebufferCopy         [offcp] = texture[o];
 						g_vbeData->m_framebuffer32[offfb] = texture[o];
-						//blpxinl (i, j, texture[o]);
 					}
 					offcp++;
 					offfb++;
@@ -1470,7 +1517,6 @@ void RenderWindow (Window* pWindow)
 			}
 		}
 	}
-	//FREE_LOCK(g_screenLock);
 }
 
 void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)

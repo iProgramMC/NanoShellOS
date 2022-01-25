@@ -20,7 +20,13 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 10);
 			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
 			
-			RECT(r, (320-70)/2, TITLE_BAR_HEIGHT+85, 70, 20);
+			RECT(r, 0, TITLE_BAR_HEIGHT+85, 320, 11);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "NanoShell is free software released under the", 4, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+			
+			RECT(r, 0, TITLE_BAR_HEIGHT+96, 320, 11);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "GNU GPL Version 3 license.", 5, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+			
+			RECT(r, (320-70)/2, TITLE_BAR_HEIGHT+108, 70, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "OK", VERSION_BUTTON_OK_COMBO, 0, 0);
 			
 			break;
@@ -39,7 +45,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 int main ()
 {
-	Window* pWindow = CreateWindow ("NanoShell Version Applet", 150, 150, 320, 115 + TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow ("NanoShell Version Applet", 150, 150, 320, 134 + TITLE_BAR_HEIGHT, WndProc, 0);
 	
 	if (!pWindow)
 		return 1;

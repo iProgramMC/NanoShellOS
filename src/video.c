@@ -37,9 +37,11 @@ VBEData* g_vbeData = NULL;
 
 int g_mouseX = 0, g_mouseY = 0;
 
+#define SEMI_TRANSPARENT 0x7F7F7F7F
 
 #define X 0X00FFFFFF,
-#define S 0X007F7F7F,
+//#define S 0X007F7F7F,
+#define S SEMI_TRANSPARENT,
 #define B 0XFF000000,
 #define o TRANSPARENT,
 
@@ -113,6 +115,11 @@ uint32_t g_waitCursorColors[] =
 	B B X X X X X X X X X B B o
 	B B B B B B B B B B B B B o
 };
+
+
+//const for now, TODO
+//bool g_disableShadows = true;
+#define g_disableShadows 0
 
 Cursor g_defaultCursor = {
 	//11, 19, 0, 0, 
@@ -291,10 +298,17 @@ void SetCursor(Cursor* pCursor)
 			int id = i * g_currentCursor->width + j;
 			if (g_currentCursor->bitmap[id] != TRANSPARENT)
 			{
+				uint32_t test = g_currentCursor->bitmap[id];
+				if (test == SEMI_TRANSPARENT)
+				{
+					//if (g_disableShadows) continue;
+					test = VidReadPixel(j + mx - g_currentCursor->leftOffs, i + my - g_currentCursor->topOffs);
+					test = ((test>>1) & 0xFF0000) | ((test>>1) & 0xFF00) | ((test>>1) & 0xFF);
+				}
 				VidPlotPixelIgnoreCursorChecksChecked(
 					j + mx - g_currentCursor->leftOffs,
 					i + my - g_currentCursor->topOffs,
-					g_currentCursor->bitmap[id]
+					test
 				);
 			}
 		}
@@ -513,7 +527,8 @@ void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 				int mx = x - g_mouseX + g_currentCursor->leftOffs;
 				int my = y - g_mouseY + g_currentCursor->topOffs;
 				int index = my * g_currentCursor->width + mx;
-				if (g_currentCursor->bitmap[index] != TRANSPARENT)
+				unsigned bru = g_currentCursor->bitmap[index];
+				if (bru != TRANSPARENT)// && bru != SEMI_TRANSPARENT)
 				{
 					return;
 				}
@@ -923,19 +938,68 @@ void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, u
 	VidTextOutInternal (pText, ox, oy, colorFg, colorBg, false, &a, &b);
 }
 
+int CountLinesInText (const char* pText)
+{
+	int lc = 1;
+	while (*pText)
+	{
+		if (*pText == '\n') lc++;
+		pText++;
+	}
+	return lc;
+}
+
+int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
+{
+	int w = 0, lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
+	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	while (1)
+	{
+		if (*pText == '\n' || *pText == '\0')
+		{
+			*pTextOut = pText;
+			return w;
+		}
+		int cw = charWidth;
+		if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *pText];
+		w += cw;
+		pText++;
+	}
+}
+
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
 {
-	//TODO: Fix this function
-	int w, h;
-	VidTextOutInternal(pText, 0, 0, 0, 0, true, &w, &h);
+	#warning "TODO: Add Word Wrapping"
+	int lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
+	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	const char* text = pText, *text2 = pText;
+	int lines = CountLinesInText(pText);
+	int startY = rect.top;
 	
-	int xStart = rect.left, yStart = rect.top;
-	if (drawFlags & TEXTSTYLE_HCENTERED)
-		xStart = rect.left + ((rect.right - rect.left - w) / 2);
 	if (drawFlags & TEXTSTYLE_VCENTERED)
-		yStart = rect.top  + ((rect.bottom- rect.top  - h) / 2);
+		startY += ((rect.bottom - rect.top - lines * lineHeight) / 2);
 	
-	VidTextOutInternal(pText, xStart, yStart, colorFg, colorBg, false, &w, &h);
+	for (int i = 0; i < lines; i++)
+	{
+		int t = MeasureTextUntilNewLine (text, &text2);
+		
+		int startX = rect.left;
+		
+		if (drawFlags & TEXTSTYLE_HCENTERED)
+			startX += (rect.right - rect.left - t) / 2;
+		
+		while (text != text2)
+		{
+			VidPlotChar(*text, startX, startY, colorFg, colorBg);
+			int cw = charWidth;
+			if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *text];
+			startX += cw;
+			text++;
+		}
+		startY += lineHeight;
+		
+		text = text2 + 1;
+	}
 }
 
 //! DO NOT use this on non-main-screen framebuffers!
@@ -1015,16 +1079,30 @@ static inline void RenderCursorTransparent(void)
 		if (xe >= GetScreenSizeX())
 			xe = GetScreenSizeX() - 1;
 		//int xd = (xe - xs) * sizeof(uint32_t);
+		int off11 = 0;
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
+			off11 = y * g_vbeData->m_pitch32 + xs;
 			ky = kz * g_currentCursor->width + off;
 			//just memcpy shit
 			//memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
 			for (int x = xs; x < xe; x++)
 			{
-				if (g_currentCursor->bitmap[ky] != TRANSPARENT)
-					g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + x] = g_currentCursor->bitmap[ky];
+				uint32_t test = g_currentCursor->bitmap[ky];
+				if (test != TRANSPARENT)
+				{
+					if (test == SEMI_TRANSPARENT)
+					{
+						test = VidReadPixelInline(x, y);
+						test = (((test & 0xFF0000)>>1) & 0xFF0000) | (((test & 0xFF00)>>1) & 0xFF00) | (((test & 0xFF)>>1) & 0xFF);
+						//if (!g_disableShadows)
+							g_vbeData->m_framebuffer32[off11] = test;
+					}
+					else
+						g_vbeData->m_framebuffer32[off11] = test;
+				}
 				ky++;
+				off11++;
 			}
 		}
 	}
@@ -1045,13 +1123,19 @@ static inline void RenderCursorTransparent(void)
 				int id = i * g_currentCursor->width + j;
 				if (g_currentCursor->bitmap[id] != TRANSPARENT)
 				{
+					uint32_t test = g_currentCursor->bitmap[id];
+					if (test == SEMI_TRANSPARENT)
+					{
+						test = VidReadPixelInline(kx, ky);
+						test = ((test>>1) & 0xFF0000) | ((test>>1) & 0xFF00) | ((test>>1) & 0xFF);
+					}
 					//int kx = j + g_mouseX - g_currentCursor->leftOffs,
 					//	ky = i + g_mouseY - g_currentCursor->topOffs;
 					if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
 					VidPlotPixelIgnoreCursorChecksChecked (
 						kx,
 						ky,
-						g_currentCursor->bitmap[id]
+						test
 					);
 				}
 			}

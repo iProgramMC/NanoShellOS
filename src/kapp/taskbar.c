@@ -91,7 +91,7 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT, sh = GetScreenHeight();
+	int ww = TASKBAR_WIDTH-1, wh = TASKBAR_HEIGHT, sh = GetScreenHeight();
 	int wx = 0, wy = (sh - wh)+2;
 	
 	Window* pWindow = CreateWindow ("Task Bar", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);

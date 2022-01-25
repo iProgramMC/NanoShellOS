@@ -149,7 +149,7 @@ int GetScrollBarPos (Window *pWindow, int comboID)
 }
 
 #define SCROLL_BAR_WIDTH 16
-void WidgetHScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetHScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;
@@ -273,8 +273,9 @@ go_back:;
 			break;
 		}
 	}
+	return false;//Fall through to other controls.
 }
-void WidgetVScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetVScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;
@@ -399,6 +400,7 @@ go_back:;
 			break;
 		}
 	}
+	return false;//Fall through to other controls.
 }
 #endif
 
@@ -520,7 +522,7 @@ void ResetList (Window* pWindow, int comboID)
 	}
 }
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
-void WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 go_back:
 	switch (eventType)
@@ -659,6 +661,7 @@ go_back:
 			break;
 		}
 	}
+	return false;//Fall through to other controls.
 }
 #endif
 
@@ -816,7 +819,7 @@ void WidgetMenuBar_CheckChildHighlight (MenuBarTreeItem* this, Point mousePos, i
 		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
 		
 		if ((width-20) < twidth) width = twidth + 20;
-		height += theight;
+		height += theight + 1;
 	}
 	height++;
 	
@@ -837,40 +840,56 @@ void WidgetMenuBar_CheckChildHighlight (MenuBarTreeItem* this, Point mousePos, i
 				this->m_childrenArray[i].m_isOpen = false;
 			}
 			this->m_childrenArray[i].m_isOpen = true;
-			
+		}
+		
+		ypos += theight + 2;
+	}
+	ypos = 1;
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		// Measure the text.
+		int twidth, theight;
+		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
+		
+		if (this->m_childrenArray[i].m_isOpen)
+		{
 			// Check this child for any highlights too.
 			WidgetMenuBar_CheckChildHighlight(&this->m_childrenArray[i], mousePos, x + width - 2, y + ypos);
 			
 			return;
 		}
 		
-		ypos += theight;
+		ypos += theight + 2;
 	}
+	//LogMsgNoCr("NO INTERSECTION! (comboID %d) ", this->m_comboID);
 }
-void WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(MenuBarTreeItem* this, Control* pControl, Window* pWindow)
+bool WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(MenuBarTreeItem* this, Control* pControl, Window* pWindow)
 {
 	if (!this->m_childrenCount)
 	{
 		CallWindowCallback (pWindow, EVENT_COMMAND, pControl->m_comboID, this->m_comboID);
-		return;
+		return true;
 	}
+	bool alright = false;
 	for (int i = 0; i < this->m_childrenCount; i++)
 	{
 		MenuBarTreeItem* pChild = &this->m_childrenArray[i];
 		if (pChild->m_isOpen)
 		{
 			// attempt to call:
-			WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent (pChild, pControl, pWindow);
+			alright |= WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent (pChild, pControl, pWindow);
+			//if (alright) return alright;
 		}
 		pChild->m_isOpen = false;
 	}
+	return alright;
 }
-void WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	Rectangle menu_bar_rect;
-	menu_bar_rect.left   = 2;
-	menu_bar_rect.top    = 2 + TITLE_BAR_HEIGHT;
-	menu_bar_rect.right  = pWindow->m_vbeData.m_width;
+	menu_bar_rect.left   = 4;
+	menu_bar_rect.top    = 4 + TITLE_BAR_HEIGHT;
+	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 4;
 	menu_bar_rect.bottom = menu_bar_rect.top + TITLE_BAR_HEIGHT;
 	
 	switch (eventType)
@@ -887,11 +906,11 @@ void WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			WidgetMenuBar_AddMenuBarItem (this, 0, 4, "Help");
 			WidgetMenuBar_AddMenuBarItem (this, 1, 5, "About");
 			WidgetMenuBar_AddMenuBarItem (this, 1, 6, "More");
-			//WidgetMenuBar_AddMenuBarItem (this, 6, 7, "Hi!");
-			//WidgetMenuBar_AddMenuBarItem (this, 6, 8, "Hello!");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 7, "Hello!");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 9, "TEST!");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 8, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 6, 7, "Hi!");
+			WidgetMenuBar_AddMenuBarItem (this, 6, 8, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 1, 9, "Hello!");
+			WidgetMenuBar_AddMenuBarItem (this, 1,10, "TEST!");
+			WidgetMenuBar_AddMenuBarItem (this, 1,11, "Hello!");
 			WidgetMenuBar_AddMenuBarItem (this, 2,20, "AAAAAAAAA!");
 			WidgetMenuBar_AddMenuBarItem (this, 3,21, "BBBBBBBBB!");
 			WidgetMenuBar_AddMenuBarItem (this, 3,22, "CCCCCCCCC!");
@@ -899,11 +918,19 @@ void WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			WidgetMenuBar_AddMenuBarItem (this, 4,24, "EEEEEEEEE!");
 			WidgetMenuBar_AddMenuBarItem (this, 4,25, "About!");
 			WidgetMenuBar_AddMenuBarItem (this, 2,26, "TEST1!");
-			WidgetMenuBar_AddMenuBarItem (this, 2,27, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this, 2,28, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this,26,27, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this,26,28, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this,28,29, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this,28,30, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this,29,31, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this,29,32, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this,32,34, "TEST2!");
+			WidgetMenuBar_AddMenuBarItem (this,32,33, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this,33,35, "TEST3!");
 			WidgetMenuBar_AddMenuBarItem (this, 1,36, "TEST1!");
 			WidgetMenuBar_AddMenuBarItem (this, 1,37, "TEST2!");
 			WidgetMenuBar_AddMenuBarItem (this, 1,38, "TEST3!");
+			WidgetMenuBar_AddMenuBarItem (this, 0,60, "Stands Alone");
 			//WidgetMenuBar_AddMenuBarItem (this, 2,11, "Hello!");
 			
 			break;
@@ -1012,13 +1039,32 @@ void WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			// Unopen all the controls. TODO
 			if (this->m_menuBarData.m_root.m_childrenArray)
 			{
-				WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(&this->m_menuBarData.m_root, this, pWindow);
+				bool check = WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(&this->m_menuBarData.m_root, this, pWindow);
+				
 				CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+				
+				return check;
 			}
 			break;
 		}
 	}
+	return false;//Fall through to other controls.
 }
+
+// Works on the control with the comboID of 'menuBarControlId'.
+// To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
+void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == menuBarControlId && pWindow->m_pControlArray[i].m_type == CONTROL_MENUBAR)
+		{
+			WidgetMenuBar_AddMenuBarItem (&pWindow->m_pControlArray[i], comboIdTo, comboIdAs, pText);
+			return;
+		}
+	}
+}
+
 #endif
 
 // Misc setters
@@ -1040,10 +1086,11 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText)
 
 // Basic controls
 #if 1
-void WidgetNone_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetNone_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	return false;
 }
-void WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1051,8 +1098,9 @@ void WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 			VidTextOut(this->m_text, this->m_rect.left, this->m_rect.top, this->m_parm1, this->m_parm2);
 			break;
 	}
+	return false;
 }
-void WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1060,8 +1108,9 @@ void WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			VidDrawText(this->m_text, this->m_rect, this->m_parm2, this->m_parm1, TRANSPARENT);
 			break;
 	}
+	return false;
 }
-void WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1069,8 +1118,9 @@ void WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 			RenderIcon(this->m_parm1, this->m_rect.left + (this->m_rect.right - this->m_rect.left - 32) / 2, this->m_rect.top + (this->m_rect.bottom - this->m_rect.top - 32) / 2);
 			break;
 	}
+	return false;
 }
-void WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1117,9 +1167,10 @@ void WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			break;
 		}
 	}
+	return false;
 }
 //for the top bar of the window.  Uses this->m_parm1 as the event type.
-void WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1167,8 +1218,9 @@ void WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			break;
 		}
 	}
+	return false;
 }
-void WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1205,12 +1257,15 @@ void WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			break;
 		}
 	}
+	return false;
 }
-void WidgetTextInput_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextInput_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	return false;
 }
-void WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	return false;
 }
 #endif
 

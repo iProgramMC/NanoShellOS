@@ -13,8 +13,8 @@
 void LaunchSystem()
 {
 	int errorCode = 0;
-	//Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
-	Task* pTask = KeStartTask(SystemMonitorEntry, 0, &errorCode);
+	Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
+	//Task* pTask = KeStartTask(SystemMonitorEntry, 0, &errorCode);
 	DebugLogMsg("Created System window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 void LaunchNotepad()
@@ -115,7 +115,7 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			Rectangle r;
 			
 			RECT(r, 0, 0, 0, 0);
-			//AddControl (pWindow, CONTROL_MENUBAR, r, NULL, LAUNCHER_MENUBAR, 0, 0);
+			AddControl (pWindow, CONTROL_MENUBAR, r, NULL, LAUNCHER_MENUBAR, 0, 0);
 			
 			
 			RECT(r, START_X, 20, 200, 20);

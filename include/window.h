@@ -88,6 +88,7 @@ enum {
 	//A horizontal scroll bar.
 	CONTROL_HSCROLLBAR,
 	//A menu bar attached to the top of a window.
+	//Adding more than one control is considered UB
 	CONTROL_MENUBAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
@@ -120,7 +121,7 @@ enum
 
 struct WindowStruct;
 struct ControlStruct;
-typedef void (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
+typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
 typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
 
 typedef struct
@@ -330,6 +331,12 @@ int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
  * Call the WindowCallback of a window and its controls.
  */
 int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
+
+/**
+ * Works on the control with the comboID of 'menuBarControlId'.
+ * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
+ */
+void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
 
 
 #endif//_WINDOW_H
