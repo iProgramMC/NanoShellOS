@@ -6,7 +6,12 @@
 ******************************************/
 
 #include <window.h>
+#include <widget.h>
 #include <video.h>
+#include <print.h>
+#include <console.h>
+#include <memory.h>
+#include <vfs.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -36,65 +41,130 @@
 
 enum
 {
-	CALL_NOTHING,
-	//Video Driver calls:
-	VID_GET_SCREEN_WIDTH,
-	VID_GET_SCREEN_HEIGHT,
-	VID_PLOT_PIXEL,
-	VID_FILL_SCREEN, //Actually fills the context, not the screen
-	VID_DRAW_H_LINE,
-	VID_DRAW_V_LINE,
-	VID_DRAW_LINE,
-	VID_SET_FONT,
-	VID_PLOT_CHAR,
-	VID_BLIT_IMAGE,
-	VID_TEXT_OUT,
-	VID_TEXT_OUT_INT,
-	VID_DRAW_TEXT,
-	VID_SHIFT_SCREEN,
-	VID_FILL_RECT,
-	VID_DRAW_RECT,
-	VID_FILL_RECT_H_GRADIENT,
-	VID_FILL_RECT_V_GRADIENT,
+	// System Calls V1.0
+		CALL_NOTHING,
+		//Video Driver calls:
+		VID_GET_SCREEN_WIDTH,
+		VID_GET_SCREEN_HEIGHT,
+		VID_PLOT_PIXEL,
+		VID_FILL_SCREEN, //Actually fills the context, not the screen
+		VID_DRAW_H_LINE,
+		VID_DRAW_V_LINE,
+		VID_DRAW_LINE,
+		VID_SET_FONT,
+		VID_PLOT_CHAR,
+		VID_BLIT_IMAGE,
+		VID_TEXT_OUT,
+		VID_TEXT_OUT_INT,
+		VID_DRAW_TEXT,
+		VID_SHIFT_SCREEN,
+		VID_FILL_RECT,
+		VID_DRAW_RECT,
+		VID_FILL_RECT_H_GRADIENT,
+		VID_FILL_RECT_V_GRADIENT,
+		
+		//Window Manager calls:
+		WIN_CREATE,
+		WIN_HANDLE_MESSAGES,
+		WIN_DEFAULT_PROC,
+		WIN_DESTROY,//don't use
+		WIN_MESSAGE_BOX,
+		WIN_ADD_CONTROL,
 	
-	//Window Manager calls:
-	WIN_CREATE,
-	WIN_HANDLE_MESSAGES,
-	WIN_DEFAULT_PROC,
-	WIN_DESTROY,
-	WIN_MESSAGE_BOX,
-	WIN_ADD_CONTROL,
+	// System Calls V1.1
+		WIN_REQUEST_REPAINT,
+		WIN_SET_LABEL_TEXT,
+		WIN_ADD_MENUBAR_ITEM,
+		WIN_SET_SCROLL_BAR_MIN,
+		WIN_SET_SCROLL_BAR_MAX,
+		WIN_SET_SCROLL_BAR_POS,
+		WIN_GET_SCROLL_BAR_POS,
+		WIN_ADD_ELEM_TO_LIST,
+		WIN_REM_ELEM_FROM_LIST,
+		WIN_GET_ELEM_STR_FROM_LIST,
+		WIN_CLEAR_LIST,
+		
+		CON_PUTSTRING,
+		CON_READCHAR,
+		CON_READSTR,
+		
+		MM_ALLOCATE_D,
+		MM_FREE,
+		MM_DEBUG_DUMP,
+		
+		FI_OPEN_D,
+		FI_CLOSE,
+		FI_READ,
+		FI_WRITE,
+		FI_TELL,
+		FI_TELLSIZE,
+		FI_SEEK,
 };
 
+void LogString(const char* pText)
+{
+	LogMsgNoCr("%s", pText);
+}
+
 void *WindowCall[] = {
-	NULL,
-	//Video Driver calls:
-	GetScreenSizeX,
-	GetScreenSizeY,
-	VidPlotPixel,
-	VidFillScreen,
-	VidDrawHLine,
-	VidDrawVLine,
-	VidDrawLine,
-	VidSetFont,
-	VidPlotChar,
-	VidBlitImage,
-	VidTextOut,
-	VidTextOutInternal,
-	VidDrawText,
-	VidShiftScreen,
-	VidFillRect,
-	VidDrawRect,
-	VidFillRectHGradient,
-	VidFillRectVGradient,
+	// System Calls V1.0
+		NULL,
+		//Video Driver calls:
+		GetScreenSizeX,
+		GetScreenSizeY,
+		VidPlotPixel,
+		VidFillScreen,
+		VidDrawHLine,
+		VidDrawVLine,
+		VidDrawLine,
+		VidSetFont,
+		VidPlotChar,
+		VidBlitImage,
+		VidTextOut,
+		VidTextOutInternal,
+		VidDrawText,
+		VidShiftScreen,
+		VidFillRect,
+		VidDrawRect,
+		VidFillRectHGradient,
+		VidFillRectVGradient,
+		
+		//Window Manager calls:
+		CreateWindow,
+		HandleMessages,
+		DefaultWindowProc,
+		DestroyWindow,
+		MessageBox,
+		AddControl,
 	
-	//Window Manager calls:
-	CreateWindow,
-	HandleMessages,
-	DefaultWindowProc,
-	DestroyWindow,
-	MessageBox,
-	AddControl,
+	// System Calls V1.1
+		RequestRepaint,
+		SetLabelText,
+		AddMenuBarItem,
+		SetScrollBarMin,
+		SetScrollBarMax,
+		SetScrollBarPos,
+		GetScrollBarPos,
+		AddElementToList,
+		RemoveElementFromList,
+		GetElementStringFromList,
+		ResetList,
+		
+		LogString,
+		CoGetChar,
+		CoGetString,
+		
+		MmAllocateD,
+		MmFree,
+		MmDebugDump,
+		
+		FiOpenD,
+		FiClose,
+		FiRead,
+		FiWrite,
+		FiTell,
+		FiTellSize,
+		FiSeek
 };
 
 void UserCallStuffNotSupportedC(void)

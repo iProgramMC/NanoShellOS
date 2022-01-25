@@ -30,6 +30,11 @@ void SetScrollBarMax (Window *pWindow, int comboID, int max);
 void SetScrollBarPos (Window *pWindow, int comboID, int pos);
 
 /**
+ * Gets the current progress value for a SCROLLBAR control with a certain comboID.
+ */
+int GetScrollBarPos (Window *pWindow, int comboID);
+
+/**
  * Adds an element to a ListView component with a certain comboID.
  */
 void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon);
@@ -53,5 +58,11 @@ void ResetList (Window* pWindow, int comboID);
  * Changes the text of any component with text with a certain comboID.
  */
 void SetLabelText (Window *pWindow, int comboID, const char* pText);
+
+/**
+ * Works on the control with the comboID of 'menuBarControlId'.
+ * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
+ */
+void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
 
 #endif//_WIDGET_H

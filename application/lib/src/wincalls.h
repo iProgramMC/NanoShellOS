@@ -1,4 +1,6 @@
 
+// System Calls V1
+#if WCALL_VERSION >= 10
 // Video Call Functions:
 CALL (GetScreenSizeX, VID_GET_SCREEN_WIDTH, int)
 	RARGS()
@@ -79,3 +81,90 @@ CALL_END
 CALL (HandleMessages, WIN_HANDLE_MESSAGES, bool, Window* pWindow)
 	RARGS(pWindow)
 CALL_END
+#endif
+
+// System Calls V1.1
+#if WCALL_VERSION >= 11
+
+// Window stuff
+CALL (RequestRepaint, WIN_REQUEST_REPAINT, void, Window* pWindow)
+	SARGS(pWindow)
+CALL_END
+CALL (SetLabelText, WIN_REQUEST_REPAINT, void, Window* pWindow, int comboID, const char* pText)
+	SARGS(pWindow, comboID, pText)
+CALL_END
+CALL (AddMenuBarItem, WIN_REQUEST_REPAINT, void, Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
+	SARGS(pWindow, menuBarControlId, comboIdTo, comboIdAs, pText)
+CALL_END
+CALL (SetScrollBarMin, WIN_SET_SCROLL_BAR_MIN, void, Window *pWindow, int comboID, int min)
+	SARGS(pWindow, comboID, min)
+CALL_END
+CALL (SetScrollBarMax, WIN_SET_SCROLL_BAR_MAX, void, Window *pWindow, int comboID, int max)
+	SARGS(pWindow, comboID, max)
+CALL_END
+CALL (SetScrollBarPos, WIN_SET_SCROLL_BAR_POS, void, Window *pWindow, int comboID, int pos)
+	SARGS(pWindow, comboID, pos)
+CALL_END
+CALL (GetScrollBarPos, WIN_GET_SCROLL_BAR_POS, int, Window *pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL (AddElementToList, WIN_ADD_ELEM_TO_LIST, void, Window* pWindow, int comboID, const char* pText, int optionalIcon)
+	SARGS(pWindow, comboID, pText, optionalIcon)
+CALL_END
+CALL (RemoveElementFromList, WIN_REM_ELEM_FROM_LIST, void, Window* pWindow, int comboID, int elemIndex)
+	SARGS(pWindow, comboID, elemIndex)
+CALL_END
+CALL (GetElementStringFromList, WIN_GET_ELEM_STR_FROM_LIST, const char*, Window* pWindow, int comboID, int elemIndex)
+	RARGS(pWindow, comboID, elemIndex)
+CALL_END
+CALL (ResetList, WIN_CLEAR_LIST, void, Window* pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+
+// Console I/O
+CALL (PutString, CON_PUTSTRING, void, const char* pText)
+	SARGS(pText)
+CALL_END
+CALL (ReadChar, CON_READCHAR, char, void)
+	RARGS()
+CALL_END
+CALL (ReadString, CON_READSTR, void, char* pOutBuffer, int maxSize)
+	SARGS(pOutBuffer, maxSize)
+CALL_END
+
+// Memory allocation
+CALL (AllocateDebug, MM_ALLOCATE_D, void*, size_t size, const char* callerFile, int callerLine)
+	RARGS(size, callerFile, callerLine)
+CALL_END
+CALL (Free, MM_FREE, void, void* ptr)
+	SARGS(ptr)
+CALL_END
+CALL (MmDebugDump, MM_DEBUG_DUMP, void, void)
+	SARGS()
+CALL_END
+
+// File I/O
+CALL (FiOpenDebug, FI_OPEN_D, int /* file descriptor or errcode if negative */, const char* pFileName, int oFlag, const char* pSrcFile, int nSrcLine)
+	RARGS(pFileName, oFlag, pSrcFile, nSrcLine)
+CALL_END
+CALL (FiClose, FI_CLOSE, int /* err code */, int fd)
+	RARGS(fd)
+CALL_END
+CALL (FiRead, FI_READ, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+	RARGS(fd, pBuf, nBytes)
+CALL_END
+CALL (FiWrite, FI_WRITE, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+	RARGS(fd, pBuf, nBytes)
+CALL_END
+CALL (FiTell, FI_TELL, int /* num bytes into file */, int fd)
+	RARGS(fd)
+CALL_END
+CALL (FiTellSize, FI_TELLSIZE, int /* num bytes into file */, int fd)
+	RARGS(fd)
+CALL_END
+CALL (FiSeek, FI_SEEK, int /* err code */, int fd, int offset, int whence)
+	RARGS(fd, offset, whence)
+CALL_END
+
+
+#endif

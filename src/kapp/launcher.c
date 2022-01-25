@@ -10,6 +10,12 @@
 #include <vfs.h>
 #include <elf.h>
 
+void LaunchVersion()
+{
+	int errorCode = 0;
+	Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
+	DebugLogMsg("Created version window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
+}
 void LaunchSystem()
 {
 	int errorCode = 0;
@@ -27,7 +33,8 @@ void LaunchNotepad()
 void LaunchPaint()
 {
 	int errorCode = 0;
-	Task* pTask = KeStartTask(PrgPaintTask, 0, &errorCode);
+	//Task* pTask = KeStartTask(PrgPaintTask, 0, &errorCode);
+	Task* pTask = KeStartTask(ControlEntry, 0, &errorCode);
 	DebugLogMsg("Created Paint window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 extern FileNode *g_pCwdNode;
@@ -109,7 +116,7 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 		case EVENT_CREATE: {
 			#define START_X 20
 			#define STEXT_X 60
-			#define START_Y 30
+			#define START_Y 40
 			#define DIST_ITEMS 36
 			// Add a label welcoming the user to NanoShell.
 			Rectangle r;
@@ -117,8 +124,42 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			RECT(r, 0, 0, 0, 0);
 			AddControl (pWindow, CONTROL_MENUBAR, r, NULL, LAUNCHER_MENUBAR, 0, 0);
 			
+			// Add some testing elements to the menubar.  A comboID of zero means you're adding to the root.
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0, 1, "Help");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1, 2, "About Launcher...");
+			/*
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0, 2, "Menu");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0, 3, "Bar");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0, 4, "Help");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1, 5, "About");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1, 6, "More");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 6, 7, "Hi!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 6, 8, "Hello!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1, 9, "Hello!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1,10, "TEST!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1,11, "Hello!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 2,20, "AAAAAAAAA!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 3,21, "BBBBBBBBB!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 3,22, "CCCCCCCCC!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 4,23, "DDDDDDDDD!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 4,24, "EEEEEEEEE!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 4,25, "About!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 2,26, "TEST1!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,26,27, "TEST2!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,26,28, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,28,29, "TEST2!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,28,30, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,29,31, "TEST2!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,29,32, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,32,34, "TEST2!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,32,33, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,33,35, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1,36, "TEST1!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1,37, "TEST2!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1,38, "TEST3!");
+			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0,60, "Stands Alone");*/
 			
-			RECT(r, START_X, 20, 200, 20);
+			RECT(r, START_X, 30, 200, 20);
 			AddControl (pWindow, CONTROL_TEXT, r, "Welcome to NanoShell!", LAUNCHER_LABEL1, 0, TRANSPARENT);
 			
 			// Add the system icon.
@@ -140,14 +181,14 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON3, ICON_KEYBOARD2, 0);
 			
 			RECT(r, STEXT_X, START_Y+2*DIST_ITEMS, 200, 32);
-			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Text Shell", LAUNCHER_NOTEPAD, 0, 0);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Text shell", LAUNCHER_NOTEPAD, 0, 0);
 			
 			// Add the paint icon.
 			RECT(r, START_X, START_Y+3*DIST_ITEMS, 32, 32);
-			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON4, ICON_DRAW, 0);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON4, ICON_ERROR, 0);
 			
 			RECT(r, STEXT_X, START_Y+3*DIST_ITEMS, 200, 32);
-			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Scribble!", LAUNCHER_PAINT, 0, 0);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Control panel", LAUNCHER_PAINT, 0, 0);
 			
 			// Add the shutdown icon.
 			RECT(r, START_X, START_Y+5*DIST_ITEMS, 32, 32);
@@ -199,6 +240,16 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 				case LAUNCHER_SHUTDOWN:
 					ConfirmShutdown(pWindow);
 					break;
+				case LAUNCHER_MENUBAR:
+				{
+					switch (parm2)
+					{
+						case 2: 
+							LaunchVersion ();
+							break;
+					}
+					break;
+				}
 				/*{
 					//The only button:
 					int randomX = GetRandom() % 320;
@@ -221,7 +272,7 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 void LauncherEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = 400, wh = 260, sw = GetScreenSizeX(), sh = GetScreenSizeY();
+	int ww = 400, wh = 270, sw = GetScreenSizeX(), sh = GetScreenSizeY();
 	int wx = (sw - ww) / 2, wy = (sh - wh) / 2;
 	
 	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, LauncherProgramProc, 0);//WF_NOCLOSE);

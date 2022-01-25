@@ -760,6 +760,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	//VidSetFont(FONT_TAMSYN_REGULAR);
 	//VidSetFont(FONT_FAMISANS);
 	//VidSetFont(FONT_GLCD);
+	//VidSetFont(FONT_BIGTEST);
 	
 	WindowCallInitialize ();
 	

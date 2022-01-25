@@ -20,7 +20,7 @@
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
-#define TITLE_BAR_HEIGHT 11
+#define TITLE_BAR_HEIGHT 11//18
 
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
@@ -331,12 +331,5 @@ int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
  * Call the WindowCallback of a window and its controls.
  */
 int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
-
-/**
- * Works on the control with the comboID of 'menuBarControlId'.
- * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
- */
-void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
-
 
 #endif//_WINDOW_H

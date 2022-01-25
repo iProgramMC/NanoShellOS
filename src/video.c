@@ -560,6 +560,10 @@ void VidFillScreen(unsigned color)
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 {
 	//basic clipping:
+	if (left >= GetScreenSizeX()) return;
+	if (top >= GetScreenSizeY()) return;
+	if (right < 0) return;
+	if (bottom < 0) return;
 	if (left < 0) left = 0;
 	if (top < 0) top = 0;
 	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
@@ -834,8 +838,26 @@ const unsigned char* g_fontIDToData[] = {
 	g_FamiSans8x8,
 	g_BasicFontData,
 	g_GlcdData,
+	g_TestFont16x16,
 };
 const unsigned char* g_pCurrentFont = NULL;
+
+__attribute__((always_inline))
+static inline int GetCharWidth(char c)
+{
+	if (g_pCurrentFont[2] == FONTTYPE_SMALL)
+	{
+		return g_pCurrentFont[3 + 256 * g_pCurrentFont[1] + c];
+	}
+	else if (g_pCurrentFont[2] == FONTTYPE_BIG)
+	{
+		if (c > '~' || c < ' ') c = '?';
+		return g_pCurrentFont[3 + 12*2 * (128-32) + c-32]+1;
+	}
+	
+	return g_pCurrentFont[0] + (g_pCurrentFont[2] == FONTTYPE_GLCD);
+}
+
 void VidSetFont(unsigned fontType)
 {
 	if (fontType >= FONT_LAST) 
@@ -854,7 +876,26 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 	}
 	int width = g_pCurrentFont[0], height = g_pCurrentFont[1];
 	const unsigned char* test = g_pCurrentFont + 3;
-	if (g_pCurrentFont[2] == 2)
+	if (g_pCurrentFont[2] == FONTTYPE_BIG)
+	{
+		if (c > '~' || c < ' ') c = '?';
+		const unsigned char* testa = (const unsigned char*)(g_pCurrentFont + 5);
+		for (int y = 0; y < height; y++)
+		{
+			int to = ((c-' ') * 12 + y)*2;
+			unsigned short test1 = testa[to+1]|testa[to]<<8;
+			
+			for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
+			{
+				if (test1 & bitmask)
+					VidPlotPixelInline(ox + x, oy + y, colorFg);
+				else if (colorBg != TRANSPARENT)
+					VidPlotPixelInline(ox + x, oy + y, colorBg);
+			}
+		}
+		return;
+	}
+	if (g_pCurrentFont[2] == FONTTYPE_GLCD)
 	{
 		int x = 0;
 		for (x = 0; x < width; x++)
@@ -867,11 +908,11 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 					VidPlotPixelInline(ox + x, oy + y, colorBg);
 			}
 		}
-		for (int y = 0; y < height; y++)
-		{
-			if (colorBg != TRANSPARENT)
+		if (colorBg != TRANSPARENT)
+			for (int y = 0; y < height; y++)
+			{
 				VidPlotPixelInline(ox + x, oy + y, colorBg);
-		}
+			}
 		
 		return;
 	}
@@ -892,10 +933,7 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx)
 {
 	int x = ox, y = oy;
-	int lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
-	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
-	if (g_pCurrentFont[2] == 2)
-		charWidth++;
+	int lineHeight = g_pCurrentFont[1];
 	
 	int width = 0;
 	int cwidth = 0, height = lineHeight;
@@ -915,8 +953,7 @@ void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned co
 		}
 		else
 		{
-			int cw = charWidth;
-			if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + c];
+			int cw = GetCharWidth(c);
 			
 			if (!doNotActuallyDraw)
 				VidPlotChar(c, x, y, colorFg, colorBg);
@@ -951,8 +988,7 @@ int CountLinesInText (const char* pText)
 
 int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 {
-	int w = 0, lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
-	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	int w = 0;
 	while (1)
 	{
 		if (*pText == '\n' || *pText == '\0')
@@ -960,8 +996,7 @@ int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 			*pTextOut = pText;
 			return w;
 		}
-		int cw = charWidth;
-		if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *pText];
+		int cw = GetCharWidth(*pText);
 		w += cw;
 		pText++;
 	}
@@ -969,8 +1004,7 @@ int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 
 int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
 {
-	int w = 0, lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
-	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	int w = 0;
 	while (1)
 	{
 		if (*pText == '\n' || *pText == '\0' || *pText == ' ')
@@ -978,8 +1012,7 @@ int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
 			*pTextOut = pText;
 			return w;
 		}
-		int cw = charWidth;
-		if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *pText];
+		int cw = GetCharWidth(*pText);
 		w += cw;
 		pText++;
 	}
@@ -988,8 +1021,7 @@ int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
 {
 	#warning "TODO: Add Word Wrapping"
-	int lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
-	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	int lineHeight = g_pCurrentFont[1];
 	const char* text = pText, *text2 = pText;
 	int lines = CountLinesInText(pText);
 	int startY = rect.top;
@@ -1022,8 +1054,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				while (text != text2)
 				{
 					VidPlotChar(*text, x, y, colorFg, colorBg);
-					int cw = charWidth;
-					if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *text];
+					int cw = GetCharWidth(*text);
 					x += cw;
 					text++;
 				}
@@ -1034,8 +1065,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				}
 				if (*text2 == ' ')
 				{
-					int cw = charWidth;
-					if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + ' '];
+					int cw = GetCharWidth(' ');
 					x += cw;
 				}
 				if (*text2 == '\0') return;
@@ -1056,8 +1086,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 		while (text != text2)
 		{
 			VidPlotChar(*text, startX, startY, colorFg, colorBg);
-			int cw = charWidth;
-			if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *text];
+			int cw = GetCharWidth(*text);
 			startX += cw;
 			text++;
 		}

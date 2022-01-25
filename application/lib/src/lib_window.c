@@ -50,4 +50,9 @@ void VidDrawRectangle(unsigned color, Rectangle rect)
 	VidDrawRect(color, rect.left, rect.top, rect.right, rect.bottom);
 }
 
+void *Allocate(int size)
+{
+	return AllocateDebug(size, __FILE__, __LINE__);//TODO FIXME: AllocateDebug should get the actual caller file/line
+}
+
 // End of File

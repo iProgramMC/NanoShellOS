@@ -898,47 +898,13 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		{
 			// Initialize the root.
 			WidgetMenuBar_InitializeRoot(this);
-			
-			// Add some testing elements to the menubar.  A comboID of zero means you're adding to the root.
-			WidgetMenuBar_AddMenuBarItem (this, 0, 1, "Widget");
-			WidgetMenuBar_AddMenuBarItem (this, 0, 2, "Menu");
-			WidgetMenuBar_AddMenuBarItem (this, 0, 3, "Bar");
-			WidgetMenuBar_AddMenuBarItem (this, 0, 4, "Help");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 5, "About");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 6, "More");
-			WidgetMenuBar_AddMenuBarItem (this, 6, 7, "Hi!");
-			WidgetMenuBar_AddMenuBarItem (this, 6, 8, "Hello!");
-			WidgetMenuBar_AddMenuBarItem (this, 1, 9, "Hello!");
-			WidgetMenuBar_AddMenuBarItem (this, 1,10, "TEST!");
-			WidgetMenuBar_AddMenuBarItem (this, 1,11, "Hello!");
-			WidgetMenuBar_AddMenuBarItem (this, 2,20, "AAAAAAAAA!");
-			WidgetMenuBar_AddMenuBarItem (this, 3,21, "BBBBBBBBB!");
-			WidgetMenuBar_AddMenuBarItem (this, 3,22, "CCCCCCCCC!");
-			WidgetMenuBar_AddMenuBarItem (this, 4,23, "DDDDDDDDD!");
-			WidgetMenuBar_AddMenuBarItem (this, 4,24, "EEEEEEEEE!");
-			WidgetMenuBar_AddMenuBarItem (this, 4,25, "About!");
-			WidgetMenuBar_AddMenuBarItem (this, 2,26, "TEST1!");
-			WidgetMenuBar_AddMenuBarItem (this,26,27, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this,26,28, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this,28,29, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this,28,30, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this,29,31, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this,29,32, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this,32,34, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this,32,33, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this,33,35, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this, 1,36, "TEST1!");
-			WidgetMenuBar_AddMenuBarItem (this, 1,37, "TEST2!");
-			WidgetMenuBar_AddMenuBarItem (this, 1,38, "TEST3!");
-			WidgetMenuBar_AddMenuBarItem (this, 0,60, "Stands Alone");
-			//WidgetMenuBar_AddMenuBarItem (this, 2,11, "Hello!");
-			
 			break;
 		}
 		case EVENT_PAINT:
 		{
 			// Render the root.  If any children are opened, draw them.
-			VidFillRectangle (0x00FF00, menu_bar_rect);
+			VidFillRectangle (BUTTONMIDD, menu_bar_rect);
+			VidDrawHLine (0, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom);
 			
 			if (this->m_menuBarData.m_root.m_childrenArray)
 			{
@@ -950,7 +916,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					const char* pText = pChild->m_text;
 					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
 					
-					width += 20;
+					width += 10;
 					
 					if (pChild->m_isOpen)
 					{
@@ -962,13 +928,13 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						
 						VidFillRectangle (0x7F, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 10, menu_bar_rect.top + 2, 0xFFFFFF, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0xFFFFFF, TRANSPARENT);
 						//render the child menu as well:
 						
 						WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);
 					}
 					else
-						VidTextOut (pText, menu_bar_rect.left + current_x + 10, menu_bar_rect.top + 2, 0, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0, TRANSPARENT);
 					
 					current_x += width;
 				}
@@ -991,7 +957,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					const char* pText = pChild->m_text;
 					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
 					
-					width += 20;
+					width += 10;
 					
 					Rectangle rect;
 					rect.left   = menu_bar_rect.left + current_x;
