@@ -184,6 +184,7 @@ void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned co
  */
 #define TEXTSTYLE_HCENTERED 1
 #define TEXTSTYLE_VCENTERED 2
+#define TEXTSTYLE_WORDWRAPPED 4
 //TODO: Add word wrap
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg);
 

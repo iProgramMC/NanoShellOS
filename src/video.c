@@ -967,6 +967,24 @@ int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 	}
 }
 
+int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
+{
+	int w = 0, lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
+	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	while (1)
+	{
+		if (*pText == '\n' || *pText == '\0' || *pText == ' ')
+		{
+			*pTextOut = pText;
+			return w;
+		}
+		int cw = charWidth;
+		if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *pText];
+		w += cw;
+		pText++;
+	}
+}
+
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
 {
 	#warning "TODO: Add Word Wrapping"
@@ -978,6 +996,53 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 	
 	if (drawFlags & TEXTSTYLE_VCENTERED)
 		startY += ((rect.bottom - rect.top - lines * lineHeight) / 2);
+	
+	if (drawFlags & TEXTSTYLE_WORDWRAPPED)
+	{
+		if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED))
+		{
+			//draw some red text to attract the programmer's attention
+			VidTextOut ("Can't do everything at once! >:( -- it's still a todo.  Just centering for now.", rect.left, rect.top, 0xFF0000, TRANSPARENT);
+		}
+		else
+		{
+			int x = rect.left, y = rect.top;
+			while (1)
+			{
+				
+				int widthWord = MeasureTextUntilSpace (text, &text2);
+				//can fit?
+				if (x + widthWord > rect.right)
+				{
+					//nope. Line wrap
+					y += lineHeight;
+					x = rect.left;
+				}
+				
+				while (text != text2)
+				{
+					VidPlotChar(*text, x, y, colorFg, colorBg);
+					int cw = charWidth;
+					if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + *text];
+					x += cw;
+					text++;
+				}
+				if (*text2 == '\n')
+				{
+					x = rect.left;
+					y += lineHeight;
+				}
+				if (*text2 == ' ')
+				{
+					int cw = charWidth;
+					if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + ' '];
+					x += cw;
+				}
+				if (*text2 == '\0') return;
+				text = text2 + 1;
+			}
+		}
+	}
 	
 	for (int i = 0; i < lines; i++)
 	{

@@ -23,10 +23,10 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 			RECT(r, 0, TITLE_BAR_HEIGHT+20, 320, 50);
 			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, ICON_NANOSHELL, 0);
 			
-			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 50);
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp\nHello, this is a test", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 10);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
 			
-			RECT(r, (320-70)/2, TITLE_BAR_HEIGHT+135, 70, 20);
+			RECT(r, (320-70)/2, TITLE_BAR_HEIGHT+85, 70, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "OK", VERSION_BUTTON_OK_COMBO, 0, 0);
 			
 			break;
@@ -56,7 +56,7 @@ void VersionProgramTask (__attribute__((unused)) int argument)
 	}
 	UseHeap (&local_heap);
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 160 + TITLE_BAR_HEIGHT, VersionProgramProc, 0);
+	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 115 + TITLE_BAR_HEIGHT, VersionProgramProc, 0);
 	
 	if (!pWindow)
 		DebugLogMsg("Hey, the window couldn't be created");
