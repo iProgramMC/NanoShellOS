@@ -55,6 +55,43 @@ void SetupExceptionInterrupt (int intNum, void* isrHandler)
 	pEntry->selector = KECODESEG;
 }
 
+void PlaySound (uint32_t frequency)
+{
+	uint32_t divisor; uint8_t tmp;
+	
+	// set the PIT to the desired frequency:
+	divisor = 1193182 / frequency;
+	
+	WritePort (0x43, 0xB6);
+	WritePort (0x42, (uint8_t)(divisor));
+	WritePort (0x42, (uint8_t)(divisor>>8));
+	
+	// And play the sound
+	tmp = ReadPort (0x61);
+	if (tmp != (tmp | 3))
+		WritePort (0x61, tmp | 3);
+}
+void StopSound (void)
+{
+	WritePort (0x61, ReadPort (0x61) & 0xFC);
+}
+
+void WaitMS (int ms)
+{
+	int tickCountToStop = GetTickCount() + ms;
+	while (GetTickCount() < tickCountToStop)
+	{
+		KeTaskDone();
+	}
+}
+
+void PerformBeep()
+{
+	PlaySound(600);
+	WaitMS   (50);
+	StopSound();
+}
+
 /**
  * Exception handlers.  They cause a bugcheck when we get 'em.
  */

@@ -90,6 +90,8 @@ enum {
 	//A menu bar attached to the top of a window.
 	//Adding more than one control is considered UB
 	CONTROL_MENUBAR,
+	//A text control printing big text (>127 chars)
+	CONTROL_TEXTHUGE,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -132,6 +134,9 @@ typedef struct
 ListItem;
 
 #define LIST_ITEM_HEIGHT 16
+//#undef  LIST_ITEM_HEIGHT
+//#define LIST_ITEM_WIDTH  90
+//#define LIST_ITEM_HEIGHT 70
 
 typedef struct
 {
@@ -304,6 +309,7 @@ void DestroyWindow (Window* pWindow);
  * Requests a safe re-paint of the window from the window manager.
  */
 void RequestRepaint (Window* pWindow);
+void RequestRepaintNew (Window* pWindow);
 
 /**
  * Displays a modal dialog box that contains a system icon, a set of buttons, and 

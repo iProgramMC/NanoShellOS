@@ -189,6 +189,14 @@ void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, u
 void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx);
 
 /**
+ * Makes the text fit in a rectangle of `xSize` width and `ySize` height,
+ * and puts it in pTextOut.
+ * Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
+ * Returns the y height attained.
+ */
+int WrapText(char *pTextOut, const char* pTextToWrap, int xSize);
+
+/**
  * Draws text inside a rectangle with the specified flags.
  */
 #define TEXTSTYLE_HCENTERED 1

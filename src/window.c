@@ -1173,8 +1173,12 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	}
 	
 	int szX, szY;
+	
+	char* test = MmAllocate(strlen(pText)+5);
+	WrapText(test, pText, GetScreenWidth() * 2 / 3);
+	
 	// Measure the pText text.
-	VidTextOutInternal (pText, 0, 0, 0, 0, true, &szX, &szY);
+	VidTextOutInternal (test, 0, 0, 0, 0, true, &szX, &szY);
 	
 	szY += 12;
 	
@@ -1215,7 +1219,10 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	rect.top    = 20;
 	rect.right  = wSzX - 20;
 	rect.bottom = wSzY - buttonHeight - 20;
-	AddControl (pBox, CONTROL_TEXTCENTER, rect, pText, 0x10000, 0, TEXTSTYLE_VCENTERED);
+	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, 0, TEXTSTYLE_VCENTERED);
+	SetHugeLabelText(pBox, 0x10000, test);
+	
+	MmFree(test);
 	
 	if (iconAvailable)
 	{
@@ -1612,8 +1619,16 @@ void PaintWindowBorder(Window* pWindow)
 }
 void PaintWindowBackgroundAndBorder(Window* pWindow)
 {
-	VidFillScreen(TRANSPARENT);
+	//VidFillScreen(TRANSPARENT);
 	PaintWindowBorder(pWindow);
+}
+
+void RequestRepaintNew (Window* pWindow)
+{
+	//paint the window background:
+	PaintWindowBackgroundAndBorder (pWindow);
+	
+	CallWindowCallbackAndControls  (pWindow, EVENT_PAINT, 0, 0);
 }
 bool IsEventDestinedForControlsToo(int type)
 {

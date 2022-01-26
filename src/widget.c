@@ -890,7 +890,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 	menu_bar_rect.left   = 4;
 	menu_bar_rect.top    = 4 + TITLE_BAR_HEIGHT;
 	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 4;
-	menu_bar_rect.bottom = menu_bar_rect.top + TITLE_BAR_HEIGHT;
+	menu_bar_rect.bottom = menu_bar_rect.top + TITLE_BAR_HEIGHT + 3;
 	
 	switch (eventType)
 	{
@@ -923,8 +923,8 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						Rectangle rect;
 						rect.left   = menu_bar_rect.left + current_x;
 						rect.right  = menu_bar_rect.left + current_x + width;
-						rect.top    = menu_bar_rect.top  + 2;
-						rect.bottom = menu_bar_rect.bottom;
+						rect.top    = menu_bar_rect.top  + 1;
+						rect.bottom = menu_bar_rect.bottom - 2;
 						
 						VidFillRectangle (0x7F, rect);
 						
@@ -996,7 +996,8 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					if (needsUpdate) break;
 				}
 				if (needsUpdate)
-					CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+					//CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+					RequestRepaintNew(pWindow);
 			}
 			break;
 		}
@@ -1076,6 +1077,44 @@ bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
+bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_CREATE:
+			this->m_dataPtr = NULL;
+			break;
+		case EVENT_PAINT:
+			if (this->m_dataPtr)
+				VidDrawText((const char*)this->m_dataPtr, this->m_rect, this->m_parm2, this->m_parm1, TRANSPARENT);
+			break;
+		case EVENT_DESTROY:
+			if (this->m_dataPtr)
+				MmFree(this->m_dataPtr);
+			this->m_dataPtr = NULL;
+			break;
+	}
+	return false;
+}
+void SetHugeLabelText (Window *pWindow, int comboID, const char* pText)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			//strcpy(pWindow->m_pControlArray[i].m_text, pText);
+			char* ptr = (char*)pWindow->m_pControlArray[i].m_dataPtr;
+			if (ptr)
+				MmFree(ptr);
+			ptr = MmAllocate(strlen(pText)+1);
+			pWindow->m_pControlArray[i].m_dataPtr = ptr;
+			strcpy (ptr, pText);
+			
+			return;
+		}
+	}
+}
+
 bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -1249,6 +1288,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetVScrollBar_OnEvent,
 	WidgetHScrollBar_OnEvent,
 	WidgetMenuBar_OnEvent,
+	WidgetTextHuge_OnEvent,
 	NULL
 };
 WidgetEventHandler GetWidgetOnEventFunction (int type)

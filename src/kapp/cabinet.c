@@ -19,13 +19,25 @@ enum
 {
 	ZERO,
 	MAIN_LISTVIEW,
-	MAIN_PARENTDIR,
+	MAIN_MENU_BAR,
+};
+enum
+{
+	                     MENU$=0,
+	//  +-------------------+-------------------+
+	//  |                   |                   |
+	MENU$FILE,          MENU$VIEW,          MENU$HELP,
+	//  |                   |                   |
+	//  v                   v                   v
+	MENU$FILE$ROOT, MENU$VIEW$REFRESH,   MENU$HELP$ABOUT,
+	MENU$FILE$EXIT, MENU$VIEW$CHVWMOD,
+	
 };
 
 void UpdateDirectoryListing (Window* pWindow)
 {
 	ResetList        (pWindow, MAIN_LISTVIEW);
-	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT16);
+	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
 	DirEnt* pEnt = NULL;
@@ -41,18 +53,18 @@ void UpdateDirectoryListing (Window* pWindow)
 		}
 		else
 		{
-			IconType icon = ICON_FILE16;
+			IconType icon = ICON_FILE;
 			if (pNode->m_type & FILE_TYPE_DIRECTORY)
 			{
-				icon = ICON_FOLDER16_CLOSED;
+				icon = ICON_FOLDER;
 			}
 			else if (EndsWith (pNode->m_name, ".nse"))
 			{
-				icon = ICON_EXECUTE_FILE16;
+				icon = ICON_EXECUTE_FILE;
 			}
 			else if (EndsWith (pNode->m_name, ".txt"))
 			{
-				icon = ICON_TEXT_FILE16;
+				icon = ICON_TEXT_FILE;
 			}
 			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, icon);
 			i++;
@@ -134,7 +146,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	{
 		case EVENT_PAINT:
 		{
-			VidTextOut (g_cabinetCWD, 8, 8 + TITLE_BAR_HEIGHT, 0, TRANSPARENT);
+			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2, 0, TRANSPARENT);
 			break;
 		}
 		case EVENT_COMMAND:
@@ -209,6 +221,30 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					MessageBox(pWindow, buffer, pWindow->m_title, ICON_ERROR << 16 | MB_OK);
 				}
 			}
+			else if (parm1 == MAIN_MENU_BAR)
+			{
+				switch (parm2)
+				{
+					case MENU$FILE$EXIT:
+						//Exit.
+						DestroyWindow (pWindow);
+						break;
+					case MENU$FILE$ROOT:
+						strcpy (g_cabinetCWD, "/");
+						UpdateDirectoryListing(pWindow);
+						break;
+					case MENU$VIEW$REFRESH:
+						UpdateDirectoryListing(pWindow);
+						break;
+					case MENU$VIEW$CHVWMOD:
+						//TODO
+						//MessageBox(pWindow, "Not Implemented!", "File Cabinet", MB_OK|ICON_HELP<<16);
+						break;
+					case MENU$HELP$ABOUT:
+						LaunchVersion();
+						break;
+				}
+			}
 			break;
 		}
 		case EVENT_CREATE:
@@ -226,6 +262,27 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			);
 			
 			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, MAIN_LISTVIEW, 0, 0);
+			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
+			
+			// Initialize the menu-bar
+			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$FILE, "File");
+			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$VIEW, "View");
+			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$HELP, "Help");
+			
+			// File:
+			{
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$ROOT, "Back to root");
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$EXIT, "Exit");
+			}
+			// View:
+			{
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$VIEW, MENU$VIEW$REFRESH, "Refresh");
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$VIEW, MENU$VIEW$CHVWMOD, "Change list view mode");
+			}
+			// Help:
+			{
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$HELP, MENU$HELP$ABOUT, "About File Cabinet");
+			}
 			
 			strcpy (g_cabinetCWD, "/");
 			

@@ -566,6 +566,8 @@ void FatPopulateRootDir (FatFileSystem* pFileSystem, FatDirectory* pDirectory)
 
 uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* pEnd, FatDirEntry*pDirEnt)
 {
+	if (pEnd == pStart) return NULL;
+	
 	uint8_t firstByte = pStart[0];
 	uint8_t *entry = pStart;
     if (firstByte == 0x00 || firstByte == 0xE5)
@@ -585,7 +587,7 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
 			LogMsg("FatReadDirEntry: LFN -- Need to load more I guess?");
             return NULL;
         }
-		if (LFNCount > 8) break;
+		//if (LFNCount > 8) break;
     }
     if (LFNCount > 0)
 	{
@@ -593,23 +595,23 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
     }
     else
 	{
-        // There's no long file name.
-        // Trim up the short filename.
-        memcpy(pDirEnt->m_pName, entry, 11);
-        pDirEnt->m_pName[11] = 0;
+		// There's no long file name.
+		// Trim up the short filename.
+		memcpy(pDirEnt->m_pName, entry, 11);
+		pDirEnt->m_pName[11] = 0;
 		
-        char extension[4];
-        memcpy(extension, pDirEnt->m_pName + 8, 3);
-        extension[3] = 0;
-        FatTrimSpaces(extension);
-
-        pDirEnt->m_pName[8] = 0;
-        FatTrimSpaces(pDirEnt->m_pName);
-
-        if (strlen(extension) > 0) {
+		char extension[4];
+		memcpy(extension, pDirEnt->m_pName + 8, 3);
+		extension[3] = 0;
+		FatTrimSpaces(extension);
+	
+		pDirEnt->m_pName[8] = 0;
+		FatTrimSpaces(pDirEnt->m_pName);
+	
+		if (strlen(extension) > 0) {
 			strcat (pDirEnt->m_pName, ".");
 			strcat (pDirEnt->m_pName, extension);
-        }
+		}
 		
 		int len = strlen(pDirEnt->m_pName);
 		for (int i = 0; i < len; i++)
@@ -623,6 +625,11 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
     uint16_t first_cluster_low  = FatGetU16(entry, 26);
     pDirEnt->m_firstCluster     = first_cluster_high << 16 | first_cluster_low;
     pDirEnt->m_fileSize         = FatGetU32(entry, 28);
+	
+	//char debug[40];
+	//sprintf(debug, "+%d",  pDirEnt->m_firstCluster);
+	//strcat (pDirEnt->m_pName, debug);
+		
     return entry + 32;
 }
 
@@ -672,7 +679,7 @@ void FatNextDirEntry (
 		pEntry = pRootCluster + pFS->m_clusSize - bytesFromPrevChunk;
 		
 		// Retry reading the entry.
-		*pNextEntry = FatReadDirEntry (pFS, pEntry, pEndOfCluster, pTargetDirEnt);
+		*pNextEntry = FatReadDirEntry (pFS, pEntry, pEndOfCluster + pFS->m_clusSize, pTargetDirEnt);
 		if (!(*pNextEntry))
 		{
 			LogMsg ("ERROR: Bad directory entry (FatNextDirEntry, still cannot read the directory entry).\nDetails:");
@@ -1023,10 +1030,10 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
 		{
 			uint8_t firstByte = *entry;
-			while (firstByte == 0x00 || firstByte == 0xE5)
+			if (firstByte == 0x00 || firstByte == 0xE5)
 			{
 				entry += 32;
-				firstByte = *entry;
+				continue;
 			}
 			
 			uint32_t secondCluster = 0;
@@ -1216,7 +1223,7 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	out_path[0] = '?', out_path[1] = 0;
 	FatMountRootDir(pFat32, out_path);
 	
-	LogMsg("Mounted '%s'.", out_path);
+	LogMsg("Mounted '%s'.  Cluster size: %d", out_path, 512 * pFat32->m_bpb.m_nSectorsPerCluster);
 	
 	return MOUNT_SUCCESS;
 }

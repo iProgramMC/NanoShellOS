@@ -1018,9 +1018,54 @@ int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
 	}
 }
 
+// Makes the text fit in a rectangle of `xSize` width and `ySize` height,
+// and puts it in pTextOut.
+// Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
+// Returns the y height attained.
+int WrapText(char *pTextOut, const char* text, int xSize)
+{
+	char* pto = pTextOut;
+	const char* text2;
+	int lineHeight = g_pCurrentFont[1];
+	int x = 0, y = lineHeight;
+	while (1)
+	{
+		int widthWord = MeasureTextUntilSpace (text, &text2);
+		//can fit?
+		if (x + widthWord > xSize)
+		{
+			//nope. Line wrap
+			x = 0;
+			y += lineHeight;
+			*pto++ = '\n';
+		}
+		
+		while (text != text2)
+			*pto++ = *text++;
+		
+		if (*text2 == '\n')
+		{
+			x = 0;
+			y += lineHeight;
+			*pto++ = '\n';
+		}
+		if (*text2 == ' ')
+		{
+			*pto++ = ' ';
+		}
+		if (*text2 == '\0')
+		{
+			*pto = 0;
+			return y;
+		}
+		text = text2 + 1;
+	}
+	*pto = 0;
+	return y;
+}
+
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
 {
-	#warning "TODO: Add Word Wrapping"
 	int lineHeight = g_pCurrentFont[1];
 	const char* text = pText, *text2 = pText;
 	int lines = CountLinesInText(pText);
