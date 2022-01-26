@@ -336,7 +336,6 @@ void ShellExecuteCommand(char* p)
 			while ((result = FiRead(fd, data, 1), result > 0))
 			{
 				CoPrintChar(g_currentConsole, data[0]);
-				hlt;hlt;hlt;hlt;
 			}
 			
 			FiClose (fd);

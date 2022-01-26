@@ -261,7 +261,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, MAIN_LISTVIEW, 0, 0);
+			AddControl (pWindow, CONTROL_ICONVIEW, r, NULL, MAIN_LISTVIEW, 0, 0);
 			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
 			
 			// Initialize the menu-bar

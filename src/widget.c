@@ -477,50 +477,6 @@ static const char* CtlGetElementStringFromList (Control *pCtl, int index)
 	
 	return pData->m_pItems[index].m_contents;
 }
-void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon)
-{
-	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
-	{
-		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-		{
-			CtlAddElementToList (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
-			return;
-		}
-	}
-}
-const char* GetElementStringFromList (Window* pWindow, int comboID, int index)
-{
-	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
-	{
-		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-		{
-			return CtlGetElementStringFromList (&pWindow->m_pControlArray[i], index);
-		}
-	}
-	return NULL;
-}
-void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
-{
-	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
-	{
-		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-		{
-			CtlRemoveElementFromList (&pWindow->m_pControlArray[i], elementIndex, pWindow);
-			return;
-		}
-	}
-}
-void ResetList (Window* pWindow, int comboID)
-{
-	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
-	{
-		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-		{
-			CtlResetList (&pWindow->m_pControlArray[i], pWindow);
-			return;
-		}
-	}
-}
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
 bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -662,6 +618,273 @@ go_back:
 		}
 	}
 	return false;//Fall through to other controls.
+}
+#endif
+
+// Icon list view
+#if 1
+static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int optionalIcon, Window* pWindow)
+{
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	if (pData->m_elementCount == pData->m_capacity)
+	{
+		//have to expand first
+		int oldSize = sizeof (ListItem) * pData->m_capacity;
+		int newSize = oldSize * 2;
+		ListItem* pNewItems = MmAllocate(newSize);
+		ZeroMemory(pNewItems, newSize);
+		memcpy (pNewItems, pData->m_pItems, oldSize);
+		MmFree (pData->m_pItems);
+		pData->m_pItems = pNewItems;
+		pData->m_capacity *= 2;
+		
+		//then can add
+	}
+	ListItem *pItem = &pData->m_pItems[pData->m_elementCount];
+	pData->m_elementCount++;
+	pData->m_highlightedElementIdx = -1;
+	
+	//also update the scroll bar.
+	int elementColsPerScreen = (pCtlIcon->m_rect.right - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+	int c = pData->m_elementCount / elementColsPerScreen;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+	
+	pItem->m_icon = optionalIcon;
+	strcpy(pItem->m_contents, pText);
+	
+	//WrapText(pItem->m_contents, pText, ICON_ITEM_WIDTH);
+}
+static void CtlIconRemoveElementFromList(Control* pCtlIcon, int index, Window* pWindow)
+{
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	memcpy (pData->m_pItems + index, pData->m_pItems + index + 1, sizeof(ListItem) * (pData->m_elementCount - index - 1));
+	pData->m_elementCount--;
+	pData->m_highlightedElementIdx = -1;
+	
+	//also update the scroll bar.
+	int elementColsPerScreen = (pCtlIcon->m_rect.right - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+	int c = pData->m_elementCount / elementColsPerScreen;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+}
+//extern VBEData*g_vbeData,g_mainScreenVBEData;
+bool WidgetIconView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+go_back:
+	switch (eventType)
+	{
+	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+		case EVENT_RELEASECURSOR:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains(&this->m_rect, &p))
+			{
+				// Highlight some element.
+				int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+				int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+				
+				int elementStart =   pData->m_scrollY * elementColsPerScreen;
+				int elementEnd   =   pData->m_scrollY * elementColsPerScreen + elementRowsPerScreen * elementColsPerScreen-1;
+				
+				if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
+				if (elementStart < 0) elementStart = 0;
+				
+				if (elementEnd < 0) elementEnd = 0;
+				if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
+				
+				int xPos = (p.x - 2 - this->m_rect.left) / ICON_ITEM_WIDTH;
+				int yPos = (p.y - 2 - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+				int elemId = yPos * elementColsPerScreen + xPos;
+				int elementHighlightAttempt = elementStart + elemId;
+				
+				if (elementHighlightAttempt >= pData->m_elementCount || elementHighlightAttempt < 0)
+					elementHighlightAttempt = -1;
+				
+				bool isDoubleClick = pData->m_highlightedElementIdx == elementHighlightAttempt;
+				pData->m_highlightedElementIdx = elementHighlightAttempt;
+				
+				// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
+				if (isDoubleClick && elementHighlightAttempt != -1)
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
+				
+				eventType = EVENT_PAINT;
+				goto go_back;
+			}
+		}
+		//fallthrough intentional
+		case EVENT_CLICKCURSOR:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
+			if (pData->m_scrollY != pos)
+			{
+				pData->m_scrollY  = pos;
+			}
+			else break;
+		}
+	#pragma GCC diagnostic pop
+		case EVENT_PAINT:
+		{
+			//draw a green rectangle:
+			Rectangle rk = this->m_rect;
+			rk.left   += 2;
+			rk.top    += 2;
+			rk.right  -= 2;
+			rk.bottom -= 2;
+			VidFillRectangle(0xFFFFFF, rk);
+			ListViewData* pData = &this->m_listViewData;
+			
+			int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+			int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+			
+			int elementStart =   pData->m_scrollY * elementColsPerScreen;
+			int elementEnd   =   pData->m_scrollY * elementColsPerScreen + elementRowsPerScreen * elementColsPerScreen-1;
+			
+			if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
+			if (elementStart < 0) elementStart = 0;
+			
+			if (elementEnd < 0) elementEnd = 0;
+			if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
+			
+			if (elementStart > elementEnd)
+				VidDrawText ("(Empty)", rk, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0x7F7F7F, TRANSPARENT);
+			
+			int elementX = 0;
+			
+			for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
+			{
+				uint32_t color = 0x000000, colorT = TRANSPARENT;
+				if (pData->m_highlightedElementIdx == i)
+				{
+					color = 0xFFFFFF, colorT = 0x7F;
+				}
+				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
+				if (pData->m_hasIcons)
+				{
+					if (pData->m_pItems[i].m_icon)
+						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, this->m_rect.top + 2 + j * ICON_ITEM_HEIGHT, 32);
+				}
+				//VidTextOut (pData->m_pItems[i].m_contents, this->m_rect.left + 4 + elementX, this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32, color, colorT);
+				Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
+				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, colorT);
+				
+				elementX += ICON_ITEM_WIDTH;
+				k++;
+				if (k >= elementColsPerScreen)
+				{
+					elementX = 0;
+					k = 0;
+					j++;
+				}
+			}
+			
+			RenderButtonShapeNoRounding (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			// Start out with an initial size of 10 elements.
+			ListViewData* pData = &this->m_listViewData;
+			pData->m_elementCount = 0;
+			pData->m_capacity     = 10;
+			pData->m_scrollY      = 0;
+			pData->m_hasIcons     = true;
+			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
+			pData->m_pItems       = MmAllocate (itemsSize);
+			memset (pData->m_pItems, 0, itemsSize);
+			
+			// Add a vertical scroll bar to its right.
+			Rectangle r;
+			r.right = this->m_rect.right, 
+			r.top   = this->m_rect.top, 
+			r.bottom= this->m_rect.bottom, 
+			r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+			
+			int c = pData->m_elementCount;
+			if (c <= 0)
+				c  = 1; 
+			
+			AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, c, 1);
+			
+			//shrink our rectangle:
+			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			//free the items first
+			if (pData->m_pItems)
+			{
+				MmFree (pData->m_pItems);
+				pData->m_pItems = NULL;
+			}
+			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			break;
+		}
+	}
+	return false;//Fall through to other controls.
+}
+#endif
+
+// List view modifiers
+#if 1
+
+void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
+				CtlIconAddElementToList (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
+			else
+				CtlAddElementToList     (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
+			return;
+		}
+	}
+}
+const char* GetElementStringFromList (Window* pWindow, int comboID, int index)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return CtlGetElementStringFromList (&pWindow->m_pControlArray[i], index);
+		}
+	}
+	return NULL;
+}
+void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
+				CtlIconRemoveElementFromList (&pWindow->m_pControlArray[i], elementIndex, pWindow);
+			else
+				CtlRemoveElementFromList     (&pWindow->m_pControlArray[i], elementIndex, pWindow);
+			return;
+		}
+	}
+}
+void ResetList (Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlResetList (&pWindow->m_pControlArray[i], pWindow);
+			return;
+		}
+	}
 }
 #endif
 
@@ -1268,8 +1491,15 @@ bool WidgetTextInput_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED 
 {
 	return false;
 }
+#define CHECKBOX_SIZE 16
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	// this->rect only affects the top left position
+	
+	Rectangle check_rect = this->m_rect;
+	check_rect.right  = check_right.left + CHECKBOX_SIZE;
+	check_rect.bottom = check_right.top  + CHECKBOX_SIZE;
+	
 	return false;
 }
 #endif
@@ -1289,8 +1519,11 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetHScrollBar_OnEvent,
 	WidgetMenuBar_OnEvent,
 	WidgetTextHuge_OnEvent,
-	NULL
+	WidgetIconView_OnEvent,
 };
+
+STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");
+
 WidgetEventHandler GetWidgetOnEventFunction (int type)
 {
 	if (type < 0 || type >= CONTROL_COUNT)

@@ -92,6 +92,8 @@ enum {
 	CONTROL_MENUBAR,
 	//A text control printing big text (>127 chars)
 	CONTROL_TEXTHUGE,
+	//Same as CONTROL_LISTVIEW but with bigger icons.
+	CONTROL_ICONVIEW,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -134,9 +136,8 @@ typedef struct
 ListItem;
 
 #define LIST_ITEM_HEIGHT 16
-//#undef  LIST_ITEM_HEIGHT
-//#define LIST_ITEM_WIDTH  90
-//#define LIST_ITEM_HEIGHT 70
+#define ICON_ITEM_WIDTH  90
+#define ICON_ITEM_HEIGHT 60
 
 typedef struct
 {
