@@ -3,15 +3,19 @@ call clean
 : Build hello-world application
 cd application/hellowindow
 call build
-copy Chart.nse ..\..\fs\chart.nse
+copy Chart.nse ..\..\fs\Chart.nse
 cd ../..
 cd application/version
 call build
-copy ver.nse ..\..\fs\ver.nse
+copy ver.nse ..\..\fs\Version.nse
 cd ../..
 cd application/helloworld
 call build
 copy HelloWorld.nse ..\..\fs\HelloWorld.nse
+cd ../..
+cd application/listtest
+call build
+copy list.nse ..\..\fs\ListTest.nse
 cd ../..
 
 : Build cabinet application

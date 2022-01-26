@@ -93,7 +93,7 @@ CALL_END
 CALL (SetLabelText, WIN_REQUEST_REPAINT, void, Window* pWindow, int comboID, const char* pText)
 	SARGS(pWindow, comboID, pText)
 CALL_END
-CALL (AddMenuBarItem, WIN_REQUEST_REPAINT, void, Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
+CALL (AddMenuBarItem, WIN_ADD_MENUBAR_ITEM, void, Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
 	SARGS(pWindow, menuBarControlId, comboIdTo, comboIdAs, pText)
 CALL_END
 CALL (SetScrollBarMin, WIN_SET_SCROLL_BAR_MIN, void, Window *pWindow, int comboID, int min)

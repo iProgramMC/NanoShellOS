@@ -3,11 +3,13 @@
 
 #directories I don't want added
 application/hellowindow/build/*
-application/hellowindow/HelloWindow.nse
+application/hellowindow/Chart.nse
 application/helloworld/build/*
 application/helloworld/HelloWorld.nse
 application/version/build/*
 application/version/Version.nse
+application/listtest/build/*
+application/listtest/list.nse
 build/*
 cp/*
 lol/*
@@ -26,6 +28,8 @@ sdk/nsmake/x64/*
 sdk/nsmake/Debug/*
 sdk/nsmake/Release/*
 nanoshell_initrd
+vdisk.vhd
+vdisk.vdi
 disk.vhd
 disk.vdi
 disk.qcow2

@@ -26,7 +26,7 @@ This software is licensed under the GNU General Public License V3.
 ## Goals
 
 Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
-I'm not particularly concerned with safety, any app is free to do anything.
+I'm not particularly concerned with safety, any app is free to do anything.  The design is NOT the best, by ANY means, so do not inspire yours from this design.
 
 Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
 

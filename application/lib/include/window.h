@@ -112,6 +112,9 @@ enum {
 	CONTROL_VSCROLLBAR,
 	//A horizontal scroll bar.
 	CONTROL_HSCROLLBAR,
+	//A menu bar attached to the top of a window.
+	//Adding more than one control is considered UB
+	CONTROL_MENUBAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -179,6 +182,24 @@ typedef struct
 }
 ButtonData;
 
+typedef struct tagMenuBarTreeItem
+{
+	int  m_comboID;//can be searchable
+	int  m_childrenCount,
+	     m_childrenCapacity;//if childrenCount reaches this and we need to add another, double this
+	struct tagMenuBarTreeItem* m_childrenArray;
+	char m_text [104];
+	//if this value is set, it gets drawn if this is an item part of the root tree, or the parent is open too.
+	bool m_isOpen;
+}
+MenuBarTreeItem;
+
+typedef struct
+{
+	MenuBarTreeItem m_root;
+}
+MenuBarData;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -196,6 +217,7 @@ typedef struct ControlStruct
 		ListViewData  m_listViewData;
 		ScrollBarData m_scrollBarData;
 		ButtonData    m_buttonData;
+		MenuBarData   m_menuBarData;
 	};
 	
 	//event handler
@@ -291,5 +313,56 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
  * Adds a control to the window.
  */
 int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2);
+
+/**
+ * Sets the minimum value for a SCROLLBAR control with a certain comboID.
+ */
+void SetScrollBarMin (Window *pWindow, int comboID, int min);
+
+/**
+ * Sets the maximum value for a SCROLLBAR control with a certain comboID.
+ */
+void SetScrollBarMax (Window *pWindow, int comboID, int max);
+
+/**
+ * Sets the current progress value for a SCROLLBAR control with a certain comboID.
+ */
+void SetScrollBarPos (Window *pWindow, int comboID, int pos);
+
+/**
+ * Gets the current progress value for a SCROLLBAR control with a certain comboID.
+ */
+int GetScrollBarPos (Window *pWindow, int comboID);
+
+/**
+ * Adds an element to a ListView component with a certain comboID.
+ */
+void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon);
+
+/**
+ * Gets an element's string contents from a ListView component with a certain comboID.
+ */
+const char* GetElementStringFromList (Window* pWindow, int comboID, int index);
+
+/**
+ * Removes an element from a ListView component with a certain comboID.
+ */
+void RemoveElementFromList (Window* pWindow, int comboID, int elemIndex);
+
+/**
+ * Clears the items from a ListView component with a certain comboID.
+ */
+void ResetList (Window* pWindow, int comboID);
+
+/**
+ * Changes the text of any component with text with a certain comboID.
+ */
+void SetLabelText (Window *pWindow, int comboID, const char* pText);
+
+/**
+ * Works on the control with the comboID of 'menuBarControlId'.
+ * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
+ */
+void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
 
 #endif//_WINDOW_H
