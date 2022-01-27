@@ -15,7 +15,10 @@ echo Please wait.
 echo "%date% %time%" > build/icons/__time.h
 
 : Touch the main.c file, so the date is always up-to-date.
-echo. >> src/main.c
+cd src
+copy main.c+
+cd ..
+
 
 set backupPath=%path%
 set path=%cd%

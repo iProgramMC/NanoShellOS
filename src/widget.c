@@ -1497,8 +1497,11 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	// this->rect only affects the top left position
 	
 	Rectangle check_rect = this->m_rect;
-	check_rect.right  = check_right.left + CHECKBOX_SIZE;
-	check_rect.bottom = check_right.top  + CHECKBOX_SIZE;
+	check_rect.right  = check_rect.left + CHECKBOX_SIZE;
+	check_rect.bottom = check_rect.top  + CHECKBOX_SIZE;
+	
+	Rectangle text_rect = check_rect;
+	//check_rect
 	
 	return false;
 }

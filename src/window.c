@@ -1350,7 +1350,8 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	
 	int dataReturned = (int)pBox->m_data;
 	
-	ReadyToDestroyWindow (pBox);
+	DestroyWindow(pBox);
+	while (HandleMessages(pBox));
 	
 	if (pWindow)
 	{

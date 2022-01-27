@@ -286,6 +286,17 @@ void UseHeap (Heap* pHeap)
 void FreeHeap (Heap* pHeap)
 {
 	ACQUIRE_LOCK (g_memoryHeapLock);
+	
+	// free all the elements allocated inside the heap:
+	for (int i = 0; i < pHeap->m_pageEntrySize; i++)
+	{
+		if (pHeap->m_pageEntries[i].m_bPresent)
+		{
+			//allocated, free it.
+			MmFreePage((void*)(pHeap->m_pageEntries[i].m_pAddress << 12 + g_pageAllocationBase));
+		}
+	}
+	
 	ResetToKernelHeap();
 	MmFree(pHeap->m_pageEntries);
 	MmFree(pHeap->m_pageDirectory);
