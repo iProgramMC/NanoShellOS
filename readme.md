@@ -7,8 +7,7 @@ Copyright (C) 2022 iProgramInCpp
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+the Free Software Foundation, version 3 of the License only.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,7 +17,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see [the GNU licenses](https://www.gnu.org/licenses/).
 
-This software is licensed under the GNU General Public License V3.
+This software is licensed under the GNU General Public License V3 only.
 
 
 #### Be warned that building this is not for the average Linux user nor is it for the faint of heart.  Soon I'll work on a way to compile this in an easier way.
