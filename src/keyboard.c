@@ -25,17 +25,12 @@ void SetFocusedConsole(Console *pConsole)
 const unsigned char KeyboardMap[256] =
 {
 	// shift not pressed.
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-  '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
-  'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter/Return key */
-    0,			/* 29   - Control */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
- '\'', '`',   0,		/* Left shift */
- '\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-  'm', ',', '.', '/',   0,				/* Right shift */
-  '*',
+    0,  27, '1', '2',  '3',  '4', '5', '6',  '7', '8',
+  '9', '0', '-', '=', '\b', '\t', 'q', 'w',  'e', 'r',
+  't', 'y', 'u', 'i',  'o',  'p', '[', ']', '\n',   0,
+  'a', 's', 'd', 'f',  'g',  'h', 'j', 'k',  'l', ';',
+ '\'', '`',   0,'\\',  'z',  'x', 'c', 'v',  'b', 'n',
+  'm', ',', '.', '/',   0,   '*',
     0,	/* Alt */
   ' ',	/* Space bar */
     0,	/* Caps lock */
@@ -52,7 +47,9 @@ const unsigned char KeyboardMap[256] =
     0,
     0,	/* Right Arrow */
   '+',
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+	0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	
 	// shift pressed.
 	0,  0, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
@@ -82,7 +79,9 @@ const unsigned char KeyboardMap[256] =
     0,
     0,	/* Right Arrow */
   '+',
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+	0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };	
 const unsigned char PrintableChars[256] =
 {
@@ -148,14 +147,15 @@ KeyState keyboardState[128];
 
 #define ENTER_KEY_CODE 0x1c
 
-#define SCANCODE_RELEASE 0x80
-#define SCANCODE_NOTREL 0x7f
-
 #define PIC1_DATA 0x21
 #define PIC2_DATA 0xa1
 
+#define KB_RAW_SIZE KB_BUF_SIZE*8
+
 char KeyboardBuffer[KB_BUF_SIZE];
-int KeyboardBufferBeg = 0, KeyboardBufferEnd = 0;
+int  KeyboardBufferBeg = 0, KeyboardBufferEnd = 0;
+char RawKeyboardBuffer[KB_RAW_SIZE];
+int  RawKeyboardBufferBeg = 0, RawKeyboardBufferEnd = 0;
 void KbAddKeyToBuffer(char key)
 {
 	if (!key) return;
@@ -169,7 +169,6 @@ void KbAddKeyToBuffer(char key)
 bool KbIsBufferEmpty()
 {
 	bool e = (KeyboardBufferBeg == KeyboardBufferEnd);
-	//LogMsg("Buffer empty? "); LogIntDec(e); LogMsg("\n");
 	return e;
 }
 char KbGetKeyFromBuffer()
@@ -183,6 +182,34 @@ char KbGetKeyFromBuffer()
 	}
 	else return 0;
 }
+
+
+void KbAddRawKeyToBuffer(char key)
+{
+	if (!key) return;
+	//LogMsg("Added key: ");LogIntDec(key);LogMsg("\n");
+	RawKeyboardBuffer[RawKeyboardBufferEnd++] = key;
+	while (RawKeyboardBufferEnd >= KB_RAW_SIZE)
+		RawKeyboardBufferEnd -= KB_RAW_SIZE;
+}
+bool KbIsRawBufferEmpty()
+{
+	bool e = (RawKeyboardBufferBeg == RawKeyboardBufferEnd);
+	return e;
+}
+char KbGetKeyFromRawBuffer()
+{
+	if (RawKeyboardBufferBeg != RawKeyboardBufferEnd)
+	{
+		char k = RawKeyboardBuffer[RawKeyboardBufferBeg++];
+		while (RawKeyboardBufferBeg >= KB_RAW_SIZE)
+			RawKeyboardBufferBeg -= KB_RAW_SIZE;
+		return k;
+	}
+	else return 0;
+}
+
+
 char KbWaitForKeyAndGet()
 {
 	while (KbIsBufferEmpty()) 
@@ -304,6 +331,7 @@ void IrqKeyboard(UNUSED int e[50])
 	if (status & 0x01)
 	{
 		keycode = ReadPort (KEYBOARD_DATA_PORT);
+		KbAddRawKeyToBuffer (keycode);
 		if (keycode & SCANCODE_RELEASE)
 		{
 			keyboardState[keycode & SCANCODE_NOTREL] = KEY_RELEASED;

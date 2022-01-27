@@ -41,8 +41,8 @@
 
 enum {
 	EVENT_NULL,
-	EVENT_CREATE,
-	EVENT_DESTROY,
+	EVENT_CREATE,  // Shall be only called once, when a window or widget is created.
+	EVENT_DESTROY, // Shall be only called once, when a window or widget is destroyed.
 	EVENT_PAINT,
 	EVENT_MOVE,
 	EVENT_SIZE,
@@ -56,8 +56,13 @@ enum {
 	EVENT_COMMAND,
 	EVENT_KEYPRESS,
 	EVENT_CLOSE,
+	EVENT_KEYRAW,
 	EVENT_MAX
 };
+
+//NOTE WHEN WORKING WITH CONTROLS:
+//While yes, the window manager technically supports negative comboIDs, you're not supposed
+//to use them.  They are used internally by other controls (for example list views and text input views).
 
 enum {
 	//A null control.  Does nothing.
@@ -181,6 +186,18 @@ typedef struct
 }
 MenuBarData;
 
+typedef struct
+{
+	bool  m_focused;
+	bool  m_onlyOneLine, m_showLineNumbers;//note that these are mutually exclusive, but both can be turned off
+	int   m_textCapacity, m_textLength;//The text length needs to be 1 less than the text capacity.
+	                                   //If the text capacity is 65, for example, the textLength may not be bigger than 64.
+	int   m_textCursorIndex, m_textCursorSelStart, m_textCursorSelEnd,
+	      m_scrollY;
+	char* m_pText;
+}
+TextInputData;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -199,6 +216,7 @@ typedef struct ControlStruct
 		ScrollBarData m_scrollBarData;
 		ButtonData    m_buttonData;
 		MenuBarData   m_menuBarData;
+		TextInputData m_textInputData;
 	};
 	
 	//event handler

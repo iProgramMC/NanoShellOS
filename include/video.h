@@ -280,6 +280,21 @@ Cursor* GetCurrentCursor();
 void SetMousePos (unsigned pX, unsigned pY);
 
 /**
+ * Gets the width of a character 'c' in the current font.
+ */
+int GetCharWidth(char c);
+
+/**
+ * Gets the height of a in the current font.
+ */
+int GetLineHeight();
+
+/**
+ * Counts the number of lines in a string of text.
+ */
+int CountLinesInText (const char* pText);
+
+/**
  * Handler routine to update mouse data.
  */
 void OnUpdateMouse (uint8_t flags, uint8_t dx, uint8_t dy, uint8_t dz);

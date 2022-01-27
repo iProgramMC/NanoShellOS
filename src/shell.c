@@ -277,6 +277,10 @@ void ShellExecuteCommand(char* p)
 		{
 			LogMsg("Expected filename");
 		}
+		else if (!g_windowManagerRunning)
+		{
+			LogMsg("Running apps outside the window manager is broken for now so don't.");
+		}
 		else
 		{
 			//TODO: open/close

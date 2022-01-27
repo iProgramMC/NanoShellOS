@@ -17,6 +17,10 @@ cd application/listtest
 call build
 copy list.nse ..\..\fs\ListTest.nse
 cd ../..
+cd application/oregon
+call build
+copy oregon.nse ..\..\fs\oregon.nse
+cd ../..
 
 : Build cabinet application
 :cd application/cabinet

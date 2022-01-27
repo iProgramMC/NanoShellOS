@@ -293,7 +293,7 @@ void FreeHeap (Heap* pHeap)
 		if (pHeap->m_pageEntries[i].m_bPresent)
 		{
 			//allocated, free it.
-			MmFreePage((void*)(pHeap->m_pageEntries[i].m_pAddress << 12 + g_pageAllocationBase));
+			MmFreePage((void*)((pHeap->m_pageEntries[i].m_pAddress << 12) + g_pageAllocationBase));
 		}
 	}
 	
@@ -458,9 +458,10 @@ void* MmSetupPage(int i, uint32_t* pPhysOut, const char* callFile, int callLine)
 	MmInvalidateSinglePage(retaddr);
 	
 #ifdef RANDOMIZE_MALLOCED_MEMORY
-	for (int i = 0; i < 1024; i++)
+	for (int i = 0; i < 512; i++)
 	{
-		*((uint32_t*)retaddr + i) = (i & 0xFF) * 0x01010101U;
+		//*((uint32_t*)retaddr + i) = (i & 0xFF) * 0x01010101U;
+		*((uint64_t*)retaddr + i) = 0x4b435546424d5544;//DUMBFUCK
 	}
 #endif
 	

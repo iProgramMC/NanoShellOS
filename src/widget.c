@@ -9,6 +9,7 @@
 #include <icon.h>
 #include <print.h>
 #include <misc.h>
+#include <keyboard.h>
 
 // Utilitary functions
 #if 1
@@ -91,10 +92,14 @@ void RenderButtonShapeSmall(Rectangle rect, unsigned colorDark, unsigned colorLi
 void CtlSetScrollBarMin (Control *pControl, int min)
 {
 	pControl->m_scrollBarData.m_min = min;
+	if (pControl->m_scrollBarData.m_pos < pControl->m_scrollBarData.m_min)
+		pControl->m_scrollBarData.m_pos = pControl->m_scrollBarData.m_min;
 }
 void CtlSetScrollBarMax (Control *pControl, int max)
 {
 	pControl->m_scrollBarData.m_max = max;
+	if (pControl->m_scrollBarData.m_pos >= pControl->m_scrollBarData.m_max)
+		pControl->m_scrollBarData.m_pos  = pControl->m_scrollBarData.m_max-1;
 }
 void CtlSetScrollBarPos (Control *pControl, int pos)
 {
@@ -402,6 +407,257 @@ go_back:;
 	}
 	return false;//Fall through to other controls.
 }
+#endif
+
+// TextEdit view
+#if 1
+
+void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
+{
+	if (this->m_textInputData.m_pText)
+		MmFree(this->m_textInputData.m_pText);
+	
+	int slen = strlen (pText);
+	this->m_textInputData.m_pText = MmAllocate (slen + 1);
+	strcpy (this->m_textInputData.m_pText, pText);
+	this->m_textInputData.m_textCapacity = slen + 1;
+	this->m_textInputData.m_textLength   = slen;
+	this->m_textInputData.m_textCursorIndex = 0;
+	this->m_textInputData.m_textCursorSelStart = -1;
+	this->m_textInputData.m_textCursorSelEnd   = -1;
+	this->m_textInputData.m_textCursorIndex    = this->m_textInputData.m_textLength;
+	
+	int c = CountLinesInText(this->m_textInputData.m_pText);
+	SetScrollBarMax (pWindow, -this->m_comboID, c);
+}
+
+void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
+{
+	if (this->m_textInputData.m_textLength >= this->m_textInputData.m_textCapacity-1)
+	{
+		//can't fit, need to expand
+		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
+		
+		char* pText = (char*)MmAllocate(newCapacity);
+		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
+		
+		MmFree(this->m_textInputData.m_pText);
+		this->m_textInputData.m_pText = pText;
+		this->m_textInputData.m_textCapacity = newCapacity;
+	}
+	
+	this->m_textInputData.m_pText[this->m_textInputData.m_textLength++] = charToAppend;
+	this->m_textInputData.m_pText[this->m_textInputData.m_textLength  ] = 0;
+	
+	int c = CountLinesInText(this->m_textInputData.m_pText);
+	SetScrollBarMax (pWindow, -this->m_comboID, c);
+}
+
+void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, int indexToAppendTo)
+{
+	if (indexToAppendTo < 0)
+		return;
+	if (indexToAppendTo > this->m_textInputData.m_textLength)
+		return;
+	
+	if (this->m_textInputData.m_textLength >= this->m_textInputData.m_textCapacity-1)
+	{
+		//can't fit, need to expand
+		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
+		
+		char* pText = (char*)MmAllocate(newCapacity);
+		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
+		
+		MmFree(this->m_textInputData.m_pText);
+		this->m_textInputData.m_pText = pText;
+		this->m_textInputData.m_textCapacity = newCapacity;
+	}
+	
+	this->m_textInputData.m_textLength++;
+	this->m_textInputData.m_pText[this->m_textInputData.m_textLength  ] = 0;
+	memmove (&this->m_textInputData.m_pText[indexToAppendTo+1], &this->m_textInputData.m_pText[indexToAppendTo], this->m_textInputData.m_textLength-1-indexToAppendTo);
+	this->m_textInputData.m_pText[indexToAppendTo] = charToAppend;
+	
+	int c = CountLinesInText(this->m_textInputData.m_pText);
+	SetScrollBarMax (pWindow, -this->m_comboID, c);
+}
+
+void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemoveFrom)
+{
+	if (indexToRemoveFrom < 0)
+		return;
+	if (indexToRemoveFrom > this->m_textInputData.m_textLength)
+		return;
+	
+	memmove (&this->m_textInputData.m_pText[indexToRemoveFrom], &this->m_textInputData.m_pText[indexToRemoveFrom+1], this->m_textInputData.m_textLength-1-indexToRemoveFrom);
+	this->m_textInputData.m_textLength--;
+	this->m_textInputData.m_pText[this->m_textInputData.m_textLength] = 0;
+	
+	int c = CountLinesInText(this->m_textInputData.m_pText);
+	SetScrollBarMax (pWindow, -this->m_comboID, c);
+}
+
+bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_RELEASECURSOR:
+			//TODO: Allow selection across the text.
+			break;
+		case EVENT_CLICKCURSOR:
+		{
+			//TODO: Allow change of cursor via click.
+			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
+			if (this->m_textInputData.m_scrollY != pos)
+			{
+				this->m_textInputData.m_scrollY  = pos;
+			}
+			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			RequestRepaint (pWindow);
+			break;
+		}
+		case EVENT_KEYRAW:
+		{
+			switch (parm1)
+			{
+				case KEY_ARROW_LEFT:
+					this->m_textInputData.m_textCursorIndex--;
+					if (this->m_textInputData.m_textCursorIndex < 0)
+						this->m_textInputData.m_textCursorIndex = 0;
+					//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+					RequestRepaint (pWindow);
+					break;
+				case KEY_ARROW_RIGHT:
+					this->m_textInputData.m_textCursorIndex++;
+					if (this->m_textInputData.m_textCursorIndex > this->m_textInputData.m_textLength)
+						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
+					//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+					RequestRepaint (pWindow);
+					break;
+			}
+			break;
+		}
+		case EVENT_KEYPRESS:
+		{
+			if ((char)parm1 == '\b')
+			{
+				CtlRemoveCharFromAnywhere(this, pWindow, --this->m_textInputData.m_textCursorIndex);
+				if (this->m_textInputData.m_textCursorIndex < 0)
+					this->m_textInputData.m_textCursorIndex = 0;
+			}
+			else
+			{
+				CtlAppendCharToAnywhere(this, pWindow, (char)parm1, this->m_textInputData.m_textCursorIndex++);
+			}
+			//RequestRepaintNew (pWindow);
+			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			RequestRepaint (pWindow);
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			this->m_textInputData.m_pText = NULL;
+			this->m_textInputData.m_scrollY = 0;
+			this->m_textInputData.m_showLineNumbers = true;
+			
+			Rectangle r;
+			r.right = this->m_rect.right, 
+			r.top   = this->m_rect.top, 
+			r.bottom= this->m_rect.bottom, 
+			r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+			
+			AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, 1, 1);
+			
+			//shrink our rectangle:
+			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			
+			// Start out with some text.
+			CtlSetTextInputText(this, pWindow,
+				"Hello, world!\n"
+				"Here you can play around, and type stuff.\n"
+				"\tTabs are supported too!"
+			);
+			
+			// TODO: Add a scroll bar.
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			if (this->m_textInputData.m_pText)
+			{
+				MmFree(this->m_textInputData.m_pText);
+				this->m_textInputData.m_pText = NULL;
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			// Render the basic container rectangle
+			Rectangle rk = this->m_rect;
+			rk.left   += 2;
+			rk.top    += 2;
+			rk.right  -= 2;
+			rk.bottom -= 2;
+			VidFillRectangle(0xFFFFFF, rk);
+			
+			if (this->m_textInputData.m_pText)
+			{
+				//HACK
+				VidSetFont(FONT_TAMSYN_BOLD);
+				
+				//VidTextOut(this->m_textInputData.m_pText, this->m_rect.left, this->m_rect.top, 0, 0xFFFFFF);
+				
+				const char*text = this->m_textInputData.m_pText;
+				int lineHeight = GetLineHeight();
+				int xPos = this->m_rect.left + 4,
+					yPos = this->m_rect.top + 4 - lineHeight * this->m_textInputData.m_scrollY;
+				int curLine = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
+				int offset = 0;
+				//LogMsg("Lines per screen: %d Scroll line: %d", linesPerScreen, scrollLine);
+				while (*text)
+				{
+					//word wrap
+					if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
+					{
+						xPos = this->m_rect.left + 4;
+						yPos += lineHeight;
+						curLine ++;
+					}
+					if (*text != '\n')
+					{
+						// render this character:
+						if (curLine >= scrollLine + linesPerScreen) break;//no point in drawing anymore.
+						if (curLine >= scrollLine)
+							VidPlotChar(*text, xPos, yPos, 0, TRANSPARENT);
+						// Increment the X,Y positions
+						xPos += GetCharWidth (*text);
+					}
+					
+					text++;
+					offset++;
+					if (offset == this->m_textInputData.m_textCursorIndex)
+					{
+						VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
+					}
+				}
+				if (offset == this->m_textInputData.m_textCursorIndex)
+				{
+					VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
+				}
+				VidSetFont(FONT_BASIC);
+			}
+			else
+				VidTextOut("NOTHING!", this->m_rect.left, this->m_rect.top, 0xFF0000, 0x000000);
+			
+			RenderButtonShapeNoRounding (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			
+			break;
+		}
+	}
+	return false;
+}
+
 #endif
 
 // List View.
@@ -1487,10 +1743,6 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
-bool WidgetTextInput_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
-{
-	return false;
-}
 #define CHECKBOX_SIZE 16
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -1512,7 +1764,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetText_OnEvent,
 	WidgetIcon_OnEvent,
 	WidgetButton_OnEvent,
-	WidgetTextInput_OnEvent,
+	WidgetTextEditView_OnEvent,
 	WidgetCheckbox_OnEvent,
 	WidgetClickLabel_OnEvent,
 	WidgetTextCenter_OnEvent,

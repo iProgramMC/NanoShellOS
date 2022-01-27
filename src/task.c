@@ -21,13 +21,15 @@ static int s_lastRunningTaskIndex = 1;
 static int s_currentRunningTask = -1;
 static CPUSaveState g_kernelSaveState;
 __attribute__((aligned(16)))
-static int          g_kernelFPUState[128];
-static VBEData*     g_kernelVBEContext = NULL;
-static Heap*        g_kernelHeapContext = NULL;
-static Console*     g_kernelConsoleContext = NULL;
+static int            g_kernelFPUState[128];
+static VBEData*       g_kernelVBEContext = NULL;
+static Heap*          g_kernelHeapContext = NULL;
+static Console*       g_kernelConsoleContext = NULL;
+static const uint8_t* g_kernelFontContext = NULL;
 
-extern Heap*        g_pHeap;
-extern Console*     g_currentConsole; //logmsg
+extern Heap*          g_pHeap;
+extern Console*       g_currentConsole; //logmsg
+extern const uint8_t* g_pCurrentFont;
 
 bool g_forceKernelTaskToRunNext = false;
 
@@ -123,6 +125,7 @@ void KeConstructTask (Task* pTask)
 	pTask->m_pVBEContext = &g_mainScreenVBEData;
 	pTask->m_pCurrentHeap = g_pHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
+	pTask->m_pFontContext = g_pCurrentFont;
 }
 
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
@@ -296,6 +299,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		pTask->m_pVBEContext = g_vbeData;
 		pTask->m_pCurrentHeap = g_pHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
+		pTask->m_pFontContext = g_pCurrentFont;
 	}
 	else
 	{
@@ -304,6 +308,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_kernelVBEContext = g_vbeData;
 		g_kernelHeapContext = g_pHeap;
 		g_kernelConsoleContext = g_currentConsole;
+		g_kernelFontContext = g_pCurrentFont;
 	}
 	ResetToKernelHeap();
 	
@@ -353,6 +358,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		KeFxRestore(pNewTask->m_fpuState);
 		g_vbeData = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
+		g_pCurrentFont = pNewTask->m_pFontContext;
 		UseHeap (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
@@ -363,6 +369,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		KeFxRestore(g_kernelFPUState);
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
+		g_pCurrentFont = g_kernelFontContext;
 		UseHeap (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}

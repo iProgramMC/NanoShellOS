@@ -784,14 +784,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	while (true)
 	{
 		UpdateFPSCounter();
-		bool bufferHasSomething = false;
-		char nextTypedChar = '\0';
-		if (!KbIsBufferEmpty())
-		{
-			bufferHasSomething = true;
-			
-			nextTypedChar = KbGetKeyFromBuffer();
-		}
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
 			Window* pWindow = &g_windows [p];
@@ -803,9 +795,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				UpdateTimeout = 100;
 			}
 			
-			if (pWindow->m_isSelected && bufferHasSomething)
+			if (pWindow->m_isSelected)
 			{
-				WindowRegisterEvent (pWindow, EVENT_KEYPRESS, nextTypedChar, 0);
+				while (!KbIsBufferEmpty())
+					WindowRegisterEvent (pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
+				
+				while (!KbIsRawBufferEmpty())
+					WindowRegisterEvent(pWindow, EVENT_KEYRAW, KbGetKeyFromRawBuffer(), 0);
 			}
 			
 		#if !THREADING_ENABLED
@@ -1640,6 +1636,8 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_MOVECURSOR:
 		case EVENT_CLICKCURSOR:
 		case EVENT_RELEASECURSOR:
+		case EVENT_KEYPRESS:
+		case EVENT_KEYRAW:
 			return true;
 	}
 	return false;

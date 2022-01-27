@@ -12,6 +12,8 @@ application/listtest/build/*
 application/listtest/list.nse
 application/learn/build/*
 application/learn/learn.nse
+application/oregon/build/*
+application/oregon/learn.nse
 build/*
 cp/*
 lol/*

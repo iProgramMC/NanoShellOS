@@ -843,7 +843,7 @@ const unsigned char* g_fontIDToData[] = {
 const unsigned char* g_pCurrentFont = NULL;
 
 __attribute__((always_inline))
-static inline int GetCharWidth(char c)
+static inline int GetCharWidthInl(char c)
 {
 	if (g_pCurrentFont[2] == FONTTYPE_SMALL)
 	{
@@ -854,8 +854,21 @@ static inline int GetCharWidth(char c)
 		if (c > '~' || c < ' ') c = '?';
 		return g_pCurrentFont[3 + 12*2 * (128-32) + c-32]+1;
 	}
+	else if (g_pCurrentFont[2] == FONTTYPE_MONOSPACE)
+	{
+		if (c == '\t')
+			return 4 * g_pCurrentFont[0];
+	}
 	
 	return g_pCurrentFont[0] + (g_pCurrentFont[2] == FONTTYPE_GLCD);
+}
+int GetCharWidth(char c)
+{
+	return GetCharWidthInl (c);
+}
+int GetLineHeight()
+{
+	return g_pCurrentFont[1];
 }
 
 void VidSetFont(unsigned fontType)
@@ -953,7 +966,7 @@ void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned co
 		}
 		else
 		{
-			int cw = GetCharWidth(c);
+			int cw = GetCharWidthInl(c);
 			
 			if (!doNotActuallyDraw)
 				VidPlotChar(c, x, y, colorFg, colorBg);
@@ -996,7 +1009,7 @@ int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 			*pTextOut = pText;
 			return w;
 		}
-		int cw = GetCharWidth(*pText);
+		int cw = GetCharWidthInl(*pText);
 		w += cw;
 		pText++;
 	}
@@ -1012,7 +1025,7 @@ int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
 			*pTextOut = pText;
 			return w;
 		}
-		int cw = GetCharWidth(*pText);
+		int cw = GetCharWidthInl(*pText);
 		w += cw;
 		pText++;
 	}
@@ -1099,7 +1112,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				while (text != text2)
 				{
 					VidPlotChar(*text, x, y, colorFg, colorBg);
-					int cw = GetCharWidth(*text);
+					int cw = GetCharWidthInl(*text);
 					x += cw;
 					text++;
 				}
@@ -1110,7 +1123,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				}
 				if (*text2 == ' ')
 				{
-					int cw = GetCharWidth(' ');
+					int cw = GetCharWidthInl(' ');
 					x += cw;
 				}
 				if (*text2 == '\0') return;
@@ -1131,7 +1144,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 		while (text != text2)
 		{
 			VidPlotChar(*text, startX, startY, colorFg, colorBg);
-			int cw = GetCharWidth(*text);
+			int cw = GetCharWidthInl(*text);
 			startX += cw;
 			text++;
 		}

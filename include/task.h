@@ -73,6 +73,7 @@ typedef struct
 	VBEData*       m_pVBEContext;
 	Heap *         m_pCurrentHeap;
 	Console*       m_pConsoleContext;
+	const uint8_t* m_pFontContext;
 	
 	char 		   m_tag[33];
 }

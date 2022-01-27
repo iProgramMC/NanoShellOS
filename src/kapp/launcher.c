@@ -34,7 +34,8 @@ void LaunchPaint()
 {
 	int errorCode = 0;
 	//Task* pTask = KeStartTask(PrgPaintTask, 0, &errorCode);
-	Task* pTask = KeStartTask(ControlEntry, 0, &errorCode);
+	//Task* pTask = KeStartTask(ControlEntry, 0, &errorCode);
+	Task* pTask = KeStartTask(BigTextEntry, 0, &errorCode);
 	DebugLogMsg("Created Paint window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 extern FileNode *g_pCwdNode;
@@ -201,7 +202,7 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			RECT(r, 200, 50, 300, 15);
 			
 			//parms after rectangle: default text, comboID for getting the text from the textbox, max characters
-			AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, LAUNCHER_TEXTBOX1, 128, 0);
+			//AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, LAUNCHER_TEXTBOX1, 128, 0);
 			
 			//DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			
