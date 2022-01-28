@@ -418,9 +418,11 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 		MmFree(this->m_textInputData.m_pText);
 	
 	int slen = strlen (pText);
-	this->m_textInputData.m_pText = MmAllocate (slen + 1);
+	int newCapacity = slen + 1;
+	if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
+	this->m_textInputData.m_pText = MmAllocate (newCapacity);
 	strcpy (this->m_textInputData.m_pText, pText);
-	this->m_textInputData.m_textCapacity = slen + 1;
+	this->m_textInputData.m_textCapacity = newCapacity;
 	this->m_textInputData.m_textLength   = slen;
 	this->m_textInputData.m_textCursorIndex = 0;
 	this->m_textInputData.m_textCursorSelStart = -1;
@@ -431,12 +433,26 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	SetScrollBarMax (pWindow, -this->m_comboID, c);
 }
 
+void SetTextInputText(Window* pWindow, int comboID, const char* pText)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetTextInputText (&pWindow->m_pControlArray[i], pWindow, pText);
+			return;
+		}
+	}
+}
+//TODO: other calls? Only add when necessary.
+
 void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 {
 	if (this->m_textInputData.m_textLength >= this->m_textInputData.m_textCapacity-1)
 	{
 		//can't fit, need to expand
 		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
+		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
 		char* pText = (char*)MmAllocate(newCapacity);
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
@@ -464,6 +480,7 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 	{
 		//can't fit, need to expand
 		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
+		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
 		char* pText = (char*)MmAllocate(newCapacity);
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
@@ -518,23 +535,147 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		}
 		case EVENT_KEYRAW:
 		{
+			bool repaint = true;
 			switch (parm1)
 			{
+				case KEY_ARROW_UP:
+				case KEY_ARROW_DOWN:
+				case KEY_HOME:
+				case KEY_END:
+				{
+					if (this->m_textInputData.m_pText)
+					{
+						const char*text = this->m_textInputData.m_pText;
+						int lastRowStartIdx = -1, lastRowEndIdx = -1, curRowStartIdx = 0, newEndIndex;
+						int xPos = this->m_rect.left + 4;
+						int offset  = 0;
+						int offsetInsideLine = -1, offsetInsideLineCur = 0;
+						int curLine = 0;
+						
+						if (parm1 != KEY_END)
+						{
+							while (*text)
+							{
+								if (offset == this->m_textInputData.m_textCursorIndex)
+								{
+									offsetInsideLine = offsetInsideLineCur;
+									if (parm1 == KEY_ARROW_UP || parm1 == KEY_HOME)
+										break;
+								}
+								//word wrap
+								if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
+								{
+									xPos = this->m_rect.left + 4;
+									offsetInsideLineCur = 0;
+									curLine ++;
+									
+									//TODO make this better?
+									if (parm1 == KEY_ARROW_DOWN)
+									{
+										if (offsetInsideLine != -1)
+										{
+											if (lastRowStartIdx == -1)
+											{
+												lastRowStartIdx  = offset + 1;
+											}
+											else
+											{
+												lastRowEndIdx    = offset;
+												break;
+											}
+										}
+									}
+									else if (parm1 == KEY_HOME)
+									{
+										curRowStartIdx = offset + 1;
+									}
+									else
+									{
+										lastRowStartIdx = curRowStartIdx;
+										lastRowEndIdx   = offset;
+										curRowStartIdx  = offset + 1;
+									}
+								}
+								if (*text != '\n')
+								{
+									// Increment the X,Y positions
+									xPos += GetCharWidth (*text);
+									offsetInsideLineCur++;
+								}
+								
+								text++;
+								offset++;
+							}
+							if (parm1 == KEY_ARROW_DOWN)
+							{
+								if (offsetInsideLine != -1)
+								{
+									if (lastRowStartIdx == -1)
+									{
+										lastRowStartIdx  = offset + 1;
+									}
+									else
+									{
+										lastRowEndIdx    = offset;
+									}
+								}
+							}
+						}
+						else
+						{
+							//END: special case.
+							int index = this->m_textInputData.m_textCursorIndex;
+							while (this->m_textInputData.m_pText[index] != '\n' && index < this->m_textInputData.m_textLength)
+								index++;
+							newEndIndex = index;
+						}
+						
+						if (offsetInsideLine > lastRowEndIdx-lastRowStartIdx)
+							offsetInsideLine = lastRowEndIdx-lastRowStartIdx;
+						int newIndex = -1;
+						if (parm1 == KEY_ARROW_UP)
+						{
+							if (lastRowEndIdx >= lastRowStartIdx)
+								newIndex = lastRowStartIdx + offsetInsideLine;
+							else
+								newIndex = 0;
+						}
+						else if (parm1 == KEY_ARROW_DOWN)
+						{
+							if (lastRowEndIdx >= lastRowStartIdx)
+								newIndex = lastRowStartIdx + offsetInsideLine;
+							else
+								newIndex = this->m_textInputData.m_textLength;
+						}
+						else if (parm1 == KEY_HOME)
+							newIndex = curRowStartIdx;
+						else if (parm1 == KEY_END)
+							newIndex = newEndIndex;
+						
+						if (newIndex >= 0)
+							this->m_textInputData.m_textCursorIndex = newIndex;
+						else
+							LogMsg("Move not implemented?");
+					}
+					break;
+				}
 				case KEY_ARROW_LEFT:
 					this->m_textInputData.m_textCursorIndex--;
 					if (this->m_textInputData.m_textCursorIndex < 0)
 						this->m_textInputData.m_textCursorIndex = 0;
-					//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-					RequestRepaint (pWindow);
 					break;
 				case KEY_ARROW_RIGHT:
 					this->m_textInputData.m_textCursorIndex++;
 					if (this->m_textInputData.m_textCursorIndex > this->m_textInputData.m_textLength)
 						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
-					//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-					RequestRepaint (pWindow);
+					break;
+				case KEY_DELETE:
+				CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
 					break;
 			}
+			if (repaint)
+				//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+				RequestRepaint(pWindow);
 			break;
 		}
 		case EVENT_KEYPRESS:
@@ -571,14 +712,8 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			//shrink our rectangle:
 			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
 			
-			// Start out with some text.
-			CtlSetTextInputText(this, pWindow,
-				"Hello, world!\n"
-				"Here you can play around, and type stuff.\n"
-				"\tTabs are supported too!"
-			);
-			
-			// TODO: Add a scroll bar.
+			// initialize blank text:
+			CtlSetTextInputText(this, pWindow, "");
 			
 			break;
 		}
@@ -606,17 +741,19 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				//HACK
 				VidSetFont(FONT_TAMSYN_BOLD);
 				
-				//VidTextOut(this->m_textInputData.m_pText, this->m_rect.left, this->m_rect.top, 0, 0xFFFFFF);
-				
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
 				int xPos = this->m_rect.left + 4,
 					yPos = this->m_rect.top + 4 - lineHeight * this->m_textInputData.m_scrollY;
 				int curLine = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
-				int offset = 0;
-				//LogMsg("Lines per screen: %d Scroll line: %d", linesPerScreen, scrollLine);
+				int offset  = 0;
+				
 				while (*text)
 				{
+					if (offset == this->m_textInputData.m_textCursorIndex)
+					{
+						VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
+					}
 					//word wrap
 					if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
 					{
@@ -636,10 +773,6 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					
 					text++;
 					offset++;
-					if (offset == this->m_textInputData.m_textCursorIndex)
-					{
-						VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
-					}
 				}
 				if (offset == this->m_textInputData.m_textCursorIndex)
 				{

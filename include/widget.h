@@ -65,6 +65,11 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText);
 void SetHugeLabelText (Window *pWindow, int comboID, const char* pText);
 
 /**
+ * Changes the text of a TEXTINPUT with text with a certain comboID.
+ */
+void SetTextInputText(Window* pWindow, int comboID, const char* pText);
+
+/**
  * Works on the control with the comboID of 'menuBarControlId'.
  * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
  */
