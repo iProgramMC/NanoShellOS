@@ -624,6 +624,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		Rectangle newWndRect;
 		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
 		newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
+		if (newWndRect.top < 0)
+			newWndRect.top = 0;
 		newWndRect.right  = newWndRect.left + GetWidth(&window->m_rect);
 		newWndRect.bottom = newWndRect.top  + GetHeight(&window->m_rect);
 		window->m_rect = newWndRect;
@@ -1418,7 +1420,7 @@ void RenderWindow (Window* pWindow)
 	int o = 0;
 	int x2 = x + tw, y2 = y + th;
 	
-	while (y < -1)
+	while (y <= -1)
 	{
 		o += pWindow->m_vbeData.m_width;
 		y++;
@@ -1462,6 +1464,9 @@ void RenderWindow (Window* pWindow)
 	if (isAboveEverything)
 	{
 		//optimization
+		//TODO FIXME: Crash when placing at the top right of the screen so that:
+		//1) The y top position < 0
+		//2) The x right position > ScreenWidth.
 		int ys = pWindow->m_rect.top;
 		int ye = ys + pWindow->m_vbeData.m_height;
 		int kys = 0, kzs = 0;
@@ -1484,15 +1489,15 @@ void RenderWindow (Window* pWindow)
 		if (xe >= GetScreenWidth())
 			xe =  GetScreenWidth();
 		
-		int xd = (xe - xs) * sizeof (uint32_t);
-		int oms = y * g_mainScreenVBEData.m_pitch32 + xs,
-		    omc = y * g_mainScreenVBEData.m_width + xs;
+		int xd = (xe - xs);
+		int oms = ys * g_mainScreenVBEData.m_pitch32 + xs,
+		    omc = ys * g_mainScreenVBEData.m_width + xs;
 		for (int y = ys, ky = kys, kz = kzs; y != ye; y++, kz++)
 		{
 			ky = kz * pWindow->m_vbeData.m_width + off;
 			//just memcpy shit
-			align4_memcpy(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
-			align4_memcpy(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			memcpy_ints(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			memcpy_ints(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
 			oms += g_mainScreenVBEData.m_pitch32;
 			omc += g_mainScreenVBEData.m_width;
 		}
@@ -1500,7 +1505,7 @@ void RenderWindow (Window* pWindow)
 	else
 	{
 		int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
-		int  offfb,                         offcp;
+		int offfb,                         offcp;
 		for (int j = y; j != y2; j++)
 		{
 			if (j >= sy) break;

@@ -143,11 +143,11 @@ void CoPlotChar (Console *this, int x, int y, char c) {
 		VidPlotChar (c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 		g_vbeData = backup;
 	}
-	if (this->type == CONSOLE_TYPE_WINDOW)
+	/*if (this->type == CONSOLE_TYPE_WINDOW)
 	{
 		VidPlotChar (c, this->offX + x * this->cwidth, this->offY + y  * this->cheight, g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 		g_vbeData = backup;
-	}
+	}*/
 }
 void CoRefreshChar (Console *this, int x, int y) {
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
@@ -175,13 +175,13 @@ void CoScrollUpByOne(Console *this) {
 		{
 			CoPlotChar (this, i, this->height - 1, 0);
 		}
-		for (int j = 0; j < this->height-1; j++)
+		/*for (int j = 0; j < this->height-1; j++)
 		{
 			for (int i = 0; i < this->width; i++)
 			{
 				CoRefreshChar(this, i, j);
 			}
-		}
+		}*/
 	}
 	else if (this->type == CONSOLE_TYPE_TEXT) {
 		if (this->pushOrWrap) {

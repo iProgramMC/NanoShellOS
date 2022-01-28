@@ -59,6 +59,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 					//re-draw every character.
 					if (pConsole->textBuffer)
 					{
+						VidSetFont(FONT_TAMSYN_BOLD);//we like this font right here
 						for (int j = 0; j < pConsole->height; j++)
 						{
 							for (int i = 0; i < pConsole->width; i++)
@@ -67,6 +68,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 								CoRefreshChar(pConsole, i, j);
 							}
 						}
+						VidSetFont(FONT_BASIC);//let the WM be happy
 					}
 					else
 					{
@@ -97,7 +99,7 @@ void TerminalHostTask(int arg)
 		"nsterm", 
 		array[0], array[1], 
 		array[2] *  8 + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
-		array[3] * 10 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
+		array[3] * 16 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
 		TerminalHostProc,
 		0);
 	if (!pWindow)
@@ -124,7 +126,7 @@ void TerminalHostTask(int arg)
 	basic_console.curX = basic_console.curY = 0;
 	basic_console.pushOrWrap = 0; //wrap for now
 	basic_console.cwidth  = 8;
-	basic_console.cheight = 10;
+	basic_console.cheight = 16;
 	basic_console.curX = 0;
 	basic_console.curY = 0;
 	
