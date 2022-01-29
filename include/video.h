@@ -39,7 +39,7 @@ typedef struct
 {
 	uint16_t width, height;
 	int16_t leftOffs, topOffs;
-	uint32_t* bitmap;
+	const uint32_t* bitmap;
 	bool m_transparency;//optimization
 }
 Cursor;

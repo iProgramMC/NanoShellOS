@@ -20,7 +20,7 @@
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
-#define TITLE_BAR_HEIGHT 11//18
+#define TITLE_BAR_HEIGHT 18
 
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
@@ -36,8 +36,8 @@
 #define WINDOW_TITLE_TEXT_COLOR_SHADOW 0xFF00003F
 #define WINDOW_TITLE_TEXT_COLOR 0x00FFFFFF
 
-#define WINDOW_MIN_WIDTH 200 //that's already very small.
-#define WINDOW_MIN_HEIGHT 15
+#define WINDOW_MIN_WIDTH 32 //that's already very small.
+#define WINDOW_MIN_HEIGHT 14
 
 enum {
 	EVENT_NULL,
@@ -57,6 +57,8 @@ enum {
 	EVENT_KEYPRESS,
 	EVENT_CLOSE,
 	EVENT_KEYRAW,
+	EVENT_MINIMIZE,//do not call this normally.
+	EVENT_UNMINIMIZE,
 	EVENT_MAX
 };
 
@@ -232,6 +234,7 @@ Control;
 typedef struct WindowStruct
 {
 	bool       m_used;
+	bool       m_minimized;
 	bool       m_hidden;
 	bool       m_isBeingDragged;
 	bool       m_isSelected;
@@ -244,9 +247,12 @@ typedef struct WindowStruct
 	
 	WindowProc m_callback;
 	Rectangle  m_rect;
+	Rectangle  m_rectBackup;
 	//uint32_t*  m_framebuffer;
 	//int        m_fbWidth, m_fbHeight;
 	VBEData    m_vbeData;
+	
+	int        m_iconID;
 	
 	bool       m_eventQueueLock;
 	short      m_eventQueue[EVENT_QUEUE_MAX];
@@ -286,6 +292,7 @@ bool RectangleContains(Rectangle*r, Point*p) ;
  * Register an event to a certain window.
  */
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2);
+void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int parm2);
 
 /**
  * Entry point of the window manager.

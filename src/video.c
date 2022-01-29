@@ -262,7 +262,7 @@ Cursor* GetCurrentCursor()
 {
 	return g_currentCursor;
 }
-
+void RenderCursor(void);
 void SetCursor(Cursor* pCursor)
 {
 	if (!pCursor) pCursor = g_pDefaultCursor;
@@ -276,7 +276,7 @@ void SetCursor(Cursor* pCursor)
 	int mx = g_mouseX, my = g_mouseY;
 	
 	//undraw the old cursor:
-	if (g_currentCursor)
+	/*if (g_currentCursor)
 	{
 		for (int i = -2; i <= g_currentCursor->height + 1; i++)
 		{
@@ -287,11 +287,34 @@ void SetCursor(Cursor* pCursor)
 				VidPlotPixelIgnoreCursorChecksChecked (x, y, VidReadPixel(x, y));
 			}
 		}
+	}*/
+	if (g_currentCursor)
+	{
+		int sx = mx - g_currentCursor->leftOffs;
+		int sy = my - g_currentCursor->topOffs;
+		int ex = sx + g_currentCursor->width;
+		int ey = sy + g_currentCursor->height;
+		if (sx < 0) { sx = 0; }//we decrease psx by sx because sx is negative so it's just adding abs(sx)
+		if (sx >= GetScreenWidth()) return;
+		if (sy < 0) { sy = 0; }
+		if (sy >= GetScreenWidth()) return;
+		
+		if (ex < 0) return;
+		if (ey < 0) return;
+		if (ex >= GetScreenWidth())  ex = GetScreenWidth();
+		if (ey >= GetScreenHeight()) ey = GetScreenHeight();
+		
+		int dist = ex-sx;
+		for (int cy = sy; cy != ey; cy++)
+		{
+			int offf = cy * g_vbeData->m_pitch32 + sx, offc = cy * g_vbeData->m_width + sx;
+			memcpy_ints(&g_vbeData->m_framebuffer32[offf], &g_framebufferCopy[offc], dist);
+		}
 	}
 	
 	//draw the new cursor:
 	g_currentCursor = pCursor;
-	for (int i = 0; i < g_currentCursor->height; i++)
+	/*for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
 		{
@@ -312,9 +335,8 @@ void SetCursor(Cursor* pCursor)
 				);
 			}
 		}
-	}
-	
-	
+	}*/
+	RenderCursor();
 	
 	g_vbeData = backup;
 	

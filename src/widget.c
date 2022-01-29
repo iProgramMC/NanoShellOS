@@ -78,7 +78,17 @@ void RenderButtonShapeSmall(Rectangle rect, unsigned colorDark, unsigned colorLi
 	VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
 	
 	//shrink
-	rect.left++, rect.right--, rect.top++, rect.bottom -= 2;
+	rect.left++, rect.top++, rect.right--, rect.bottom--;
+	
+	//do the same
+	//VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
+	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right);
+	VidDrawHLine (colorDark,  rect.left,  rect.right,      rect.bottom - 1);
+	//VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
+	
+	//shrink again
+	//rect.left++, rect.top++,
+	rect.right--, rect.bottom -= 2;
 	
 	//fill the background:
 	if (colorMiddle != TRANSPARENT)
@@ -529,8 +539,8 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			{
 				this->m_textInputData.m_scrollY  = pos;
 			}
-			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-			RequestRepaint (pWindow);
+			WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			//RequestRepaint (pWindow);
 			break;
 		}
 		case EVENT_KEYRAW:
@@ -670,12 +680,15 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
 					break;
 				case KEY_DELETE:
-				CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
+					CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
+					break;
+				default:
+					repaint = false;
 					break;
 			}
 			if (repaint)
-				//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-				RequestRepaint(pWindow);
+				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+				//RequestRepaint(pWindow);
 			break;
 		}
 		case EVENT_KEYPRESS:
@@ -693,6 +706,8 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			//RequestRepaintNew (pWindow);
 			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			RequestRepaint (pWindow);
+			//pWindow->m_vbeData.m_dirty = true;
+			//pWindow->m_renderFinished  = true;
 			break;
 		}
 		case EVENT_CREATE:
@@ -1290,6 +1305,8 @@ void ResetList (Window* pWindow, int comboID)
 // Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
 // in parm1, and the menu item's comboID in parm2.
 
+#define MENU_BAR_HEIGHT 11
+
 void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comboID)
 {
 	// Call the generic initializor for the menu bar tree item.
@@ -1500,9 +1517,9 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 {
 	Rectangle menu_bar_rect;
 	menu_bar_rect.left   = 4;
-	menu_bar_rect.top    = 4 + TITLE_BAR_HEIGHT;
+	menu_bar_rect.top    = 2 + TITLE_BAR_HEIGHT;
 	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 4;
-	menu_bar_rect.bottom = menu_bar_rect.top + TITLE_BAR_HEIGHT + 3;
+	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 3;
 	
 	switch (eventType)
 	{
@@ -1798,7 +1815,8 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 			{
 				//send a command event to the window:
-				CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+				//CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+				WindowRegisterEventUnsafe(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
 			}
 			this->m_buttonData.m_clicked = false;
 			WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -1828,7 +1846,9 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			}
 			else
 			{
+				this->m_rect.right--;
 				RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				this->m_rect.right++;//ugly hack
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			}
 			

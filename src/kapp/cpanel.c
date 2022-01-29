@@ -97,9 +97,13 @@ void ControlEntry(__attribute__((unused)) int arg)
 	int wx = 150, wy = 150;
 	
 	Window* pWindow = CreateWindow ("Control Panel", wx, wy, ww, wh, ControlProgramProc, 0);//WF_NOCLOSE);
+	pWindow->m_iconID = ICON_FOLDER_SETTINGS;
 	
 	if (!pWindow)
-		DebugLogMsg("Hey, the main launcher window couldn't be created");
+	{
+		DebugLogMsg("Hey, the window couldn't be created. Why?");
+		return;
+	}
 	
 	// setup:
 	//ShowWindow(pWindow);

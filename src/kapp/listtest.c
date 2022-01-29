@@ -48,9 +48,13 @@ void ListTestTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("List Test", 300, 200, 400, 300, ListTestProc, 0);
+	pWindow->m_iconID = ICON_TEXT_FILE;
 	
 	if (!pWindow)
+	{
 		DebugLogMsg("Hey, the window couldn't be created");
+		return;
+	}
 	
 	// setup:
 	//ShowWindow(pWindow);

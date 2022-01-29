@@ -330,6 +330,7 @@ static int s_nSeconds;
 /**
  * RTC interrupt routine.
  */
+bool g_trustRtcUpdateFinishFlag;
 void IrqClock()
 {
 	//acknowledge interrupt
@@ -341,10 +342,21 @@ void IrqClock()
 	char flags = ReadPort(0x71);
 	if (flags & (1 << 4))
 	{
+		g_trustRtcUpdateFinishFlag = true;//yeah, trust me from now on.
 		//HACK: Done so that it wouldn't drift anymore.
 		s_nSeconds++;
 		g_nRtcTicks = s_nSeconds * RTC_TICKS_PER_SECOND + (g_nRtcTicks % RTC_TICKS_PER_SECOND);
 		TmGetTime(TmReadTime());
 	}
+	int oldTicks = g_nRtcTicks;
 	g_nRtcTicks++;
+	// if 4 seconds have passed and we STILL didn't get a update finished interrupt
+	// don't hesitate to update the time every 250 ms (just to be sure)
+	if (!g_trustRtcUpdateFinishFlag && GetTickCount() > 4000)
+	{
+		if (oldTicks / (RTC_TICKS_PER_SECOND/4) != g_nRtcTicks / (RTC_TICKS_PER_SECOND/4))//second changed?
+		{
+			TmGetTime(TmReadTime());
+		}
+	}
 }

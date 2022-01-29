@@ -12,6 +12,7 @@
 #include <console.h>
 #include <memory.h>
 #include <vfs.h>
+#include <misc.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -99,6 +100,22 @@ enum
 		FI_TELL,
 		FI_TELLSIZE,
 		FI_SEEK,
+	
+	// System Calls V1.2
+		WIN_SET_HUGE_LABEL_TEXT,
+		WIN_SET_INPUT_TEXT_TEXT,
+		WIN_SET_WINDOW_ICON,
+		WIN_SET_WINDOW_TITLE,
+		WIN_REGISTER_EVENT,
+		WIN_REGISTER_EVENT2,
+		
+		TM_GET_TICK_COUNT,
+		TM_GET_TIME,
+		
+		CPU_GET_TYPE,
+		CPU_GET_NAME,
+		
+		CON_GET_CURRENT_CONSOLE,
 };
 
 void LogString(const char* pText)
@@ -106,8 +123,22 @@ void LogString(const char* pText)
 	LogMsgNoCr("%s", pText);
 }
 
+void SetWindowIcon (Window* pWindow, int icon)
+{
+	pWindow->m_iconID = icon;
+}
+void SetWindowTitle(Window* pWindow, const char* pTitle)
+{
+	
+}
+extern Console* g_currentConsole;
+Console* GetCurrentConsole()
+{
+	return g_currentConsole;
+}
+
 void *WindowCall[] = {
-	// System Calls V1.0
+	// System Calls V1.0 -- 14/01/2022
 		NULL,
 		//Video Driver calls:
 		GetScreenSizeX,
@@ -137,7 +168,7 @@ void *WindowCall[] = {
 		MessageBox,
 		AddControl,
 	
-	// System Calls V1.1
+	// System Calls V1.1 -- 25/01/2022
 		RequestRepaint,
 		SetLabelText,
 		AddMenuBarItem,
@@ -164,7 +195,23 @@ void *WindowCall[] = {
 		FiWrite,
 		FiTell,
 		FiTellSize,
-		FiSeek
+		FiSeek,
+		
+	// System Calls V1.2 - 29/01/2022
+		SetHugeLabelText,
+		SetTextInputText,
+		SetWindowIcon,
+		SetWindowTitle,
+		WindowRegisterEvent,
+		WindowRegisterEventUnsafe,
+		
+		GetTickCount,
+		TmReadTime,
+		
+		GetCPUType,
+		GetCPUName,
+		
+		GetCurrentConsole,
 };
 
 void UserCallStuffNotSupportedC(void)

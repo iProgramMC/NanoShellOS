@@ -49,12 +49,32 @@
 #include <icons/text_file16.h>
 #include <icons/execute_file16.h>
 #include <icons/folder_parent16.h>
+// Icons V1.1
 #include <icons/folder_settings.h>
 #include <icons/cabinet16.h>
 #include <icons/computer16.h>
 #include <icons/command.h>
 #include <icons/command16.h>
 #include <icons/error16.h>
+// Icons V1.2
+#include <icons/lock.h>
+#include <icons/directions.h>
+#include <icons/certificate.h>
+#include <icons/file_write.h>
+#include <icons/scrap_file.h>
+#include <icons/scrap_file16.h>
+#include <icons/resmon.h>
+#include <icons/billboard.h>
+#include <icons/cscript_file.h>
+#include <icons/cscript_file16.h>
+#include <icons/file_click.h>
+#include <icons/keys.h>
+#include <icons/restricted.h>
+#include <icons/home.h>
+#include <icons/home16.h>
+#include <icons/adapter.h>
+#include <icons/clock.h>
+#include <icons/clock16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -105,81 +125,34 @@ Image * g_iconTable[] = {
 	&g_computer16_icon,
 	&g_command_icon,
 	&g_command16_icon,
-	&g_error16_icon
+	&g_error16_icon,
+	&g_lock_icon,
+	&g_directions_icon,
+	&g_certificate_icon,
+	&g_file_write_icon,
+	&g_scrap_file_icon,
+	&g_scrap_file16_icon,
+	&g_resmon_icon,
+	&g_billboard_icon,
+	&g_cscript_file_icon,
+	&g_cscript_file16_icon,
+	&g_file_click_icon,
+	&g_keys_icon,
+	&g_restricted_icon,
+	&g_home_icon,
+	&g_home16_icon,
+	&g_adapter_icon,
+	&g_clock_icon,
+	&g_clock16_icon,
 };
-#if 0
-enum 
-{
-	ICON_NULL,
-	ICON_CABINET,
-	ICON_CHIP,
-	ICON_CHIP_SQ,
-	ICON_COMPUTER,
-	ICON_COMPUTER_SHUTDOWN,
-	ICON_DESKTOP,
-	ICON_DRAW,
-	ICON_EARTH,
-	ICON_ERROR,
-	ICON_EXECUTE_FILE,
-	ICON_FILE,
-	ICON_FILES,
-	ICON_FOLDER,
-	ICON_FOLDER_BLANK,
-	ICON_FOLDER_MOVE,
-	ICON_FOLDER_PARENT,
-	ICON_FOLDER16_CLOSED,
-	ICON_FOLDER16_OPEN,
-	ICON_GLOBE,
-	ICON_GO,
-	ICON_HAND,
-	ICON_HELP,
-	ICON_INFO,
-	ICON_KEYBOARD,
-	ICON_KEYBOARD2,
-	ICON_LAPTOP,
-	ICON_NOTES,
-	ICON_PAINT,
-	ICON_SERIAL,
-	ICON_STOP,
-	ICON_TEXT_FILE,
-	ICON_WARNING,
-	ICON_NANOSHELL_LETTERS,
-	ICON_NANOSHELL_LETTERS16,
-	ICON_NANOSHELL,
-	ICON_NANOSHELL16,
-	ICON_BOMB,
-	ICON_BOMB_SPIKEY,
-	ICON_FILE16,
-	ICON_TEXT_FILE16,
-	ICON_EXECUTE_FILE16,
-	ICON_FOLDER_PARENT16,
-	//icons V1.1
-	ICON_FOLDER_SETTINGS,
-	ICON_CABINET16,
-	ICON_COMPUTER16,
-	ICON_COMMAND,
-	ICON_COMMAND16,
-	ICON_ERROR16,
-	ICON_COUNT
-};
-#endif
-
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
 
-
-void RenderIcon(IconType type, int x, int y)
+Image* GetIconImage(IconType type, int sz)
 {
-	if (type >= ICON_COUNT || type <= ICON_NULL) return;
+	if (type >= ICON_COUNT || type <= ICON_NULL) return NULL;
 	
-	Image* p = g_iconTable[type];
-	VidBlitImage(p, x, y);
-}
-void RenderIconForceSize(IconType type, int x, int y, int size)
-{
-	if (type >= ICON_COUNT || type <= ICON_NULL) return;
-	
-	if (size == 16)
+	if (sz == 16)
 	{
 		// Convert certain icons to their 16x counterparts:
 		switch (type)
@@ -196,11 +169,27 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 			CASE(NANOSHELL)
 			CASE(NANOSHELL_LETTERS)
 			CASE(COMMAND)
+			CASE(SCRAP_FILE)
+			CASE(FILE_CSCRIPT)
+			CASE(HOME)
+			CASE(CLOCK)
 			#undef CASE
 		}
 	}
 	
+	return g_iconTable[type];
+}
+void RenderIcon(IconType type, int x, int y)
+{
+	if (type >= ICON_COUNT || type <= ICON_NULL) return;
+	
 	Image* p = g_iconTable[type];
-	VidBlitImageResize(p, x, y, size, size);
+	VidBlitImage(p, x, y);
+}
+void RenderIconForceSize(IconType type, int x, int y, int size)
+{
+	Image *p = GetIconImage(type, size);
+	if (p)
+		VidBlitImageResize(p, x, y, size, size);
 }
 

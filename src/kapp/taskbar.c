@@ -16,6 +16,10 @@
 #define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
 #define TASKBAR_TIME_THING_WIDTH 60
 
+//hack.
+#undef  TITLE_BAR_HEIGHT
+#define TITLE_BAR_HEIGHT 11
+
 enum {
 	TASKBAR_HELLO = 0x1,
 	TASKBAR_START_TEXT,
@@ -40,7 +44,7 @@ void UpdateTaskbar (Window* pWindow)
 	//TODO: Window buttons.
 	
 	// FPS
-	sprintf(buffer, "<-- Click this button to start.  FPS: %d", GetWindowManagerFPS());
+	sprintf(buffer, "<-- Click this button to start.  FPS: %d     ", GetWindowManagerFPS());
 	SetLabelText(pWindow, TASKBAR_START_TEXT, buffer);
 	
 	// Time
@@ -59,10 +63,10 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			RECT (r, 4, 2, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Start", TASKBAR_HELLO, 0, 0);
-			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 2, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXTCENTER, r, "<-- Click this button to start.", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED);
-			RECT (r, GetScreenWidth() - 2 - TASKBAR_TIME_THING_WIDTH, 2, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED |TEXTSTYLE_HCENTERED);
+			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 8, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXT, r, "<-- Click this button to start.", TASKBAR_START_TEXT, 0, WINDOW_BACKGD_COLOR);
+			RECT (r, GetScreenWidth() - 2 - TASKBAR_TIME_THING_WIDTH, 8, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXT, r, "?", TASKBAR_TIME_TEXT, 0, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
@@ -97,7 +101,10 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	Window* pWindow = CreateWindow ("Task Bar", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
 	
 	if (!pWindow)
-		DebugLogMsg("Hey, the taskbar couldn't be created.  Why?");
+	{
+		DebugLogMsg("Hey, the window couldn't be created. Why?");
+		return;
+	}
 	
 	// setup:
 	//ShowWindow(pWindow);

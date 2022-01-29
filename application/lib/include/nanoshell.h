@@ -12,6 +12,20 @@ typedef uint8_t bool;
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(*array))
 
+typedef struct
+{
+	int seconds,
+		minutes,
+		hours,
+		weekday,
+		day,
+		month,
+		year,
+		statusA,
+		statusB;
+}
+TimeStruct;
+
 //basic memoryoperations:
 int memcmp(const void* ap, const void* bp, size_t size);
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size);
@@ -39,5 +53,12 @@ void LogMsgNoCr(const char* fmt, ...);
 void *Allocate(int size);
 void Free (void* ptr);
 void MmDebugDump();
+char ReadChar();
+void ReadString(char* pOutBuffer, int MaxSize);
+const char* GetCpuType();
+const char* GetCpuName();
+void* GetConsole();//TODO
+TimeStruct* GetTime();
+int GetTickCount();//time since startup
 
 #endif//_NANOSHELL_H

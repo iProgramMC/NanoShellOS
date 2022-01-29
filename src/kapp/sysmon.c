@@ -56,11 +56,12 @@ void UpdateSystemMonitorLists(Window* pWindow)
 	
 	
 	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
-	sprintf(buffer, "Memory: %d / %d KB (%d / %d pages)", (npp-nfpp)*4, npp*4, npp-nfpp, npp);
+	sprintf(buffer, "Memory: %d / %d KB (%d / %d pages)     ", (npp-nfpp)*4, npp*4, npp-nfpp, npp);
 	SetLabelText(pWindow, MEMORY_LABEL, buffer);
 	
 	sprintf(buffer, "FPS: %d           Uptime: ", GetWindowManagerFPS());
 	FormatTime(buffer, FORMAT_TYPE_VAR, GetTickCount() / 1000);
+	strcat (buffer, "      ");
 	SetLabelText(pWindow, UPTIME_LABEL, buffer);
 }
 
@@ -102,9 +103,9 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 4, listview_width, 20);
-			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", MEMORY_LABEL, 0, TRANSPARENT);
+			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", MEMORY_LABEL, 0, WINDOW_BACKGD_COLOR);
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 24, listview_width, 20);
-			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", UPTIME_LABEL, 0, TRANSPARENT);
+			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", UPTIME_LABEL, 0, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
@@ -120,6 +121,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	int xPos = (GetScreenSizeX() - SYSMON_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - SYSMON_HEIGHT) / 2;
 	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, 0);
+	pWindow->m_iconID = ICON_RESMON;
 	
 	if (!pWindow)
 	{

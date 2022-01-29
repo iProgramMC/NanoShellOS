@@ -139,7 +139,7 @@ static void vsprintf(char* memory, const char* format, va_list list) {
 	*memory = '\0';
 	return;
 }
-static void sprintf(char*a, const char*c, ...) {
+void sprintf(char*a, const char*c, ...) {
 	va_list list;
 	va_start(list, c);
 	vsprintf(a, c, list);

@@ -90,7 +90,7 @@ CALL_END
 CALL (RequestRepaint, WIN_REQUEST_REPAINT, void, Window* pWindow)
 	SARGS(pWindow)
 CALL_END
-CALL (SetLabelText, WIN_REQUEST_REPAINT, void, Window* pWindow, int comboID, const char* pText)
+CALL (SetLabelText, WIN_SET_LABEL_TEXT, void, Window* pWindow, int comboID, const char* pText)
 	SARGS(pWindow, comboID, pText)
 CALL_END
 CALL (AddMenuBarItem, WIN_ADD_MENUBAR_ITEM, void, Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
@@ -166,5 +166,38 @@ CALL (FiSeek, FI_SEEK, int /* err code */, int fd, int offset, int whence)
 	RARGS(fd, offset, whence)
 CALL_END
 
+CALL (SetHugeLabelText, WIN_SET_HUGE_LABEL_TEXT, void, Window* pWindow, int comboID, const char* pText)
+	SARGS(pWindow, comboID, pText)
+CALL_END
+CALL (SetTextInputText, WIN_SET_INPUT_TEXT_TEXT, void, Window* pWindow, int comboID, const char* pText)
+	SARGS(pWindow, comboID, pText)
+CALL_END
+CALL (SetWindowIcon, WIN_SET_WINDOW_ICON, void, Window* pWindow, int iconID)
+	SARGS(pWindow, iconID)
+CALL_END
+CALL (SetWindowTitle, WIN_SET_WINDOW_TITLE, void, Window* pWindow, const char* pText)
+	SARGS(pWindow, pText)
+CALL_END
+CALL (GetTickCount, TM_GET_TICK_COUNT, int, void)
+	RARGS()
+CALL_END
+CALL (GetTime, TM_GET_TIME, TimeStruct*, void)
+	RARGS()
+CALL_END
+CALL (GetCpuType, CPU_GET_TYPE, const char*, void)
+	RARGS()
+CALL_END
+CALL (GetCpuName, CPU_GET_NAME, const char*, void)
+	RARGS()
+CALL_END
+CALL (GetConsole, CON_GET_CURRENT_CONSOLE, void*, void)
+	RARGS()
+CALL_END
+CALL (RegisterEvent, WIN_REGISTER_EVENT, void, Window* pWindow, short evType, int parm1, int parm2)
+	SARGS(pWindow, evType, parm1, parm2)
+CALL_END
+CALL (RegisterEventInsideWndProc, WIN_REGISTER_EVENT2, void, Window* pWindow, short evType, int parm1, int parm2)
+	SARGS(pWindow, evType, parm1, parm2)
+CALL_END
 
 #endif

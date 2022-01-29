@@ -63,10 +63,34 @@ enum
 	ICON_COMMAND,
 	ICON_COMMAND16,
 	ICON_ERROR16,
+	//icons V1.2
+	ICON_LOCK,
+	ICON_DIRECTIONS,
+	ICON_CERTIFICATE,
+	ICON_FILE_WRITE,
+	ICON_SCRAP_FILE,
+	ICON_SCRAP_FILE16,
+	ICON_RESMON,
+	ICON_BILLBOARD,
+	ICON_FILE_CSCRIPT,
+	ICON_FILE_CSCRIPT16,
+	ICON_FILE_CLICK,
+	ICON_KEYS,
+	ICON_RESTRICTED,
+	ICON_HOME,
+	ICON_HOME16,
+	ICON_ADAPTER,
+	ICON_CLOCK,
+	ICON_CLOCK16,
 	ICON_COUNT
 };
 
 typedef int IconType;
+
+/**
+ * Gets an icon image.
+ */
+Image* GetIconImage(IconType type, int sz);
 
 /**
  * Renders an icon to the screen.

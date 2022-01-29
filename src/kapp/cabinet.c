@@ -303,6 +303,7 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - CABINET_HEIGHT) / 2;
 	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, 0);
+	pWindow->m_iconID = ICON_CABINET;
 	
 	if (!pWindow)
 	{

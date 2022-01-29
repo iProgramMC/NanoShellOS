@@ -25,7 +25,7 @@ enum {
 	WINDOW_CREATE = 0x1000,
 };
 
-#define WCALL_VERSION 11
+#define WCALL_VERSION 12
 enum
 {
 	// System Calls V1.0
@@ -89,6 +89,24 @@ enum
 		FI_TELL,
 		FI_TELLSIZE,
 		FI_SEEK,
+	#endif
+	
+	// System Calls V1.2
+	#if WCALL_VERSION >= 12
+		WIN_SET_HUGE_LABEL_TEXT,
+		WIN_SET_INPUT_TEXT_TEXT,
+		WIN_SET_WINDOW_ICON,
+		WIN_SET_WINDOW_TITLE,
+		WIN_REGISTER_EVENT,
+		WIN_REGISTER_EVENT2,
+		
+		TM_GET_TICK_COUNT,
+		TM_GET_TIME,
+		
+		CPU_GET_TYPE,
+		CPU_GET_NAME,
+		
+		CON_GET_CURRENT_CONSOLE,
 	#endif
 };
 

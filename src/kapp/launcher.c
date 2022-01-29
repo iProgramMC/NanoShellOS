@@ -187,9 +187,13 @@ void LauncherEntry(__attribute__((unused)) int arg)
 	int wx = (sw - ww) / 2, wy = (sh - wh) / 2;
 	
 	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, LauncherProgramProc, 0);//WF_NOCLOSE);
+	pWindow->m_iconID = ICON_HOME;
 	
 	if (!pWindow)
-		DebugLogMsg("Hey, the main launcher window couldn't be created");
+	{
+		DebugLogMsg("Hey, the window couldn't be created");
+		return;
+	}
 	
 	// setup:
 	//ShowWindow(pWindow);

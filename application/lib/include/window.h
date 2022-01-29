@@ -8,7 +8,7 @@
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
 
-#define TITLE_BAR_HEIGHT 11
+#define TITLE_BAR_HEIGHT 18
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
 #define EVENT_QUEUE_MAX 256
 #define WINDOW_TITLE_MAX 250
@@ -61,8 +61,40 @@ enum
 	ICON_TEXT_FILE,
 	ICON_WARNING,
 	ICON_NANOSHELL_LETTERS,
-	ICON_NANOSHELL16,
+	ICON_NANOSHELL_LETTERS16,
 	ICON_NANOSHELL,
+	ICON_NANOSHELL16,
+	ICON_BOMB,
+	ICON_BOMB_SPIKEY,
+	ICON_FILE16,
+	ICON_TEXT_FILE16,
+	ICON_EXECUTE_FILE16,
+	ICON_FOLDER_PARENT16,
+	//icons V1.1
+	ICON_FOLDER_SETTINGS,
+	ICON_CABINET16,
+	ICON_COMPUTER16,
+	ICON_COMMAND,
+	ICON_COMMAND16,
+	ICON_ERROR16,
+	//icons V1.2
+	ICON_LOCK,
+	ICON_DIRECTIONS,
+	ICON_CERTIFICATE,
+	ICON_FILE_WRITE,
+	ICON_SCRAP_FILE,
+	ICON_SCRAP_FILE16,
+	ICON_RESMON,
+	ICON_BILLBOARD,
+	ICON_FILE_CSCRIPT,
+	ICON_FILE_CSCRIPT16,
+	ICON_FILE_CLICK,
+	ICON_KEYS,
+	ICON_RESTRICTED,
+	ICON_HOME,
+	ICON_HOME16,
+	ICON_ADAPTER,
+	ICON_CLOCK,
 	ICON_COUNT
 };
 
@@ -81,7 +113,11 @@ enum {
 	EVENT_CLICKCURSOR,
 	EVENT_RELEASECURSOR,
 	EVENT_COMMAND,
+	EVENT_CLOSE,
 	EVENT_KEYPRESS,
+	EVENT_KEYRAW,
+	EVENT_MINIMIZE,//do not call this normally.
+	EVENT_UNMINIMIZE,
 	EVENT_MAX
 };
 enum {
@@ -200,6 +236,18 @@ typedef struct
 }
 MenuBarData;
 
+typedef struct
+{
+	bool  m_focused;
+	bool  m_onlyOneLine, m_showLineNumbers;//note that these are mutually exclusive, but both can be turned off
+	int   m_textCapacity, m_textLength;//The text length needs to be 1 less than the text capacity.
+	                                   //If the text capacity is 65, for example, the textLength may not be bigger than 64.
+	int   m_textCursorIndex, m_textCursorSelStart, m_textCursorSelEnd,
+	      m_scrollY;
+	char* m_pText;
+}
+TextInputData;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -218,6 +266,7 @@ typedef struct ControlStruct
 		ScrollBarData m_scrollBarData;
 		ButtonData    m_buttonData;
 		MenuBarData   m_menuBarData;
+		TextInputData m_textInputData;
 	};
 	
 	//event handler
@@ -233,6 +282,7 @@ Control;
 typedef struct WindowStruct
 {
 	bool       m_used;
+	bool       m_minimized;
 	bool       m_hidden;
 	bool       m_isBeingDragged;
 	bool       m_isSelected;
@@ -245,9 +295,12 @@ typedef struct WindowStruct
 	
 	WindowProc m_callback;
 	Rectangle  m_rect;
+	Rectangle  m_rectBackup;
 	//uint32_t*  m_framebuffer;
 	//int        m_fbWidth, m_fbHeight;
 	VBEData    m_vbeData;
+	
+	int        m_iconID;
 	
 	bool       m_eventQueueLock;
 	short      m_eventQueue[EVENT_QUEUE_MAX];
@@ -364,5 +417,31 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText);
  * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
  */
 void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
+
+/**
+ * Changes the text of a TEXTHUGE with text with a certain comboID.
+ */
+void SetHugeLabelText (Window *pWindow, int comboID, const char* pText);
+
+/**
+ * Changes the text of a TEXTINPUT with text with a certain comboID.
+ */
+void SetTextInputText(Window* pWindow, int comboID, const char* pText);
+
+/**
+ * Changes the icon of a window, displayed when minimized.
+ */
+void SetWindowIcon (Window* pWindow, int icon);
+
+/**
+ * Changes the text of a window.
+ */
+void SetWindowTitle(Window* pWindow, const char* pTitle);
+
+/**
+ * Queues up an event to the window.
+ */
+void RegisterEvent(Window* pWindow, short evType, int parm1, int parm2);
+void RegisterEventInsideWndProc(Window* pWindow, short evType, int parm1, int parm2);
 
 #endif//_WINDOW_H
