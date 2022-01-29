@@ -1213,8 +1213,8 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	bool iconAvailable = iconID != ICON_NULL;
 	
 	if (iconAvailable)
-		if (szY < 32)
-			szY = 32;
+		if (szY < 50)
+			szY = 50;
 	
 	int buttonWidth  = 70;
 	int buttonWidthG = 76;

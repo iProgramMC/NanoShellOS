@@ -17,7 +17,7 @@ enum
 };
 
 uint8_t g_commandRunning, g_resetStages, g_mouseDeviceID = 0, g_mouseCycle;
-bool g_mouseAvailable = true, g_mouseInitted = false;
+bool g_mouseAvailable = true, g_mouseInitted = false, g_ps2MouseAvail = false;
 
 MousePacket g_currentPacket;
 bool g_discardPacket;
@@ -246,6 +246,7 @@ void MouseInit()
 		SetDefaultCursor();
 		SetMouseVisible (true);
 		SetMousePos (GetScreenSizeX() / 2, GetScreenSizeY() / 2);
+		g_ps2MouseAvail = true;
 	}
 	else
 		LogMsg("PS/2 Mouse failed to initialize!");

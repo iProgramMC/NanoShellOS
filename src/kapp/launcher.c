@@ -111,18 +111,15 @@ void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, 
 			
 			// Add list items:
 			ResetList(pWindow, LAUNCHER_LISTVIEW);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "System",        ICON_BOMB);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "File cabinet",  ICON_CABINET);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Icon demo",     ICON_INFO);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Text Editor",   ICON_NOTES);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Scribble!",     ICON_DRAW);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Command Shell", ICON_COMMAND);
-			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Control Panel", ICON_FOLDER_SETTINGS);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "System Monitor",    ICON_RESMON);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "File cabinet",      ICON_CABINET);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Icon demo",         ICON_INFO);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Text Editor",       ICON_NOTES);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Scribble!",         ICON_DRAW);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Command Shell",     ICON_COMMAND);
+			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Control Panel",     ICON_FOLDER_SETTINGS);
 			AddElementToList(pWindow, LAUNCHER_LISTVIEW, "Shutdown Computer", ICON_COMPUTER_SHUTDOWN);
 			
-			break;
-		}
-		case EVENT_PAINT: {
 			break;
 		}
 		case EVENT_COMMAND: {
