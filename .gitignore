@@ -32,6 +32,7 @@ sdk/nsmake/x64/*
 sdk/nsmake/Debug/*
 sdk/nsmake/Release/*
 nanoshell_initrd
+vdisk*.vdi
 vdisk.vhd
 vdisk.vdi
 disk.vhd
@@ -39,3 +40,4 @@ disk.vdi
 disk.qcow2
 help/*
 nanoshell.cfg
+TEXT.TXT
