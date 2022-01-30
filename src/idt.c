@@ -100,7 +100,7 @@ extern Console *g_currentConsole, g_debugConsole;
 void IsrExceptionCommon(int code, Registers* pRegs) {
 	g_debugConsole.color = 0x4F;
 	g_debugConsole.pushOrWrap = 1;
-	g_debugConsole.curY = 1;
+	//g_debugConsole.curY = 1;
 	g_currentConsole = &g_debugConsole;
 	VidSetVBEData(NULL);
 	//VidSetFont(FONT_TAMSYN_BOLD);

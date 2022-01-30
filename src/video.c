@@ -1632,7 +1632,8 @@ void VidInitialize(multiboot_info_t* pInfo)
 		
 		// initialize the console:
 		//LogMsg("Setting font.");
-		VidSetFont (FONT_TAMSYN_REGULAR);
+		//VidSetFont (FONT_TAMSYN_REGULAR);
+		VidSetFont (FONT_FAMISANS);
 		//VidSetFont (FONT_BASIC);
 		//LogMsg("Re-initializing debug console with graphics");
 		CoInitAsGraphics(&g_debugConsole);
