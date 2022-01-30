@@ -55,6 +55,7 @@ typedef struct FSNodeS
 	uint32_t         m_inode;      //device specific
 	uint32_t         m_length;     //file size
 	uint32_t         m_implData;   //implementation data. TODO
+	uint32_t         m_implData1;  //implementation data. TODO
 	FileReadFunc     Read;
 	FileWriteFunc    Write;
 	FileOpenFunc     Open;

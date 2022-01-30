@@ -193,7 +193,7 @@ void FatFlushFat (FatFileSystem *pFS)
 void FatSetClusterInFAT (FatFileSystem *pFS, uint32_t cluster, uint32_t nextClus)
 {
 	pFS->m_pFat[cluster] = nextClus;
-	pFS->m_pbFatModified[cluster / 512] = true;
+	pFS->m_pbFatModified[cluster / 128] = true;
 }
 
 // TODO: Need to fix this for big endian platforms.
@@ -347,7 +347,10 @@ uint32_t FatAllocateCluster (FatFileSystem *pFS)
 			return i;
 		}
 	}
-	for (i = 0; i < pFS->m_clusAllocHint; i++)
+	//BUG: Was 0 before, clusters 0 and 1 are reserved and 2 is reserved for the root directory.
+	//Do not try to allocate over it.
+	//On most competent systems clusters 0 and 1 are marked as "end of chain", but we could wake up to weird issues.
+	for (i = 3; i < pFS->m_clusAllocHint; i++)
 	{
 		if (pFS->m_pFat[i] == 0)
 		{
@@ -837,17 +840,145 @@ bool FatDeleteFile (FatFileSystem* pFS, FatDirectory* pDir, const char* fileName
 
 typedef struct
 {
+	bool           bIsDirectory;
 	FatFileSystem* pOpenedIn;
 	uint8_t      * pWorkCluster;
+	bool           bLoadedWorkCluster;
 	uint32_t       nClusterCurrent,  // Cluster number inside the FAT.  Used to continue reading beyond the work cluster
 				   nClusterProgress, // Number of clusters that have been passed to reach this point.  Useful to check if "offset" has changed at all.
 				   nClusterFirst;    // First cluster.  Used to re-resolve nClusterCurrent if offset has gone back.
+	FileNode     * pFileNodes;       // List of file nodes.  Useful if, for example, this is a directory we're reading.
+	uint32_t       nFileNodes;
+	bool           bAllowWriting;
 }
 FatInode;
 
 static FatInode s_FatInodes[FD_MAX];
 
-bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, UNUSED bool write)
+//TODO: re-enable this
+
+/*
+bool FsFatOpenNonRootDir (FileNode* pFileNode);
+void FsFatCloseNonRootDir (FileNode* pFileNode);
+static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index);
+static FileNode* FsFatFindNonRootDir(FileNode *pNode, const char* pName);
+
+static void FsFatReadDirectoryContents(FatFileSystem* pFS, FileNode* *whereToStoreFileNodes, uint32_t** whereToStoreFileNodeCount, uint32_t startCluster)
+{
+	// Read the directory and count the entries.
+	int entryCount = 0;
+	uint32_t cluster = startCluster;
+	
+	while (true)
+	{
+		uint8_t root_cluster[pSystem->m_clusSize * 2];
+		FatGetCluster(pSystem, root_cluster, cluster);
+		uint8_t* entry = root_cluster;
+		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
+		{
+			uint8_t firstByte = *entry;
+			if (firstByte == 0x00 || firstByte == 0xE5)
+			{
+				entry += 32;
+				continue;
+			}
+			
+			uint32_t secondCluster = 0;
+			uint8_t* nextEntry = NULL;
+			FatDirEntry targetDirEnt;
+			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
+			entry = nextEntry;
+			if (secondCluster)
+			{
+				cluster = secondCluster;
+			}
+			
+			entryCount++;
+		}
+		cluster = FatGetNextCluster(pSystem, cluster);
+		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
+	}
+	
+	// Allocate a FileNode* pointer.
+	FileNode* pFileNodes = (FileNode*)MmAllocate (sizeof(FileNode) * entryCount);
+	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
+	
+	// Read the directory AGAIN and fill in the FileNodes
+	cluster = startCluster;
+	int index = 0;
+	
+	while (true)
+	{
+		uint8_t root_cluster[pSystem->m_clusSize * 2];
+		FatGetCluster(pSystem, root_cluster, cluster);
+		uint8_t* entry = root_cluster;
+		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
+		{
+			uint8_t firstByte = *entry;
+			while (firstByte == 0x00 || firstByte == 0xE5)
+			{
+				entry += 32;
+				firstByte = *entry;
+			}
+			
+			uint32_t secondCluster = 0;
+			uint8_t* nextEntry = NULL;
+			FatDirEntry targetDirEnt;
+			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
+			
+			// turn this entry into a FileNode entry.
+			FileNode *pCurrent = pFileNodes + index;
+			
+			strcpy(pCurrent->m_name, targetDirEnt.m_pName);
+			
+			pCurrent->m_type = FILE_TYPE_FILE;
+			if (targetDirEnt.m_dirFlags & FAT_DIRECTORY)
+				pCurrent->m_type = FILE_TYPE_DIRECTORY;
+			
+			pCurrent->m_perms = PERM_READ | PERM_WRITE;
+			if (targetDirEnt.m_dirFlags & FAT_READONLY)
+				pCurrent->m_perms &= ~PERM_WRITE;
+			
+			if (EndsWith (targetDirEnt.m_pName, ".nse"))
+				pCurrent->m_perms |=  PERM_EXEC;
+			
+			pCurrent->m_inode  = targetDirEnt.m_firstCluster;
+			pCurrent->m_length = targetDirEnt.m_fileSize;
+			pCurrent->m_implData = (int)pSystem;
+			pCurrent->m_flags    = 0;
+			
+			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
+			{
+				pCurrent->Read  = FsFatRead;
+				pCurrent->Write = NULL;
+				pCurrent->Open  = FsFatOpen;
+				pCurrent->Close = FsFatClose;
+			}
+			
+			//TODO: directory I/O
+			pCurrent->OpenDir  = FsFatOpenNonRootDir;
+			pCurrent->CloseDir = FsFatCloseNonRootDir;
+			pCurrent->ReadDir  = FsFatReadNonRootDir;
+			pCurrent->FindDir  = FsFatFindNonRootDir;
+			
+			entry = nextEntry;
+			if (secondCluster)
+			{
+				cluster = secondCluster;
+			}
+			
+			index++;
+		}
+		cluster = FatGetNextCluster(pSystem, cluster);
+		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
+	}
+	
+	//Done!
+	*whereToStoreFileNodes     = pFileNodes;
+	*whereToStoreFileNodeCount = entryCount;
+}
+
+bool FsFatOpenNonRootDir (FileNode* pFileNode)
 {
 	// pFileNode->m_inode    BEFORE OPENING currently represents the first cluster.
 	// pFileNode->m_implData represents the FatFileSystem pointer it's on
@@ -870,9 +1001,103 @@ bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, UNUSED bool write)
 	// Prepare the structure.
 	FatInode* pNode = &s_FatInodes[freeInode];
 	
-	pNode->pOpenedIn = pFS;
-	pNode->nClusterCurrent = pNode->nClusterFirst = nFirstCluster;
+	pNode->bIsDirectory     = true;
+	pNode->pOpenedIn        = pFS;
+	pNode->nClusterCurrent  = pNode->nClusterFirst = nFirstCluster;
 	pNode->nClusterProgress = 0;
+	
+	pFileNode->m_inode = freeInode;
+	
+	// Initialize the directory.
+	FsFatReadDirectoryContents(pFS, &pNode->pFileNodes, &pNode->nFileNodes, nFirstCluster);
+	
+	return true;
+}
+
+void FsFatCloseNonRootDir (FileNode* pFileNode)
+{
+	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
+	
+	if (!pNode->pOpenedIn) return;
+	
+	// Free the pWorkCluster structure, if applicable.
+	if (pNode->pWorkCluster)
+	{
+		MmFree(pNode->pWorkCluster);
+		pNode->pWorkCluster = NULL;
+	}
+	
+	// Deinitialize this fatinode:
+	pNode->pOpenedIn = NULL;
+	
+	// Reset the pFileNode to its default state:
+	pFileNode->m_inode = pNode->nClusterFirst;
+	pNode->nClusterCurrent = pNode->nClusterFirst = pNode->nClusterProgress = 0;
+	
+	// Get rid of a pFileNodes, if there is one.
+	if (pNode->pFileNodes)
+	{
+		MmFree(pNode->pFileNodes);
+		pNode->pFileNodes = NULL;
+	}
+}*/
+static DirEnt  g_FatDirEnt;
+/*static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index)
+{
+	int findex = pNode->m_inode;
+	if (findex < 0 || findex >= FD_MAX) return NULL;
+	if (!s_FatInodes[findex].pFileNodes) return NULL;//Not opened?
+	if (index >= s_FatInodes[findex].nFileNodes)
+		return NULL;
+	
+	strcpy(g_FatDirEnt.m_name, s_FatInodes[findex].pFileNodes[index].m_name);
+	g_FatDirEnt.m_inode = s_FatInodes[findex].pFileNodes[index].m_inode;
+	return &g_FatDirEnt;
+}
+static FileNode* FsFatFindNonRootDir(FileNode *pNode, const char* pName)
+{
+	int findex = pNode->m_inode;
+	if (findex < 0 || findex >= FD_MAX) return NULL;
+	if (!s_FatInodes[findex].pFileNodes) return NULL;//Not opened?
+	
+	for (int i = 0; i < s_FatInodes[findex].nFileNodes; i++)
+	{
+		if (strcmp (s_FatInodes[findex].pFileNodes[i].m_name, pName) == 0)
+			return &s_FatInodes[findex].pFileNodes[i];
+	}
+	return NULL;
+}
+*/
+
+bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, bool write)
+{
+	// pFileNode->m_inode    BEFORE OPENING currently represents the first cluster.
+	// pFileNode->m_implData represents the FatFileSystem pointer it's on
+	
+	FatFileSystem* pFS = (FatFileSystem*)pFileNode->m_implData;
+	uint32_t nFirstCluster = pFileNode->m_inode;
+	
+	// look for a free inode:
+	int freeInode = -1;
+	for (int i = 0; i < FD_MAX; i++)
+	{
+		if (!s_FatInodes[i].pOpenedIn)
+		{
+			freeInode = i;
+			break;
+		}
+	}
+	if (freeInode == -1) return false;//too many files!
+	
+	// Prepare the structure.
+	FatInode* pNode = &s_FatInodes[freeInode];
+	
+	pNode->bIsDirectory     = false;
+	pNode->pOpenedIn        = pFS;
+	pNode->nClusterCurrent  = pNode->nClusterFirst = nFirstCluster;
+	pNode->nClusterProgress = 0;
+	pNode->bAllowWriting    = write;
+	pNode->bLoadedWorkCluster = false;
 	
 	pFileNode->m_inode = freeInode;
 	
@@ -884,6 +1109,13 @@ void FsFatClose (FileNode* pFileNode)
 	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
 	
 	if (!pNode->pOpenedIn) return;
+	
+	if (pNode->bAllowWriting && pNode->bLoadedWorkCluster)
+	{
+		//Write one last sector
+		SLogMsg("Writing last cluster!");
+		FatPutCluster (pNode->pOpenedIn, pNode->pWorkCluster, pNode->nClusterCurrent);
+	}
 	
 	// Free the pWorkCluster structure, if applicable.
 	if (pNode->pWorkCluster)
@@ -962,6 +1194,7 @@ uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED u
 	if (needsToReloadCluster)
 	{
 		FatGetCluster (pNode->pOpenedIn, pNode->pWorkCluster, pNode->nClusterCurrent);
+		pNode->bLoadedWorkCluster = true;
 	}
 	
 	int whereToEndReading = size + insideClusterOffset, howMuchToRead = size;
@@ -983,6 +1216,228 @@ uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED u
 	return result;
 }
 
+//NOTE: For Now it does not expand the file.  It's a TODO
+uint32_t FsFatWrite (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+{
+	SLogMsg("FsFatWrite(%x, %d, %d, %x)", pFileNode,offset,size,pBuffer);
+	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
+	
+	if (!pNode->pOpenedIn) return 0;
+	
+	bool needsToReloadCluster = false;
+
+	int remainderToExpandTo = 0;
+	// Determine how much we can read
+	if (offset + size > pFileNode->m_length)
+	{
+		int oldSize = size;
+		size = pFileNode->m_length - offset;
+		remainderToExpandTo = oldSize - size;
+		
+		//do we need to expand?
+		if (remainderToExpandTo > 0)
+		{
+			//Expand here, and then FsFatWrite again.
+			SLogMsg("Cluster Size is  %d.",  pNode->pOpenedIn->m_clusSize);
+			SLogMsg("Want to expand by %d?", remainderToExpandTo);
+			
+			int newSize = pFileNode->m_length + remainderToExpandTo;
+			int clusterSizeOld = (pFileNode->m_length + pNode->pOpenedIn->m_clusSize - 1) / pNode->pOpenedIn->m_clusSize;
+			int clusterSizeNew = (newSize             + pNode->pOpenedIn->m_clusSize - 1) / pNode->pOpenedIn->m_clusSize;
+			
+			// Do they differ?
+			if (clusterSizeOld != clusterSizeNew)
+			{
+				// yes. Allocate however many cluster it takes:
+				int clustersToAllocate = clusterSizeNew - clusterSizeOld;
+				SLogMsg("Yes.  Need to allocate a %d clusters.", clustersToAllocate);
+				//allocate some clusters:
+				uint32_t nLastCluster = pNode->nClusterFirst;
+				do
+				{
+					uint32_t clus = FatGetNextCluster(pNode->pOpenedIn, nLastCluster);
+					if (clus < FAT_END_OF_CHAIN)
+					{
+						nLastCluster = clus;
+					}
+					else break;
+				}
+				while (1);
+				
+				pNode->pOpenedIn->m_clusAllocHint = nLastCluster;
+				while (clustersToAllocate)
+				{
+					SLogMsg("Last Cluster Number is %d.  Expanding by one cluster, %d left.", nLastCluster, clustersToAllocate);
+					uint32_t nextCluster = FatAllocateCluster(pNode->pOpenedIn);
+					if (!nextCluster) 
+					{
+						SLogMsg("ERROR! Did not work, drive full?");
+						return 0;
+					}
+					SLogMsg("Allocated Cluster Number %d.", nextCluster);
+					FatClearCluster   (pNode->pOpenedIn, nextCluster);
+					FatSetClusterInFAT(pNode->pOpenedIn, nLastCluster, nextCluster);
+					FatSetClusterInFAT(pNode->pOpenedIn, nextCluster,  FAT_END_OF_CHAIN);
+					nLastCluster = nextCluster;
+					clustersToAllocate--;
+				}
+				FatFlushFat(pNode->pOpenedIn);
+			}
+			
+			//TODO: Write directory entry to update size.
+			uint32_t cluster = pFileNode->m_implData1;
+			int index = 0;
+			bool didSomething = false;
+			
+			while (true)
+			{
+				uint8_t root_cluster[pNode->pOpenedIn->m_clusSize * 2];
+				FatGetCluster(pNode->pOpenedIn, root_cluster, cluster);
+				uint8_t* entry = root_cluster;
+				while ((uint32_t)(entry - root_cluster) < pNode->pOpenedIn->m_clusSize)
+				{
+					uint8_t firstByte = *entry;
+					while (firstByte == 0x00 || firstByte == 0xE5)
+					{
+						entry += 32;
+						firstByte = *entry;
+					}
+					
+					uint32_t secondCluster = 0;
+					uint8_t* nextEntry = NULL;
+					FatDirEntry targetDirEnt;
+					FatNextDirEntry (pNode->pOpenedIn, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
+					
+					if (strcmp(targetDirEnt.m_pName, pFileNode->m_name) == 0)
+					{
+						SLogMsg("Overwriting entry.");
+						//Found it!
+						//Write stuff to it.
+						*((uint32_t*)(entry + 28)) = newSize;
+						FatPutCluster(pNode->pOpenedIn, root_cluster, cluster);
+						
+						didSomething = true;
+						break;
+					}
+					
+					entry = nextEntry;
+					if (secondCluster)
+					{
+						cluster = secondCluster;
+					}
+					
+					index++;
+				}
+				cluster = FatGetNextCluster(pNode->pOpenedIn, cluster);
+				if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
+			}
+			
+			if (!didSomething)
+			{
+				SLogMsg("ERROR: Could Not Write Entry! FileSystem may be corrupted!!!");
+				return 0;
+			}
+			else
+				SLogMsg("Overwrote entry.");
+			
+			FatFlushFat(pNode->pOpenedIn);
+			//return 0;
+			pFileNode->m_length = newSize;
+			
+			return FsFatWrite(pFileNode, offset, oldSize, pBuffer);
+		}
+	}
+	
+	if (size <= 0) return 0;
+	
+	if (!pNode->pWorkCluster)
+	{	
+		SLogMsg("Didn't allocate work cluster, doing it now");
+		pNode->pWorkCluster  = (uint8_t*)MmAllocate (pNode->pOpenedIn->m_clusSize);
+		needsToReloadCluster = true;
+		pNode->bLoadedWorkCluster = false;
+		if (!pNode->pWorkCluster)
+			return 0; //Out of memory
+	}
+	
+	// Cluster offset to read from.  NOT the cluster number, just the number of cluster steps to go through to reach this.
+	uint32_t clusterOffsetCurrent = offset / pNode->pOpenedIn->m_clusSize;
+	
+	// Did it change from the current cluster? If yes, how?
+	uint32_t clusterToWrite = 0;
+	if (clusterOffsetCurrent < pNode->nClusterProgress)
+	{
+		// It went back.  Re-resolve from the start.
+		clusterToWrite = pNode->nClusterCurrent;
+		pNode->nClusterCurrent  = pNode->nClusterFirst;
+		needsToReloadCluster = true;
+		
+		// Navigate the singly linked list until we reach the cluster.
+		for (pNode->nClusterProgress = 0; pNode->nClusterProgress < clusterOffsetCurrent; pNode->nClusterProgress++)
+		{
+			pNode->nClusterCurrent = FatGetNextCluster (pNode->pOpenedIn, pNode->nClusterCurrent);
+		}
+	}
+	else if (clusterOffsetCurrent > pNode->nClusterProgress)
+	{
+		// It went forwards.  To speed forward reads, start resolving the current cluster
+		// number right from the current offset stored.
+		clusterToWrite = pNode->nClusterCurrent;
+		needsToReloadCluster = true;
+		for (; pNode->nClusterProgress < clusterOffsetCurrent; pNode->nClusterProgress++)
+		{
+			pNode->nClusterCurrent = FatGetNextCluster (pNode->pOpenedIn, pNode->nClusterCurrent);
+		}
+	}
+	else
+	{
+		// ... We're already at the needed cluster.
+	}
+	
+	int insideClusterOffset = offset % pNode->pOpenedIn->m_clusSize;
+	
+	// Reload the cluster if needed.
+	if (clusterToWrite > 0)
+	{
+		if (pNode->bLoadedWorkCluster)
+		{
+			SLogMsg("Writing some cluster!");
+			FatPutCluster (pNode->pOpenedIn, pNode->pWorkCluster, clusterToWrite);
+		}
+	}
+	if (needsToReloadCluster)
+	{
+		SLogMsg("Reloading cluster.");
+		FatGetCluster (pNode->pOpenedIn, pNode->pWorkCluster, pNode->nClusterCurrent);
+		pNode->bLoadedWorkCluster = true;
+	}
+	
+	int whereToEndWriting = size + insideClusterOffset, howMuchToWrite = size;
+	if (whereToEndWriting > (int)pNode->pOpenedIn->m_clusSize)
+	{
+		howMuchToWrite -= (whereToEndWriting - (int)pNode->pOpenedIn->m_clusSize);
+		whereToEndWriting = (int)pNode->pOpenedIn->m_clusSize;
+	}
+	
+	// Place the data in it, finally.
+	uint8_t* pointer = (uint8_t*)pBuffer;
+	memcpy (pNode->pWorkCluster + insideClusterOffset, pointer, howMuchToWrite);
+	SLogMsg("Written to memory, waiting to write on disk.");
+	pNode->bLoadedWorkCluster = true;
+	
+	int result = howMuchToWrite;
+	if ((uint32_t)howMuchToWrite < size) // More to write?
+		// Yeah, write more.
+		result += FsFatWrite (pFileNode, offset + howMuchToWrite, size - howMuchToWrite, pointer + howMuchToWrite);
+	else
+	{
+		// No more to write
+		SLogMsg("No more to write");
+	}
+	
+	return result;
+}
+
 
 FileNode*             g_fatsMountedPointers     [32];
 static FileNode*      g_fatsMountedListFilesPtrs[32];
@@ -990,7 +1445,6 @@ static FatFileSystem* g_fatsMountedAsFileSystems[32];
 int                   g_fatsMountedListFilesCnt [32];
 int                   g_fatsMountedCount         = 0;
 
-static DirEnt  g_FatDirEnt;
 static DirEnt* FsFatReadRootDir(FileNode* pNode, uint32_t index)
 {
 	int findex = pNode->m_inode;
@@ -1095,20 +1549,26 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 			if (EndsWith (targetDirEnt.m_pName, ".nse"))
 				pCurrent->m_perms |=  PERM_EXEC;
 			
-			pCurrent->m_inode  = targetDirEnt.m_firstCluster;
-			pCurrent->m_length = targetDirEnt.m_fileSize;
-			pCurrent->m_implData = (int)pSystem;
-			pCurrent->m_flags    = 0;
+			pCurrent->m_inode     = targetDirEnt.m_firstCluster;
+			pCurrent->m_length    = targetDirEnt.m_fileSize;
+			pCurrent->m_implData  = (int)pSystem;
+			pCurrent->m_implData1 = 2;
+			pCurrent->m_flags     = 0;
 			
 			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
 			{
 				pCurrent->Read  = FsFatRead;
-				pCurrent->Write = NULL;
+				pCurrent->Write = FsFatWrite;
 				pCurrent->Open  = FsFatOpen;
 				pCurrent->Close = FsFatClose;
 			}
 			
 			//TODO: directory I/O
+			/*
+			pCurrent->OpenDir  = FsFatOpenNonRootDir;
+			pCurrent->CloseDir = FsFatCloseNonRootDir;
+			pCurrent->ReadDir  = FsFatReadNonRootDir;
+			pCurrent->FindDir  = FsFatFindNonRootDir;*/
 			pCurrent->OpenDir  = NULL;
 			pCurrent->CloseDir = NULL;
 			pCurrent->ReadDir  = NULL;

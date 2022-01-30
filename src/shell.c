@@ -382,6 +382,42 @@ void ShellExecuteCommand(char* p)
 			LogMsg("Done");
 		}
 	}
+	else if (strcmp (token, "ffa") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			char s[1024];
+			strcpy (s, g_cwd);
+			if (g_cwd[1] != 0) //not just a '/'
+				strcat(s, "/");
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_WRONLY);
+			if (fd < 0)
+			{
+				LogMsg("Got error code %d when opening file", fd);
+				return;
+			}
+			
+			FiSeek(fd, 0, SEEK_END);
+			
+			char text[] = "Hello World from FiWrite!\n\n\n";
+			
+			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
+			
+			FiClose (fd);
+			LogMsg("Done");
+		}
+	}
 	else if (strcmp (token, "lr") == 0)
 	{
 		KePrintMemoryMapInfo();

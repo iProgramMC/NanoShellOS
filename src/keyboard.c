@@ -345,7 +345,7 @@ void IrqKeyboard(UNUSED int e[50])
 			KbAddKeyToBuffer(KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)]);
 		}
 		
-		if (g_virtualMouseEnabled)
+		if (g_virtualMouseEnabled && VidIsAvailable())
 		{
 			UpdateFakeMouse();
 		}

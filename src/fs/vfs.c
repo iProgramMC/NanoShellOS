@@ -319,6 +319,8 @@ int FiSeek (int fd, int offset, int whence)
 	if (realOffset > g_FileNodeToDescriptor[fd].m_nFileEnd)
 		return -EOVERFLOW;
 	
+	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
+	
 	return -ENOTHING;
 }
 
