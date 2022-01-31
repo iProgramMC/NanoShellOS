@@ -30,5 +30,6 @@ extern void KeTimerInit();
 extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
+extern void WaitMS(int ms);
 
 #endif//_IDT_H

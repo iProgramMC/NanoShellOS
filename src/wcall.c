@@ -13,6 +13,7 @@
 #include <memory.h>
 #include <vfs.h>
 #include <misc.h>
+#include <idt.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -119,6 +120,8 @@ enum
 		
 	// System Calls V1.21
 		VID_BLIT_IMAGE_RESIZE,
+		
+		TM_SLEEP,
 };
 
 void LogString(const char* pText)
@@ -218,6 +221,8 @@ void *WindowCall[] = {
 		
 	// System Calls V1.21- 31/01/2022
 		VidBlitImageResize,
+		
+		WaitMS,
 };
 
 void UserCallStuffNotSupportedC(void)

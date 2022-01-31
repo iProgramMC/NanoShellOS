@@ -204,4 +204,8 @@ CALL (VidBlitImageResize, VID_BLIT_IMAGE_RESIZE, void, Image*pImage, int x, int 
 	SARGS(pImage,x,y, width, height)
 CALL_END
 
+CALL (TmSleep, TM_SLEEP, void, int ms)
+	SARGS(ms)
+CALL_END
+
 #endif

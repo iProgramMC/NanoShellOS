@@ -110,6 +110,7 @@ enum
 		
 		//V1.21
 		VID_BLIT_IMAGE_RESIZE,
+		TM_SLEEP,
 	#endif
 };
 
