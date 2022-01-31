@@ -274,6 +274,7 @@ bool g_virtualMouseHadUpdatesBefore = false;
 
 extern Cursor* g_currentCursor;
 extern bool g_mouseInitted;
+extern bool g_ps2MouseAvail;
 //mappings: F11-Left Click, F12-Right Click, F9-make it slower, F10-make it faster
 void UpdateFakeMouse()
 {
@@ -345,7 +346,7 @@ void IrqKeyboard(UNUSED int e[50])
 			KbAddKeyToBuffer(KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)]);
 		}
 		
-		if (g_virtualMouseEnabled && VidIsAvailable())
+		if (g_virtualMouseEnabled && VidIsAvailable() && !g_ps2MouseAvail)
 		{
 			UpdateFakeMouse();
 		}

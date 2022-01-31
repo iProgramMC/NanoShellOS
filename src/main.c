@@ -73,8 +73,7 @@ extern VBEData* g_vbeData;
 
 multiboot_info_t* g_pMultibootInfo;
 
-extern uint8_t g_TestingFloppyImage[];
-
+extern bool g_gotTime;//idt.c
 void FpuTest();
 
 extern uint32_t e_temporary1, e_temporary2;
@@ -128,20 +127,26 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	
 	//KePrintMemoryMapInfo();
 	// Initialize the task scheduler
-	LogMsg("Initializing task scheduler...");
+	//LogMsg("Initializing task scheduler...");
 	KiTaskSystemInitialize();
 	
 	
 	// Initialize the ramdisk
-	LogMsg("Initializing initrd...");
+	//LogMsg("Initializing initrd...");
 	FsInitializeInitRd(g_initrdStart);
 	// Initialize the IDE driver
-	LogMsg("Initializing IDE drives...");
+	//LogMsg("Initializing IDE drives...");
 	StIdeInitialize ();
 	
 	// Initialize the FAT partitions.
-	LogMsg("Mounting FAT partitions...");
+	//LogMsg("Mounting FAT partitions...");
 	FsMountFatPartitions();
+	
+	LogMsg("Waiting to get time...");
+	while (g_gotTime)
+	{
+		hlt;
+	}
 	
 	//Initialize the mouse driver too
 	sti;

@@ -326,6 +326,7 @@ void KeClockInit()
 
 extern int g_nRtcTicks;//misc.c
 static int s_nSeconds;
+extern bool g_gotTime = false;
 
 /**
  * RTC interrupt routine.
@@ -346,6 +347,7 @@ void IrqClock()
 		//HACK: Done so that it wouldn't drift anymore.
 		s_nSeconds++;
 		g_nRtcTicks = s_nSeconds * RTC_TICKS_PER_SECOND + (g_nRtcTicks % RTC_TICKS_PER_SECOND);
+		g_gotTime = true;
 		TmGetTime(TmReadTime());
 	}
 	int oldTicks = g_nRtcTicks;
@@ -356,6 +358,7 @@ void IrqClock()
 	{
 		if (oldTicks / (RTC_TICKS_PER_SECOND/4) != g_nRtcTicks / (RTC_TICKS_PER_SECOND/4))//second changed?
 		{
+			g_gotTime = true;
 			TmGetTime(TmReadTime());
 		}
 	}
