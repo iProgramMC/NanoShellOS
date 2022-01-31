@@ -207,7 +207,7 @@ void KillWindowDepthBuffer ()
 {
 	if (g_windowDepthBuffer)
 	{
-		MmFree(g_windowDepthBuffer);
+		MmFreeK(g_windowDepthBuffer);
 		g_windowDepthBuffer = NULL;
 		g_windowDepthBufferSzBytes = 0;
 	}
@@ -217,7 +217,7 @@ void InitWindowDepthBuffer ()
 	KillWindowDepthBuffer();
 	
 	g_windowDepthBufferSzBytes = sizeof (short) * GetScreenSizeX() * GetScreenSizeY();
-	g_windowDepthBuffer = MmAllocate(g_windowDepthBufferSzBytes);
+	g_windowDepthBuffer = MmAllocateK(g_windowDepthBufferSzBytes);
 }
 void SetWindowDepthBuffer (int windowIndex, int x, int y)
 {
@@ -383,13 +383,13 @@ void ReadyToDestroyWindow (Window* pWindow)
 	
 	if (pWindow->m_vbeData.m_framebuffer32)
 	{
-		MmFree (pWindow->m_vbeData.m_framebuffer32);
+		MmFreeK (pWindow->m_vbeData.m_framebuffer32);
 		pWindow->m_vbeData.m_available     = 0;
 		pWindow->m_vbeData.m_framebuffer32 = NULL;
 	}
 	if (pWindow->m_pControlArray)
 	{
-		MmFree(pWindow->m_pControlArray);
+		MmFreeK(pWindow->m_pControlArray);
 		pWindow->m_controlArrayLen = 0;
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
@@ -485,7 +485,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
 	pWnd->m_vbeData.m_available     = true;
-	pWnd->m_vbeData.m_framebuffer32 = MmAllocate (sizeof (uint32_t) * xSize * ySize);
+	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
 	ZeroMemory (pWnd->m_vbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
 	pWnd->m_vbeData.m_width         = xSize;
 	pWnd->m_vbeData.m_height        = ySize;
@@ -497,7 +497,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
 	size_t controlArraySize = sizeof(Control) * pWnd->m_controlArrayLen;
-	pWnd->m_pControlArray   = (Control*)MmAllocate(controlArraySize);
+	pWnd->m_pControlArray   = (Control*)MmAllocateK(controlArraySize);
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
@@ -759,7 +759,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		return;
 	}
 	
-	g_debugConsole.curY = 0;
+	g_debugConsole.curY = g_debugConsole.height / 2;
 	g_clickQueueSize = 0;
 	// load background?
 	memset (&g_windows, 0, sizeof (g_windows));
@@ -998,14 +998,14 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		//series: 2, 3, 4, 6, 9, 13, 19, 28, 42, ...
 		
 		size_t newSize = sizeof(Control) * cal;
-		Control* newCtlArray = (Control*)MmAllocate(newSize);
+		Control* newCtlArray = (Control*)MmAllocateK(newSize);
 		memset(newCtlArray, 0, newSize);
 		
 		// copy stuff into the new control array:
 		memcpy(newCtlArray, pWindow->m_pControlArray, sizeof(Control) * pWindow->m_controlArrayLen);
 		
 		// free the previous array:
-		MmFree(pWindow->m_pControlArray);
+		MmFreeK(pWindow->m_pControlArray);
 		
 		// then assign the new one
 		pWindow->m_pControlArray   = newCtlArray;
@@ -1201,7 +1201,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	
 	int szX, szY;
 	
-	char* test = MmAllocate(strlen(pText)+5);
+	char* test = MmAllocateK(strlen(pText)+5);
 	WrapText(test, pText, GetScreenWidth() * 2 / 3);
 	
 	// Measure the pText text.
@@ -1249,7 +1249,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, 0, TEXTSTYLE_VCENTERED);
 	SetHugeLabelText(pBox, 0x10000, test);
 	
-	MmFree(test);
+	MmFreeK(test);
 	
 	if (iconAvailable)
 	{

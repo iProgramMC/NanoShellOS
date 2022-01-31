@@ -800,6 +800,11 @@ void VidBlitImage(Image* pImage, int x, int y)
 }
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
+	if (width == p->width && height == p->height)
+	{
+		VidBlitImage (p, gx, gy);
+		return;
+	}
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -1632,8 +1637,8 @@ void VidInitialize(multiboot_info_t* pInfo)
 		
 		// initialize the console:
 		//LogMsg("Setting font.");
-		//VidSetFont (FONT_TAMSYN_REGULAR);
-		VidSetFont (FONT_FAMISANS);
+		VidSetFont (FONT_TAMSYN_REGULAR);
+		//VidSetFont (FONT_FAMISANS);
 		//VidSetFont (FONT_BASIC);
 		//LogMsg("Re-initializing debug console with graphics");
 		CoInitAsGraphics(&g_debugConsole);

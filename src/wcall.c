@@ -116,6 +116,9 @@ enum
 		CPU_GET_NAME,
 		
 		CON_GET_CURRENT_CONSOLE,
+		
+	// System Calls V1.21
+		VID_BLIT_IMAGE_RESIZE,
 };
 
 void LogString(const char* pText)
@@ -212,6 +215,9 @@ void *WindowCall[] = {
 		GetCPUName,
 		
 		GetCurrentConsole,
+		
+	// System Calls V1.21- 31/01/2022
+		VidBlitImageResize,
 };
 
 void UserCallStuffNotSupportedC(void)

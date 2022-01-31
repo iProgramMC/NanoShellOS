@@ -92,7 +92,7 @@ int main ()
 	if (!pWindow)
 		return 1;
 	
-	memset (&time, 0, sizeof(time));
+	//memset (&time, 0, sizeof(time));
 	
 	while (HandleMessages (pWindow))
 	{

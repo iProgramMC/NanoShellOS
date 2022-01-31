@@ -107,6 +107,9 @@ enum
 		CPU_GET_NAME,
 		
 		CON_GET_CURRENT_CONSOLE,
+		
+		//V1.21
+		VID_BLIT_IMAGE_RESIZE,
 	#endif
 };
 

@@ -59,9 +59,10 @@ void ElfCleanup (ElfProcess* pProcess)
 		pProcess->m_pagesAllocated[i] = NULL;
 	}
 }
-void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data)
+void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
 {
 	uint32_t* pageDir = pProc->m_pageDirectory;
+	uint32_t sizeToCopy = fileSize;
 	size = (((size-1) >> 12) + 1) << 12;
 	
 	uint32_t pdIndex =  (uint32_t)virt >> 22;
@@ -93,7 +94,7 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data)
 		uint32_t min = 4096;
 		if (min > pagesNecessary+ptIndex)
 			min = pagesNecessary+ptIndex;
-		for (uint32_t i=ptIndex; i<min; i++)
+		for (uint32_t i = ptIndex; i < min; i++)
 		{
 			uint32_t phys2 = 0;
 			void *pageVirt = MmAllocateSinglePagePhy(&phys2);
@@ -106,8 +107,15 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data)
 			//register our new page in the elfprocess:
 			pProc->m_pagesAllocated[pProc->m_pageAllocationCount++] = pageVirt;
 			
-			memcpy (pageVirt, pointer, 4096);
-			//LogMsg("Copied section, need some more?");
+			if (sizeToCopy > 0)
+			{
+				memcpy (pageVirt, pointer, sizeToCopy > 4096 ? 4096 : sizeToCopy);
+				sizeToCopy -= 4096;
+			}
+			
+			//if we have copied everything, just reserve the pages,
+			//I'm sure the executable will put them to good use :)
+			
 			pointer += 1024;
 		}
 		pageTablesNecessary--; 
@@ -145,7 +153,7 @@ int ElfExecute (void *pElfFile, size_t size)
 	//ElfDumpInfo(pHeader);
 	// Allocate a new page directory for the elf:
 	
-	if (!AllocateHeap (&proc.m_heap, 256))
+	if (!AllocateHeap (&proc.m_heap, 4096))//2048))//256))
 		return ELF_CANT_MAKE_HEAP;
 	
 	uint32_t* newPageDir = proc.m_heap.m_pageDirectory,
@@ -159,20 +167,27 @@ int ElfExecute (void *pElfFile, size_t size)
 		ElfProgHeader* pProgHeader = (ElfProgHeader*)(pElfData + pHeader->m_phOffs + i * pHeader->m_phEntSize);
 		
 		void *addr = (void*)pProgHeader->m_virtAddr;
-		size_t size1 = pProgHeader->m_memSize;
+		size_t size1 = pProgHeader->m_memSize, size2 = pProgHeader->m_fileSize;
 		int offs = pProgHeader->m_offset;
 		
-		ElfMapAddress (&proc, addr, size1, &pElfData[offs]);
-		//MmUsePageDirectory(newPageDir, newPageDirP);
-		//LogMsg("TEST!");
-		//MmRevertToKernelPageDir();
+		ElfMapAddress (&proc, addr, size1, &pElfData[offs], size2);
+	}
+	
+	UseHeap (&proc.m_heap);
+	for (int i = 0; i < pHeader->m_shNum; i++)
+	{
+		ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
+		void *addr = (void*)pSectHeader->m_addr;
+		if (pSectHeader->m_type == SHT_NOBITS)
+		{
+			//clear
+			ZeroMemory(addr, pSectHeader->m_shSize);
+		}
 	}
 	
 	//now that we have switched, call the entry func:
 	ElfEntry entry = (ElfEntry)pHeader->m_entry;
 	//MmUsePageDirectory(newPageDir, newPageDirP);
-	
-	UseHeap (&proc.m_heap);
 	
 	//LogMsg("Loaded ELF successfully! Executing it now.");
 	int e = entry();

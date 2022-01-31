@@ -148,7 +148,7 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 		return NULL;
 	}
 	
-	void *pStack = MmAllocate(C_STACK_BYTES_PER_TASK);
+	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
 	if (pStack)
 	{
 		//Setup our new task here:
@@ -199,7 +199,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		if (killing && pTask->m_pStack)
 		{
 			//SLogMsg("Freeing this task's stack");
-			MmFree(pTask->m_pStack);
+			MmFreeK(pTask->m_pStack);
 		}
 		pTask->m_pStack = NULL;
 		

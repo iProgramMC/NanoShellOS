@@ -900,7 +900,7 @@ void FsFatClose (FileNode* pFileNode)
 	pNode->nClusterCurrent = pNode->nClusterFirst = pNode->nClusterProgress = 0;
 }
 
-uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+uint32_t FsFatRead1 (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
 {
 	//LogMsg("FsFatRead(%x, %d, %d, %x)", pFileNode,offset,size,pBuffer);
 	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
@@ -978,9 +978,27 @@ uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED u
 	int result = howMuchToRead;
 	if ((uint32_t)howMuchToRead < size) // More to read?
 		// Yeah, read more.
-		result += FsFatRead (pFileNode, offset + howMuchToRead, size - howMuchToRead, pointer + howMuchToRead);
+		result += FsFatRead1 (pFileNode, offset + howMuchToRead, size - howMuchToRead, pointer + howMuchToRead);
 	
 	return result;
+}
+
+uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+{
+	uint32_t off1 = 0, size_left = size;
+	uint32_t rv = 0;
+	#define ITERATION_SIZE 512
+	while (size_left > ITERATION_SIZE)
+	{
+		rv += FsFatRead1(pFileNode, offset + off1, ITERATION_SIZE, (uint8_t*)pBuffer + off1);
+		off1 += ITERATION_SIZE;
+		if (rv < off1)
+			return rv;//TODO
+		size_left -= ITERATION_SIZE;
+	}
+	if (size_left)
+		return rv + FsFatRead1(pFileNode, offset + off1, size_left, (uint8_t*)pBuffer + off1);
+	return rv;
 }
 
 

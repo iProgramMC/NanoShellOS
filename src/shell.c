@@ -284,22 +284,32 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			//TODO: open/close
-			FileNode* pNode = g_pCwdNode;
-			FileNode* pFile = FsFindDir(pNode, fileName);
-			if (!pFile)
-				LogMsg("No such file or directory");
-			else
+			char s[1024];
+			strcpy (s, g_cwd);
+			if (g_cwd[1] != 0) //not just a '/'
+				strcat(s, "/");
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_RDONLY);
+			if (fd < 0)
 			{
-				int length = pFile->m_length;
-				char* pData = (char*)MmAllocate(length + 1);
-				pData[length] = 0;
-				
-				FsRead(pFile, 0, length, pData);
-				
-				ElfExecute(pData, length);
-				
-				MmFree(pData);
+				LogMsg("Got error code %d when opening file", fd);
+				return;
 			}
+			
+			int length = FiTellSize(fd);
+			
+			char* pData = (char*)MmAllocate(length + 1);
+			pData[length] = 0;
+			
+			FiRead(fd, pData, length);
+			
+			FiClose(fd);
+			
+			ElfExecute(pData, length);
+			
+			MmFree(pData);
+			
 			LogMsg("");
 		}
 	}
@@ -434,7 +444,7 @@ void ShellExecuteCommand(char* p)
 			if (!pSubnode)
 				LogMsg("- [NULL?!]");
 			else
-				LogMsg("- %s\t%c%c%c\t%d\x02\x16%s", 
+				LogMsg("- %s\t%c%c%c\t%d\x02\x16\"%s\"", 
 						(pSubnode->m_type & FILE_TYPE_DIRECTORY) ? "<DIR>" : "     ", 
 						"-R"[!!(pSubnode->m_perms & PERM_READ )],
 						"-W"[!!(pSubnode->m_perms & PERM_WRITE)],

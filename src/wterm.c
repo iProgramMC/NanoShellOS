@@ -59,7 +59,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 					//re-draw every character.
 					if (pConsole->textBuffer)
 					{
-						VidSetFont(FONT_TAMSYN_BOLD);//we like this font right here
+						VidSetFont(FONT_TAMSYN_REGULAR);//we like this font right here
 						for (int j = 0; j < pConsole->height; j++)
 						{
 							for (int i = 0; i < pConsole->width; i++)
@@ -92,14 +92,14 @@ extern void ShellInit(void);
 void TerminalHostTask(int arg)
 {
 	int* array = (int*)arg;
-	int arrayDefault[] = { 100, 100, 80, 25 };
+	int arrayDefault[] = { 100, 100, 80, 25};
 	if (!array)
 		array = arrayDefault;
 	Window *pWindow = CreateWindow(
 		"nsterm", 
 		array[0], array[1], 
-		array[2] *  8 + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
-		array[3] * 16 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
+		array[2] *   8 + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
+		array[3] *  16 + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
 		TerminalHostProc,
 		0);
 	if (!pWindow)

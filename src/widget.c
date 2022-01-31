@@ -425,12 +425,12 @@ go_back:;
 void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 {
 	if (this->m_textInputData.m_pText)
-		MmFree(this->m_textInputData.m_pText);
+		MmFreeK(this->m_textInputData.m_pText);
 	
 	int slen = strlen (pText);
 	int newCapacity = slen + 1;
 	if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
-	this->m_textInputData.m_pText = MmAllocate (newCapacity);
+	this->m_textInputData.m_pText = MmAllocateK (newCapacity);
 	strcpy (this->m_textInputData.m_pText, pText);
 	this->m_textInputData.m_textCapacity = newCapacity;
 	this->m_textInputData.m_textLength   = slen;
@@ -464,10 +464,10 @@ void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
 		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
-		char* pText = (char*)MmAllocate(newCapacity);
+		char* pText = (char*)MmAllocateK(newCapacity);
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
 		
-		MmFree(this->m_textInputData.m_pText);
+		MmFreeK(this->m_textInputData.m_pText);
 		this->m_textInputData.m_pText = pText;
 		this->m_textInputData.m_textCapacity = newCapacity;
 	}
@@ -492,10 +492,10 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
 		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
-		char* pText = (char*)MmAllocate(newCapacity);
+		char* pText = (char*)MmAllocateK(newCapacity);
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
 		
-		MmFree(this->m_textInputData.m_pText);
+		MmFreeK(this->m_textInputData.m_pText);
 		this->m_textInputData.m_pText = pText;
 		this->m_textInputData.m_textCapacity = newCapacity;
 	}
@@ -736,7 +736,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		{
 			if (this->m_textInputData.m_pText)
 			{
-				MmFree(this->m_textInputData.m_pText);
+				MmFreeK(this->m_textInputData.m_pText);
 				this->m_textInputData.m_pText = NULL;
 			}
 			break;
@@ -818,10 +818,10 @@ static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalI
 		//have to expand first
 		int oldSize = sizeof (ListItem) * pData->m_capacity;
 		int newSize = oldSize * 2;
-		ListItem* pNewItems = MmAllocate(newSize);
+		ListItem* pNewItems = MmAllocateK(newSize);
 		ZeroMemory(pNewItems, newSize);
 		memcpy (pNewItems, pData->m_pItems, oldSize);
-		MmFree (pData->m_pItems);
+		MmFreeK (pData->m_pItems);
 		pData->m_pItems = pNewItems;
 		pData->m_capacity *= 2;
 		
@@ -858,13 +858,13 @@ static void CtlResetList (Control* pCtl, Window* pWindow)
 	ListViewData* pData = &pCtl->m_listViewData;
 	
 	if (pData->m_pItems)
-		MmFree (pData->m_pItems);
+		MmFreeK (pData->m_pItems);
 	
 	pData->m_highlightedElementIdx = -1;
 	pData->m_elementCount = 0;
 	pData->m_capacity     = 10;
 	int itemsSize         = sizeof (ListItem) * pData->m_capacity;
-	pData->m_pItems       = MmAllocate (itemsSize);
+	pData->m_pItems       = MmAllocateK (itemsSize);
 	memset (pData->m_pItems, 0, itemsSize);
 	
 	//also update the scroll bar.
@@ -987,7 +987,7 @@ go_back:
 			pData->m_scrollY      = 0;
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
-			pData->m_pItems       = MmAllocate (itemsSize);
+			pData->m_pItems       = MmAllocateK (itemsSize);
 			memset (pData->m_pItems, 0, itemsSize);
 			
 			// Add a vertical scroll bar to its right.
@@ -1014,7 +1014,7 @@ go_back:
 			//free the items first
 			if (pData->m_pItems)
 			{
-				MmFree (pData->m_pItems);
+				MmFreeK (pData->m_pItems);
 				pData->m_pItems = NULL;
 			}
 			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
@@ -1035,10 +1035,10 @@ static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int o
 		//have to expand first
 		int oldSize = sizeof (ListItem) * pData->m_capacity;
 		int newSize = oldSize * 2;
-		ListItem* pNewItems = MmAllocate(newSize);
+		ListItem* pNewItems = MmAllocateK(newSize);
 		ZeroMemory(pNewItems, newSize);
 		memcpy (pNewItems, pData->m_pItems, oldSize);
-		MmFree (pData->m_pItems);
+		MmFreeK (pData->m_pItems);
 		pData->m_pItems = pNewItems;
 		pData->m_capacity *= 2;
 		
@@ -1199,7 +1199,7 @@ go_back:
 			pData->m_scrollY      = 0;
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
-			pData->m_pItems       = MmAllocate (itemsSize);
+			pData->m_pItems       = MmAllocateK (itemsSize);
 			memset (pData->m_pItems, 0, itemsSize);
 			
 			// Add a vertical scroll bar to its right.
@@ -1226,7 +1226,7 @@ go_back:
 			//free the items first
 			if (pData->m_pItems)
 			{
-				MmFree (pData->m_pItems);
+				MmFreeK (pData->m_pItems);
 				pData->m_pItems = NULL;
 			}
 			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
@@ -1313,7 +1313,7 @@ void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comb
 	this->m_comboID          = comboID;
 	this->m_childrenCount    = 0;
 	this->m_childrenCapacity = 4;
-	this->m_childrenArray    = (MenuBarTreeItem*)MmAllocate (this->m_childrenCapacity * sizeof (MenuBarTreeItem));
+	this->m_childrenArray    = (MenuBarTreeItem*)MmAllocateK (this->m_childrenCapacity * sizeof (MenuBarTreeItem));
 	memset (this->m_childrenArray, 0, 4 * sizeof (MenuBarTreeItem));
 	this->m_text[0]          = 0;
 	this->m_isOpen           = false;
@@ -1326,13 +1326,13 @@ bool WidgetMenuBar_TryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comb
 		if (this->m_childrenCount >= this->m_childrenCapacity)
 		{
 			// Doesn't fit.  Need to expand.
-			MenuBarTreeItem* new = (MenuBarTreeItem*)MmAllocate (this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
+			MenuBarTreeItem* new = (MenuBarTreeItem*)MmAllocateK (this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
 			memset (new, 0, this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
 			memcpy (new, this->m_childrenArray, this->m_childrenCapacity * sizeof (MenuBarTreeItem));
 			this->m_childrenCapacity *= 2;
 			
 			// Get rid of the old one.  We've moved.
-			MmFree (this->m_childrenArray);
+			MmFreeK (this->m_childrenArray);
 			
 			this->m_childrenArray = new;
 		}
@@ -1347,7 +1347,7 @@ bool WidgetMenuBar_TryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comb
 		
 		//Allocate a default of 2 items.
 		pItem->m_childrenCapacity = 2;
-		pItem->m_childrenArray    = (MenuBarTreeItem*)MmAllocate (2 * sizeof (MenuBarTreeItem));
+		pItem->m_childrenArray    = (MenuBarTreeItem*)MmAllocateK (2 * sizeof (MenuBarTreeItem));
 		memset (pItem->m_childrenArray, 0, 2 * sizeof (MenuBarTreeItem));
 		
 		//We were able to add it.  Leave and tell the caller that we did it.
@@ -1719,7 +1719,7 @@ bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			break;
 		case EVENT_DESTROY:
 			if (this->m_dataPtr)
-				MmFree(this->m_dataPtr);
+				MmFreeK(this->m_dataPtr);
 			this->m_dataPtr = NULL;
 			break;
 	}
@@ -1734,8 +1734,8 @@ void SetHugeLabelText (Window *pWindow, int comboID, const char* pText)
 			//strcpy(pWindow->m_pControlArray[i].m_text, pText);
 			char* ptr = (char*)pWindow->m_pControlArray[i].m_dataPtr;
 			if (ptr)
-				MmFree(ptr);
-			ptr = MmAllocate(strlen(pText)+1);
+				MmFreeK(ptr);
+			ptr = MmAllocateK(strlen(pText)+1);
 			pWindow->m_pControlArray[i].m_dataPtr = ptr;
 			strcpy (ptr, pText);
 			

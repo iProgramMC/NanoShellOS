@@ -41,8 +41,8 @@ enum
 };
 
 // Opens a file and returns its descriptor.
-int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine);
-#define FiOpen(pFileName, oflag)  FiOpenD(pFileName,oflag,__FILE__,__LINE__)
+int FiOpenDebug (const char* pFileName, int oflag, const char* srcFile, int srcLine);
+#define FiOpen(pFileName, oflag)  FiOpenDebug(pFileName,oflag,__FILE__,__LINE__)
 
 // Closes a file and frees its descriptor for use.
 int FiClose (int fd);

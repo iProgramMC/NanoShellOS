@@ -112,6 +112,7 @@ void LaunchExecutable (int argument)
 	FiClose (fd);
 	
 	//LogMsg("Executing...");
+	g_debugConsole.curY = g_debugConsole.height / 4;
 	ElfExecute(pData, length);
 	
 	MmFree(pData);

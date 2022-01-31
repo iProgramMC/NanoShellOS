@@ -601,6 +601,14 @@ void *MmAllocateD (size_t size, const char* callFile, int callLine)
 {
 	return MmAllocatePhyD(size, callFile, callLine, NULL);
 }
+void *MmAllocateKD (size_t size, const char* callFile, int callLine)
+{
+	Heap *pHeapBkp = g_pHeap;
+	ResetToKernelHeap();
+	void* toReturn = MmAllocatePhyD(size, callFile, callLine, NULL);
+	UseHeap (pHeapBkp);
+	return toReturn;
+}
 void MmFree(void* pAddr)
 {
 	if (!pAddr) return; //handle (hopefully) accidental NULL freeing
@@ -622,6 +630,13 @@ void MmFree(void* pAddr)
 		pAddr = (void*)((uint8_t*)pAddr+0x1000);
 	}
 	FREE_LOCK (g_memoryPageLock);
+}
+void MmFreeK(void* pAddr)
+{
+	Heap *pHeapBkp = g_pHeap;
+	ResetToKernelHeap();
+	MmFree(pAddr);
+	UseHeap (pHeapBkp);
 }
 
 uint32_t* MmGetKernelPageDir()
