@@ -15,7 +15,7 @@ application/learn/learn.nse
 application/oregon/build/*
 application/oregon/learn.nse
 application/doomnanoshell/*
-application/doomnanoshell/*
+application/doomnanoshell
 build/*
 cp/*
 lol/*

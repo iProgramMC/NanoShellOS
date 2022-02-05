@@ -9,15 +9,189 @@
 #include <wterm.h>
 #include <vfs.h>
 #include <elf.h>
+#include <keyboard.h>
 
+extern VBEData g_mainScreenVBEData, *g_vbeData;
+extern bool    g_ps2MouseAvail;
+extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+
+//POPUP WINDOWS: Set `pWindow->m_data` to anything to exit.
+#define MOUSE_POPUP_WINDOW 1//stubbed out for now because it's buggy as hell
+#define KEYBD_POPUP_WINDOW 1
+
+
+
+#if MOUSE_POPUP_WINDOW
+	enum
+	{
+		MOUSEP_SPEED_SCROLL = 1000,
+		MOUSEP_KEYBOARD_CONTROL_MOUSE,
+	};
+	int  GetMouseSpeedMultiplier();
+	void SetMouseSpeedMultiplier(int spd);
+	#define MOUSE_POPUP_WIDTH 200
+	#define MOUSE_POPUP_HEITE 70
+	void CALLBACK Cpl$MousePopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+	{
+		switch (messageType)
+		{
+			case EVENT_CREATE:
+			{
+				pWindow->m_iconID = ICON_HAND;//TODO
+				
+				//add a button
+				Rectangle r;
+				RECT(r,8,8+TITLE_BAR_HEIGHT,MOUSE_POPUP_WIDTH-16,35);
+				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Mouse tracking speed", 1, 0, 0);
+				{
+					//add stuff inside the rect.
+					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
+					
+					RECT(r, 16,  24 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, MOUSE_POPUP_WIDTH - 40, 24 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 50,  22 + TITLE_BAR_HEIGHT, MOUSE_POPUP_WIDTH - 100, 1);
+					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, MOUSEP_SPEED_SCROLL, (0)<<16|(4), (1)<<16|(GetMouseSpeedMultiplier()));
+				}
+				
+				break;
+			}
+			case EVENT_COMMAND:
+				if (parm1 == 1232)
+				{
+					MessageBox(pWindow, "Message Box test from Cpl$TestPopupWndProc!", "Cpl$TestPopupWndProc", MB_OK | ICON_BILLBOARD<<16);
+				}
+				else
+				{
+					DestroyWindow(pWindow);
+				}
+				break;
+			case EVENT_RELEASECURSOR:
+				SetMouseSpeedMultiplier(GetScrollBarPos(pWindow, MOUSEP_SPEED_SCROLL));
+				break;
+			default:
+				DefaultWindowProc(pWindow, messageType, parm1, parm2);
+				break;
+		}
+	}
+#endif
+#if KEYBD_POPUP_WINDOW
+	enum
+	{
+		KEYBDP_REPEAT_CPS = 1000,
+		KEYBDP_REPEAT_DELAY,
+		KEYBDP_OK_BUTTON,
+		KEYBDP_CANCEL_BUTTON,
+		KEYBDP_TEST_BOX,
+	};
+	#define KEYBD_POPUP_WIDTH 300
+	#define KEYBD_POPUP_HEITE 140
+	
+	uint8_t g_oldTypematicRepeatRate, g_oldTypematicRepeatDelay;
+	void CALLBACK Cpl$KeybdPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+	{
+		switch (messageType)
+		{
+			case EVENT_CREATE:
+			{
+				pWindow->m_iconID = ICON_KEYBOARD;//TODO
+				
+				g_oldTypematicRepeatRate  = GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY);
+				g_oldTypematicRepeatDelay = GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT);
+				
+				//add a button
+				Rectangle r;
+				RECT(r,8,8+TITLE_BAR_HEIGHT,KEYBD_POPUP_WIDTH-16,35);
+				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Keyboard repeat rate", 1, 0, 0);
+				{
+					//add stuff inside the rect.
+					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
+					
+					RECT(r, 16,  24 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 24 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 50,  22 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 1);
+					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_CPS,
+						(0)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)),
+						(1)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)-1-g_oldTypematicRepeatRate)
+					);
+				}
+				RECT(r,8,8+TITLE_BAR_HEIGHT+40,KEYBD_POPUP_WIDTH-16,35);
+				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Delay before repeat", 1, 0, 0);
+				{
+					//add stuff inside the rect.
+					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
+					
+					RECT(r, 16,  24+40 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 24+40 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 50,  22+40 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 1);
+					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_DELAY,
+						(0)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)),
+						(1)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-g_oldTypematicRepeatDelay)
+					);
+				}
+				RECT(r,(KEYBD_POPUP_WIDTH-100)/2,8+TITLE_BAR_HEIGHT+80,45,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Revert", KEYBDP_CANCEL_BUTTON, 0, 0);
+				RECT(r,(KEYBD_POPUP_WIDTH-100)/2+55,8+TITLE_BAR_HEIGHT+80,45,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  KEYBDP_OK_BUTTON,     0, 0);
+				/*
+				RECT(r,8,8+TITLE_BAR_HEIGHT+80,KEYBD_POPUP_WIDTH-16,80);
+				AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, KEYBDP_TEST_BOX, 0, 0);
+				SetTextInputText(pWindow, KEYBDP_TEST_BOX, "Test");
+				*/
+				break;
+			}
+	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"//fallthrough intentional.
+			case EVENT_COMMAND:
+				if (parm1 != KEYBDP_CANCEL_BUTTON)
+				{
+					if (parm1 != KEYBDP_OK_BUTTON)
+						break;
+					
+					//ok button:
+					messageType = EVENT_CLOSE;
+					//fallthrough
+				}
+				else
+				{
+					//cancel button:
+					SetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT,  g_oldTypematicRepeatDelay);
+					SetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY,     g_oldTypematicRepeatRate);
+					FlushKeyboardProperties();
+					messageType = EVENT_CLOSE;
+					//fallthrough
+				}
+				//fallthrough
+			case EVENT_CLOSE:
+				DefaultWindowProc(pWindow, messageType, parm1, parm2);
+				break;
+	#pragma GCC diagnostic pop
+			case EVENT_RELEASECURSOR:
+				SetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT,  GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-GetScrollBarPos(pWindow, KEYBDP_REPEAT_DELAY));
+				SetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY,     GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)   -1-GetScrollBarPos(pWindow, KEYBDP_REPEAT_CPS));
+				FlushKeyboardProperties();
+				break;
+			default:
+				DefaultWindowProc(pWindow, messageType, parm1, parm2);
+				break;
+		}
+	}
+#endif
 
 enum {
 	CONTPNL_LISTVIEW = 0x10,
 	CONTPNL_MENUBAR  = 0xFE,
 };
-extern VBEData g_mainScreenVBEData;
-extern bool    g_ps2MouseAvail;
-void CALLBACK ControlProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
+
+int state=0;
+void KbSetLedStatus(uint8_t status);
+
+void Cpl$WindowPopup(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -103,6 +277,23 @@ void CALLBACK ControlProgramProc (Window* pWindow, int messageType, int parm1, i
 						MessageBox(pWindow, buff, "Display adapter info", MB_OK | ICON_ADAPTER << 16);
 						break;
 					}
+					#if KEYBD_POPUP_WINDOW
+					case 1:
+					{
+						Cpl$WindowPopup(
+							pWindow,
+							"Keyboard",
+							pWindow->m_rect.left + 50,
+							pWindow->m_rect.top  + 50,
+							KEYBD_POPUP_WIDTH,
+							KEYBD_POPUP_HEITE,
+							Cpl$KeybdPopupWndProc,
+							WF_NOMINIMZ
+						);
+						
+						break;
+					}
+					#else
 					case 1:
 					{
 						char buff[2048];
@@ -117,21 +308,24 @@ void CALLBACK ControlProgramProc (Window* pWindow, int messageType, int parm1, i
 						MessageBox(pWindow, buff, "Keyboard info", MB_OK | ICON_KEYBOARD << 16);
 						break;
 					}
+					#endif
+					#if MOUSE_POPUP_WINDOW
 					case 6:
 					{
-						char buff[2048];
-						sprintf (buff, 
-							"Mouse: %s\n"
-							"Driver Name: %s",
-							
-							//TODO: fill in info such as 'does it support intellimouse?'
-							g_ps2MouseAvail ? "Generic PS/2 Mouse HID device" : "Fake Mouse Driver controlled by keyboard",
-							"NanoShell Basic Mouse Driver",
-							GetScreenWidth(), GetScreenHeight()
+						Cpl$WindowPopup(
+							pWindow,
+							"Mouse",
+							pWindow->m_rect.left + 50,
+							pWindow->m_rect.top  + 50,
+							MOUSE_POPUP_WIDTH,
+							MOUSE_POPUP_HEITE,
+							Cpl$MousePopupWndProc,
+							WF_NOMINIMZ
 						);
-						MessageBox(pWindow, buff, "Mouse info", MB_OK | ICON_HAND << 16);
+						
 						break;
 					}
+					#endif
 					default:
 						MessageBox(pWindow, "Not Implemented!", "Control Panel", MB_OK | ICON_WARNING << 16);
 						break;
@@ -152,7 +346,7 @@ void ControlEntry(__attribute__((unused)) int arg)
 	int ww = 400, wh = 260;
 	int wx = 150, wy = 150;
 	
-	Window* pWindow = CreateWindow ("Control Panel", wx, wy, ww, wh, ControlProgramProc, 0);//WF_NOCLOSE);
+	Window* pWindow = CreateWindow ("Control Panel", wx, wy, ww, wh, Cpl$WndProc, 0);//WF_NOCLOSE);
 	pWindow->m_iconID = ICON_FOLDER_SETTINGS;
 	
 	if (!pWindow)

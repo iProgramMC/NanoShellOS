@@ -13,7 +13,9 @@ enum
 	COMMAND_SETDEFAULT,
 	COMMAND_SETREPORT,
 	COMMAND_GETDEVID,
-	COMMAND_READDATA
+	COMMAND_READDATA,
+	COMMAND_SETSAMPRATE, COMMAND_SETSAMPRATE1,
+	COMMAND_SETRESOLUTION, COMMAND_SETRESOLUTION1
 };
 
 uint8_t g_commandRunning, g_resetStages, g_mouseDeviceID = 0, g_mouseCycle;
@@ -27,26 +29,33 @@ bool IsMouseAvailable()
 	return g_mouseAvailable && g_mouseInitted;
 }
 
+//mouse comms//
+#if 1
 void MouseWaitN (uint8_t type, const char* waiter, int waiterL)
 {
 	if (!g_mouseAvailable) return;
-	uint32_t _timeout = 100000;
+	uint32_t _timeout = 1000000;
 	
 	if (type == 0)
 	{
 		while (_timeout--)
+		{
 			if (ReadPort (0x64) & 1) return;
+			asm ("pause");
+		}
 	}
 	else
 	{
 		while (_timeout--)
+		{
 			if (!(ReadPort (0x64) & 2)) return;
+			asm ("pause");
+		}
 	}
 	g_mouseAvailable = false;
 	LogMsg("PS/2 mouse took too long to respond, guessed it's not available. (%s:%d)",waiter,waiterL);
 }
 #define MouseWait(x) MouseWaitN(x, __FILE__, __LINE__)
-
 void MouseWrite (uint8_t write)
 {
 	if (!g_mouseAvailable) return;
@@ -62,6 +71,48 @@ uint8_t MouseRead()
 	MouseWait (0);
 	return ReadPort (0x60);
 }
+#endif
+
+//mouse commds//
+#if 1
+static const int g_sampleRateValues[] = {10,20,40,60,80,100,200};
+int g_mouseSpeedMultiplier = 2, g_mouseSampRate = 6;
+int GetMouseSpeedMultiplier()
+{
+	return g_mouseSpeedMultiplier;
+}
+int GetMouseSampRateMax()
+{
+	return ARRAY_COUNT(g_sampleRateValues);
+}
+void SetMouseSpeedMultiplier(int spd)
+{
+	spd &= 0b11;
+	g_mouseSpeedMultiplier = spd;
+	
+	if (g_ps2MouseAvail)
+	{
+		g_commandRunning = COMMAND_SETRESOLUTION;
+		MouseWrite(0xE8);
+	}
+}
+void SetMouseSampleRate(int spd)
+{
+	if (spd < 0) spd = 0;
+	if (spd >= GetMouseSampRateMax()) spd = ARRAY_COUNT(g_sampleRateValues);
+	g_mouseSampRate = spd;
+	
+	//send Set Sample Rate command
+	if (g_ps2MouseAvail)
+	{
+		g_commandRunning = COMMAND_SETSAMPRATE;
+		MouseWrite(0xF3);
+	}
+}
+#endif
+
+//mouse irq//
+#if 1
 void IrqMouse()
 {
 	cli;//sti is called automatically upon the iret.
@@ -115,8 +166,36 @@ void IrqMouse()
 				g_commandRunning = COMMAND_NONE;
 				break;
 			}
+			case COMMAND_SETSAMPRATE: {
+				if (b == 0xFA)
+				{
+					//acknowledged.
+					g_commandRunning = COMMAND_SETSAMPRATE1;
+					MouseWrite (g_sampleRateValues[g_mouseSampRate]);
+				}
+				else
+					g_commandRunning = COMMAND_NONE;
+				break;
+			}
+			case COMMAND_SETRESOLUTION: {
+				if (b == 0xFA)
+				{
+					//acknowledged.
+					g_commandRunning = COMMAND_SETRESOLUTION1;
+					MouseWrite (g_mouseSpeedMultiplier);
+				}
+				else
+					g_commandRunning = COMMAND_NONE;
+				break;
+			}
+			case COMMAND_SETSAMPRATE1:
+			case COMMAND_SETRESOLUTION1:
+			{
+				g_commandRunning = COMMAND_NONE;
+				break;
+			}
 			case COMMAND_GETDEVID: {
-				//! What if the mouse ID was indeed 0xfa?
+				//! What if the mouse ID was indeed 0xfa? Probably never the case
 				if (b != 0xFA)
 					g_mouseDeviceID = b; 
 				
@@ -160,6 +239,8 @@ void IrqMouse()
 						g_discardPacket = false;
 						return;
 					}
+					g_currentPacket.xMov = g_currentPacket.xMov;
+					g_currentPacket.yMov = g_currentPacket.yMov;
 					OnUpdateMouse (g_currentPacket.flags, g_currentPacket.xMov, g_currentPacket.yMov, 0);
 				}
 				else g_mouseCycle++;
@@ -178,7 +259,10 @@ void IrqMouse()
 		}
 	}
 }
+#endif
 
+//mouse init//
+#if 1
 void MouseInit()
 {
 	//return;//don't have it for now
@@ -237,6 +321,9 @@ void MouseInit()
 	MouseWrite (0xF2);
 	while (g_commandRunning) hlt;
 	
+	SetMouseSampleRate(6);
+	while (g_commandRunning) hlt;
+	
 	while (ReadPort(0x64) & 2)
 		ReadPort (0x60);
 	
@@ -251,3 +338,4 @@ void MouseInit()
 	else
 		LogMsg("PS/2 Mouse failed to initialize!");
 }
+#endif

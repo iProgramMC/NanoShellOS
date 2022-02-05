@@ -192,6 +192,7 @@ void MovePreExistingWindowToFront(short windowIndex)
 	{
 		if (g_windowDrawOrder[i] == windowIndex)
 		{
+			g_windowDrawOrder[i] = -1;
 			//move everything after it back
 			memcpy (g_windowDrawOrder + i, g_windowDrawOrder + i + 1, sizeof (short) * (WINDOWS_MAX - i - 1));
 			g_windowDrawOrder[WINDOWS_MAX-1] = windowIndex;
@@ -492,7 +493,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_pitch32       = xSize;
 	pWnd->m_vbeData.m_bitdepth      = 2;     // 32 bit :)
 	
-	pWnd->m_iconID = ICON_COMMAND;
+	pWnd->m_iconID = ICON_APPLICATION;
 	
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
@@ -750,8 +751,7 @@ void WindowManagerOnShutdown(void)
 	UNUSED int useless = 0;
 	KeStartTask(WindowManagerOnShutdownTask, 0, &useless);
 }
-
-void WindowManagerTask(__attribute__((unused)) int useless_argument)
+void SetupWindowManager()
 {
 	if (g_windowManagerRunning)
 	{
@@ -808,12 +808,33 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 #endif
+}
+
+bool g_heldAlt = false;
+void HandleKeypressOnWindow(unsigned char key)
+{
+	if (key == KEY_ALT)
+	{
+		g_heldAlt = true;
+	}
+	else if (key == (KEY_ALT | SCANCODE_RELEASE))
+	{
+		g_heldAlt = false;
+		KillAltTab();
+	}
+	else if (key == KEY_TAB)
+		OnPressAltTabOnce();
+}
+void WindowManagerTask(__attribute__((unused)) int useless_argument)
+{
+	SetupWindowManager();
 	
 	int timeout = 10;
 	int UpdateTimeout = 100, shutdownTimeout = 500;
 	
 	while (true)
 	{
+		bool handled = false;
 		UpdateFPSCounter();
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
@@ -832,7 +853,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					WindowRegisterEvent (pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
 				
 				while (!KbIsRawBufferEmpty())
-					WindowRegisterEvent(pWindow, EVENT_KEYRAW, KbGetKeyFromRawBuffer(), 0);
+				{
+					unsigned char key = KbGetKeyFromRawBuffer();
+					WindowRegisterEvent(pWindow, EVENT_KEYRAW, key, 0);
+					
+					HandleKeypressOnWindow(key);
+					handled = true;
+				}
 			}
 			
 		#if !THREADING_ENABLED
@@ -869,6 +896,12 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		}
 		UpdateTimeout--;
 		
+		if (!handled)
+		{
+			unsigned char key = KbGetKeyFromRawBuffer();
+			HandleKeypressOnWindow(key);
+		}
+		UpdateAltTabWindow();
 		//cli;
 		ACQUIRE_LOCK (g_clickQueueLock);
 		
@@ -1238,7 +1271,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		wPosY = (GetScreenSizeY() - wSzY) / 2;
 	
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
 	
 	// Add the basic controls required.
 	Rectangle rect;
@@ -1404,6 +1437,75 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	if (wnLock) ACQUIRE_LOCK (g_windowLock);
 	if (scLock) ACQUIRE_LOCK (g_screenLock);
 	return dataReturned;
+}
+
+//TODO FIXME: Why does this freeze the OS when clicking on the main controlpanel window
+//when I put this in kapp/cpanel.c??
+void Cpl$WindowPopup(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+{
+	// Free the locks that have been acquired.
+	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
+	if  (wnLock) FREE_LOCK (g_windowLock);
+	if  (scLock) FREE_LOCK (g_screenLock);
+	
+	bool wasSelectedBefore = false;
+	if (pWindow)
+	{
+		eqLock = pWindow->m_eventQueueLock;
+		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+	
+		wasSelectedBefore = pWindow->m_isSelected;
+		if (wasSelectedBefore)
+		{
+			pWindow->m_isSelected = false;
+			PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		}
+	}
+	
+	VBEData* pBackup = g_vbeData;
+	
+	VidSetVBEData(NULL);
+	// Freeze the current window.
+	int old_flags = 0;
+	WindowProc pProc;
+	if (pWindow)
+	{
+		pProc = pWindow->m_callback;
+		old_flags = pWindow->m_flags;
+		//pWindow->m_callback = MessageBoxWindowLightCallback;
+		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
+	}
+	
+	Window* pSubWindow = CreateWindow(newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags);
+	if (pSubWindow)
+	{
+		while (HandleMessages(pSubWindow))
+		{
+			KeTaskDone();
+		}
+	}
+	
+	if (pWindow)
+	{
+		pWindow->m_callback = pProc;
+		pWindow->m_flags    = old_flags;
+	}
+	g_vbeData = pBackup;
+	
+	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
+	if (wasSelectedBefore)
+	{
+		pWindow->m_isSelected = true;
+		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+	}
+	
+	// Re-acquire the locks that have been freed before.
+	if (pWindow)
+	{
+		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+	}
+	if (wnLock) ACQUIRE_LOCK (g_windowLock);
+	if (scLock) ACQUIRE_LOCK (g_screenLock);
 }
 
 #endif
@@ -1836,9 +1938,12 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
-				rect.left -= TITLE_BAR_HEIGHT;
-				rect.right -= TITLE_BAR_HEIGHT;
-				AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
+				if (!(pWindow->m_flags & WF_NOMINIMZ))
+				{
+					rect.left -= TITLE_BAR_HEIGHT;
+					rect.right -= TITLE_BAR_HEIGHT;
+					AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
+				}
 			}
 			
 			break;

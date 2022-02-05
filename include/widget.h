@@ -60,6 +60,11 @@ void ResetList (Window* pWindow, int comboID);
 void SetLabelText (Window *pWindow, int comboID, const char* pText);
 
 /**
+ * Changes the icon of an icon component with a certain comboID.
+ */
+void SetIcon (Window *pWindow, int comboID, int icon);
+
+/**
  * Changes the text of a TEXTHUGE with text with a certain comboID.
  */
 void SetHugeLabelText (Window *pWindow, int comboID, const char* pText);

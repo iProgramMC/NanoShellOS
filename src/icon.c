@@ -75,6 +75,16 @@
 #include <icons/adapter.h>
 #include <icons/clock.h>
 #include <icons/clock16.h>
+// Icons V1.3
+#include <icons/application.h>
+#include <icons/application16.h>
+#include <icons/taskbar.h>
+#include <icons/app_demo.h>
+#include <icons/computer_flat.h>
+#include <icons/calculator.h>
+#include <icons/calculator16.h>
+#include <icons/desktop2.h>
+#include <icons/mouse.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -144,6 +154,15 @@ Image * g_iconTable[] = {
 	&g_adapter_icon,
 	&g_clock_icon,
 	&g_clock16_icon,
+	&g_application_icon,
+	&g_application16_icon,
+	&g_taskbar_icon,
+	&g_app_demo_icon,
+	&g_computer_flat_icon,
+	&g_calculator_icon,
+	&g_calculator16_icon,
+	&g_desktop2_icon,
+	&g_mouse_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -173,6 +192,8 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(FILE_CSCRIPT)
 			CASE(HOME)
 			CASE(CLOCK)
+			CASE(APPLICATION)
+			CASE(CALCULATOR)
 			#undef CASE
 		}
 	}

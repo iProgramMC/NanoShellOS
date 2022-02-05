@@ -101,6 +101,8 @@ enum {
 	CONTROL_TEXTHUGE,
 	//Same as CONTROL_LISTVIEW but with bigger icons.
 	CONTROL_ICONVIEW,
+	//Does nothing except surround other controls with a rectangle.  Useful for grouping settings.
+	CONTROL_SURROUND_RECT,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -230,6 +232,7 @@ Control;
 #define WF_FROZEN   0x00000002
 #define WF_NOTITLE  0x00000004
 #define WF_NOBORDER 0x00000008
+#define WF_NOMINIMZ 0x00000010
 
 typedef struct WindowStruct
 {

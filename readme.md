@@ -38,7 +38,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] A basic shell, can execute applications
 - [x] Get a GUI running (Also in a task)
 - [x] Applications can use the GUI API
-- [ ] Port DOOM
+- [x] Port DOOM
 - [ ] (ultimate boss) Port Mesa and Super Mario 64 (based on the DOS port, please)
 #### Drivers
 - [x] PS/2 Mouse and Keyboard

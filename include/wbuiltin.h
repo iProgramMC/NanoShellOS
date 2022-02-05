@@ -20,6 +20,12 @@
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
 
+// ALT TAB
+void UpdateAltTabWindow();
+void OnPressAltTabOnce();
+void KillAltTab();
+
+// MISC WINDOWS
 void VersionProgramTask (int argument);
 void PrgPaintTask (int argument);
 void IconTestTask (int argument);

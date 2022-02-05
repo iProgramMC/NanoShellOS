@@ -275,6 +275,108 @@ bool g_virtualMouseHadUpdatesBefore = false;
 extern Cursor* g_currentCursor;
 extern bool g_mouseInitted;
 extern bool g_ps2MouseAvail;
+
+void KbSetLedStatus(uint8_t status)
+{
+	status &= 0b111;
+	while (ReadPort (0x64)  &  0x2) asm("pause");
+	WritePort (0x60, 0xED);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+	WritePort (0x60, status);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+}
+void KbEnableScanning()
+{
+	while (ReadPort (0x64)  &  0x2) asm("pause");
+	WritePort (0x60, 0xF4);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+}
+static void KbSetTypematicParmsByte(uint8_t status)
+{
+	while (ReadPort (0x64)  &  0x2) asm("pause");
+	WritePort (0x60, 0xF3);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+	WritePort (0x60, status);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+}
+/*static void KbSetUseScanCodeSet(uint8_t scs)
+{
+	while (ReadPort (0x64)  &  0x2) asm("pause");
+	WritePort (0x60, 0xF0);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+	WritePort (0x60, scs);
+	while (ReadPort (0x60) != 0xFA) asm("pause");
+}*/
+
+uint8_t g_typematicParms = 0b00110100;//default BIOS parms.
+uint8_t g_newTypematicRepeatRate, g_newTypematicRepeatDelay;
+void KbSetTypematicParms(uint8_t repeat_rate, uint8_t key_repeat_delay)
+{
+	g_typematicParms = (repeat_rate & 0b11111) | ((key_repeat_delay & 0b11) << 5);
+	KbSetTypematicParmsByte(g_typematicParms);
+}
+
+uint8_t GetKeyboardProperty(int index)
+{
+	switch (index)
+	{
+		case KBPROPERTY_DELAY_BEFORE_REPEAT_MAX:
+			return 0b11;
+		case KBPROPERTY_REPEAT_FREQUENCY_MAX:
+			return 0b11111;
+		default:
+			LogMsg("GetKeyboardProperty: property number %d is not available");
+			return 0;
+		case KBPROPERTY_DELAY_BEFORE_REPEAT:
+			return (g_typematicParms >> 5) & 0b11;
+		case KBPROPERTY_REPEAT_FREQUENCY:
+			return (g_typematicParms) & 0b11111;
+	}
+}
+void SetKeyboardProperty(int index, uint8_t data)
+{
+	switch (index)
+	{
+		case KBPROPERTY_DELAY_BEFORE_REPEAT_MAX:
+		case KBPROPERTY_REPEAT_FREQUENCY_MAX:
+		default:
+			LogMsg("GetKeyboardProperty: property number %d is read-only or not available");
+			break;
+		case KBPROPERTY_DELAY_BEFORE_REPEAT:
+			g_newTypematicRepeatRate = data;
+			break;
+		case KBPROPERTY_REPEAT_FREQUENCY:
+			g_newTypematicRepeatDelay = data;
+			break;
+	}
+}
+void FlushKeyboardProperties()
+{
+	KbSetTypematicParms(g_newTypematicRepeatDelay, g_newTypematicRepeatRate);
+}
+void RevertKeyboardProperties()
+{
+}
+
+void KbInitialize()
+{
+	//setup keyboard
+	//this shows that everything is setup alright
+	KbSetLedStatus(7);
+	
+	//enable scancodes.
+	//This is not necessary as the BIOS already does this for you, but
+	//what if it gets disabled before boot for whatever reason!?
+	KbEnableScanning();
+	
+	//KbSetUseScanCodeSet(2);//By default it's 1
+	//^^TODO this does not work as scancodes don't fuck up
+	
+	KbSetTypematicParms(0x14, 0x1);//10.9 chars/sec, 500ms delay before repeat.
+	
+	KbSetLedStatus(0);
+}
+
 //mappings: F11-Left Click, F12-Right Click, F9-make it slower, F10-make it faster
 void UpdateFakeMouse()
 {
@@ -325,10 +427,14 @@ void IrqKeyboard(UNUSED int e[50])
 	WritePort(0xA0, 0x20);
 	
 	// get status:
-	char status, keycode;
+	unsigned char status, keycode;
 	status = ReadPort(KEYBOARD_STATUS_PORT);
 	
 	// lowest bit of status _will_ be set if buffer is not empty
+	if (status == 0xFA)
+	{
+		LogMsgNoCr("Got ack!");
+	}
 	if (status & 0x01)
 	{
 		keycode = ReadPort (KEYBOARD_DATA_PORT);

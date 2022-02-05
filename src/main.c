@@ -40,7 +40,7 @@ int g_nKbExtRam = 0;
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), January 2022 - " VersionString);
+	LogMsg("NanoShell (TM), February 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam, GetNumPhysPages() * 4);
 	LogMsg("Built on: %s", 
 		#include <icons/__time.h>
@@ -122,6 +122,8 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	MmInit(mbi);
 	// Initialize the video subsystem
 	VidInitialize (mbi);
+	// Initialize the keyboard.
+	KbInitialize ();
 	
 	KePrintSystemVersion();
 	
@@ -143,7 +145,7 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	FsMountFatPartitions();
 	
 	LogMsg("Waiting to get time...");
-	while (g_gotTime)
+	while (!g_gotTime)
 	{
 		hlt;
 	}

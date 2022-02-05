@@ -284,7 +284,7 @@ go_back:;
 			
 			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			//VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			break;
 		}
 	}
@@ -1677,6 +1677,17 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText)
 		}
 	}
 }
+void SetIcon (Window *pWindow, int comboID, int icon)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_parm1 = icon;
+			return;
+		}
+	}
+}
 
 #endif
 
@@ -1896,6 +1907,27 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
+bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_PAINT:
+		{
+			// Draw a rectangle to surround the things we put inside
+			Rectangle r = this->m_rect;
+			r.top += GetLineHeight() / 2;
+			
+			VidDrawRectangle(0x000000, r);
+			
+			// Draw the text
+			VidTextOut(this->m_text, this->m_rect.left + 10, this->m_rect.top, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
+			VidTextOut(this->m_text, this->m_rect.left + 12, this->m_rect.top, 0x00000,             WINDOW_BACKGD_COLOR);
+			
+			break;
+		}
+	}
+	return false;
+}
 #define CHECKBOX_SIZE 16
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -1928,6 +1960,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetMenuBar_OnEvent,
 	WidgetTextHuge_OnEvent,
 	WidgetIconView_OnEvent,
+	WidgetSurroundRect_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");
