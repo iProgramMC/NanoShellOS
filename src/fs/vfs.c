@@ -13,7 +13,7 @@
  * here, but they will use storabs.c's functionality.
  */
  
-
+#define MULTITASKED_WINDOW_MANAGER//to make ACQUIRE_LOCK and FREE_LOCK to not build to nothing
 #include <vfs.h>
 #include <string.h>
 #include <memory.h>
@@ -179,6 +179,7 @@ FileDescriptor;
 
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
 
+void FsListOpenedDirs();//fat.c
 void FiDebugDump()
 {
 	LogMsg("Listing opened files.");
@@ -191,6 +192,7 @@ void FiDebugDump()
 					p->m_bIsFIFO, p->m_pNode, p->m_openFile, p->m_openLine, p->m_sPath);
 		}
 	}
+	FsListOpenedDirs();
 	LogMsg("Done");
 }
 
@@ -210,32 +212,59 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	return -ENFILE;
 }
 
+//TODO: improve MT
+bool g_fileSystemLock = false;
+
 int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
+	ACQUIRE_LOCK (g_fileSystemLock);
 	// find a free fd to open:
 	int fd = FiFindFreeFileDescriptor(pFileName);
-	if (fd < 0) return fd;
+	if (fd < 0)
+	{
+		FREE_LOCK (g_fileSystemLock);
+		return fd;
+	}
 	
 	//find the node:
 	FileNode* pFile = FsResolvePath(pFileName);
 	if (!pFile)
+	{
+		FREE_LOCK (g_fileSystemLock);
 		return -EEXIST;
+	}
 	
 	//if we are trying to read, but we can't:
 	if ((oflag & O_RDONLY) && !(pFile->m_perms & PERM_READ))
+	{
+		FREE_LOCK (g_fileSystemLock);
 		return -EACCES;
+	}
 	//if we are trying to write, but we can't:
 	if ((oflag & O_WRONLY) && !(pFile->m_perms & PERM_WRITE))
+	{
+		FREE_LOCK (g_fileSystemLock);
 		return -EACCES;
+	}
 	//if we are trying to execute, but we can't:
 	if ((oflag & O_EXEC) && !(pFile->m_perms & PERM_EXEC))
+	{
+		FREE_LOCK (g_fileSystemLock);
 		return -EACCES;
+	}
 	
-	if (pFile->m_type & FILE_TYPE_DIRECTORY) return -EISDIR;
+	if (pFile->m_type & FILE_TYPE_DIRECTORY)
+	{
+		FREE_LOCK (g_fileSystemLock);
+		return -EISDIR;
+	}
 	
 	//open it:
 	if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
+	{
+		FREE_LOCK (g_fileSystemLock);
 		return -EIO;
+	}
 	
 	//we have all the perms, let's write the filenode there:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
@@ -248,6 +277,7 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	pDesc->m_nFileEnd		= pFile->m_length;
 	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE;
 	
+	FREE_LOCK (g_fileSystemLock);
 	return fd;
 }
 bool FiIsValidDescriptor(int fd)
@@ -259,7 +289,12 @@ bool FiIsValidDescriptor(int fd)
 
 int FiClose (int fd)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
 	
 	//closes the file:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
@@ -271,41 +306,84 @@ int FiClose (int fd)
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
 	
+	FREE_LOCK(g_fileSystemLock);
 	return -ENOTHING;
 }
 
 size_t FiRead (int fd, void *pBuf, int nBytes)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
 	
-	if (nBytes < 0) return -EINVAL;
+	if (nBytes < 0)
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EINVAL;
+	}
 	
 	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf);
-	if (rv < 0) return rv;
+	if (rv < 0) 
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return rv;
+	}
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	FREE_LOCK(g_fileSystemLock);
 	return rv;
 }
 
 //TODO
 size_t FiWrite (int fd, void *pBuf, int nBytes)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
 	
-	if (nBytes < 0) return -EINVAL;
+	if (nBytes < 0)
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EINVAL;
+	}
 	
 	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf);
-	if (rv < 0) return rv;
+	if (rv < 0) 
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return rv;
+	}
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	FREE_LOCK(g_fileSystemLock);
 	return rv;
 }
 
 int FiSeek (int fd, int offset, int whence)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
 	
-	if (g_FileNodeToDescriptor[fd].m_bIsFIFO) return -ESPIPE;
+	if (g_FileNodeToDescriptor[fd].m_bIsFIFO)
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -ESPIPE;
+	}
 	
-	if (whence < 0 || whence > SEEK_END) return -EINVAL;
+	if (whence < 0 || whence > SEEK_END)
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EINVAL;
+	}
+	
 	int realOffset = offset;
 	switch (whence)
 	{
@@ -317,23 +395,40 @@ int FiSeek (int fd, int offset, int whence)
 			break;
 	}
 	if (realOffset > g_FileNodeToDescriptor[fd].m_nFileEnd)
+	{
+		FREE_LOCK(g_fileSystemLock);
 		return -EOVERFLOW;
+	}
 	
 	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
-	
+	FREE_LOCK(g_fileSystemLock);
 	return -ENOTHING;
 }
 
 int FiTell (int fd)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
-	return g_FileNodeToDescriptor[fd].m_nStreamOffset;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
+	int rv = g_FileNodeToDescriptor[fd].m_nStreamOffset;
+	FREE_LOCK(g_fileSystemLock);
+	return rv;
 }
 
 int FiTellSize (int fd)
 {
-	if (!FiIsValidDescriptor(fd)) return -EBADF;
-	return g_FileNodeToDescriptor[fd].m_nFileEnd;
+	ACQUIRE_LOCK (g_fileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		FREE_LOCK(g_fileSystemLock);
+		return -EBADF;
+	}
+	int rv = g_FileNodeToDescriptor[fd].m_nFileEnd;
+	FREE_LOCK(g_fileSystemLock);
+	return rv;
 }
 
 #endif

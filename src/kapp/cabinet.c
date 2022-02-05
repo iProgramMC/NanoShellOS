@@ -13,7 +13,15 @@
 #define CABINET_HEIGHT 400
 
 //TODO: Move this to its own space.
-char g_cabinetCWD[PATH_MAX+2];
+typedef struct
+{
+char m_cabinetCWD[PATH_MAX+2];
+char m_cbntOldCWD[PATH_MAX+2];
+}
+CabData;
+
+#define g_cabinetCWD (((CabData*)pWindow->m_data)->m_cabinetCWD)
+#define g_cbntOldCWD (((CabData*)pWindow->m_data)->m_cbntOldCWD)
 
 enum
 {
@@ -77,56 +85,88 @@ void UpdateDirectoryListing (Window* pWindow)
 char g_cabinetExecutableToExecute[PATH_MAX+4];
 
 //TODO FIXME: Spawn a console window if the ELF file is not marked as using the GUI.
-void LaunchExecutable (int argument)
+void LaunchExecutable (int fd)
 {
-	//The argument is assumed to point to a valid const char*.
-	cli;
-	const char* pFileNameUnsafe = (const char*)argument;
-	char filename[1024];
+	//The argument is assumed to be a valid file descriptor.
+	//The CabinetExecute function gave us a tag and everything.
+	//We just need to load the data and execute it.
 	
+	// Get the length we need to take
+	int length = FiTellSize (fd);
+	
+	// Allocate a buffer sufficient enough
+	char* pData = (char*)MmAllocate(length + 1);
+	if (!pData)
+	{
+		LogMsg("Out of memory in LaunchExecutable?!");
+		//just kill the file
+		FiClose (fd);
+		return;
+	}
+	pData[length] = 0;
+	
+	// Read the data from the file and close the file
+	FiRead(fd, pData, length);
+	FiClose (fd);
+	
+	// And execute!
+	ElfExecute(pData, length);
+	
+	// Once done executing, free the exacutable data from memory.
+	MmFree(pData);
+}
+
+void CabinetExecute(Window* pWindow, const char* pFileName)
+{
+	// Get the file name.
+	char filename[1024];
 	strcpy (filename, g_cabinetCWD);
 	if (g_cabinetCWD[1] != 0)
 		strcat (filename, "/");
-	strcat (filename, pFileNameUnsafe);
-	sti;
+	strcat (filename, pFileName);
 	
-	KeTaskAssignTag(KeGetRunningTask(), filename);
-	
+	// Open it up
 	int fd = FiOpen (filename, O_RDONLY | O_EXEC);
 	if (fd < 0)
 	{
 		//LogMsg("Got error %d while trying to open %s", fd, filename);
 		char buffer[1024];
-		sprintf (buffer, "Got error %d while trying to open %s", fd, filename);
+		sprintf (buffer, "Got error %d while trying to open %s.", fd, filename);
 		MessageBox(NULL, buffer, "File cabinet", MB_OK | ICON_ERROR << 16);
 		return;
 	}
 	
-	int length = FiTellSize (fd);
-	//LogMsg("File Length: %d", length);
-	char* pData = (char*)MmAllocate(length + 1);
-	pData[length] = 0;
+	// Create the Launch Executable thread with the file descriptor as its parameter.
+	int errorCode = 0;
+    strcpy (g_cabinetExecutableToExecute, pFileName);
+    Task* pTask = KeStartTask (LaunchExecutable, fd, &errorCode);
+    if (errorCode != TASK_SUCCESS)
+    {
+		char buffer[1024];
+        sprintf (buffer, "Can not create thread to execute '%s'. Out of memory?", pFileName);
+        MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
+		
+		return;
+    }
 	
-	FiRead(fd, pData, length);
+	// After the task was created, give it a tag.
+	cli;
+	KeTaskAssignTag(pTask, filename);
+	sti;
 	
-	FiClose (fd);
-	
-	//LogMsg("Executing...");
-	g_debugConsole.curY = g_debugConsole.height / 4;
-	ElfExecute(pData, length);
-	
-	MmFree(pData);
+	// Consider it done.  LaunchExecutable task shall now FiClose the open file descriptor we've created.
 }
 
 //TODO FIXME
 void CdBack(Window* pWindow)
 {
+	LogMsg("Looking for a / to get rid of...");
 	for (int i = PATH_MAX - 1; i >= 0; i--)
 	{
 		if (g_cabinetCWD[i] == PATH_SEP)
 		{
-			bool o = i == 0;
-			g_cabinetCWD[i+o] = 0;
+			LogMsg("Found it at %d! Cutting off the bit after.", i);
+			g_cabinetCWD[i+(i == 0)] = 0;
 			FileNode* checkNode = FsResolvePath(g_cabinetCWD);
 			if (!checkNode)
 			{
@@ -137,6 +177,7 @@ void CdBack(Window* pWindow)
 				return;
 			}
 			UpdateDirectoryListing (pWindow);
+			break;
 		}
 	}
 }
@@ -147,7 +188,9 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	{
 		case EVENT_PAINT:
 		{
-			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2, 0, TRANSPARENT);
+			VidTextOut (g_cbntOldCWD, 8, 15 + TITLE_BAR_HEIGHT*2, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2, 0x00000000000000000, WINDOW_BACKGD_COLOR);
+			strcpy(g_cbntOldCWD, g_cabinetCWD);
 			break;
 		}
 		case EVENT_COMMAND:
@@ -193,15 +236,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
 						{
-							int errorCode = 0;
-							strcpy (g_cabinetExecutableToExecute, pFileName);
-							KeStartTask (LaunchExecutable, (int)g_cabinetExecutableToExecute, &errorCode);
-							
-							if (errorCode != TASK_SUCCESS)
-							{
-								sprintf (buffer, "Can not create thread to execute '%s'. Out of memory?", pFileName);
-								MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
-							}
+							CabinetExecute(pWindow, pFileName);
 						}
 					}
 					/*else if (EndsWith (pFileName, ".txt"))
@@ -250,6 +285,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		}
 		case EVENT_CREATE:
 		{
+			strcpy (g_cbntOldCWD, "");
 			Rectangle r;
 			// Add a list view control.
 			
@@ -291,6 +327,16 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			break;
 		}
+		case EVENT_DESTROY:
+		{
+			if (pWindow->m_data)
+			{
+				MmFree(pWindow->m_data);
+				pWindow->m_data = NULL;
+			}
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			break;
+		}
 		//TODO: Fix crash when shutting down cabinet?
 		//TODO: SysMon crashes too? (c0103389)  Perhaps it's a widget dispose bug? (they both have listview widgets)
 		default:
@@ -311,6 +357,8 @@ void CabinetEntry (__attribute__((unused)) int argument)
 		MessageBox(NULL, "Hey, the window couldn't be created. File " __FILE__ ".", "Cabinet", MB_OK | ICON_STOP << 16);
 		return;
 	}
+	
+	pWindow->m_data = MmAllocate(sizeof(CabData));
 	
 	// setup:
 	//ShowWindow(pWindow);

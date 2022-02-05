@@ -52,6 +52,8 @@ extern void KeTaskDone();
 } while (0)
 
 #define FREE_LOCK(lock_var) do {\
+	if (lock_var == 0)\
+		SLogMsg("warning: attempted to release not-acquired lock at " __FILE__ ":%d", __LINE__);\
 	lock_var = 0;\
 } while (0);
 

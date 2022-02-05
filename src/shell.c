@@ -199,7 +199,7 @@ void ShellExecuteCommand(char* p)
 				{
 					if (g_cwd[i] == PATH_SEP)
 					{
-						g_cwd[i+1] = 0;
+						g_cwd[i+(i==0)] = 0;
 						g_pCwdNode = FsResolvePath(g_cwd);
 						if (!g_pCwdNode)
 						{

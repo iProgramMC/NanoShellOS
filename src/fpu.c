@@ -23,14 +23,15 @@ void KiFpuInit()
 		LogMsg("Warning: no FPU hardware detected!");
 	}
 	
-	cr0 &= ~(1<<2);
-	cr0 |=  (1<<1);
+	cr0 &= ~(1<<2);//Turn off the EM bit
+	cr0 |=  (1<<1);//Turn on the MP bit
 	asm("mov %0, %%cr0" :: "r"(cr0));
 	asm("mov %%cr4, %0" : "=r"(cr4));
 	
-	//some SSE shit and fast FPU save&restore
-	//TODO: maybe not necessary?
+	//Enable OSFXSR and OSXMMEXCPT
 	cr4 |= 3 << 9;
+	//Enable OSXSAVE
+	//cr4 |= 1 << 18;
 	
 	asm("mov %0, %%cr4" :: "r"(cr4));
 	

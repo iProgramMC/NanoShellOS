@@ -1742,8 +1742,15 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 			rectb.bottom
 		);
 	
-		VidTextOut(pWindow->m_title, rectb.left + 2 + iconGap, rectb.top + 2 + 3, WINDOW_TITLE_TEXT_COLOR_SHADOW, TRANSPARENT);
-		VidTextOut(pWindow->m_title, rectb.left + 1 + iconGap, rectb.top + 1 + 3, WINDOW_TITLE_TEXT_COLOR, TRANSPARENT);
+		int textwidth, __attribute__((unused)) height;
+		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
+		
+		int MinimizAndCloseGap = ((pWindow->m_flags & WF_NOMINIMZ) ? 0:16) + ((pWindow->m_flags & WF_NOCLOSE) ? 0:16);
+		
+		int offset = (rectb.right-iconGap-rectb.left-textwidth-MinimizAndCloseGap)/2;
+	
+		VidTextOut(pWindow->m_title, rectb.left + offset + 1 + iconGap, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 0 + iconGap, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		
 		if (pWindow->m_iconID != ICON_NULL)
 			RenderIconForceSize(pWindow->m_iconID, rectb.left+1, rectb.top+1, 16);

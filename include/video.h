@@ -92,6 +92,11 @@ typedef struct
 }
 VBEData;
 
+#define FLAGS_TOO(flags, color) (flags | (color & 0XFFFFFF))
+
+#define TEXT_RENDER_TRANSPARENT 0xFFFFFFFF
+#define TEXT_RENDER_BOLD        0x01000000
+
 /**
  * Sets the current VBE data, or NULL for the mainscreen.
  */

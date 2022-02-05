@@ -56,6 +56,7 @@ typedef struct FSNodeS
 	uint32_t         m_length;     //file size
 	uint32_t         m_implData;   //implementation data. TODO
 	uint32_t         m_implData1;  //implementation data. TODO
+	uint32_t         m_implData2;  //implementation data. TODO
 	FileReadFunc     Read;
 	FileWriteFunc    Write;
 	FileOpenFunc     Open;
@@ -84,6 +85,7 @@ FileNode* FsGetRootNode();
 
 //Remember the definitions above.
 
+//These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
 uint32_t FsRead    (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
 uint32_t FsWrite   (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
 bool     FsOpen    (FileNode* pNode, bool read, bool write);

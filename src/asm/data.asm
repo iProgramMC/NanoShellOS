@@ -16,7 +16,8 @@ global e_temporary2
 
 ; WORK: Change this if necessary.  Paging is not setup at this stage
 ;       so this address is purely PHYSICAL.
-e_placement dd 0x400000
+; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
+e_placement dd 0x480000
 
 section .bss
 

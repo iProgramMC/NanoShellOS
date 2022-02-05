@@ -914,6 +914,14 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 		SLogMsg("FUCK!");
 		return;
 	}
+	
+	bool bold = false;
+	if (colorFg & TEXT_RENDER_BOLD)
+	{
+		bold = true;
+	}
+	colorFg &= 0xFFFFFF;
+	
 	int width = g_pCurrentFont[0], height = g_pCurrentFont[1];
 	const unsigned char* test = g_pCurrentFont + 3;
 	if (g_pCurrentFont[2] == FONTTYPE_BIG)
@@ -928,7 +936,10 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 			for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
 			{
 				if (test1 & bitmask)
+				{
 					VidPlotPixelInline(ox + x, oy + y, colorFg);
+					if (bold) VidPlotPixelInline(ox + x + bold, oy + y, colorFg);
+				}
 				else if (colorBg != TRANSPARENT)
 					VidPlotPixelInline(ox + x, oy + y, colorBg);
 			}
@@ -943,7 +954,10 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 			for (int y = 0, bitmask = 1; y < height; y++, bitmask <<= 1)
 			{
 				if (test[c * width + x] & bitmask)
+				{
 					VidPlotPixelInline(ox + x, oy + y, colorFg);
+					if (bold) VidPlotPixelInline(ox + x + bold, oy + y, colorFg);
+				}
 				else if (colorBg != TRANSPARENT)
 					VidPlotPixelInline(ox + x, oy + y, colorBg);
 			}
@@ -963,7 +977,10 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 			for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
 			{
 				if (test[c * height + y] & bitmask)
+				{
 					VidPlotPixelInline(ox + x, oy + y, colorFg);
+					if (bold) VidPlotPixelInline(ox + x + bold, oy + y, colorFg);
+				}
 				else if (colorBg != TRANSPARENT)
 					VidPlotPixelInline(ox + x, oy + y, colorBg);
 			}
@@ -977,6 +994,12 @@ void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned co
 	
 	int width = 0;
 	int cwidth = 0, height = lineHeight;
+	
+	bool bold = false;
+	if (colorFg & TEXT_RENDER_BOLD)
+	{
+		bold = true;
+	}
 	
 	while (*pText)
 	{
@@ -993,7 +1016,7 @@ void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned co
 		}
 		else
 		{
-			int cw = GetCharWidthInl(c);
+			int cw = GetCharWidthInl(c) + bold;
 			
 			if (!doNotActuallyDraw)
 				VidPlotChar(c, x, y, colorFg, colorBg);
@@ -1026,8 +1049,9 @@ int CountLinesInText (const char* pText)
 	return lc;
 }
 
-int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
+static int MeasureTextUntilNewLineI (const char* pText, const char** pTextOut, uint32_t flags)
 {
+	bool bold = (flags & TEXT_RENDER_BOLD) != 0;
 	int w = 0;
 	while (1)
 	{
@@ -1036,10 +1060,14 @@ int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
 			*pTextOut = pText;
 			return w;
 		}
-		int cw = GetCharWidthInl(*pText);
+		int cw = GetCharWidthInl(*pText) + bold;
 		w += cw;
 		pText++;
 	}
+}
+int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
+{
+	return MeasureTextUntilNewLineI(pText, pTextOut, 0x00000000);
 }
 
 int MeasureTextUntilSpace (const char* pText, const char** pTextOut)
@@ -1111,6 +1139,12 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 	int lines = CountLinesInText(pText);
 	int startY = rect.top;
 	
+	bool bold = false;
+	if (colorFg & TEXT_RENDER_BOLD)
+	{
+		bold = true;
+	}
+	
 	if (drawFlags & TEXTSTYLE_VCENTERED)
 		startY += ((rect.bottom - rect.top - lines * lineHeight) / 2);
 	
@@ -1139,7 +1173,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				while (text != text2)
 				{
 					VidPlotChar(*text, x, y, colorFg, colorBg);
-					int cw = GetCharWidthInl(*text);
+					int cw = GetCharWidthInl(*text) + bold;
 					x += cw;
 					text++;
 				}
@@ -1150,7 +1184,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 				}
 				if (*text2 == ' ')
 				{
-					int cw = GetCharWidthInl(' ');
+					int cw = GetCharWidthInl(' ') + bold;
 					x += cw;
 				}
 				if (*text2 == '\0') return;
@@ -1161,7 +1195,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 	
 	for (int i = 0; i < lines; i++)
 	{
-		int t = MeasureTextUntilNewLine (text, &text2);
+		int t = MeasureTextUntilNewLineI (text, &text2, colorFg);
 		
 		int startX = rect.left;
 		
@@ -1171,7 +1205,7 @@ void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned
 		while (text != text2)
 		{
 			VidPlotChar(*text, startX, startY, colorFg, colorBg);
-			int cw = GetCharWidthInl(*text);
+			int cw = GetCharWidthInl(*text) + bold;
 			startX += cw;
 			text++;
 		}

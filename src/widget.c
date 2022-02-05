@@ -1373,6 +1373,24 @@ void WidgetMenuBar_InitializeRoot (Control* this)
 	// Call the generic initializor for the menu bar tree item with a comboID of zero.
 	WidgetMenuBar_InitializeMenuBarItemAsEmpty (&this->m_menuBarData.m_root, 0);
 }
+
+void WidgetMenuBar_DeInitializeChild(MenuBarTreeItem *this)
+{
+	// deinitialize the children first.
+	for (int i = 0; i < this->m_childrenCount; i++)
+	{
+		WidgetMenuBar_DeInitializeChild(&this->m_childrenArray[i]);
+	}
+	
+	// then, deinitialize this
+	MmFree(this->m_childrenArray);
+}
+
+void WidgetMenuBar_DeInitializeRoot(Control* this)
+{
+	WidgetMenuBar_DeInitializeChild (&this->m_menuBarData.m_root);
+}
+
 void WidgetMenuBar_RenderSubMenu (MenuBarTreeItem* this, int x, int y)
 {
 	// calculate the width and height of the menu
@@ -1527,6 +1545,11 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		{
 			// Initialize the root.
 			WidgetMenuBar_InitializeRoot(this);
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			WidgetMenuBar_DeInitializeRoot(this);
 			break;
 		}
 		case EVENT_PAINT:

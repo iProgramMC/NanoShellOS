@@ -97,6 +97,7 @@ const char* KeTaskGetTag(Task* pTask)
 extern void KeTaskStartup();
 extern uint32_t g_curPageDirP; //memory.c
 extern VBEData* g_vbeData, g_mainScreenVBEData;
+void KeFxSave(int *fpstate);
 void KeConstructTask (Task* pTask)
 {
 	pTask->m_state.esp = ((int)pTask->m_pStack + C_STACK_BYTES_PER_TASK) & ~0xF; //Align to 4 bits
@@ -122,10 +123,13 @@ void KeConstructTask (Task* pTask)
 	pTask->m_state.esp -= sizeof(int) * 5;
 	memcpy ((void*)(pTask->m_state.esp), &pTask->m_state.eip, sizeof(int)*3);
 	
-	pTask->m_pVBEContext = &g_mainScreenVBEData;
-	pTask->m_pCurrentHeap = g_pHeap;//default kernel heap.
+	pTask->m_pVBEContext     = &g_mainScreenVBEData;
+	pTask->m_pCurrentHeap    = g_pHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
-	pTask->m_pFontContext = g_pCurrentFont;
+	pTask->m_pFontContext    = g_pCurrentFont;
+	
+	memset   (pTask->m_fpuState, 0, sizeof (pTask->m_fpuState));
+	KeFxSave (pTask->m_fpuState);
 }
 
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)

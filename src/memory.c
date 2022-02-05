@@ -7,6 +7,10 @@
 
 //#define MULTITASKED_WINDOW_MANAGER
 
+//TODO FIXME: Make this thread safe in the future.  The problem is if
+//you enable MULTITASKED_WINDOW_MANAGER (so, the locks), the system
+//gets stack overflowed for whatever reason.
+
 #include <memory.h>
 #include <print.h>
 #include <string.h>
@@ -655,7 +659,7 @@ void MmDebugDump()
 	{
 		if (g_pageEntries[i].m_bPresent) {
 			//S: subsequent mempages, A: author file, AL: author line
-			LogMsg("%x:  virt:%x  phys:%x  P%s%s%s%s S:%d A:%s AL:%d",
+			SLogMsg("%x:  virt:%x  phys:%x  P%s%s%s%s S:%d A:%s AL:%d",
 				i,
 				(g_pageAllocationBase + (i << 12)),
 				g_pageEntries[i].m_pAddress<<12,
