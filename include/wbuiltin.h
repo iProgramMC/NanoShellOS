@@ -37,5 +37,6 @@ void LaunchVersion();//ShellAbout
 void SystemMonitorEntry(int argument);
 void LauncherEntry(int arg);
 void TaskbarEntry(int arg);
+void CrashReporterCheck();
 
 #endif//_WBUILTIN_H

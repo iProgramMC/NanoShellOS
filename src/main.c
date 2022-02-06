@@ -136,6 +136,7 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	// Initialize the ramdisk
 	//LogMsg("Initializing initrd...");
 	FsInitializeInitRd(g_initrdStart);
+	FsMountRamDisk(g_initrdStart);
 	// Initialize the IDE driver
 	//LogMsg("Initializing IDE drives...");
 	StIdeInitialize ();

@@ -1370,8 +1370,8 @@ static inline void RenderCursorOpaque(void)
 			kzs -= ys;
 			ys = 0;
 		}
-		if (ye >= GetScreenSizeY())
-			ye =  GetScreenSizeY() - 1;
+		if (ye >= GetScreenHeight())
+			ye =  GetScreenHeight() - 1;
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1473,6 +1473,8 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 	if (topUpTo < 0) topUpTo = 0;
 	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
 	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+	if (bottom < 0) bottom= 0;
+	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight()-1;
 	if (left < 0) left = 0;
 	if (left >= GetScreenWidth()) left = GetScreenWidth();
 	if (right < 0) right = 0;
@@ -1502,6 +1504,8 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 		{
 			topUpTo = g_mouseY - g_currentCursor->topOffs;
 			int bottomUpTo = topUpTo + g_currentCursor->height;
+			if (bottomUpTo < 0) bottom= 0;
+			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight()-1;
 			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
 			startcp = yoffscp + left,                  startfb = yoffsfb + left;
 			for (int y = bottomUpTo; y < bottom; y++)

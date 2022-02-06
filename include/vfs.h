@@ -100,6 +100,13 @@ FileNode*FsResolvePath (const char* pPath);
 
 void FiDebugDump();
 
+//Ramdisk API:
+#if 1
+
+void FsMountRamDisk(void* pRamDisk);
+
+#endif
+
 //Initrd stuff:
 #if 1
 	typedef struct

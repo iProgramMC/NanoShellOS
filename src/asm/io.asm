@@ -458,7 +458,11 @@ KeIdtLoad:
 
 global MmStartupStuff
 MmStartupStuff:
-	mov ecx, dword [e_placement]
+; WORK: Change this if necessary.  Paging is not setup at this stage
+;       so this address is purely PHYSICAL.
+; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
+	mov ecx, 0x600000
+	mov dword [e_placement], ecx
 	add ecx, 0xC0000000
 	mov dword [e_frameBitsetVirt], ecx
 	ret
@@ -527,10 +531,10 @@ extern UserCallStuffNotSupportedC
 global UserCallStuff
 global UserCallStuffEnd
 UserCallStuff:
-	MOV EBX, [0xC0007CFC]
-	SHL EBX, 2
+	MOV ECX, [0xC0007CFC]
+	SHL ECX, 2
 	
-	MOV EAX, [WindowCall+EBX]
+	MOV EAX, [WindowCall+ECX]
 	JMP EAX
 	
 	RET

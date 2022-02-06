@@ -16,6 +16,8 @@ application/oregon/build/*
 application/oregon/learn.nse
 application/doomnanoshell/*
 application/doomnanoshell
+application/nesemu/*
+application/nesemu
 build/*
 cp/*
 lol/*

@@ -85,6 +85,8 @@
 #include <icons/calculator16.h>
 #include <icons/desktop2.h>
 #include <icons/mouse.h>
+// Icons V1.31
+#include <icons/ambulance.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -163,6 +165,7 @@ Image * g_iconTable[] = {
 	&g_calculator16_icon,
 	&g_desktop2_icon,
 	&g_mouse_icon,
+	&g_ambulance_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");

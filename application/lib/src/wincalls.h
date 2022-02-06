@@ -1,5 +1,5 @@
 
-// System Calls V1
+// System CALL V1
 #if WCALL_VERSION >= 10
 // Video Call Functions:
 CALL (GetScreenSizeX, VID_GET_SCREEN_WIDTH, int)
@@ -83,7 +83,7 @@ CALL (HandleMessages, WIN_HANDLE_MESSAGES, bool, Window* pWindow)
 CALL_END
 #endif
 
-// System Calls V1.1
+// System CALL V1.1
 #if WCALL_VERSION >= 11
 
 // Window stuff

@@ -2,7 +2,7 @@
 		NanoShell Operating System
 		  (C) 2022 iProgramInCpp
 
-     FILE SYSTEM: Init RAMDisk module
+       FILE SYSTEM: VFS root module
 ******************************************/
 #include <vfs.h>
 #include <console.h>
@@ -90,7 +90,7 @@ uint32_t  g_nDevNodes; //number of dev nodes.
 
 static DirEnt g_DirEnt; // directory /dev
 
-static uint32_t FsInitRdRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+static uint32_t FsRootFsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	InitRdFileHeader* pHeader = &g_pInitRdFileHeaders[pNode->m_inode];
 	
@@ -108,10 +108,12 @@ static uint32_t FsInitRdRead(FileNode* pNode, uint32_t offset, uint32_t size, vo
 //TODO: make a different separate way to do this stuff?
 extern int       g_fatsMountedCount;
 extern FileNode* g_fatsMountedPointers[32];
-static DirEnt* FsInitRdReadDir(FileNode* pNode, uint32_t index)
+extern int       g_rdsMountedCount;
+extern FileNode* g_rdsMountedPointers[32];
+static DirEnt* FsRootFsReadDir(FileNode* pNode, uint32_t index)
 {
-	uint32_t filesBeforeInitrd = 1 + g_fatsMountedCount;
-	if (pNode == g_pInitRdRoot && index < filesBeforeInitrd)
+	uint32_t filesBeforeInitrd = 1 + g_fatsMountedCount + g_rdsMountedCount;
+	if (pNode == g_pInitRdRoot)
 	{
 		if (index == 0)
 		{
@@ -119,16 +121,21 @@ static DirEnt* FsInitRdReadDir(FileNode* pNode, uint32_t index)
 			g_DirEnt.m_inode = 0;
 			return &g_DirEnt;
 		}
-		else
+		index--;
+		if (index < (uint32_t)g_rdsMountedCount)
 		{
-			index--;
+			strcpy (g_DirEnt.m_name, g_rdsMountedPointers[index]->m_name);
+			g_DirEnt.m_inode = g_rdsMountedPointers[index]->m_inode;
+			return &g_DirEnt;
+		}
+		index -= g_rdsMountedCount;
+		if (index < (uint32_t)g_fatsMountedCount)
+		{
 			strcpy (g_DirEnt.m_name, g_fatsMountedPointers[index]->m_name);
 			g_DirEnt.m_inode = g_fatsMountedPointers[index]->m_inode;
 			return &g_DirEnt;
 		}
 	}
-	
-	index -= filesBeforeInitrd;
 	if (index >= g_nRootNodes)
 		return NULL;
 	
@@ -137,7 +144,7 @@ static DirEnt* FsInitRdReadDir(FileNode* pNode, uint32_t index)
 	return &g_DirEnt;
 }
 
-static FileNode* FsInitRdFindDir(FileNode* pNode, const char* pName)
+static FileNode* FsRootFsFindDir(FileNode* pNode, const char* pName)
 {
 	if (pNode == g_pInitRdRoot)
 	{
@@ -145,6 +152,13 @@ static FileNode* FsInitRdFindDir(FileNode* pNode, const char* pName)
 			return g_pInitRdDev;
 		else
 		{
+			for (int i = 0; i < g_rdsMountedCount; i++)
+			{
+				if (strcmp (pName, g_rdsMountedPointers[i]->m_name) == 0)
+				{
+					return g_rdsMountedPointers[i];
+				}
+			}
 			for (int i = 0; i < g_fatsMountedCount; i++)
 			{
 				if (strcmp (pName, g_fatsMountedPointers[i]->m_name) == 0)
@@ -243,8 +257,8 @@ void FsInitializeInitRd(void* pRamDisk)
 	g_pInitRdRoot->Write   = NULL;
 	g_pInitRdRoot->Open    = NULL;
 	g_pInitRdRoot->Close   = NULL;
-	g_pInitRdRoot->ReadDir = FsInitRdReadDir;
-	g_pInitRdRoot->FindDir = FsInitRdFindDir;
+	g_pInitRdRoot->ReadDir = FsRootFsReadDir;
+	g_pInitRdRoot->FindDir = FsRootFsFindDir;
 	
 	// Initialize the /dev dir.
 	g_pInitRdDev = (FileNode*)MmAllocate(sizeof(FileNode));
@@ -281,7 +295,7 @@ void FsInitializeInitRd(void* pRamDisk)
 		g_pRootNodes[i].m_length = g_pInitRdFileHeaders[i].m_length;
 		g_pRootNodes[i].m_inode = i;
 		g_pRootNodes[i].m_type = FILE_TYPE_FILE;
-		g_pRootNodes[i].Read    = FsInitRdRead;
+		g_pRootNodes[i].Read    = FsRootFsRead;
 		g_pRootNodes[i].Write   = NULL;
 		g_pRootNodes[i].Open    = NULL;
 		g_pRootNodes[i].Close   = NULL;

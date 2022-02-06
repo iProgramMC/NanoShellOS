@@ -160,20 +160,19 @@ void ShellExecuteCommand(char* p)
 		LogMsg("lt         - list currently running threads (pauses them during the print)");
 		LogMsg("mode X     - change the screen mode");
 		LogMsg("mspy       - Memory Spy! (TM)");
-		LogMsg("mrd        - mounts a testing RAM Disk");
+		LogMsg("mrd        - mounts a RAM Disk from a file");
+		
+		//wait for new key
+		LogMsg("Strike a key to print more.");
+		CoGetChar();
+		
 		LogMsg("ph         - prints current heap's address in kernel address space (or NULL for the default heap)");
-		LogMsg("rd         - reads and dumps a sector from the RAM Disk");
 		LogMsg("sysinfo    - dump system information");
 		LogMsg("sysinfoa   - dump advanced system information");
 		LogMsg("time       - get timing information");
 		LogMsg("stt        - spawns a single thread that doesn't last forever");
 		LogMsg("st         - spawns a single thread that makes a random line forever");
 		LogMsg("tt         - spawns 64 threads that makes random lines forever");
-		
-		//wait for new key
-		LogMsg("Strike a key to print more.");
-		CoGetChar();
-		
 		LogMsg("tte        - spawns 1024 threads that makes random lines forever");
 		LogMsg("ttte       - spawns 1024 threads that prints stuff");
 		LogMsg("ver        - print system version");
@@ -473,13 +472,44 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "mrd") == 0)
 	{
-		if (g_ramDiskMounted)
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
 		{
-			LogMsg("Have a ramdisk mounted already.");
-			return;
+			LogMsg("You want to mount what, exactly?");
 		}
-//		g_ramDiskID = StMountTestRamDisk();
-//		g_ramDiskMounted = true;
+		else if (*fileName == 0)
+		{
+			LogMsg("You want to mount what, exactly?");
+		}
+		else
+		{
+			//TODO: open/close
+			char s[1024];
+			strcpy (s, g_cwd);
+			if (g_cwd[1] != 0) //not just a '/'
+				strcat(s, "/");
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_RDONLY);
+			if (fd < 0)
+			{
+				LogMsg("Got error code %d when opening file", fd);
+				return;
+			}
+			
+			int length = FiTellSize(fd);
+			
+			char* pData = (char*)MmAllocate(length + 1);
+			pData[length] = 0;
+			
+			FiRead(fd, pData, length);
+			
+			FiClose(fd);
+			
+			FsMountRamDisk(pData);
+			
+			//Do not free as the file system now owns this pointer.
+		}
 	}
 	else if (strcmp (token, "mspy") == 0)
 	{
@@ -543,52 +573,6 @@ void ShellExecuteCommand(char* p)
 		LogMsg("- pageNumber is in\x01\x0C DECIMAL\x01\x0F");
 		LogMsg("- note: cut off the last 3 digits of an address in hex and turn it to decimal to get a pageNumber");
 	dont_print_usage:;
-	}
-	else if (strcmp (token, "rd") == 0)
-	{
-		if (!g_ramDiskMounted)
-		{
-			LogMsg("Must mount a ramdisk first.  Please use \"mrd\".");
-			return;
-		}
-		char* secNum = Tokenize (&state, NULL, " ");
-		if (!secNum)
-		{
-			LogMsg("Expected sector number");
-		}
-		else if (*secNum == 0)
-		{
-			LogMsg("Expected sector number");
-		}
-		else
-		{
-			int e = atoi (secNum);
-			
-			char sector[512];
-			DriveStatus f = StDeviceRead(e, sector, g_ramDiskID, 1);
-			LogMsg("Printing sector number %d.  The returned %x.", e, f);
-			
-			for (int i = 0; i < SECTOR_SIZE; i += 16)
-			{
-				LogMsgNoCr(" %x:", i);
-				for (int j = 0; j < 16; j++)
-				{
-					LogMsgNoCr(" %B", sector[i+j]);
-				}
-				LogMsgNoCr("   ");
-				for (int j = 0; j < 16; j++)
-				{
-					char e = sector[i+j];
-					/**/ if (e == 0x00) e = ' ';
-					else if (e <  0x20) e = '.';
-					else if (e >= 0x7F) e = '.';
-					LogMsgNoCr("%c", e);
-				}
-				LogMsg("");
-			}
-			
-			//PrInitialize();
-		}
 	}
 	else if (strcmp (token, "cls") == 0)
 	{
@@ -698,6 +682,7 @@ void ShellExecuteCommand(char* p)
 		{
 			SwitchMode (*modeNum - '0');
 			//PrInitialize();
+			CoInitAsText(g_currentConsole);
 		}
 	}
 	else if (strcmp (token, "font") == 0)

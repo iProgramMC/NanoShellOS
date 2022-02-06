@@ -14,10 +14,7 @@ global g_pageTableArray
 global e_temporary1
 global e_temporary2
 
-; WORK: Change this if necessary.  Paging is not setup at this stage
-;       so this address is purely PHYSICAL.
-; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
-e_placement dd 0x480000
+e_placement dd 0x000000
 
 section .bss
 

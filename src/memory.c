@@ -659,7 +659,7 @@ void MmDebugDump()
 	{
 		if (g_pageEntries[i].m_bPresent) {
 			//S: subsequent mempages, A: author file, AL: author line
-			SLogMsg("%x:  virt:%x  phys:%x  P%s%s%s%s S:%d A:%s AL:%d",
+			LogMsg("%x:  virt:%x  phys:%x  P%s%s%s%s S:%d A:%s AL:%d",
 				i,
 				(g_pageAllocationBase + (i << 12)),
 				g_pageEntries[i].m_pAddress<<12,

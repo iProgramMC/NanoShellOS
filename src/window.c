@@ -836,6 +836,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	{
 		bool handled = false;
 		UpdateFPSCounter();
+		CrashReporterCheck();
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
 			Window* pWindow = &g_windows [p];
@@ -1733,7 +1734,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		
 		//todo: gradients?
 		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
-		VidFillRectVGradient(
+		VidFillRectHGradient(
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
 			rectb.left,
@@ -1747,7 +1748,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		
 		int MinimizAndCloseGap = ((pWindow->m_flags & WF_NOMINIMZ) ? 0:16) + ((pWindow->m_flags & WF_NOCLOSE) ? 0:16);
 		
-		int offset = (rectb.right-iconGap-rectb.left-textwidth-MinimizAndCloseGap)/2;
+		int offset = (rectb.right-rectb.left-iconGap*2-textwidth-MinimizAndCloseGap)/2;
 	
 		VidTextOut(pWindow->m_title, rectb.left + offset + 1 + iconGap, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pWindow->m_title, rectb.left + offset + 0 + iconGap, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);

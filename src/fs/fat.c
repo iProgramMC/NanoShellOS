@@ -1048,7 +1048,7 @@ void FsFatCloseNonRootDir (FileNode* pFileNode);
 static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index);
 static FileNode* FsFatFindNonRootDir(FileNode* pNode, const char* pName);
 //generic purpose fillup directory entry thing
-static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereToStoreFileNodes, uint32_t* whereToStoreFileNodeCount, uint32_t startCluster)
+static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereToStoreFileNodes, int* whereToStoreFileNodeCount, uint32_t startCluster)
 {
 	// Read the directory and count the entries.
 	int entryCount = 0;
@@ -1101,6 +1101,12 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 		int dirEntsUntilReal = 0;
 		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
 		{
+			if (index >= entryCount)
+			{
+				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");
+				break;
+			}
+			
 			uint8_t firstByte = *entry;
 			while (firstByte == 0x00 || firstByte == 0xE5 || (firstByte == (uint8_t)'.' && dirEntsUntilReal++ < 2))
 			{
@@ -1358,6 +1364,8 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	FileNode* pFileNodes = (FileNode*)MmAllocate (sizeof(FileNode) * entryCount);
 	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
 	
+	//LogMsg("Counted %d File entries.", entryCount);
+	
 	// Read the directory AGAIN and fill in the FileNodes
 	cluster = 2;
 	int index = 0;
@@ -1369,6 +1377,12 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 		uint8_t* entry = root_cluster;
 		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
 		{
+			if (index >= entryCount)
+			{
+				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");
+				break;
+			}
+			
 			uint8_t firstByte = *entry;
 			while (firstByte == 0x00 || firstByte == 0xE5)
 			{
@@ -1380,6 +1394,8 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 			uint8_t* nextEntry = NULL;
 			FatDirEntry targetDirEnt;
 			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
+			
+			//LogMsg("> Loading file entry '%s' (index %d)", targetDirEnt.m_pName, index);
 			
 			// turn this entry into a FileNode entry.
 			FileNode *pCurrent = pFileNodes + index;

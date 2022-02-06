@@ -22,7 +22,7 @@ enum {
 	BC_EX_COPROCESSOR_UNUSED,
 	BC_EX_INVALID_TSS,
 	BC_EX_SEGMENT_NOT_PRESENT,
-	BC_EX_SS_FAULT,
+	BC_EX_SS_FAULT,//TODO: Handle this seperately and switch to an emergency stack.
 	BC_EX_GENERAL_FAULT,
 	BC_EX_PAGE_FAULT,
 	BC_EX_RESERVED,
@@ -43,8 +43,17 @@ enum {
 	BC_EX_SECURITY,
 	BC_EX_RESERVED8,
 };
+
+/* Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble. */
+typedef struct StackFrame {
+	struct StackFrame* ebp;
+	uint32_t eip;
+} StackFrame;
+
 typedef int BugCheckReason;
 void KeBugCheck (BugCheckReason reason, Registers* pRegs);
 void DumpRegisters (Registers*);
+//WORK: make sure the string you pass in here is large enough!!!
+void DumpRegistersToString (char* pStr, Registers* pRegs);
 
 #endif//_DEBUG_H

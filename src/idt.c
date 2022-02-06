@@ -11,6 +11,8 @@
 #include <debug.h>
 #include <misc.h>
 #include <video.h>
+#include <task.h>
+#include <string.h>
 
 #define KBDATA 0x60
 #define KBSTAT 0x64
@@ -92,23 +94,100 @@ void PerformBeep()
 	StopSound();
 }
 
+bool      g_killedTaskBecauseOfException = false;
+
+CrashInfo g_taskKilledCrashInfo;
+bool g_hasAlreadyThrownException = false;
+bool g_hasAlreadyThrownException1 = false;
+
+void KeAcknowledgeTaskCrash()
+{
+	g_killedTaskBecauseOfException = false;
+	g_hasAlreadyThrownException1   = false;
+}
+bool KeDidATaskCrash()
+{
+	return g_killedTaskBecauseOfException;
+}
+const char* KeGetCrashedTaskTag()
+{
+	return g_taskKilledCrashInfo.m_tag;
+}
+CrashInfo* KeGetCrashedTaskInfo()
+{
+	return &g_taskKilledCrashInfo;
+}
+
 /**
  * Exception handlers.  They cause a bugcheck when we get 'em.
  */
-bool g_hasAlreadyThrownException = false;
 extern Console *g_currentConsole, g_debugConsole;
-void IsrExceptionCommon(int code, Registers* pRegs) {
-	g_debugConsole.color = 0x4F;
-	g_debugConsole.pushOrWrap = 1;
-	g_debugConsole.curY = 1;
+
+void IsrExceptionCommon(int code, Registers* pRegs)
+{
+	//TODO SEVERE FIXME: if a task fucks up the ESP you can easily triple fault the system.
+	//Don't let that happen to you.  Make the stack-segment-exception switch to an emergency
+	//stack to salvage what's left of the system.
+	
 	g_currentConsole = &g_debugConsole;
 	VidSetVBEData(NULL);
-	VidSetFont(FONT_TAMSYN_BOLD);
-	//VidSetFont(FONT_FAMISANS);
+	VidSetFont (FONT_TAMSYN_BOLD);
 	
+	//If we're running a task:
+	if (KeGetRunningTask() != NULL)
+	{
+		if (!g_hasAlreadyThrownException1)
+		{
+			g_hasAlreadyThrownException1 = true;
+			//Just quit the task
+			KeGetRunningTask()->m_bMarkedForDeletion = true;
+			
+			memset(
+				g_taskKilledCrashInfo.m_stackTrace,
+				0,
+				sizeof (g_taskKilledCrashInfo.m_stackTrace)
+			);
+			
+			//If the task was not using the kernel heap, dispose of its heap.
+			if (KeGetRunningTask()->m_pCurrentHeap != NULL)
+			{
+				//FreeHeap switches to the kernel heap after its done freeing everything.
+				FreeHeap (KeGetRunningTask()->m_pCurrentHeap);
+			}
+			
+			g_killedTaskBecauseOfException = true;
+			g_taskKilledCrashInfo.m_pTaskKilled = KeGetRunningTask();
+			g_taskKilledCrashInfo.m_regs        = *pRegs;
+			
+			strcpy (g_taskKilledCrashInfo.m_tag, KeGetRunningTask()->m_tag);
+			if (strlen (g_taskKilledCrashInfo.m_tag) == 0)
+			{
+				strcpy (g_taskKilledCrashInfo.m_tag, "Generic task");
+			}
+			
+			//Get the stacktrace too
+			StackFrame* stk = (StackFrame*)(pRegs->ebp);
+			int sttri = 0;
+			g_taskKilledCrashInfo.m_stackTrace[sttri++] = pRegs->eip;
+			
+			for (unsigned int frame = 0; stk && frame < 50; frame++)
+			{
+				g_taskKilledCrashInfo.m_stackTrace[sttri++] = stk->eip;
+				stk = stk->ebp;
+			}
+			
+			//Let a task switch come in
+			sti;
+			
+			// Wait for a switch
+			while (1) hlt;
+		}
+	}
+	
+	//kernel task or a task crashing baaaadly
 	if (g_hasAlreadyThrownException)
 	{
-		LogMsg("SEVERE ERROR: Already threw an exception.");
+		LogMsg("Recursive exception detected.  Goodbye, cruel world!");
 		KeStopSystem();
 	}
 	g_hasAlreadyThrownException = true;

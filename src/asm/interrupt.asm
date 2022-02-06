@@ -69,6 +69,8 @@ global IsrStub%+%1
 IsrStub%+%1:
 	push 0
 	pusha
+	mov  eax, cr2
+	push eax
 	push esp
 	push %1
 	call IsrExceptionCommon
@@ -83,6 +85,8 @@ extern IsrExceptionCommon
 global IsrStub%+%1
 IsrStub%+%1:
 	pusha
+	mov  eax, cr2
+	push eax
 	push esp
 	push %1
 	call IsrExceptionCommon
