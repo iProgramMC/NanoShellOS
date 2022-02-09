@@ -162,6 +162,12 @@ enum {
 	//A menu bar attached to the top of a window.
 	//Adding more than one control is considered UB
 	CONTROL_MENUBAR,
+	//A text control printing big text (>127 chars)
+	CONTROL_TEXTHUGE,
+	//Same as CONTROL_LISTVIEW but with bigger icons.
+	CONTROL_ICONVIEW,
+	//Does nothing except surround other controls with a rectangle.  Useful for grouping settings.
+	CONTROL_SURROUND_RECT,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -443,6 +449,11 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText);
  * Changes the icon of a window, displayed when minimized.
  */
 void SetWindowIcon (Window* pWindow, int icon);
+
+/**
+ * Changes the icon of an ICON control, or the internal parm1 of any other control.
+ */
+void SetIcon (Window* pWindow, int comboID, int icon);
 
 /**
  * Changes the text of a window.

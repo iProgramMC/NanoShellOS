@@ -8,7 +8,7 @@
 
 %ifdef enable
 
-section .data
+section .rodata
 global g_initrdStart, g_initrd, g_initrdEnd
 
 g_initrdStart:

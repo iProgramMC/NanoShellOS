@@ -18,6 +18,8 @@ application/doomnanoshell/*
 application/doomnanoshell
 application/nesemu/*
 application/nesemu
+application/nanomod/*
+application/nanomod
 build/*
 cp/*
 lol/*
@@ -44,4 +46,7 @@ disk.vdi
 disk.qcow2
 help/*
 nanoshell.cfg
+cs.b
+cs.fnt
+moarplans.txt
 TEXT.TXT

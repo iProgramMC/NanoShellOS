@@ -122,7 +122,7 @@ void TerminalHostTask(int arg)
 	basic_console.height = array[3];
 	basic_console.offX = 4;
 	basic_console.offY = 5 + TITLE_BAR_HEIGHT;
-	basic_console.color = 0x1F;//green background
+	basic_console.color = DefaultConsoleColor;//green background
 	basic_console.curX = basic_console.curY = 0;
 	basic_console.pushOrWrap = 0; //wrap for now
 	basic_console.cwidth  = 8;

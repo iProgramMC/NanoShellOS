@@ -199,7 +199,7 @@ void strcat(char* dest, const char* after)
 	memcpy(end, after, strlen(after) + 1);
 }
 
-const char* strchr (const char* stringToSearch, const char characterToSearchFor)
+char* strchr (char* stringToSearch, const char characterToSearchFor)
 {
 	while (*stringToSearch)
 	{

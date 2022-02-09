@@ -107,6 +107,120 @@ int GetWindowManagerFPS()
 		1, 1, g_placeholderBackground
 	};
 #endif
+extern uint32_t* g_framebufferCopy;
+extern VBEData * g_vbeData;
+
+__attribute__((always_inline))
+inline void VidPlotPixelToCopyInlineUnsafeRF(unsigned x, unsigned y, unsigned color)
+{
+	g_framebufferCopy[x + y * g_vbeData->m_width] = color;
+}
+__attribute__((always_inline))
+inline void VidPlotPixelRaw32IRF (unsigned x, unsigned y, unsigned color)
+{
+	g_vbeData->m_dirty = 1;
+	g_vbeData->m_framebuffer32[x + y * g_vbeData->m_pitch32] = color;
+}
+short GetWindowIndexInDepthBuffer (int x, int y);
+__attribute__((always_inline))
+inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
+{
+	if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
+	{
+		if (GetWindowIndexInDepthBuffer(x, y) < 0)
+		{
+			VidPlotPixelToCopyInlineUnsafeRF(x, y, color);
+			VidPlotPixelRaw32IRF (x, y, color);
+		}
+	}
+}
+
+extern const unsigned char g_BasicFontData[];
+extern const unsigned char g_TestFont216x16[];
+void WinPlotCharBkgd (char c, unsigned ox, unsigned oy, unsigned colorFg)
+{
+	VidSetVBEData(NULL);
+	bool bold = false;
+	if (colorFg & TEXT_RENDER_BOLD)
+	{
+		bold = true;
+	}
+	colorFg &= 0xFFFFFF;
+	
+	//big text?
+	/*
+	if (c > '~' || c < ' ') c = '?';
+	int width = g_TestFont216x16[0], height = g_TestFont216x16[1];
+	const unsigned char* testa = (const unsigned char*)(g_TestFont216x16 + 3);
+	for (int y = 0; y < height; y++)
+	{
+		int to = ((c-' ') * height + y)*2;
+		unsigned short test1 = testa[to+1]|testa[to]<<8;
+		
+		for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
+		{
+			if (test1 & bitmask)
+			{
+				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
+				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
+			}
+		}
+	}
+	*/
+	
+	//standard font?
+	int width = g_BasicFontData[0], height = g_BasicFontData[1];
+	const unsigned char* test = (const unsigned char*)(g_BasicFontData + 3);
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
+		{
+			if (test[c * height + y] & bitmask)
+			{
+				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
+				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
+			}
+		}
+	}
+}
+enum
+{
+	JUSTIFY_LEFT,
+	JUSTIFY_CENTER,
+	JUSTIFY_RIGHT,
+};
+//really basic, no lf support
+void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
+{
+	int text_width = 0;
+	const char* text1 = text;
+	bool bold = false;
+	if (color & TEXT_RENDER_BOLD)
+	{
+		bold = true;
+	}
+	
+	while (*text1)
+	{
+		//text_width += GetCharWidth(*text);
+		text_width += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text1)];
+		if (bold) text_width++;
+		text1++;
+	}
+	int xaxis = 0;
+	if (justify > JUSTIFY_LEFT)
+		xaxis = (GetScreenWidth()-text_width);
+	if (justify == JUSTIFY_CENTER)
+		xaxis /= 2;
+	while (*text)
+	{
+		WinPlotCharBkgd (*text, xaxis, yaxis, color);
+		xaxis += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text)];
+		if (bold) xaxis++;
+		text++;
+	}
+}
+	
 
 void RedrawBackground (Rectangle rect)
 {
@@ -124,6 +238,13 @@ void RedrawBackground (Rectangle rect)
 	}*/
 	//simple background:
 	VidFillRectangle (BACKGROUND_COLOR, rect);
+}
+
+void RedrawBackgdDetails()
+{
+	//WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, 0, JUSTIFY_CENTER, 0xFFFFFF);
+	WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, GetScreenHeight()-22, JUSTIFY_RIGHT, 0xFFFFFF);
+	WinRenderTextBkgd("For evaluation purposes only.",                  GetScreenHeight()-12, JUSTIFY_RIGHT, 0xFFFFFF);
 }
 
 void SetDefaultBackground()
@@ -834,7 +955,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	
 	while (true)
 	{
-		bool handled = false;
+		bool handled = false, hasRedrawnThem = false;
 		UpdateFPSCounter();
 		CrashReporterCheck();
 		for (int p = 0; p < WINDOWS_MAX; p++)
@@ -842,11 +963,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			Window* pWindow = &g_windows [p];
 			if (!pWindow->m_used) continue;
 			
-			if (UpdateTimeout == 0)
+			/*if (UpdateTimeout == 0)
 			{
 				WindowRegisterEvent (pWindow, EVENT_UPDATE, 0, 0);
 				UpdateTimeout = 100;
-			}
+			}*/
 			
 			if (pWindow->m_isSelected)
 			{
@@ -877,6 +998,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				//cli;
 				if (pWindow->m_renderFinished)
 				{
+					if (!hasRedrawnThem)
+					{
+						hasRedrawnThem = true;
+						RedrawBackgdDetails();
+					}
 					pWindow->m_renderFinished = false;
 					RenderWindow(pWindow);
 					Point p = { g_mouseX, g_mouseY };
@@ -1669,7 +1795,7 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 }
-
+extern const unsigned char* g_pCurrentFont;
 void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 {
 	Rectangle recta = pWindow->m_rect;
@@ -1750,8 +1876,13 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		
 		int offset = (rectb.right-rectb.left-iconGap*2-textwidth-MinimizAndCloseGap)/2;
 	
+		/*const unsigned char* pBkp = g_pCurrentFont;
+		VidSetFont(FONT_BIGTEST2);*/
+		
 		VidTextOut(pWindow->m_title, rectb.left + offset + 1 + iconGap, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pWindow->m_title, rectb.left + offset + 0 + iconGap, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		
+		//g_pCurrentFont = pBkp;
 		
 		if (pWindow->m_iconID != ICON_NULL)
 			RenderIconForceSize(pWindow->m_iconID, rectb.left+1, rectb.top+1, 16);

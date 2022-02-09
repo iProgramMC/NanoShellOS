@@ -9,7 +9,8 @@
 
 #include <video.h>
 
-#define DefaultConsoleColor 0x1F
+//#define DefaultConsoleColor 0x1F
+#define DefaultConsoleColor 0x0F
 
 enum ConsoleType {
 	CONSOLE_TYPE_NONE, // uninitialized

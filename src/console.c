@@ -22,6 +22,25 @@ uint16_t TextModeMakeChar(uint8_t fgbg, uint8_t chr) {
 	return comb2;
 }
 uint32_t g_vgaColorsToRGB[] = {
+	0x00111111,
+	0x001111AA,
+	0x0011AA11,
+	0x0011AAAA,
+	0x00AA1111,
+	0x00AA11AA,
+	0x00AAAA11,
+	0x00AAAAAA,
+	0x00555555,
+	0x005555FF,
+	0x0055FF55,
+	0x0055FFFF,
+	0x00FF5555,
+	0x00FF55FF,
+	0x00FFFF55,
+	0x00FFFFFF,
+};
+/*
+uint32_t g_vgaColorsToRGB[] = {
 	0x00000000,
 	0x000000AA,
 	0x0000AA00,
@@ -39,7 +58,7 @@ uint32_t g_vgaColorsToRGB[] = {
 	0x00FFFF55,
 	0x00FFFFFF,
 };
-
+*/
 extern bool g_uses8by16Font;
 Console g_debugConsole; // for LogMsg
 Console g_debugSerialConsole; // for SLogMsg

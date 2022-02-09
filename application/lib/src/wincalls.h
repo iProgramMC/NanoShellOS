@@ -208,4 +208,8 @@ CALL (TmSleep, TM_SLEEP, void, int ms)
 	SARGS(ms)
 CALL_END
 
+CALL (SetIcon, WIN_SET_ICON, void, Window* pWindow, int comboID, int icon)
+	SARGS(pWindow,comboID,icon)
+CALL_END
+
 #endif

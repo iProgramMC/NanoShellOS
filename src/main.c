@@ -93,8 +93,8 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	// Check the multiboot checknum
 	if (check != 0x2badb002)
 	{
-		SwitchMode(0);
-		CoInitAsText(&g_debugConsole);
+		/*SwitchMode(0);
+		CoInitAsText(&g_debugConsole);*/
 		LogMsg("NanoShell has not booted from a Multiboot-compatible bootloader.  A bootloader such as GRUB is required to run NanoShell.");
 		KeStopSystem();
 	}

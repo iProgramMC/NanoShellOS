@@ -122,6 +122,9 @@ enum
 		VID_BLIT_IMAGE_RESIZE,
 		
 		TM_SLEEP,
+		
+	// System Calls V1.22
+		WIN_SET_ICON,
 };
 
 void LogString(const char* pText)
@@ -223,6 +226,9 @@ void *WindowCall[] = {
 		VidBlitImageResize,
 		
 		WaitMS,
+	
+	// System Calls V1.22- 07/01/2022
+		SetIcon,
 };
 
 void UserCallStuffNotSupportedC(void)

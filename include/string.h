@@ -26,6 +26,7 @@ void strtolower(char* as);
 void strtoupper(char* as);
 int strcmp(const char* as, const char* bs);
 void strcat(char* dest, const char* after);
+char* strchr (char* stringToSearch, const char characterToSearchFor);
 void fast_memcpy(void* restrict dest, const void* restrict src, int size);//aligns to 32 bytes!!
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
 
