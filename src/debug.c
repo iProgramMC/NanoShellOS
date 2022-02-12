@@ -7,6 +7,7 @@
 #include <debug.h>
 #include <task.h>
 #include <keyboard.h>
+#include <print.h>
 
 void DumpRegisters (Registers* pRegs)
 {
@@ -87,31 +88,36 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 	LogMsg("*** STOP: %x", reason);
 	
 	if (!pRegs)
-		LogMsg("No register information was provided. (??)");
+		LogMsg("No register information was provided. (perhaps some other stuff)");
 	else
 		DumpRegisters(pRegs);
 	
 	const char* pTag = KeTaskGetTag(KeGetRunningTask());
 	
-	// navigate the stack:
-	StackFrame* stk = (StackFrame*)(pRegs->ebp);
-	//__asm__ volatile ("movl %%ebp, %0"::"r"(stk));
-	LogMsg("Stack trace:");
-	LogMsg("-> 0x%x %s", pRegs->eip, TransformTag (pTag, pRegs->eip), GetMemoryRangeString (pRegs->eip));
-	int count = 40;
-	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
+	if (pRegs)
 	{
-		LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
-		// TODO: addr2line implementation?
-		LogMsg("");
-		stk = stk->ebp;
-		count--;
-		if (count == 0)
+		// navigate the stack:
+		StackFrame* stk = (StackFrame*)(pRegs->ebp);
+		//__asm__ volatile ("movl %%ebp, %0"::"r"(stk));
+		LogMsg("Stack trace:");
+		LogMsg("-> 0x%x %s", pRegs->eip, TransformTag (pTag, pRegs->eip), GetMemoryRangeString (pRegs->eip));
+		int count = 40;
+		for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
 		{
-			LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
-			break;
+			LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
+			// TODO: addr2line implementation?
+			LogMsg("");
+			stk = stk->ebp;
+			count--;
+			if (count == 0)
+			{
+				LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
+				break;
+			}
 		}
 	}
+	else
+		LogMsg("No register information was provided, so no stack trace available either.");
 }
 void ShellExecuteCommand(char* p);
 extern Console* g_focusedOnConsole, g_debugConsole;

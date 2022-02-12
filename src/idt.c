@@ -405,7 +405,7 @@ void KeClockInit()
 
 extern int g_nRtcTicks;//misc.c
 static int s_nSeconds;
-extern bool g_gotTime = false;
+bool g_gotTime = false;
 
 /**
  * RTC interrupt routine.

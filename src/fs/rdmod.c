@@ -7,6 +7,7 @@
 #include <vfs.h>
 #include <memory.h>
 #include <string.h>
+#include <print.h>
 
 #define MAX_CONCURRENT_RAMDISKS 32
 

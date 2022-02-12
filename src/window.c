@@ -23,6 +23,8 @@ void KeTaskDone(void);
 #include <keyboard.h>
 #include <wbuiltin.h>
 #include <wcall.h>
+#include <vfs.h>
+#include <image.h>
 
 #undef cli
 #undef sti
@@ -55,48 +57,41 @@ int GetWindowManagerFPS()
 //background code:
 #if 1
 
-//#define CHECKER_PATTERN
+#define CHECKER_PATTERN
 #ifdef CHECKER_PATTERN
-	#define BG_WHITE 0xFF007F7F
-	#define BG_BLACK 0xFF005C5C
+	#define B 0x000000,
+	#define X 0xFFFFFF,
+	#define o 0x7F0000,
 	const uint32_t g_placeholderBackground[] = {
-		BACKGROUND_COLOR,
-		/*00*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*01*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*02*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*03*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*04*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*05*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*06*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*07*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*08*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*09*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0A*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0B*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0C*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0D*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0E*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*0F*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
-		/*10*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*11*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*12*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*13*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*14*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*15*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*16*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*17*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*18*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*19*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1A*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1B*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1C*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1D*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1E*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
-		/*1F*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+	B B B B B B B B B B B B B o
+	B B X X X X X X X X X B B o
+	B B B B B B B B B B B B B o
+	o B X X X X X X X X X B o o
+	o B X X X X X X X X X B o o
+	o B X X B X B X B X X B o o
+	o B X X X B X B X X X B o o
+	o B B X X X B X X X B B o o
+	o o B B X X X X X B B o o o
+	o o o B B X B X B B o o o o
+	o o o o B B X B B o o o o o
+	o o o o B B X B B o o o o o
+	o o o B B X X X B B o o o o
+	o o B B X X B X X B B o o o
+	o B B X X X X X X X B B o o
+	o B X X X X B X X X X B o o
+	o B X X X B X B X X X B o o
+	o B X X B X B X B X X B o o
+	o B X B X B X B X B X B o o
+	B B B B B B B B B B B B B o
+	B B X X X X X X X X X B B o
+	B B B B B B B B B B B B B o
 	};
+	#undef B
+	#undef X
+	#undef o
 	
 	Image* g_background, g_defaultBackground = {
-		32, 32, g_placeholderBackground
+		14, 22, g_placeholderBackground
 	};
 #else
 	const uint32_t g_placeholderBackground[] = {
@@ -221,23 +216,72 @@ void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
 	}
 }
 	
-
+extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RedrawBackground (Rectangle rect)
 {
-	/*rect.bottom++, rect.right++;
+	// if the rectangle is FULLY inside the 0,0 tile:
+	// (TODO: Make this work on any tile)
+	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
+	//  and call RedrawBackground on them)
+	int rlc = rect.left / g_background->width,  rrc = rect.right  / g_background->width;
+	int rtc = rect.top  / g_background->height, rbc = rect.bottom / g_background->height;
+	if (rlc == rrc && rtc == rbc && rlc == 0 && rtc == 0)
+	{
+		//just draw the clipped portion
+		for (int y = rect.top; y < rect.bottom; y++)
+		{
+			memcpy_ints (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
+			memcpy_ints (&g_framebufferCopy         [y * g_vbeData->m_width   + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
+		}
+		
+		return;
+	}
+	
+	// Fill in the grid pattern ...
+	int grid_left  = (rect.left  - 1 + g_background->width)  / g_background->width;
+	int grid_right = (rect.right + 1 - g_background->width)  / g_background->width;
+	int grid_top   = (rect.top   - 1 + g_background->height) / g_background->height;
+	int grid_bottom= (rect.bottom+ 1 - g_background->height) / g_background->height;
+	
+	for (int y = grid_top, yi = grid_top * g_background->height; y <= grid_bottom; y++, yi += g_background->height)
+	{
+		for (int x = grid_left, xi = grid_left * g_background->width; x <= grid_right; x++, xi += g_background->width)
+		{
+			VidBlitImageForceOpaque (g_background, xi, yi);
+		}
+	}
+	
+	// Then fill in the edges.
+	int xl = grid_left  * g_background->width;
+	int xr = grid_right * g_background->width;
+	int yt = grid_top   * g_background->height;
+	int yb = grid_bottom* g_background->height;
+	
+	rect.bottom++, rect.right++;
 	for (int y = rect.top; y != rect.bottom; y++)
 	{
-		for (int x = rect.left; x != rect.right; x++)
+		int ymod = (y % g_background->height);
+		for (int x = rect.left, xa = rect.left % g_background->width; x != rect.right; x++, xa++)
 		{
-			//TODO: is a z-buffer check necessary?
-			if (true/ * && ...* /)
+			if (y >= yt && y < yb)
 			{
-				VidPlotPixel (x, y, g_background->framebuffer[(x % g_background->width) + g_background->width * (y % g_background->height)]);
+				if (x == xl) 
+				{
+					x = xr;
+					xa = x % g_background->width;
+				}
+				else if (x >= xr)
+					xa = xa % g_background->width;
 			}
+			else
+				xa = xa % g_background->width;
+			//TODO: is a z-buffer check necessary?
+			VidPlotPixel (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
 		}
-	}*/
+	}
+	
 	//simple background:
-	VidFillRectangle (BACKGROUND_COLOR, rect);
+	/*VidFillRectangle (BACKGROUND_COLOR, rect);*/
 }
 
 void RedrawBackgdDetails()
@@ -249,7 +293,41 @@ void RedrawBackgdDetails()
 
 void SetDefaultBackground()
 {
+	SLogMsg("Loading Wallpaper...");
 	g_background = &g_defaultBackground;
+	
+	//Try to open a file now.
+	//WORK: Change the file name here.  Should work
+	int fd = FiOpen("/Fat0/penile.bmp", O_RDONLY);
+	if (fd < 0)
+	{
+		SLogMsg("Could not open wallpaper. Using default one!");
+		return;
+	}
+	
+	int size = FiTellSize(fd);
+	
+	uint8_t*pData=MmAllocate(size);
+	if (!pData)
+	{
+		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
+		return;
+	}
+	
+	FiRead(fd, pData, size);
+	
+	FiClose(fd);
+	
+	int errorCode = 0;
+	Image* pImage = LoadBitmap(pData, &errorCode);
+	MmFree(pData);
+	
+	if (pImage)
+	{
+		g_background = pImage;
+	}
+	else
+		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
 }
 
 #endif
@@ -880,12 +958,14 @@ void SetupWindowManager()
 		return;
 	}
 	
+	LogMsg("Please wait...");
+	
 	g_debugConsole.curY = g_debugConsole.height / 2;
 	g_clickQueueSize = 0;
 	// load background?
 	memset (&g_windows, 0, sizeof (g_windows));
 	InitWindowDepthBuffer();
-	CoClearScreen (&g_debugConsole);
+	//CoClearScreen (&g_debugConsole);
 	g_debugConsole.curX = g_debugConsole.curY = 0;
 	g_debugConsole.pushOrWrap = 1;
 	
@@ -943,7 +1023,7 @@ void HandleKeypressOnWindow(unsigned char key)
 		g_heldAlt = false;
 		KillAltTab();
 	}
-	else if (key == KEY_TAB)
+	else if (key == KEY_TAB && g_heldAlt)
 		OnPressAltTabOnce();
 }
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
@@ -1220,6 +1300,17 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		if (pControl->m_scrollBarData.m_pos >= pControl->m_scrollBarData.m_max)
 			pControl->m_scrollBarData.m_pos =  pControl->m_scrollBarData.m_max - 1;
 	}
+	else if (type == CONTROL_TEXTINPUT)
+	{
+		//by default you have single line
+		pControl->m_textInputData.m_onlyOneLine     = true;
+		pControl->m_textInputData.m_showLineNumbers = false;
+		pControl->m_textInputData.m_focused         = false;
+		if (pControl->m_parm1 & 0x1)
+			pControl->m_textInputData.m_onlyOneLine = false;
+		if (pControl->m_parm1 & 0x2)
+			pControl->m_textInputData.m_showLineNumbers = true;
+	}
 	
 	//register an event for the window:
 	//WindowRegisterEvent(pWindow, EVENT_PAINT, 0, 0);
@@ -1323,6 +1414,12 @@ void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, i
 	else
 		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 }
+
+//TODO FIXME: Moving this anywhere but here causes a strange bug where moving this out
+//causes attempting to switch to the back window to freeze the whole system for whatever reason.
+//The code itself has NO cli's nor does it ever call cli, so why the mouse freezes I don't know.
+//It's also worth noting that once you switch to another window clicking the back window no longer freezes.
+//This does NOT happen when the code sits right here.
 
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
 {

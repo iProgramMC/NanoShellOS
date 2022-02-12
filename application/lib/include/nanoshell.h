@@ -60,5 +60,7 @@ const char* GetCpuName();
 void* GetConsole();//TODO
 TimeStruct* GetTime();
 int GetTickCount();//time since startup
+int NsGetVersion();
+const char* GetVersionString();
 
 #endif//_NANOSHELL_H

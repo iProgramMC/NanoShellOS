@@ -22,13 +22,13 @@ uint16_t TextModeMakeChar(uint8_t fgbg, uint8_t chr) {
 	return comb2;
 }
 uint32_t g_vgaColorsToRGB[] = {
-	0x00111111,
-	0x001111AA,
-	0x0011AA11,
-	0x0011AAAA,
-	0x00AA1111,
-	0x00AA11AA,
-	0x00AAAA11,
+	0x00000000,
+	0x000000AA,
+	0x0000AA00,
+	0x0000AAAA,
+	0x00AA0000,
+	0x00AA00AA,
+	0x00AAAA00,
 	0x00AAAAAA,
 	0x00555555,
 	0x005555FF,

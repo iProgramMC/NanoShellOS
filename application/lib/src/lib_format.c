@@ -216,3 +216,21 @@ void LogMsgNoCr(const char* fmt, ...)
 	va_end(list);
 }
 
+//futureproofing here:
+char g_VersionString[10] = "VX.XX";
+
+const char* GetVersionString()
+{
+	if (g_VersionString[1] == 'X')
+	{
+		int ver = NsGetVersion();
+		//major version and minor version:
+		//NanoShell V1.00 (when that comes out) will have a version number of 100
+		//Current version as of Feb 10,2022 (NanoShell V0.30) has a version code of 30.
+		//Some software may naively just put a 0 in the major version number, but
+		//we should expect an eventual V1.00 or more.
+		sprintf(g_VersionString, "V%d.%02d", ver/100, ver%100);
+	}
+	return g_VersionString;
+}
+

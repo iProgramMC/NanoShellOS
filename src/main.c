@@ -60,7 +60,7 @@ void KiPerformRamCheck()
 extern void KeCPUID();//io.asm
 extern void ShellInit(void);//shell.c
 
-extern char g_initrdStart[];
+extern char g_initrdStart[], g_initrdEnd[];
 
 #define VERBOSE_START 1
 #if VERBOSE_START
@@ -135,8 +135,12 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	
 	// Initialize the ramdisk
 	//LogMsg("Initializing initrd...");
-	FsInitializeInitRd(g_initrdStart);
-	FsMountRamDisk(g_initrdStart);
+	
+	size_t sz = g_initrdEnd - g_initrdStart;
+	void* mem = MmAllocate(sz);
+	memcpy(mem, g_initrdStart, sz);
+	
+	FsInitializeInitRd(mem);
 	// Initialize the IDE driver
 	//LogMsg("Initializing IDE drives...");
 	StIdeInitialize ();

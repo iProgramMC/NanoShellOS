@@ -7,7 +7,7 @@
 #include <wterm.h>
 
 #define DebugLogMsg  SLogMsg
-extern Console *g_currentConsole, g_debugConsole;
+extern Console *g_currentConsole, *g_focusedOnConsole, g_debugConsole;
 void ShellExecuteCommand(char* p);
 void CoRefreshChar (Console *this, int x, int y);
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
@@ -26,6 +26,13 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 		case EVENT_CLOSE:
 		case EVENT_DESTROY:
 		{
+			// Restore keyboard input
+			if (g_focusedOnConsole == pConsole)
+			{
+				g_focusedOnConsole =  &g_debugConsole;
+				g_currentConsole   =  &g_debugConsole;
+			}
+			
 			// Kill the subordinate task.
 			if (pWindow->m_pSubThread)
 			{

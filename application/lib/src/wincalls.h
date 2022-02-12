@@ -212,4 +212,8 @@ CALL (SetIcon, WIN_SET_ICON, void, Window* pWindow, int comboID, int icon)
 	SARGS(pWindow,comboID,icon)
 CALL_END
 
+CALL (NsGetVersion, TM_SLEEP, int, void)
+	RARGS()
+CALL_END
+
 #endif

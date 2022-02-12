@@ -77,11 +77,11 @@ void GraphicsTest()
 	
 	//demonstrate some of the apis that the kernel provides:
 	//VidFillRect(0xFF0000, 10, 150, 210, 310);
-	*((uint32_t*)0xC0007CFC) = 14;
+	/**((uint32_t*)0xC0007CFC) = 14;
 	
 	Pointer ptr = (Pointer) 0xC0007C00;
 	
-	ptr(0xFF0000, 10, 150, 210, 310);return;
+	ptr(0xFF0000, 10, 150, 210, 310);return;*/
 	VidDrawRect(0x00FF00, 100, 150, 250, 250);
 	
 	//lines, triangles, polygons, circles perhaps?

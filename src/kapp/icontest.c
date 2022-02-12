@@ -15,8 +15,8 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			//draw until ICON_COUNT:
 			for (int i = ICON_NULL+1; i < ICON_COUNT; i++)
 			{
-				int x = i & 7, y = i >> 3;
-				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + 15, 32);
+				int x = i & 15, y = i >> 4;
+				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+12, 32);
 			}
 			/*RenderIcon(ICON_CABINET, 10, 20);*/
 			break;
@@ -28,7 +28,7 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 void IconTestTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("Icon Test", 300, 200, 400, 400, IconTestProc, 0);
+	Window* pWindow = CreateWindow ("Icon test", 300, 200, 540, 400, IconTestProc, 0);
 	pWindow->m_iconID = ICON_INFO;
 	
 	if (!pWindow)

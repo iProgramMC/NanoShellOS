@@ -526,6 +526,7 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 
 bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
 	switch (eventType)
 	{
 		case EVENT_RELEASECURSOR:
@@ -534,12 +535,15 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		case EVENT_CLICKCURSOR:
 		{
 			//TODO: Allow change of cursor via click.
-			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
-			if (this->m_textInputData.m_scrollY != pos)
+			if (!this->m_textInputData.m_onlyOneLine)
 			{
-				this->m_textInputData.m_scrollY  = pos;
+				int pos = GetScrollBarPos(pWindow, -this->m_comboID);
+				if (this->m_textInputData.m_scrollY != pos)
+				{
+					this->m_textInputData.m_scrollY  = pos;
+				}
+				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			//RequestRepaint (pWindow);
 			break;
 		}
@@ -553,6 +557,11 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				case KEY_HOME:
 				case KEY_END:
 				{
+					if (this->m_textInputData.m_onlyOneLine)
+					{
+						if (parm1 == KEY_ARROW_UP || parm1 == KEY_ARROW_DOWN)
+							break;
+					}
 					if (this->m_textInputData.m_pText)
 					{
 						const char*text = this->m_textInputData.m_pText;
@@ -638,6 +647,14 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 							while (this->m_textInputData.m_pText[index] != '\n' && index < this->m_textInputData.m_textLength)
 								index++;
 							newEndIndex = index;
+							
+							if (this->m_textInputData.m_onlyOneLine)
+							{
+								this->m_textInputData.m_textCursorIndex = 0;
+								this->m_textInputData.m_scrollY = index - charsPerLine + 5;
+								if (this->m_textInputData.m_scrollY < 0)
+									this->m_textInputData.m_scrollY = 0;
+							}
 						}
 						
 						if (offsetInsideLine > lastRowEndIdx-lastRowStartIdx)
@@ -658,9 +675,18 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 								newIndex = this->m_textInputData.m_textLength;
 						}
 						else if (parm1 == KEY_HOME)
+						{
 							newIndex = curRowStartIdx;
+							if (this->m_textInputData.m_onlyOneLine)
+							{
+								this->m_textInputData.m_scrollY = 0;
+								newIndex = 0;
+							}
+						}
 						else if (parm1 == KEY_END)
+						{
 							newIndex = newEndIndex;
+						}
 						
 						if (newIndex >= 0)
 							this->m_textInputData.m_textCursorIndex = newIndex;
@@ -673,14 +699,35 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					this->m_textInputData.m_textCursorIndex--;
 					if (this->m_textInputData.m_textCursorIndex < 0)
 						this->m_textInputData.m_textCursorIndex = 0;
+					
+					if (this->m_textInputData.m_onlyOneLine)
+					{
+						if (this->m_textInputData.m_scrollY > this->m_textInputData.m_textCursorIndex)
+						{
+							this->m_textInputData.m_scrollY -= 10;
+							if (this->m_textInputData.m_scrollY < 0)
+								this->m_textInputData.m_scrollY = 0;
+						}
+					}
+					
 					break;
 				case KEY_ARROW_RIGHT:
 					this->m_textInputData.m_textCursorIndex++;
 					if (this->m_textInputData.m_textCursorIndex > this->m_textInputData.m_textLength)
 						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
+					
+					if (this->m_textInputData.m_onlyOneLine)
+					{
+						if (this->m_textInputData.m_scrollY + charsPerLine +2 <= this->m_textInputData.m_textCursorIndex)
+						{
+							this->m_textInputData.m_scrollY += 10;
+						}
+					}
+					
 					break;
 				case KEY_DELETE:
-					CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
+					if (this->m_textInputData.m_textLength   >   this->m_textInputData.m_textCursorIndex)
+						CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
 					break;
 				default:
 					repaint = false;
@@ -693,15 +740,35 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		}
 		case EVENT_KEYPRESS:
 		{
+			if ((char)parm1 == '\n' && this->m_textInputData.m_onlyOneLine)
+				break;
 			if ((char)parm1 == '\b')
 			{
 				CtlRemoveCharFromAnywhere(this, pWindow, --this->m_textInputData.m_textCursorIndex);
 				if (this->m_textInputData.m_textCursorIndex < 0)
 					this->m_textInputData.m_textCursorIndex = 0;
+				
+				if (this->m_textInputData.m_onlyOneLine)
+				{
+					if (this->m_textInputData.m_scrollY >= this->m_textInputData.m_textCursorIndex)
+					{
+						this->m_textInputData.m_scrollY -= 10;
+						if (this->m_textInputData.m_scrollY < 0)
+							this->m_textInputData.m_scrollY = 0;
+					}
+				}
 			}
 			else
 			{
 				CtlAppendCharToAnywhere(this, pWindow, (char)parm1, this->m_textInputData.m_textCursorIndex++);
+				
+				if (this->m_textInputData.m_onlyOneLine)
+				{
+					if (this->m_textInputData.m_scrollY + charsPerLine <= this->m_textInputData.m_textCursorIndex)
+					{
+						this->m_textInputData.m_scrollY += 10;
+					}
+				}
 			}
 			//RequestRepaintNew (pWindow);
 			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
@@ -714,20 +781,25 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		{
 			this->m_textInputData.m_pText = NULL;
 			this->m_textInputData.m_scrollY = 0;
-			this->m_textInputData.m_showLineNumbers = true;
 			
-			Rectangle r;
-			r.right = this->m_rect.right, 
-			r.top   = this->m_rect.top, 
-			r.bottom= this->m_rect.bottom, 
-			r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+			if (!this->m_textInputData.m_onlyOneLine)
+			{
+				Rectangle r;
+				r.right = this->m_rect.right, 
+				r.top   = this->m_rect.top, 
+				r.bottom= this->m_rect.bottom, 
+				r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+				
+				AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, 1, 1);
 			
-			AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, 1, 1);
+				//shrink our rectangle:
+				this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			}
 			
-			//shrink our rectangle:
-			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			if (this->m_textInputData.m_onlyOneLine)
+				this->m_rect.bottom = this->m_rect.top + 16 + 8;
 			
-			// initialize blank text:
+			// setup some blank text:
 			CtlSetTextInputText(this, pWindow, "");
 			
 			break;
@@ -745,6 +817,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		{
 			// Render the basic container rectangle
 			Rectangle rk = this->m_rect;
+			
 			rk.left   += 2;
 			rk.top    += 2;
 			rk.right  -= 2;
@@ -759,8 +832,20 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
 				int xPos = this->m_rect.left + 4,
-					yPos = this->m_rect.top + 4 - lineHeight * this->m_textInputData.m_scrollY;
+					yPos = this->m_rect.top  + 4 - lineHeight * this->m_textInputData.m_scrollY;
+				
+				if (this->m_textInputData.m_onlyOneLine)
+				{
+					xPos = this->m_rect.left + 4 - 8 * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
+					yPos = this->m_rect.top  + 4;
+				}
+				
 				int curLine = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
+				if (this->m_textInputData.m_onlyOneLine)
+				{
+					linesPerScreen = 1;
+					scrollLine     = 0;
+				}
 				int offset  = 0;
 				
 				while (*text)
@@ -772,6 +857,9 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					//word wrap
 					if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
 					{
+						if (this->m_textInputData.m_onlyOneLine)
+							//Don't actually word-wrap if we hit the edge on a one-line textbox.
+							break;
 						xPos = this->m_rect.left + 4;
 						yPos += lineHeight;
 						curLine ++;
@@ -780,7 +868,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					{
 						// render this character:
 						if (curLine >= scrollLine + linesPerScreen) break;//no point in drawing anymore.
-						if (curLine >= scrollLine)
+						if (curLine >= scrollLine && xPos >= this->m_rect.left)
 							VidPlotChar(*text, xPos, yPos, 0, TRANSPARENT);
 						// Increment the X,Y positions
 						xPos += GetCharWidth (*text);
@@ -1960,7 +2048,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	check_rect.right  = check_rect.left + CHECKBOX_SIZE;
 	check_rect.bottom = check_rect.top  + CHECKBOX_SIZE;
 	
-	Rectangle text_rect = check_rect;
+//	Rectangle text_rect = check_rect;
 	//check_rect
 	
 	return false;

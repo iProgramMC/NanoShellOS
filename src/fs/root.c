@@ -112,7 +112,7 @@ extern int       g_rdsMountedCount;
 extern FileNode* g_rdsMountedPointers[32];
 static DirEnt* FsRootFsReadDir(FileNode* pNode, uint32_t index)
 {
-	uint32_t filesBeforeInitrd = 1 + g_fatsMountedCount + g_rdsMountedCount;
+	//uint32_t filesBeforeInitrd = 1 + g_fatsMountedCount + g_rdsMountedCount;
 	if (pNode == g_pInitRdRoot)
 	{
 		if (index == 0)
@@ -135,6 +135,7 @@ static DirEnt* FsRootFsReadDir(FileNode* pNode, uint32_t index)
 			g_DirEnt.m_inode = g_fatsMountedPointers[index]->m_inode;
 			return &g_DirEnt;
 		}
+		index -= g_fatsMountedCount;
 	}
 	if (index >= g_nRootNodes)
 		return NULL;

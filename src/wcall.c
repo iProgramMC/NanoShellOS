@@ -125,6 +125,9 @@ enum
 		
 	// System Calls V1.22
 		WIN_SET_ICON,
+		
+	// System Calls V1.23
+		NS_GET_VERSION,
 };
 
 void LogString(const char* pText)
@@ -136,9 +139,26 @@ void SetWindowIcon (Window* pWindow, int icon)
 {
 	pWindow->m_iconID = icon;
 }
+extern VBEData * g_vbeData;
 void SetWindowTitle(Window* pWindow, const char* pTitle)
 {
+	int len = strlen (pTitle);
+	if (len < WINDOW_TITLE_MAX-1)
+		len = WINDOW_TITLE_MAX-1;
 	
+	memcpy (pWindow->m_title, pTitle, len);
+	pWindow->m_title[len] = 0;
+	
+	//TODO
+	
+	VBEData * backup = g_vbeData;
+	VidSetVBEData (&pWindow->m_vbeData);
+	RequestRepaintNew(pWindow);
+	g_vbeData = backup;
+}
+int GetVersionNumber()
+{
+	return VersionNumber;
 }
 extern Console* g_currentConsole;
 Console* GetCurrentConsole()
@@ -229,6 +249,9 @@ void *WindowCall[] = {
 	
 	// System Calls V1.22- 07/01/2022
 		SetIcon,
+	
+	// System Calls V1.23- 10/01/2022
+		GetVersionNumber,
 };
 
 void UserCallStuffNotSupportedC(void)

@@ -782,6 +782,18 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 		}
 	}
 }
+void VidBlitImageForceOpaque(Image* pImage, int x, int y)
+{
+	//TODO: memcpy method.
+	const uint32_t* fb = pImage->framebuffer;
+	
+	int ixe = x + pImage->width, iye = y + pImage->height;
+	for (int iy = y; iy < iye; iy++)
+		for (int ix = x; ix < ixe; ix++)
+		{
+			VidPlotPixelInline(ix, iy, *(fb++));
+		}
+}
 void VidBlitImage(Image* pImage, int x, int y)
 {
 	const uint32_t* fb = pImage->framebuffer;

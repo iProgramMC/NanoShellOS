@@ -19,8 +19,6 @@ extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 #define MOUSE_POPUP_WINDOW 1//stubbed out for now because it's buggy as hell
 #define KEYBD_POPUP_WINDOW 1
 
-
-
 #if MOUSE_POPUP_WINDOW
 	enum
 	{
