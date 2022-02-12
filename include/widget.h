@@ -9,6 +9,10 @@
 
 #include<window.h>
 
+#define TEXTEDIT_MULTILINE 1
+#define TEXTEDIT_LINENUMS  2
+#define TEXTEDIT_READONLY  4
+
 /**
  * Gets the OnEvent function corresponding to the widget type.
  */

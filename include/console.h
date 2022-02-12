@@ -21,7 +21,7 @@ enum ConsoleType {
 	CONSOLE_TYPE_WINDOW,
 };
 
-#define KB_BUF_SIZE 128
+#define KB_BUF_SIZE 512
 
 typedef struct ConsoleStruct {
 	int  type; // ConsoleType enum

@@ -20,6 +20,7 @@
 #include <icon.h>
 #include <vfs.h>
 #include <elf.h>
+#include <cinterp.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -192,6 +193,11 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			if (strcmp (fileName, PATH_THISDIR) == 0) return;
+			if (strcmp (fileName, "/") == 0)
+			{
+				strcpy(g_cwd, "/");
+				g_pCwdNode = FsResolvePath(g_cwd);
+			}
 			if (strcmp (fileName, PATH_PARENTDIR) == 0)
 			{
 				for (int i = PATH_MAX - 1; i >= 0; i--)
@@ -282,11 +288,13 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			//TODO: open/close
 			char s[1024];
-			strcpy (s, g_cwd);
-			if (g_cwd[1] != 0) //not just a '/'
-				strcat(s, "/");
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_RDONLY);
@@ -312,6 +320,54 @@ void ShellExecuteCommand(char* p)
 			LogMsg("");
 		}
 	}
+	else if (strcmp (token, "ec") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			char s[1024];
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_RDONLY);
+			if (fd < 0)
+			{
+				LogMsg("Got error code %d when opening file", fd);
+				return;
+			}
+			
+			int length = FiTellSize(fd);
+			
+			char* pData = (char*)MmAllocate(length + 1);
+			pData[length] = 0;
+			
+			FiRead(fd, pData, length);
+			
+			FiClose(fd);
+			
+			//ElfExecute(pData, length);
+			
+			CCSTATUS status = CcRunCCode(pData, length);
+			LogMsg("Exited with status %d", status);
+			
+			MmFree(pData);
+			
+			LogMsg("");
+		}
+	}
 	else if (strcmp (token, "cat") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
@@ -327,9 +383,12 @@ void ShellExecuteCommand(char* p)
 		{
 			//TODO: open/close
 			char s[1024];
-			strcpy (s, g_cwd);
-			if (g_cwd[1] != 0) //not just a '/'
-				strcat(s, "/");
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_RDONLY);
@@ -369,9 +428,12 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
-			strcpy (s, g_cwd);
-			if (g_cwd[1] != 0) //not just a '/'
-				strcat(s, "/");
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_WRONLY);
@@ -405,9 +467,12 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
-			strcpy (s, g_cwd);
-			if (g_cwd[1] != 0) //not just a '/'
-				strcat(s, "/");
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_WRONLY);
@@ -483,11 +548,13 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			//TODO: open/close
 			char s[1024];
-			strcpy (s, g_cwd);
-			if (g_cwd[1] != 0) //not just a '/'
-				strcat(s, "/");
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_RDONLY);

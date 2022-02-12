@@ -204,6 +204,7 @@ typedef struct
 	int   m_textCursorIndex, m_textCursorSelStart, m_textCursorSelEnd,
 	      m_scrollY;
 	char* m_pText;
+	bool  m_readOnly;
 }
 TextInputData;
 

@@ -219,6 +219,10 @@ void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
 extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RedrawBackground (Rectangle rect)
 {
+	if (rect.left < 0) rect.left = 0;
+	if (rect.top  < 0) rect.top  = 0;
+	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
+	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight()-1;
 	// if the rectangle is FULLY inside the 0,0 tile:
 	// (TODO: Make this work on any tile)
 	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
@@ -1306,10 +1310,12 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		pControl->m_textInputData.m_onlyOneLine     = true;
 		pControl->m_textInputData.m_showLineNumbers = false;
 		pControl->m_textInputData.m_focused         = false;
-		if (pControl->m_parm1 & 0x1)
-			pControl->m_textInputData.m_onlyOneLine = false;
-		if (pControl->m_parm1 & 0x2)
+		if (pControl->m_parm1 & TEXTEDIT_MULTILINE)
+			pControl->m_textInputData.m_onlyOneLine     = false;
+		if (pControl->m_parm1 & TEXTEDIT_LINENUMS)
 			pControl->m_textInputData.m_showLineNumbers = true;
+		if (pControl->m_parm1 & TEXTEDIT_READONLY)
+			pControl->m_textInputData.m_readOnly        = true;
 	}
 	
 	//register an event for the window:

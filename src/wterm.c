@@ -98,10 +98,15 @@ extern void ShellInit(void);
 //! NOTE: arg is a pointer to an array of 4 ints.
 void TerminalHostTask(int arg)
 {
-	int* array = (int*)arg;
-	int arrayDefault[] = { 100, 100, 80, 25};
-	if (!array)
-		array = arrayDefault;
+	int array[] = { 100, 100, 80, 25 };
+	
+	bool providedShellCmd = false;
+	char* shellcmd = (char*)arg;
+	if (shellcmd)
+	{
+		providedShellCmd = true;
+	}
+	
 	Window *pWindow = CreateWindow(
 		"nsterm", 
 		array[0], array[1], 
@@ -146,7 +151,15 @@ void TerminalHostTask(int arg)
 	CoClearScreen(&basic_console);
 	basic_console.curX = 0;
 	basic_console.curY = 0;
-	ShellExecuteCommand ("ver");
+	if (providedShellCmd)
+	{
+		char* pText = shellcmd;
+		while (*pText)
+			CoAddToInputQueue(g_currentConsole, *pText++);
+		MmFree(shellcmd);
+	}
+	else
+		ShellExecuteCommand ("ver");
 	
 	int confusion = 0;
 	Task* pTask = KeStartTask(ShellRun, (int)(&basic_console),  &confusion);

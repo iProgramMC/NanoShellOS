@@ -549,6 +549,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		}
 		case EVENT_KEYRAW:
 		{
+			if (this->m_textInputData.m_readOnly) break;
 			bool repaint = true;
 			switch (parm1)
 			{
@@ -740,6 +741,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		}
 		case EVENT_KEYPRESS:
 		{
+			if (this->m_textInputData.m_readOnly) break;
 			if ((char)parm1 == '\n' && this->m_textInputData.m_onlyOneLine)
 				break;
 			if ((char)parm1 == '\b')
@@ -850,10 +852,11 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				
 				while (*text)
 				{
-					if (offset == this->m_textInputData.m_textCursorIndex)
-					{
-						VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
-					}
+					if (!this->m_textInputData.m_readOnly)
+						if (offset == this->m_textInputData.m_textCursorIndex)
+						{
+							VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
+						}
 					//word wrap
 					if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
 					{
