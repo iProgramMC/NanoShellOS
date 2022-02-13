@@ -68,6 +68,8 @@ extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);
 extern void WritePortW(unsigned short port, unsigned short data);
 extern unsigned short ReadPortW(unsigned short port);
+extern void WritePortL(unsigned short port, unsigned int data);
+extern unsigned int ReadPortL(unsigned int port);
 
 __attribute__((noreturn))
 void KeStopSystem();

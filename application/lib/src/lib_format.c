@@ -218,7 +218,7 @@ void LogMsgNoCr(const char* fmt, ...)
 
 //futureproofing here:
 char g_VersionString[10] = "VX.XX";
-
+int NsGetVersion ();
 const char* GetVersionString()
 {
 	if (g_VersionString[1] == 'X')

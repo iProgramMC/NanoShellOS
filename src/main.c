@@ -22,6 +22,7 @@
 #include <fpu.h>
 #include <wcall.h>
 #include <window.h>
+#include <pci.h>
 
 //TODO FIXME: Add a global VFS lock.
 
@@ -77,6 +78,7 @@ extern bool g_gotTime;//idt.c
 void FpuTest();
 
 extern uint32_t e_temporary1, e_temporary2;
+extern uint32_t g_BGADeviceBAR0;
 __attribute__((noreturn))
 void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 {
@@ -120,8 +122,33 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	cli;
 	// Initialize the Memory Management Subsystem
 	MmInit(mbi);
+	
+	// Initialize eventual PCI devices.  This is useful to find the main BGA controller, if there's one.
+	PciInit();
+	
 	// Initialize the video subsystem
 	VidInitialize (mbi);
+	
+	if (!VidIsAvailable())
+	{
+		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
+		//try this:
+		#define DEFAULT_WIDTH  640
+		#define DEFAULT_HEIGHT 480
+		BgaChangeScreenResolution (DEFAULT_WIDTH,DEFAULT_HEIGHT);
+		mbi->flags |= MULTIBOOT_INFO_FRAMEBUFFER_INFO;
+		mbi->framebuffer_type   = 1;
+		//TODO FIXME: We assume this is the address, but what if it isn't?
+		//Furthermore, what if the pitch doesn't match the width*4?
+		mbi->framebuffer_addr   = g_BGADeviceBAR0;
+		mbi->framebuffer_width  = DEFAULT_WIDTH;
+		mbi->framebuffer_pitch  = DEFAULT_WIDTH*4;
+		mbi->framebuffer_height = DEFAULT_HEIGHT;
+		
+		//and re-attempt init:
+		VidInitialize(mbi);
+	}
+	
 	// Initialize the keyboard.
 	KbInitialize ();
 	
@@ -159,9 +186,7 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	sti;
 	if (VidIsAvailable())
 	{
-		LogMsg("Press any key to initialize the PS/2 mouse (skip if you're running on real hardware).  If you don't, you will still be able to use the mouse cursor anyway via the arrow keys.");
-		LogMsg("Key mappings: F9 - Slow down mouse, F10 - Speed up mouse, F11 - Left click, F12 - Right click, Arrow Keys - Move cursor");
-		LogMsg("If you press a key within approximately 5 seconds the PS/2 mouse driver will initialize, potentially freezing your system if you don't have a PS/2 mouse installed, so be careful!!.");
+		LogMsg("Press any key to initialize the PS/2 mouse, or wait about 5 seconds to control it by keyboard.");
 		
 		// Wait 5 seconds.
 		bool choseToInit = false;
@@ -190,16 +215,15 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	}
 	
 	//print the hello text, to see if the OS booted ok
-	LogMsg("OS appears to have initialized successfully.");
 	if (!VidIsAvailable())
 	{
 		LogMsg("\n\x01\x0CWARNING\x01\x0F: Running NanoShell in text mode is deprecated and will be removed in the future.\n");
 		textMode = true;
 	}
 	
-	KePrintSystemInfo();
+	//KePrintSystemInfo();
 	
-	LogMsg("Type 'w' to start up the GUI!");
+	//LogMsg("Type 'w' to start up the GUI!");
 	
 	ShellInit();
 	

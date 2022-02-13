@@ -11,12 +11,19 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 {
 	switch (messageType)
 	{
+		case EVENT_CREATE:
+		{
+			Rectangle r;
+			RECT(r, 10, TITLE_BAR_HEIGHT + 10, 300, 50);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Test?", 1000, 0, 0);
+			break;
+		}
 		case EVENT_PAINT:
 			//draw until ICON_COUNT:
 			for (int i = ICON_NULL+1; i < ICON_COUNT; i++)
 			{
 				int x = i & 15, y = i >> 4;
-				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+12, 32);
+				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+52, 32);
 			}
 			/*RenderIcon(ICON_CABINET, 10, 20);*/
 			break;

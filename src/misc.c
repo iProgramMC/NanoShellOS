@@ -425,36 +425,6 @@ void KePrintSystemInfo()
 {
 	//neofetch style:
 	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
-	LogMsg("(note, the logo you see is temporary)");
-	//below are the first lines modified in 2022 :)\x01\x10  /\x01\x10     \x01\x08 \x01\x0C
-	/*
-	LogMsgNoCr("  \x01\x10/                   ");                                                   LogMsg("\x01\x0C OS:       \x01\x0FNanoShell Operating System");
-	LogMsgNoCr(" \x01\x10/                \x01\x1F#   ");                                           LogMsg("\x01\x0C Kernel:   \x01\x0F%s (%d)", VersionString, VersionNumber);
-	LogMsgNoCr("\x01\x1F#     \x01\x10.\x01\x14+\x01\x1C#####\x01\x14:\x01\x10.    \x01\x10\\  ");  LogMsg("\x01\x0C Uptime:   \x01\x0F?");
-	LogMsgNoCr("    \x01\x10+\x01\x14s\x01\x1C#########\x01\x14:\x01\x10.     ");                   LogMsg("\x01\x0C CPU:      \x01\x0F%s", GetCPUName());
-	LogMsgNoCr("   \x01\x10+\x01\x14s\x01\x1C###########\x01\x14:     \x01\x10|");                  LogMsg("\x01\x0C CPU type: \x01\x0F%s", GetCPUType());
-	LogMsgNoCr("  \x01\x1FmMMMMMMm\x01\x14:\x01\x1C######:.   \x01\x10|");                          LogMsg("\x01\x0C Memory:   \x01\x0F%d KB / %d KB", (npp-nfpp)*4, npp*4);
-	LogMsgNoCr("  \x01\x1FW\x01\x10###\x01\x1E##\x01\x1FWWWwwwwwwW#   ");                           LogMsg("\x01\x0C ");
-	LogMsgNoCr("    \x01\x1F\x01\x10##\x01\x1E####\x01\x10##\x01\x1E#####    \x01\x10/");           LogMsg("\x01\x0C ");
-	LogMsgNoCr("\x01\x10\\    \x01\x1E\\####\x01\x10#\x01\x1E####/    \x01\x10/ ");                 LogMsg("\x01\x0C ");
-	LogMsgNoCr(" \x01\x10\\                 \x01\x10/");                                            LogMsg("\x01\x0C ");
-	LogMsgNoCr("  \x01\x1F#       #       #");                                                      LogMsg("\x01\x0C ");
-	LogMsgNoCr("         /\x01\x0F");                                                               LogMsg("\x01\x0C ");
-	LogMsg("\x01\x0F");
-	
-	LogMsgNoCr("  \x01\x10/                    ");                                                   							LogMsg("\x01\x0C OS:       \x01\x0FNanoShell Operating System");
-	LogMsgNoCr(" \x01\x10/                \x01\x1F#    ");                                           							LogMsg("\x01\x0C Kernel:   \x01\x0F%s (%d)", VersionString, VersionNumber);
-	LogMsgNoCr("\x01\x1F#     \x01\x10.\x01\x14+\x01\x1C\x02\x02\x02\x02\x02\x01\x14:\x01\x10.    \x01\x10\\   ");  			LogMsg("\x01\x0C Uptime:   \x01\x0F?");
-	LogMsgNoCr("    \x01\x10+\x01\x14s\x01\x1C\x02\x02\x02\x02\x02\x02\x02\x02\x02\x01\x14:\x01\x10.      ");					LogMsg("\x01\x0C CPU:      \x01\x0F%s", GetCPUName());
-	LogMsgNoCr("   \x01\x10+\x01\x14s\x01\x1C\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x01\x14:     \x01\x10|");				LogMsg("\x01\x0C CPU type: \x01\x0F%s", GetCPUType());
-	LogMsgNoCr("  \x01\x1FmMMMMMMm\x01\x14:\x01\x1C\x02\x02\x02\x02\x02\x02:.   \x01\x10|");									LogMsg("\x01\x0C Memory:   \x01\x0F%d KB / %d KB", (npp-nfpp)*4, npp*4);
-	LogMsgNoCr("  \x01\x1FW\x01\x10\x02\x02\x02\x01\x1E\x02\x02\x01\x1FWWWwwwwwwW#   ");										LogMsg("\x01\x0C ");
-	LogMsgNoCr("    \x01\x1F\x01\x10\x02\x02\x01\x1E\x02\x02\x02\x02\x01\x10\x02\x02\x01\x1E\x02\x02\x02\x02\x02    \x01\x10/");LogMsg("\x01\x0C ");
-	LogMsgNoCr("\x01\x10\\    \x01\x1E\\\x02\x02\x02\x02\x01\x10\x02\x01\x1E\x02\x02\x02\x02/    \x01\x10/ ");					LogMsg("\x01\x0C ");
-	LogMsgNoCr(" \x01\x10\\                 \x01\x10/");																		LogMsg("\x01\x0C ");
-	LogMsgNoCr("  \x01\x1F#       #       #");																					LogMsg("\x01\x0C ");
-	LogMsgNoCr("         \x01\x10/\x01\x0F");																					LogMsg("\x01\x0C ");
-	LogMsg("\x01\x0F");*/
 	
 	char timingInfo[128];
 	timingInfo[0] = 0;

@@ -1103,7 +1103,7 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 		{
 			if (index >= entryCount)
 			{
-				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");
+				//LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE."); -- these entries tend to be garbage
 				break;
 			}
 			
@@ -1379,7 +1379,7 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 		{
 			if (index >= entryCount)
 			{
-				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");
+				//LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");--these entries tend to be garbage.
 				break;
 			}
 			
@@ -1543,7 +1543,7 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	out_path[0] = '?', out_path[1] = 0;
 	FatMountRootDir(pFat32, out_path);
 	
-	LogMsg("Mounted '%s'.  Cluster size: %d", out_path, 512 * pFat32->m_bpb.m_nSectorsPerCluster);
+	LogMsg("Mounted '%s'.", out_path, 512 * pFat32->m_bpb.m_nSectorsPerCluster);
 	
 	return MOUNT_SUCCESS;
 }

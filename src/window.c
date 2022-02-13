@@ -34,7 +34,8 @@ void KeTaskDone(void);
 //fps counter:
 #if 1
 
-int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
+int  g_FPS, g_FPSThisSecond, g_FPSLastCounted;
+bool g_RenderWindowContents = false;
 
 void UpdateFPSCounter()
 {
@@ -798,7 +799,10 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			{
 				window->m_isBeingDragged = true;
 				
-				HideWindow(window);
+				if (g_RenderWindowContents)
+				{
+					HideWindow(window);
+				}
 				
 				//change cursor:
 				if (window->m_minimized)
@@ -850,6 +854,11 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
 	if (window->m_isBeingDragged)
 	{
+		if (!g_RenderWindowContents)
+		{
+			HideWindow(window);
+		}
+		
 		Rectangle newWndRect;
 		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
 		newWndRect.top    = mouseY - g_windowDragCursor.topOffs;

@@ -11,6 +11,8 @@ global ReadPort
 global WritePort
 global ReadPortW
 global WritePortW
+global ReadPortL
+global WritePortL
 global WriteFont8px
 global WriteFont16px
 
@@ -56,6 +58,27 @@ WritePortW:
 	mov  edx, [ebp + 8]
 	mov  ax,  [ebp + 12]
 	out  dx,  ax
+	
+	mov  esp, ebp
+	pop  ebp
+	ret
+ReadPortL:
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	in   eax, dx
+	
+	mov  esp, ebp
+	pop  ebp
+	ret
+WritePortL:
+	push ebp
+	mov  ebp, esp
+	
+	mov  edx, [ebp + 8]
+	mov  eax, [ebp + 12]
+	out  dx,  eax
 	
 	mov  esp, ebp
 	pop  ebp
@@ -558,7 +581,7 @@ g_cpuidNameEDX resd 1
 g_cpuidNameECX resd 1
 g_cpuidNameNUL resd 1
 
-g_cpuidBrandingInfo resd 49
+g_cpuidBrandingInfo resd 13
 
 ; eax=1, eax's value:
 g_cpuidFeatureBits resd 1

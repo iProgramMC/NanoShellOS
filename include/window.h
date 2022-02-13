@@ -208,6 +208,13 @@ typedef struct
 }
 TextInputData;
 
+typedef struct
+{
+	bool m_clicked;
+	bool m_checked;
+}
+CheckBoxData;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -227,6 +234,7 @@ typedef struct ControlStruct
 		ButtonData    m_buttonData;
 		MenuBarData   m_menuBarData;
 		TextInputData m_textInputData;
+		CheckBoxData  m_checkBoxData;
 	};
 	
 	//event handler

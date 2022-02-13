@@ -29,6 +29,8 @@ VBEData g_mainScreenVBEData;
 VBEData* g_vbeData = NULL;
 #endif
 
+extern bool g_RenderWindowContents;
+
 // Mouse graphics stuff
 #if 1
 
@@ -1009,6 +1011,26 @@ static inline void RenderCursorTransparent(void)
 __attribute__((always_inline))
 static inline void RenderCursorOpaque(void)
 {
+	if (!g_RenderWindowContents)
+	{
+		//Just XOR the pixels around the window frame
+		
+		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
+		{
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                            ky, VidReadPixelInline(g_mouseX - g_currentCursor->leftOffs,                            ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixelInline(g_mouseX - g_currentCursor->leftOffs + 1,                        ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixelInline(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixelInline(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky)^0xFFFFFFFF);
+		}
+		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
+		{
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                             VidReadPixelInline(kx, g_mouseY - g_currentCursor->topOffs                            )^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                         VidReadPixelInline(kx, g_mouseY - g_currentCursor->topOffs + 1                        )^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixelInline(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixelInline(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2)^0xFFFFFFFF);
+		}
+		return;
+	}
 	if (g_vbeData->m_bitdepth == 2)
 	{
 		//NEW: Optimization
@@ -1114,6 +1136,26 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 			);
 		}
 	}*/
+	if (!g_RenderWindowContents)
+	{
+		//Just XOR the pixels around the window frame
+		
+		for (int i = 0, ky=oldY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
+		{
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                            ky, VidReadPixelInline(oldX - g_currentCursor->leftOffs,                            ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixelInline(oldX - g_currentCursor->leftOffs + 1,                        ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixelInline(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixelInline(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky));
+		}
+		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
+		{
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                             VidReadPixelInline(kx, oldY - g_currentCursor->topOffs                            ));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                         VidReadPixelInline(kx, oldY - g_currentCursor->topOffs + 1                        ));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixelInline(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixelInline(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2));
+		}
+		return;
+	}
 	
 	// Draw over the Y coordinate.
 	
@@ -1243,11 +1285,11 @@ void SetMousePos (unsigned newX, unsigned newY)
 	//VidPlotPixelIgnoreCursorChecks (g_mouseX, g_mouseY, 0xFF);
 	//VidPlotPixel (oldX, oldY, VidReadPixel(oldX, oldY));
 	
-	//Draw the cursor image at the new position:
-	RenderCursor();
-	
 	//Redraw all the pixels under where the cursor was previously:
 	RedrawOldPixels(oldX, oldY);
+	
+	//Draw the cursor image at the new position:
+	RenderCursor();
 	//TODO: check flags here
 	
 	g_vbeData = backup;
@@ -1277,20 +1319,102 @@ void VidInitializeVBEData(multiboot_info_t* pInfo)
 	g_vbeData->m_framebuffer16 = (uint16_t*)FRAMEBUFFER_MAPPED_ADDR;
 	g_vbeData->m_framebuffer8  = (uint8_t *)FRAMEBUFFER_MAPPED_ADDR;
 }
+
+bool     g_IsBGADevicePresent;
+uint32_t g_BGADeviceBAR0;
+void BgaWriteRegister(unsigned short index, unsigned short data)
+{
+	WritePortW(VBE_DISPI_IOPORT_INDEX, index);
+	WritePortW(VBE_DISPI_IOPORT_DATA,  data);
+}
+unsigned short BgaReadRegister(unsigned short index)
+{
+	WritePortW(VBE_DISPI_IOPORT_INDEX, index);
+	return ReadPortW(VBE_DISPI_IOPORT_DATA);
+}
+bool BgaIsAvailable()
+{
+	return (BgaReadRegister(VBE_DISPI_INDEX_ID) & 0xFFF0) == VBE_DISPI_ID0;//can be 0xB0C0-0xB0CF or else
+}
+bool BgaChangeScreenResolution(int xSize, int ySize)
+{
+	if (!BgaIsAvailable())
+	{
+		SLogMsg("BGA device not available.");
+		return false;
+	}
+	
+	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
+	BgaWriteRegister(VBE_DISPI_INDEX_XRES,   xSize);
+	BgaWriteRegister(VBE_DISPI_INDEX_YRES,   ySize);
+	BgaWriteRegister(VBE_DISPI_INDEX_BPP,    32);
+	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED | VBE_DISPI_NOCLEARMEM);
+	return true;
+}
+bool VidChangeScreenResolution(int xSize, int ySize)
+{
+	if (!g_IsBGADevicePresent)
+	{
+		//may want to test it?
+		if (BgaIsAvailable())
+		{
+			g_IsBGADevicePresent = true;
+			SLogMsg("Found BGA device.");
+			return VidChangeScreenResolution(xSize, ySize);
+		}
+	}
+	else
+	{
+		if (g_mainScreenVBEData.m_framebuffer32 != (uint32_t*)0xE0000000)
+		{
+			SLogMsg("Attempt to VidChangeScreenResolution may fail!");
+		}
+		
+		if (!BgaChangeScreenResolution(xSize, ySize))
+		{
+			g_IsBGADevicePresent = false;
+			return false;
+		}
+		
+		//Assume that everything went ok, and set our main screen VBE data to have that:
+		g_mainScreenVBEData.m_available = true;
+		g_mainScreenVBEData.m_width     = xSize;
+		g_mainScreenVBEData.m_height    = ySize;
+		g_mainScreenVBEData.m_pitch     = xSize * 4;//TODO: Hack
+		g_mainScreenVBEData.m_pitch16   = xSize * 2;//TODO: Hack
+		g_mainScreenVBEData.m_pitch32   = xSize * 1;//TODO: Hack
+		g_mainScreenVBEData.m_bitdepth  = 2;
+		g_mainScreenVBEData.m_dirty     = 1;
+		//else, preserve the address
+		
+		//if  we have a g_framebufferCopy allocated yet, free it and replace it with something new:
+		if (g_framebufferCopy)
+		{
+			MmFree(g_framebufferCopy);
+		}
+		g_framebufferCopy = (uint32_t*)MmAllocate(xSize * ySize * 32);
+		
+		return true;
+	}
+	return false;
+}
+
 //present, read/write, user/supervisor, writethrough
 #define VBE_PAGE_BITS (1 | 2 | 4 | 8)
 void VidInitialize(multiboot_info_t* pInfo)
 {
 	cli;
+	SLogMsg("Initializing video subsystem");
 	g_vbeData = &g_mainScreenVBEData;
 	
 	g_vbeData->m_available = false;
 	
 	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
 	{
+		SLogMsg("Passed in VBE info. Physical address: %x", pInfo->framebuffer_addr);
 		if (pInfo->framebuffer_type != 1)
 		{
-			LogMsg("Need direct RGB framebuffer!");
+			SLogMsg("Need direct RGB framebuffer!");
 			sti;
 			return;
 		}
@@ -1317,6 +1441,7 @@ void VidInitialize(multiboot_info_t* pInfo)
 			index++;
 		}
 		
+		SLogMsg("Allocating framebuffer copy: %dx%d.  Pitch:%d",pInfo->framebuffer_width,pInfo->framebuffer_height,pInfo->framebuffer_pitch);
 		g_framebufferCopy = MmAllocate (pInfo->framebuffer_width * pInfo->framebuffer_height * 4);
 		
 		MmTlbInvalidate();
@@ -1337,12 +1462,13 @@ void VidInitialize(multiboot_info_t* pInfo)
 		CoInitAsGraphics(&g_debugConsole);
 		//sti;
 	}
-	/*else
+	else
 	{
+		SLogMsg("Sorry, didn't pass in VBE info.");
 		SwitchMode (1);
 		CoInitAsText(&g_debugConsole);
 		//LogMsg("Warning: no VBE mode specified.");
 		//sti;
-	}*/
+	}
 }
 #endif

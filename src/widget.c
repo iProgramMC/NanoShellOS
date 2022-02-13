@@ -2042,7 +2042,7 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	}
 	return false;
 }
-#define CHECKBOX_SIZE 16
+#define CHECKBOX_SIZE 12
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	// this->rect only affects the top left position
@@ -2051,8 +2051,53 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	check_rect.right  = check_rect.left + CHECKBOX_SIZE;
 	check_rect.bottom = check_rect.top  + CHECKBOX_SIZE;
 	
-//	Rectangle text_rect = check_rect;
-	//check_rect
+	Rectangle text_rect = this->m_rect;
+	text_rect.left =  check_rect.right + 2;
+	text_rect.top  += (check_rect.bottom - check_rect.top - GetLineHeight()) / 2 + 1;
+	
+	switch (eventType)
+	{
+		case EVENT_PAINT:
+		{
+			VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : 0xffffff, check_rect);
+			VidDrawRectangle(0x000000,                                             check_rect);
+			//if checked, mark it as "checked"
+			if (this->m_checkBoxData.m_checked)
+			{
+				check_rect.left++;
+				check_rect.top ++;
+				check_rect.left++;
+				check_rect.top ++;
+				VidDrawText("\x09", check_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, 0x000000, TRANSPARENT);
+			}
+			
+			VidDrawText(this->m_text, text_rect, TEXTSTYLE_WORDWRAPPED, 0x000000, WINDOW_BACKGD_COLOR);
+			
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&check_rect, &p) || RectangleContains (&text_rect, &p))
+			{
+				this->m_checkBoxData.m_clicked = true;
+				WidgetCheckbox_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if ( (RectangleContains (&check_rect, &p) || RectangleContains (&text_rect, &p)) && this->m_checkBoxData.m_clicked )
+			{
+				this->m_checkBoxData.m_checked ^= 1;
+				this->m_checkBoxData.m_clicked = false;
+				WidgetCheckbox_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			
+			break;
+		}
+	}
 	
 	return false;
 }
