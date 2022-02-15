@@ -454,6 +454,39 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText)
 		}
 	}
 }
+void TextInputClearDirtyFlag(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_textInputData.m_dirty = false;
+			return;
+		}
+	}
+}
+bool TextInputQueryDirtyFlag(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_textInputData.m_dirty;
+		}
+	}
+	return false;
+}
+const char* TextInputGetRawText(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_textInputData.m_pText;
+		}
+	}
+	return NULL;
+}
 //TODO: other calls? Only add when necessary.
 
 void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
@@ -477,6 +510,8 @@ void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 	
 	int c = CountLinesInText(this->m_textInputData.m_pText);
 	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	
+	this->m_textInputData.m_dirty = true;
 }
 
 void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, int indexToAppendTo)
@@ -507,6 +542,8 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 	
 	int c = CountLinesInText(this->m_textInputData.m_pText);
 	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	
+	this->m_textInputData.m_dirty = true;
 }
 
 void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemoveFrom)
@@ -522,6 +559,8 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 	
 	int c = CountLinesInText(this->m_textInputData.m_pText);
 	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	
+	this->m_textInputData.m_dirty = true;
 }
 
 bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)

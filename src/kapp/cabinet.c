@@ -10,6 +10,7 @@
 #include <vfs.h>
 #include <elf.h>
 #include <wterm.h>
+#include <resource.h>
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
@@ -87,8 +88,6 @@ void UpdateDirectoryListing (Window* pWindow)
 	RequestRepaint(pWindow);
 }
 
-char g_cabinetExecutableToExecute[PATH_MAX+4];
-
 //TODO FIXME: Spawn a console window if the ELF file is not marked as using the GUI.
 void LaunchExecutable (int fd)
 {
@@ -119,82 +118,6 @@ void LaunchExecutable (int fd)
 	
 	// Once done executing, free the exacutable data from memory.
 	MmFree(pData);
-}
-
-void CabinetExecute(Window* pWindow, const char* pFileName)
-{
-	// Get the file name.
-	char filename[1024];
-	strcpy (filename, g_cabinetCWD);
-	if (g_cabinetCWD[1] != 0)
-		strcat (filename, "/");
-	strcat (filename, pFileName);
-	
-	// Open it up
-	int fd = FiOpen (filename, O_RDONLY | O_EXEC);
-	if (fd < 0)
-	{
-		//LogMsg("Got error %d while trying to open %s", fd, filename);
-		char buffer[1024];
-		sprintf (buffer, "Got error %d while trying to open %s.", fd, filename);
-		MessageBox(NULL, buffer, "File cabinet", MB_OK | ICON_ERROR << 16);
-		return;
-	}
-	
-	// Create the Launch Executable thread with the file descriptor as its parameter.
-	int errorCode = 0;
-    strcpy (g_cabinetExecutableToExecute, pFileName);
-    Task* pTask = KeStartTask (LaunchExecutable, fd, &errorCode);
-    if (errorCode != TASK_SUCCESS)
-    {
-		char buffer[1024];
-        sprintf (buffer, "Can not create thread to execute '%s'. Out of memory?", pFileName);
-        MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
-		
-		return;
-    }
-	
-	// After the task was created, give it a tag.
-	cli;
-	KeTaskAssignTag(pTask, filename);
-	sti;
-	
-	// Consider it done.  LaunchExecutable task shall now FiClose the open file descriptor we've created.
-}
-
-void CabinetExecuteScript(Window* pWindow, const char* pFileName)
-{
-	// Get the file name.
-	char filename[1024];
-	strcpy (filename, g_cabinetCWD);
-	if (g_cabinetCWD[1] != 0)
-		strcat (filename, "/");
-	strcat (filename, pFileName);
-	
-	char *buffer = (char*)MmAllocate(512);
-	strcpy (buffer, "ec ");
-	strcat (buffer, filename);
-	strcat (buffer, "\n");
-	
-	// Create the Launch Executable thread with the file descriptor as its parameter.
-	int errorCode = 0;
-    strcpy (g_cabinetExecutableToExecute, pFileName);
-    Task* pTask = KeStartTask (TerminalHostTask, (int)buffer, &errorCode);
-    if (errorCode != TASK_SUCCESS)
-    {
-		char buffer[1024];
-        sprintf (buffer, "Can not create thread to execute '%s'. Out of memory?", pFileName);
-        MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
-		
-		return;
-    }
-	
-	// After the task was created, give it a tag.
-	cli;
-	KeTaskAssignTag(pTask, filename);
-	sti;
-	
-	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 }
 
 //TODO FIXME
@@ -276,7 +199,16 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
 						{
-							CabinetExecute(pWindow, pFileName);
+							// Get the file name.
+							char filename[1024];
+							strcpy (filename, "exwindow:");
+							strcat (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							//CabinetExecute(pWindow, filename);
+							RESOURCE_STATUS status = LaunchResource(filename);
+							SLogMsg("Resource launch status: %x", status);
 						}
 					}
 					else if (EndsWith (pFileName, ".c"))
@@ -286,7 +218,16 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						sprintf(buffer, "Would you like to run the NanoShell script '%s'", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_FILE_CSCRIPT << 16 | MB_YESNO) == MBID_YES)
 						{
-							CabinetExecuteScript(pWindow, pFileName);
+							// Get the file name.
+							char filename[1024];
+							strcpy (filename, "exscript:");
+							strcat (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							//CabinetExecute(pWindow, filename);
+							RESOURCE_STATUS status = LaunchResource(filename);
+							SLogMsg("Resource launch status: %x", status);
 						}
 					}
 					/*else if (EndsWith (pFileName, ".txt"))

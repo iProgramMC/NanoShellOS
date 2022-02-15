@@ -198,6 +198,7 @@ MenuBarData;
 typedef struct
 {
 	bool  m_focused;
+	bool  m_dirty;//Has it been changed since the dirty flag was set to false?
 	bool  m_onlyOneLine, m_showLineNumbers;//note that these are mutually exclusive, but both can be turned off
 	int   m_textCapacity, m_textLength;//The text length needs to be 1 less than the text capacity.
 	                                   //If the text capacity is 65, for example, the textLength may not be bigger than 64.
@@ -360,6 +361,16 @@ void RequestRepaintNew (Window* pWindow);
  * box returns an integer value that indicates which button the user clicked.
  */
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t type);
+
+/**
+ * Pops up a modal dialog box requesting an input string, and returns a MmAllocate'd
+ * region of memory with the text inside.  Make sure to free the result, if it's non-null.
+ *
+ * Returns NULL if the user clicks "Cancel".
+ *
+ * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
+ */
+char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 
 /**
  * Adds a control to the window.

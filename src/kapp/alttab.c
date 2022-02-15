@@ -36,7 +36,7 @@ enum{
 void AltTab$ResetWindowIndexOrder()
 {
 	memset (g_windowIndexOrder, 0, sizeof(g_windowIndexOrder));
-	memset (g_temporaryArray,   0, sizeof(g_windowIndexOrder));
+	memset (g_temporaryArray,   0, sizeof(g_temporaryArray));
 	g_windowIndexOrderSize = 0;
 }
 void AltTab$CalcWindowIndexOrder()
@@ -44,10 +44,13 @@ void AltTab$CalcWindowIndexOrder()
 	AltTab$ResetWindowIndexOrder();
 	for (int i = WINDOWS_MAX-1; i >= 0; i--)
 	{
+		if (g_windowDrawOrder[i] < 0) continue;
+		if (g_windowDrawOrder[i] >= WINDOWS_MAX) continue;
 		if (g_temporaryArray[g_windowDrawOrder[i]] == 0)
 		{
 			if (!g_windows[g_windowDrawOrder[i]].m_used) continue;
 			g_windowIndexOrder[g_windowIndexOrderSize++] = g_windowDrawOrder[i];
+			if (g_windowIndexOrderSize >= WINDOWS_MAX) return;
 			g_temporaryArray[g_windowDrawOrder[i]]++;
 			if (g_windows[g_windowDrawOrder[i]].m_isSelected)
 			{

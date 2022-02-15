@@ -5,6 +5,7 @@
         String manipulation module
 ******************************************/
 #include <string.h>
+#include <memory.h>
 
 bool EndsWith(const char* pText, const char* pCheck)
 {
@@ -210,6 +211,14 @@ char* strchr (char* stringToSearch, const char characterToSearchFor)
 		stringToSearch++;
 	}
 	return NULL;
+}
+
+char* strdup (const char* pText)
+{
+	int len1 = strlen(pText);
+	char* ret = MmAllocate(len1 + 1);
+	strcpy (ret, pText);
+	return ret;
 }
 
 char* Tokenize (TokenState* pState, char* pString, char* separator) {

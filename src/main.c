@@ -133,8 +133,8 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	{
 		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
 		//try this:
-		#define DEFAULT_WIDTH  640
-		#define DEFAULT_HEIGHT 480
+		#define DEFAULT_WIDTH  1024
+		#define DEFAULT_HEIGHT 768
 		BgaChangeScreenResolution (DEFAULT_WIDTH,DEFAULT_HEIGHT);
 		mbi->flags |= MULTIBOOT_INFO_FRAMEBUFFER_INFO;
 		mbi->framebuffer_type   = 1;

@@ -84,4 +84,24 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText);
  */
 void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
 
+/**
+ * Checks if the text has been changed in a TextInput control.  Returns false if the control is not found.
+ */
+bool TextInputQueryDirtyFlag(Window* pWindow, int comboID);
+
+/**
+ * Clears the dirty flag in a TextInput control.
+ */
+void TextInputClearDirtyFlag(Window* pWindow, int comboID);
+
+/**
+ * Gets the text stored in a TextInput control.
+ *
+ * Do not store a pointer to this, because as the user types in text, the string can be
+ * expanded, invalidating the memory region that the pointer this returns points to.
+ * (You'll have to call it again)
+ * This is useful if you want to, say, get the text of a document to save it.
+ */
+const char* TextInputGetRawText(Window* pWindow, int comboID);
+
 #endif//_WIDGET_H
