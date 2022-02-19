@@ -35,7 +35,7 @@ void KeTaskDone(void);
 #if 1
 
 int  g_FPS, g_FPSThisSecond, g_FPSLastCounted;
-bool g_RenderWindowContents = false;
+bool g_RenderWindowContents = false;//while moving
 
 void UpdateFPSCounter()
 {
@@ -57,6 +57,9 @@ int GetWindowManagerFPS()
 
 //background code:
 #if 1
+
+uint32_t g_BackgroundSolidColor = BACKGROUND_COLOR;
+bool     g_BackgroundSolidColorActive = true;
 
 #define CHECKER_PATTERN
 #ifdef CHECKER_PATTERN
@@ -220,6 +223,12 @@ void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
 extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RedrawBackground (Rectangle rect)
 {
+	if (g_BackgroundSolidColorActive)
+	{
+		VidFillRectangle(g_BackgroundSolidColor, rect);
+		return;
+	}
+	
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
@@ -307,6 +316,7 @@ void SetDefaultBackground()
 	if (fd < 0)
 	{
 		SLogMsg("Could not open wallpaper. Using default one!");
+		g_BackgroundSolidColorActive = true;
 		return;
 	}
 	
@@ -316,6 +326,7 @@ void SetDefaultBackground()
 	if (!pData)
 	{
 		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
+		g_BackgroundSolidColorActive = true;
 		return;
 	}
 	
@@ -330,9 +341,13 @@ void SetDefaultBackground()
 	if (pImage)
 	{
 		g_background = pImage;
+		g_BackgroundSolidColorActive = false;
 	}
 	else
+	{
 		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
+		g_BackgroundSolidColorActive = true;
+	}
 }
 
 #endif
@@ -917,19 +932,12 @@ void OnUIRightClick (int mouseX, int mouseY)
 
 void RedrawEverything()
 {
-	//cli;
-//	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
-	/*VidFillScreen(BACKGROUND_COLOR);
-	
-	//wait for apps to fully setup their windows:
-	sti;
-	for (int i = 0; i < 50000; i++)
-		hlt;
-	cli;*/
-	
+	VBEData* pBkp = g_vbeData;
+	VidSetVBEData(NULL);
 	UpdateDepthBuffer();
 	
-	//sti;
+	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
+	RedrawBackground (r);
 	
 	//for each window, send it a EVENT_PAINT:
 	for (int p = 0; p < WINDOWS_MAX; p++)
@@ -937,8 +945,10 @@ void RedrawEverything()
 		Window* pWindow = &g_windows [p];
 		if (!pWindow->m_used) continue;
 		
-		WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
+		//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
+		pWindow->m_renderFinished = true;
 	}
+	VidSetVBEData(pBkp);
 }
 
 bool HandleMessages(Window* pWindow);
@@ -1176,7 +1186,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			{
 				LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
 				LogMsg("STATUS: We survived!  Exitting in a brief moment.");
-				g_windowManagerRunning = false;
+				//g_windowManagerRunning = false;
 				
 				// On Shutdown:
 				g_shutdownWaiting = false;
@@ -1326,6 +1336,12 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		if (pControl->m_parm1 & TEXTEDIT_READONLY)
 			pControl->m_textInputData.m_readOnly        = true;
 	}
+	else if (type == CONTROL_CHECKBOX)
+	{
+		//by default you have single line
+		pControl->m_checkBoxData.m_checked = p1 != 0;
+		pControl->m_checkBoxData.m_clicked = 0;
+	}
 	
 	//register an event for the window:
 	//WindowRegisterEvent(pWindow, EVENT_PAINT, 0, 0);
@@ -1404,529 +1420,7 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 
 #endif
 
-// Modal dialog box code.
-#if 1
-
-//Forward declaration
-void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
-
-void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2)
-{
-	DefaultWindowProc (pWindow, messageType, parm1, parm2);
-}
-
-void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, int parm2)
-{
-	if (messageType == EVENT_COMMAND)
-	{
-		//Which button did we click?
-		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
-		{
-			//We clicked a valid button.  Return.
-			pWindow->m_data = (void*)parm1;
-		}
-	}
-	else
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-}
-
-//TODO FIXME: Moving this anywhere but here causes a strange bug where moving this out
-//causes attempting to switch to the back window to freeze the whole system for whatever reason.
-//The code itself has NO cli's nor does it ever call cli, so why the mouse freezes I don't know.
-//It's also worth noting that once you switch to another window clicking the back window no longer freezes.
-//This does NOT happen when the code sits right here.
-
-int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
-{
-	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
-	
-	bool wasSelectedBefore = false;
-	if (pWindow)
-	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
-	
-		wasSelectedBefore = pWindow->m_isSelected;
-		if (wasSelectedBefore)
-		{
-			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
-		}
-	}
-	
-	VBEData* pBackup = g_vbeData;
-	
-	VidSetVBEData(NULL);
-	// Freeze the current window.
-	int old_flags = 0;
-	WindowProc pProc;
-	if (pWindow)
-	{
-		pProc = pWindow->m_callback;
-		old_flags = pWindow->m_flags;
-		pWindow->m_callback = MessageBoxWindowLightCallback;
-		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
-	}
-	
-	int szX, szY;
-	
-	char* test = MmAllocateK(strlen(pText)+5);
-	WrapText(test, pText, GetScreenWidth() * 2 / 3);
-	
-	// Measure the pText text.
-	VidTextOutInternal (test, 0, 0, 0, 0, true, &szX, &szY);
-	
-	szY += 12;
-	
-	int  iconID = style >> 16;
-	bool iconAvailable = iconID != ICON_NULL;
-	
-	if (iconAvailable)
-		if (szY < 50)
-			szY = 50;
-	
-	int buttonWidth  = 70;
-	int buttonWidthG = 76;
-	int buttonHeight = 20;
-	
-	// We now have the text's size in szX and szY.  Get the window size.
-	int wSzX = szX + 
-			   40 + //X padding on both sides
-			   10 + //Gap between icon and text.
-			   32 * iconAvailable + //Icon's size.
-			   5 +
-			   WINDOW_RIGHT_SIDE_THICKNESS;//End.
-	int wSzY = szY + 
-			   20 + //Y padding on both sides
-			   buttonHeight + //Button's size.
-			   TITLE_BAR_HEIGHT +
-			   5 + 
-			   WINDOW_RIGHT_SIDE_THICKNESS;
-	
-	int wPosX = (GetScreenSizeX() - wSzX) / 2,
-		wPosY = (GetScreenSizeY() - wSzY) / 2;
-	
-	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
-	
-	// Add the basic controls required.
-	Rectangle rect;
-	rect.left   = 20 + iconAvailable*32 + 10;
-	rect.top    = 20;
-	rect.right  = wSzX - 20;
-	rect.bottom = wSzY - buttonHeight - 20;
-	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, 0, TEXTSTYLE_VCENTERED);
-	SetHugeLabelText(pBox, 0x10000, test);
-	
-	MmFreeK(test);
-	
-	if (iconAvailable)
-	{
-		rect.left = 20;
-		rect.top  = 20 + (szY - 32) / 2;
-		rect.right = rect.left + 32;
-		rect.bottom= rect.top  + 32;
-		AddControl (pBox, CONTROL_ICON, rect, NULL, 0x10001, iconID, 0);
-	}
-	
-	int buttonStyle = style & 0x7;
-	switch (buttonStyle)
-	{
-		case MB_OK:
-		{
-			rect.left = (wSzX - buttonWidth) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
-			break;
-		}
-		case MB_RESTART:
-		{
-			rect.left = (wSzX - buttonWidth) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Restart", MBID_OK, 0, 0);
-			break;
-		}
-		case MB_YESNOCANCEL:
-		{
-			rect.left = (wSzX - buttonWidth) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "No", MBID_NO, 0, 0);
-			rect.right -= buttonWidthG;
-			rect.left  -= buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Yes", MBID_YES, 0, 0);
-			rect.right += 2 * buttonWidthG;
-			rect.left  += 2 * buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
-			break;
-		}
-		case MB_ABORTRETRYIGNORE:
-		{
-			rect.left = (wSzX - buttonWidth) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Retry", MBID_RETRY, 0, 0);
-			rect.right -= buttonWidthG;
-			rect.left  -= buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Abort", MBID_ABORT, 0, 0);
-			rect.right += 2 * buttonWidthG;
-			rect.left  += 2 * buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Ignore", MBID_IGNORE, 0, 0);
-			break;
-		}
-		case MB_CANCELTRYCONTINUE:
-		{
-			rect.left = (wSzX - buttonWidth) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Try again", MBID_TRY_AGAIN, 0, 0);
-			rect.right -= buttonWidthG;
-			rect.left  -= buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
-			rect.right += 2 * buttonWidthG;
-			rect.left  += 2 * buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Continue", MBID_CONTINUE, 0, 0);
-			break;
-		}
-		case MB_YESNO:
-		{
-			rect.left = (wSzX - buttonWidthG * 2) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Yes", MBID_YES, 0, 0);
-			rect.right += buttonWidthG;
-			rect.left  += buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "No", MBID_NO, 0, 0);
-			break;
-		}
-		case MB_OKCANCEL:
-		{
-			rect.left = (wSzX - buttonWidthG * 2) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
-			rect.right += buttonWidthG;
-			rect.left  += buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
-			break;
-		}
-		case MB_RETRYCANCEL:
-		{
-			rect.left = (wSzX - buttonWidthG * 2) / 2;
-			rect.top  = (wSzY - buttonHeight - 10);
-			rect.right  = rect.left + buttonWidth;
-			rect.bottom = rect.top  + buttonHeight;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Retry", MBID_RETRY, 0, 0);
-			rect.right += buttonWidthG;
-			rect.left  += buttonWidthG;
-			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
-			break;
-		}
-	}
-	
-	pBox->m_iconID = ICON_NULL;
-	
-	// Handle messages for this modal dialog window.
-	while (HandleMessages(pBox))
-	{
-		if (pBox->m_data)
-		{
-			break;//we're done.
-		}
-		//hlt;
-		KeTaskDone();
-	}
-	
-	int dataReturned = (int)pBox->m_data;
-	
-	DestroyWindow(pBox);
-	while (HandleMessages(pBox));
-	
-	if (pWindow)
-	{
-		pWindow->m_callback = pProc;
-		pWindow->m_flags    = old_flags;
-	}
-	g_vbeData = pBackup;
-	
-	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
-	if (wasSelectedBefore)
-	{
-		pWindow->m_isSelected = true;
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
-	}
-	
-	// Re-acquire the locks that have been freed before.
-	if (pWindow)
-	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
-	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
-	return dataReturned;
-}
-
-//Null but all 0xffffffff's. Useful
-#define FNULL ((void*)0xffffffff)
-#define POPUP_WIDTH  400
-#define POPUP_HEIGHT 120
-void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
-{
-	if (messageType == EVENT_COMMAND)
-	{
-		//Which button did we click?
-		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
-		{
-			//We clicked a valid button.  Return.
-			
-			if (parm1 == MBID_CANCEL)
-			{
-				pWindow->m_data = FNULL;
-				return;
-			}
-			const char* pText = TextInputGetRawText(pWindow, 100000);
-			if (!pText)
-				pWindow->m_data = FNULL;
-			else
-				pWindow->m_data = strdup(pText);
-		}
-	}
-	else if (messageType == EVENT_CREATE)
-	{
-		pWindow->m_vbeData.m_dirty = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else if (messageType == EVENT_PAINT)
-	{
-		pWindow->m_vbeData.m_dirty = 1;
-		pWindow->m_renderFinished  = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else if (messageType == EVENT_SETFOCUS || messageType == EVENT_KILLFOCUS)
-	{
-		pWindow->m_vbeData.m_dirty = 1;
-		pWindow->m_renderFinished  = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else if (messageType == EVENT_CLICKCURSOR || messageType == EVENT_RELEASECURSOR)
-	{
-		pWindow->m_vbeData.m_dirty = 1;
-		pWindow->m_renderFinished  = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-}
-
-// Pops up a text box requesting an input string, and returns a MmAllocate'd
-// region of memory with the text inside.  Make sure to free the result,
-// if it's non-null.
-//
-// Returns NULL if the user cancels.
-const char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText)
-{
-	/*
-	
-	  +---------------------------------------------------------------------+
-	  |                                                                     |
-	  |  pPrompt text goes here                                             |
-	  |                                                                     |
-	  | +-----------------------------------------------------------------+ |
-	  | | Your text will go here.                                         | |
-	  | +-----------------------------------------------------------------+ |
-	  |                                                                     |
-	  |            +----------+                  +----------+               |
-	  |            |    OK    |                  |  Cancel  |               |
-	  |            +----------+                  +----------+               |
-	  |                                                                     |
-	  +---------------------------------------------------------------------+
-	
-	*/
-	
-	
-	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
-	
-	bool wasSelectedBefore = false;
-	if (pWindow)
-	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
-	
-		wasSelectedBefore = pWindow->m_isSelected;
-		if (wasSelectedBefore)
-		{
-			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
-		}
-	}
-	
-	VBEData* pBackup = g_vbeData;
-	
-	VidSetVBEData(NULL);
-	// Freeze the current window.
-	int old_flags = 0;
-	WindowProc pProc;
-	if (pWindow)
-	{
-		pProc = pWindow->m_callback;
-		old_flags = pWindow->m_flags;
-		pWindow->m_callback = MessageBoxWindowLightCallback;
-		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
-	}
-	
-	int wPosX = (GetScreenWidth()  - POPUP_WIDTH)  / 2;
-	int wPosY = (GetScreenHeight() - POPUP_HEIGHT) / 2;
-	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, POPUP_WIDTH, POPUP_HEIGHT, InputPopupProc, WF_NOCLOSE | WF_NOMINIMZ);
-	
-	// Add the basic controls required.
-	Rectangle rect;
-	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT;
-	rect.right  = POPUP_WIDTH - 20;
-	rect.bottom = 50;
-	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, 0, WINDOW_BACKGD_COLOR);
-	
-	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT + 20;
-	rect.right  = POPUP_WIDTH - 20;
-	rect.bottom = 20;
-	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100000, 0, 0);
-	if (pDefaultText)
-		SetTextInputText(pBox, 100000, pDefaultText);
-	
-	RECT(rect, (POPUP_WIDTH - 250)/2, POPUP_HEIGHT - 30, 100, 20);
-	AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
-	RECT(rect, (POPUP_WIDTH - 250)/2+150, POPUP_HEIGHT - 30, 100, 20);
-	AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
-	
-	pBox->m_data   = NULL;
-	pBox->m_iconID = ICON_NULL;
-	
-	// Handle messages for this modal dialog window.
-	while (HandleMessages(pBox))
-	{
-		if (pBox->m_data)
-		{
-			break;//we're done.
-		}
-	}
-	
-	char* dataReturned = (char*)pBox->m_data;
-	
-	DestroyWindow(pBox);
-	while (HandleMessages(pBox));
-	
-	if (pWindow)
-	{
-		pWindow->m_callback = pProc;
-		pWindow->m_flags    = old_flags;
-	}
-	g_vbeData = pBackup;
-	
-	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
-	if (wasSelectedBefore)
-	{
-		pWindow->m_isSelected = true;
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
-	}
-	
-	// Re-acquire the locks that have been freed before.
-	if (pWindow)
-	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
-	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
-	if (dataReturned == FNULL) dataReturned = NULL;
-	return dataReturned;
-}
-
-//TODO FIXME: Why does this freeze the OS when clicking on the main controlpanel window
-//when I put this in kapp/cpanel.c??
-void Cpl$WindowPopup(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
-{
-	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
-	
-	bool wasSelectedBefore = false;
-	if (pWindow)
-	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
-	
-		wasSelectedBefore = pWindow->m_isSelected;
-		if (wasSelectedBefore)
-		{
-			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
-		}
-	}
-	
-	VBEData* pBackup = g_vbeData;
-	
-	VidSetVBEData(NULL);
-	// Freeze the current window.
-	int old_flags = 0;
-	WindowProc pProc;
-	if (pWindow)
-	{
-		pProc = pWindow->m_callback;
-		old_flags = pWindow->m_flags;
-		//pWindow->m_callback = MessageBoxWindowLightCallback;
-		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
-	}
-	
-	Window* pSubWindow = CreateWindow(newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags);
-	if (pSubWindow)
-	{
-		while (HandleMessages(pSubWindow))
-		{
-			KeTaskDone();
-		}
-	}
-	
-	if (pWindow)
-	{
-		pWindow->m_callback = pProc;
-		pWindow->m_flags    = old_flags;
-	}
-	g_vbeData = pBackup;
-	
-	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
-	if (wasSelectedBefore)
-	{
-		pWindow->m_isSelected = true;
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
-	}
-	
-	// Re-acquire the locks that have been freed before.
-	if (pWindow)
-	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
-	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
-}
-
-#endif
+#include "modals.h"
 
 // Event processors called by user processes.
 #if 1

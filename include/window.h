@@ -25,7 +25,7 @@
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
 
-#define BACKGROUND_COLOR                0xFF00007F
+#define BACKGROUND_COLOR                0xFF007f7f
 #define BUTTON_MIDDLE_COLOR             0xFFCCCCCC
 #define WINDOW_BACKGD_COLOR             0xFFAAAAAA
 #define WINDOW_EDGE_COLOR               0xFF000000
@@ -108,6 +108,8 @@ enum {
 	CONTROL_ICONVIEW,
 	//Does nothing except surround other controls with a rectangle.  Useful for grouping settings.
 	CONTROL_SURROUND_RECT,
+	//Button with a colored background (parm2)
+	CONTROL_BUTTON_COLORED,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -371,6 +373,11 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
  * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
  */
 char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
+
+/**
+ * TBA
+ */
+uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaption);
 
 /**
  * Adds a control to the window.

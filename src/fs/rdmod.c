@@ -89,6 +89,10 @@ void FsMountRamDisk(void* pRamDisk)
 	pRootNode->Close   = NULL;
 	pRootNode->ReadDir = FsRamDiskReadDir;
 	pRootNode->FindDir = FsRamDiskFindDir;
+	pRootNode->OpenDir = NULL;
+	pRootNode->CloseDir= NULL;
+	pRootNode->CreateFile = NULL;
+	pRootNode->EmptyFile  = NULL;
 	
 	//add files to the
 	InitRdHeader* pFileHdr = (InitRdHeader*)pRamDisk;
@@ -116,6 +120,8 @@ void FsMountRamDisk(void* pRamDisk)
 		pNode->Close   = NULL;
 		pNode->ReadDir = NULL;
 		pNode->FindDir = NULL;
+		pNode->CreateFile = NULL;
+		pNode->EmptyFile  = NULL;
 		
 		//if it ends with .nse...
 		if (EndsWith(pNode->m_name, ".nse"))
@@ -125,19 +131,3 @@ void FsMountRamDisk(void* pRamDisk)
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

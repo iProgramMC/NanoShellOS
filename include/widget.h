@@ -95,13 +95,15 @@ bool TextInputQueryDirtyFlag(Window* pWindow, int comboID);
 void TextInputClearDirtyFlag(Window* pWindow, int comboID);
 
 /**
- * Gets the text stored in a TextInput control.
+ * Gets the checked state in a Checkbox control.
  *
- * Do not store a pointer to this, because as the user types in text, the string can be
- * expanded, invalidating the memory region that the pointer this returns points to.
- * (You'll have to call it again)
- * This is useful if you want to, say, get the text of a document to save it.
+ * If the control does not exist, this returns false.
  */
-const char* TextInputGetRawText(Window* pWindow, int comboID);
+bool CheckboxGetChecked(Window* pWindow, int comboID);
+
+/**
+ * Sets the checked state in a Checkbox control.
+ */
+void CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
 
 #endif//_WIDGET_H

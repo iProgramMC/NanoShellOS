@@ -319,7 +319,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		timeout--;
 		if (timeout <= 0)
 		{
-			LogMsg("Trying to find drive %d, timeout reached, assuming not found");
+			LogMsg("Trying to find drive %d, timeout reached, assuming not found", driveID);
 			return DEVERR_NOTFOUND;
 		}
 		//KeTaskDone();

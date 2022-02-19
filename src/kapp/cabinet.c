@@ -46,12 +46,20 @@ enum
 
 void UpdateDirectoryListing (Window* pWindow)
 {
+reset:
 	ResetList        (pWindow, MAIN_LISTVIEW);
 	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
 	DirEnt* pEnt = NULL;
 	int i = 0;
+	
+	if (!FsOpenDir(pFolderNode))
+	{
+		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", ICON_ERROR | ICON_WARNING << 16);
+		strcpy (g_cabinetCWD, "/");
+		goto reset;
+	}
 	
 	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
 	{
@@ -123,20 +131,17 @@ void LaunchExecutable (int fd)
 //TODO FIXME
 void CdBack(Window* pWindow)
 {
-	LogMsg("Looking for a / to get rid of...");
 	for (int i = PATH_MAX - 1; i >= 0; i--)
 	{
 		if (g_cabinetCWD[i] == PATH_SEP)
 		{
-			LogMsg("Found it at %d! Cutting off the bit after.", i);
 			g_cabinetCWD[i+(i == 0)] = 0;
 			FileNode* checkNode = FsResolvePath(g_cabinetCWD);
 			if (!checkNode)
 			{
-				MessageBox(pWindow, "Cannot find parent directory.\n\nSince we can't go back, just exit.", pWindow->m_title, ICON_STOP << 16 | MB_OK);
+				MessageBox(pWindow, "Cannot find parent directory.\n\nGoing back to root.", pWindow->m_title, ICON_ERROR << 16 | MB_OK);
 				
-				//fake a destroy call
-				DestroyWindow(pWindow);
+				strcpy (g_cabinetCWD, "/");
 				return;
 			}
 			UpdateDirectoryListing (pWindow);
@@ -195,7 +200,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					else if (EndsWith (pFileName, ".nse"))
 					{
 						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[256];
+						char buffer[512];
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
 						{
@@ -214,8 +219,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					else if (EndsWith (pFileName, ".c"))
 					{
 						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[256];
-						sprintf(buffer, "Would you like to run the NanoShell script '%s'", pFileName);
+						char buffer[512];
+						sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_FILE_CSCRIPT << 16 | MB_YESNO) == MBID_YES)
 						{
 							// Get the file name.
@@ -230,10 +235,19 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							SLogMsg("Resource launch status: %x", status);
 						}
 					}
-					/*else if (EndsWith (pFileName, ".txt"))
+					else if (EndsWith (pFileName, ".txt"))
 					{
-						// TODO!
-					}*/
+						// Get the file name.
+						char filename[1024];
+						strcpy (filename, "ted:");
+						strcat (filename, g_cabinetCWD);
+						if (g_cabinetCWD[1] != 0)
+							strcat (filename, "/");
+						strcat (filename, pFileName);
+						//CabinetExecute(pWindow, filename);
+						RESOURCE_STATUS status = LaunchResource(filename);
+						SLogMsg("Resource launch status: %x", status);
+					}
 					else
 					{
 						char buffer[256];

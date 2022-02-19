@@ -15,9 +15,14 @@ extern VBEData g_mainScreenVBEData, *g_vbeData;
 extern bool    g_ps2MouseAvail;
 extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 
+extern bool     g_BackgroundSolidColorActive, g_RenderWindowContents;
+extern uint32_t g_BackgroundSolidColor;
+
+void RedrawEverything();
 //POPUP WINDOWS: Set `pWindow->m_data` to anything to exit.
 #define MOUSE_POPUP_WINDOW 1//stubbed out for now because it's buggy as hell
 #define KEYBD_POPUP_WINDOW 1
+#define DESKT_POPUP_WINDOW 1
 
 #if MOUSE_POPUP_WINDOW
 	enum
@@ -35,7 +40,7 @@ extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 		{
 			case EVENT_CREATE:
 			{
-				pWindow->m_iconID = ICON_HAND;//TODO
+				pWindow->m_iconID = ICON_MOUSE;//TODO
 				
 				//add a button
 				Rectangle r;
@@ -56,17 +61,73 @@ extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 				break;
 			}
 			case EVENT_COMMAND:
-				if (parm1 == 1232)
-				{
-					MessageBox(pWindow, "Message Box test from Cpl$TestPopupWndProc!", "Cpl$TestPopupWndProc", MB_OK | ICON_BILLBOARD<<16);
-				}
-				else
-				{
-					DestroyWindow(pWindow);
-				}
+				DestroyWindow(pWindow);
 				break;
 			case EVENT_RELEASECURSOR:
 				SetMouseSpeedMultiplier(GetScrollBarPos(pWindow, MOUSEP_SPEED_SCROLL));
+				break;
+			default:
+				DefaultWindowProc(pWindow, messageType, parm1, parm2);
+				break;
+		}
+	}
+#endif
+#if DESKT_POPUP_WINDOW
+	enum
+	{
+		DESKTOP_ENABLE_BACKGD = 4000,
+		DESKTOP_SHOW_WINDOW_CONTENTS,
+		DESKTOP_APPLY_CHANGES,
+		DESKTOP_CHANGE_BACKGD,
+		DESKTOP_CANCEL,
+	};
+	#define DESKTOP_POPUP_WIDTH 300
+	#define DESKTOP_POPUP_HEITE 140
+	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+	{
+		switch (messageType)
+		{
+			case EVENT_CREATE:
+			{
+				pWindow->m_iconID = ICON_DESKTOP;//TODO
+				
+				//add a button
+				Rectangle r;
+				RECT(r,10, 10 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 150, 15);
+				AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", DESKTOP_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
+				RECT(r,DESKTOP_POPUP_WIDTH-80, 5 + TITLE_BAR_HEIGHT, 70, 20);
+				AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
+				RECT(r,10, 30 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
+				
+				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2,8+TITLE_BAR_HEIGHT+80,45,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
+				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2+55,8+TITLE_BAR_HEIGHT+80,45,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "OK",  DESKTOP_APPLY_CHANGES, 0, 0);
+				
+				break;
+			}
+			case EVENT_COMMAND:
+				if (parm1 == DESKTOP_CHANGE_BACKGD)
+				{
+					uint32_t data = ColorInputBox(pWindow, "Choose a new background color:", "Background color");
+					if (data != TRANSPARENT)
+					{
+						g_BackgroundSolidColor = data & 0xffffff;
+						RedrawEverything();
+					}
+					break;
+				}
+				if (parm1 == DESKTOP_APPLY_CHANGES)
+				{
+					g_BackgroundSolidColorActive = CheckboxGetChecked(pWindow, DESKTOP_ENABLE_BACKGD);
+					g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);
+					RedrawEverything();
+				}
+				DestroyWindow(pWindow);
+				break;
+			case EVENT_RELEASECURSOR:
+				
 				break;
 			default:
 				DefaultWindowProc(pWindow, messageType, parm1, parm2);
@@ -226,16 +287,16 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			ResetList(pWindow, CONTPNL_LISTVIEW);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Display",             ICON_ADAPTER);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Keyboard",            ICON_KEYBOARD);
+			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Mouse",               ICON_MOUSE);
+			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_DESKTOP);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Launcher",            ICON_HOME);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Environment Paths",   ICON_DIRECTIONS);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Permissions",         ICON_RESTRICTED);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Serial Port",         ICON_SERIAL);
-			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Mouse",               ICON_HAND);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Download over Serial",ICON_BILLBOARD);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Date and Time",       ICON_CLOCK);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Password Lock",       ICON_LOCK);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Terminal settings",   ICON_COMMAND);
-			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_DESKTOP);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "App Memory Limit",    ICON_RESMON);
 			
 			break;
@@ -308,7 +369,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 					}
 					#endif
 					#if MOUSE_POPUP_WINDOW
-					case 6:
+					case 2:
 					{
 						Cpl$WindowPopup(
 							pWindow,
@@ -318,6 +379,23 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 							MOUSE_POPUP_WIDTH,
 							MOUSE_POPUP_HEITE,
 							Cpl$MousePopupWndProc,
+							WF_NOMINIMZ
+						);
+						
+						break;
+					}
+					#endif
+					#if DESKT_POPUP_WINDOW
+					case 3:
+					{
+						Cpl$WindowPopup(
+							pWindow,
+							"Desktop",
+							pWindow->m_rect.left + 50,
+							pWindow->m_rect.top  + 50,
+							DESKTOP_POPUP_WIDTH,
+							DESKTOP_POPUP_HEITE,
+							Cpl$DesktopPopupWndProc,
 							WF_NOMINIMZ
 						);
 						

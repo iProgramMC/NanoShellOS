@@ -86,7 +86,7 @@ bool FsOpenDir(FileNode* pNode)
 	{
 		if (pNode->OpenDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
 			return pNode->OpenDir(pNode);
-		else return false;
+		else return true;//Assume it is opened.
 	}
 	else return false;
 }
@@ -97,6 +97,24 @@ void FsCloseDir(FileNode* pNode)
 		if (pNode->OpenDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
 			pNode->OpenDir(pNode);
 	}
+}
+void FsClearFile(FileNode* pNode)
+{
+	if (pNode)
+	{
+		if (pNode->EmptyFile && !(pNode->m_type & FILE_TYPE_DIRECTORY))
+			pNode->EmptyFile(pNode);
+	}
+}
+FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
+{
+	if (pDirNode)
+	{
+		if (pDirNode->CreateFile && (pDirNode->m_type & FILE_TYPE_DIRECTORY))
+			return pDirNode->CreateFile(pDirNode, pFileName);
+		return NULL;
+	}
+	return NULL;
 }
 
 FileNode* FsResolvePath (const char* pPath)
@@ -165,18 +183,6 @@ extern uint32_t  g_nDevNodes; //number of dev nodes.
 // File Descriptor handlers:
 #if 1
 
-typedef struct {
-	bool      m_bOpen;
-	FileNode *m_pNode;
-	char      m_sPath[PATH_MAX+2];
-	int       m_nStreamOffset;
-	int       m_nFileEnd;
-	bool      m_bIsFIFO; //is a char device, basically
-	const char* m_openFile;
-	int       m_openLine;
-}
-FileDescriptor;
-
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
 
 void FsListOpenedDirs();//fat.c
@@ -227,11 +233,52 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	//find the node:
+	bool hasClearedAlready = false;
 	FileNode* pFile = FsResolvePath(pFileName);
 	if (!pFile)
 	{
-		FREE_LOCK (g_fileSystemLock);
-		return -EEXIST;
+		// Allow creation, if O_CREAT was specified and we need to write data
+		if ((oflag & O_CREAT) && (oflag & O_WRONLY))
+		{
+			// Resolve the directory's name
+			char fileName[strlen(pFileName) + 1];
+			strcpy (fileName, pFileName);
+			
+			char* fileNameSimple = NULL;
+			
+			for (int i = strlen (pFileName); i >= 0; i--)
+			{
+				if (fileName[i] == '/')
+				{
+					fileName[i] = 0;
+					fileNameSimple = fileName + i + 1;
+					break;
+				}
+			}
+			
+			FileNode* pDir = FsResolvePath(fileName);
+			if (!pDir)
+			{
+				//couldn't even find parent dir
+				FREE_LOCK (g_fileSystemLock);
+				return -EEXIST;
+			}
+			
+			// Try creating a file
+			pFile = FsCreateEmptyFile (pDir, fileNameSimple);
+			hasClearedAlready = true;
+			if (!pFile)
+			{
+				FREE_LOCK (g_fileSystemLock);
+				return -EEXIST;
+			}
+		}
+		else
+		{
+			//Can't append to/read from a missing file!
+			FREE_LOCK (g_fileSystemLock);
+			return -EEXIST;
+		}
 	}
 	
 	//if we are trying to read, but we can't:
@@ -259,6 +306,14 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 		return -EISDIR;
 	}
 	
+	//If we have O_CREAT and O_WRONLY:
+	if ((oflag & O_CREAT) && (oflag & O_WRONLY))
+	{
+		//If the filenode we opened isn't empty, empty it ourself
+		if (!hasClearedAlready)
+			FsClearFile(pFile);
+	}
+	
 	//open it:
 	if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
 	{
@@ -278,6 +333,13 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE;
 	
 	FREE_LOCK (g_fileSystemLock);
+	
+	if ((oflag & O_APPEND) && (oflag & O_WRONLY))
+	{
+		// Automatically seek to the end
+		FiSeek(fd, SEEK_END, 0);
+	}
+	
 	return fd;
 }
 bool FiIsValidDescriptor(int fd)

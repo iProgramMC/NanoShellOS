@@ -31,11 +31,6 @@ static uint32_t FsRandomRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uin
 	for (uint32_t i = 0; i < size; i++)
 	{
 		char out = (char)GetRandom() ^ 0x4E;
-		out = out << 5 | out >> 3;
-		out ^= 0x82;
-		out = out << 2 | out >> 6;
-		out ^= 0xB7;
-		out ^= 0xFF;
 		*(pText++) = out;
 	}
 	return size;
@@ -233,6 +228,10 @@ while (0)
 	g_pDevNodes[index].Close = NULL;\
 	g_pDevNodes[index].ReadDir = NULL;\
 	g_pDevNodes[index].FindDir = NULL;\
+	g_pDevNodes[index].OpenDir = NULL;\
+	g_pDevNodes[index].CloseDir= NULL;\
+	g_pDevNodes[index].CreateFile = NULL;\
+	g_pDevNodes[index].EmptyFile  = NULL;\
 	index++;\
 } while (0)
 	
@@ -260,6 +259,10 @@ void FsInitializeInitRd(void* pRamDisk)
 	g_pInitRdRoot->Close   = NULL;
 	g_pInitRdRoot->ReadDir = FsRootFsReadDir;
 	g_pInitRdRoot->FindDir = FsRootFsFindDir;
+	g_pInitRdRoot->OpenDir = NULL;
+	g_pInitRdRoot->CloseDir= NULL;
+	g_pInitRdRoot->CreateFile = NULL;
+	g_pInitRdRoot->EmptyFile  = NULL;
 	
 	// Initialize the /dev dir.
 	g_pInitRdDev = (FileNode*)MmAllocate(sizeof(FileNode));
@@ -273,6 +276,10 @@ void FsInitializeInitRd(void* pRamDisk)
 	g_pInitRdDev->Close   = NULL;
 	g_pInitRdDev->ReadDir = FsDevReadDir;
 	g_pInitRdDev->FindDir = FsDevFindDir;
+	g_pInitRdDev->OpenDir = NULL;
+	g_pInitRdDev->CloseDir= NULL;
+	g_pInitRdDev->CreateFile = NULL;
+	g_pInitRdDev->EmptyFile  = NULL;
 	
 	// Initialize devices
 	FsInitializeDevicesDir();
@@ -284,12 +291,6 @@ void FsInitializeInitRd(void* pRamDisk)
 	// for every file
 	for (int i = 0; i < g_pInitRdHeader->m_nFiles; i++)
 	{
-		/*if (g_pInitRdFileHeaders[i].m_magic != 0x2A2054EL)
-		{
-			LogMsg("\x01\x0C ERROR\x01\x0F: initrd failed to initialize -- is it corrupt?");
-			KeStopSystem();
-		}*/
-		
 		g_pInitRdFileHeaders[i].m_offset += location;
 		//create a new filenode
 		strcpy(g_pRootNodes[i].m_name, g_pInitRdFileHeaders[i].m_name);
@@ -302,6 +303,10 @@ void FsInitializeInitRd(void* pRamDisk)
 		g_pRootNodes[i].Close   = NULL;
 		g_pRootNodes[i].ReadDir = NULL;
 		g_pRootNodes[i].FindDir = NULL;
+		g_pRootNodes[i].OpenDir = NULL;
+		g_pRootNodes[i].CloseDir= NULL;
+		g_pRootNodes[i].CreateFile = NULL;
+		g_pRootNodes[i].EmptyFile  = NULL;
 		g_pRootNodes[i].m_perms = PERM_READ;
 		
 		//if it ends with .nse...

@@ -144,6 +144,7 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 		mbi->framebuffer_width  = DEFAULT_WIDTH;
 		mbi->framebuffer_pitch  = DEFAULT_WIDTH*4;
 		mbi->framebuffer_height = DEFAULT_HEIGHT;
+		mbi->framebuffer_bpp    = 32;
 		
 		//and re-attempt init:
 		VidInitialize(mbi);

@@ -563,6 +563,8 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 	this->m_textInputData.m_dirty = true;
 }
 
+#define LINE_NUM_GAP 56
+
 bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
@@ -607,6 +609,10 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						const char*text = this->m_textInputData.m_pText;
 						int lastRowStartIdx = -1, lastRowEndIdx = -1, curRowStartIdx = 0, newEndIndex;
 						int xPos = this->m_rect.left + 4;
+						if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+						{
+							xPos += LINE_NUM_GAP;
+						}
 						int offset  = 0;
 						int offsetInsideLine = -1, offsetInsideLineCur = 0;
 						int curLine = 0;
@@ -625,6 +631,10 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 								if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
 								{
 									xPos = this->m_rect.left + 4;
+									if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+									{
+										xPos += LINE_NUM_GAP;
+									}
 									offsetInsideLineCur = 0;
 									curLine ++;
 									
@@ -857,13 +867,24 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 		case EVENT_PAINT:
 		{
 			// Render the basic container rectangle
-			Rectangle rk = this->m_rect;
+			Rectangle rk = this->m_rect, rk1;
 			
 			rk.left   += 2;
 			rk.top    += 2;
 			rk.right  -= 2;
 			rk.bottom -= 2;
-			VidFillRectangle(0xFFFFFF, rk);
+			
+			rk1 = rk;
+			
+			if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+			{
+				rk.left += LINE_NUM_GAP;
+				rk1.right = rk.left;
+			}
+			
+			VidFillRectangle(0xffffff, rk);
+			if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+				VidFillRectangle(0x3f3f3f, rk1);
 			
 			if (this->m_textInputData.m_pText)
 			{
@@ -874,6 +895,10 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				int lineHeight = GetLineHeight();
 				int xPos = this->m_rect.left + 4,
 					yPos = this->m_rect.top  + 4 - lineHeight * this->m_textInputData.m_scrollY;
+				if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+				{
+					xPos += LINE_NUM_GAP;
+				}
 				
 				if (this->m_textInputData.m_onlyOneLine)
 				{
@@ -881,7 +906,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					yPos = this->m_rect.top  + 4;
 				}
 				
-				int curLine = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
+				int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
 				if (this->m_textInputData.m_onlyOneLine)
 				{
 					linesPerScreen = 1;
@@ -903,6 +928,20 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 							//Don't actually word-wrap if we hit the edge on a one-line textbox.
 							break;
 						xPos = this->m_rect.left + 4;
+						if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+						{
+							xPos += LINE_NUM_GAP;
+						}
+						if (*text == '\n')
+						{
+							char string[10];
+							curLine2 ++;
+							if (curLine >= scrollLine && xPos >= this->m_rect.left)
+							{
+								sprintf(string, "%5d", curLine2);
+								VidTextOut(string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
+							}
+						}
 						yPos += lineHeight;
 						curLine ++;
 					}
@@ -1967,6 +2006,55 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 	}
 	return false;
 }
+bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_RELEASECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			{
+				//send a command event to the window:
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+			}
+			this->m_buttonData.m_clicked = false;
+			WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p))
+			{
+				this->m_buttonData.m_clicked = true;
+				WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			if (this->m_buttonData.m_clicked)
+			{
+				Rectangle r = this->m_rect;
+				//draw the button as slightly pushed in
+				r.left++; r.right++; r.bottom++; r.top++;
+				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, this->m_parm2);
+				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, this->m_parm1, TRANSPARENT);
+			}
+			else
+			{
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, this->m_parm2);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, this->m_parm1, TRANSPARENT);
+			}
+			
+			break;
+		}
+	}
+	return false;
+}
 //for the top bar of the window.  Uses this->m_parm1 as the event type.
 bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -2082,6 +2170,27 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	return false;
 }
 #define CHECKBOX_SIZE 12
+bool CheckboxGetChecked(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_checkBoxData.m_checked;
+		}
+	}
+	return false;
+}
+void CheckboxSetChecked(Window* pWindow, int comboID, bool checked)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_checkBoxData.m_checked = checked;
+		}
+	}
+}
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	// this->rect only affects the top left position
@@ -2159,6 +2268,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetTextHuge_OnEvent,
 	WidgetIconView_OnEvent,
 	WidgetSurroundRect_OnEvent,
+	WidgetButtonColor_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

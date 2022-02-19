@@ -2,7 +2,7 @@
 		NanoShell Operating System
 	      (C) 2022 iProgramInCpp
 
-        Cabinet Application module
+        SysMon  Application module
 ******************************************/
 
 #include <wbuiltin.h>
@@ -34,6 +34,8 @@ void UpdateSystemMonitorLists(Window* pWindow)
 	ResetList(pWindow, PROCESS_LISTVIEW);
 	
 	char buffer [1024];
+	sprintf (buffer, "System");
+	AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
 		Task* pTask = g_runningTasks + i;
@@ -44,13 +46,13 @@ void UpdateSystemMonitorLists(Window* pWindow)
 				pTask->m_authorFile,
 				pTask->m_authorLine,
 				pTask->m_authorFunc,
-				pTask->m_pFunction/*,
-				pTask->m_pVBEContext,
-				pTask->m_pCurrentHeap,
-				pTask->m_pStack,
-				pTask->m_argument*/
+				pTask->m_pFunction
 			);
-			AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_BOMB);
+			if (strlen(pTask->m_tag) == 0)
+				sprintf (buffer, "%s[%s:%d]", pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
+			else
+				sprintf (buffer, "%s", pTask->m_tag);
+			AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
 		}
 	}
 	

@@ -131,6 +131,9 @@ void funnytest(UNUSED int argument)
 }
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
+
+bool FatCreateEmptyFile(FileNode *pDirNode, char* pFileName);//fs/fat.c
+void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName);//fs/fat.c
 void ShellExecuteCommand(char* p)
 {
 	TokenState state;
@@ -453,6 +456,79 @@ void ShellExecuteCommand(char* p)
 			LogMsg("Done");
 		}
 	}
+	else if (strcmp (token, "fce") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			char s[1024];
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_WRONLY | O_CREAT);
+			if (fd < 0)
+			{
+				LogMsg("Got error code %d when opening file", fd);
+				return;
+			}
+			
+			FiSeek(fd, 0, SEEK_END);
+			
+			char text[] = "Hello World from FiWrite!\n\n\n";
+			
+			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
+			
+			FiClose (fd);
+			LogMsg("Done");
+		}
+	}
+	else if (strcmp (token, "fc") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			bool b = FatCreateEmptyFile(g_pCwdNode, fileName);
+			LogMsg("Done. Result=%d", (int)b);
+		}
+	}
+	else if (strcmp (token, "fz") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			FatZeroOutFile(g_pCwdNode, fileName);
+			LogMsg("Done. ");
+		}
+	}
 	else if (strcmp (token, "ffa") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
@@ -500,6 +576,13 @@ void ShellExecuteCommand(char* p)
 	{
 		FileNode* pNode = g_pCwdNode;
 		LogMsg("Directory of %s (%x)", pNode->m_name, pNode);
+		
+		if (!FsOpenDir(pNode))
+		{
+			LogMsg("ERROR: Could not open '%s', try 'cd'-ing back?", pNode->m_name);
+			return;
+		}
+		
 		DirEnt* pDirEnt;
 		int i = 0;
 		while ((pDirEnt = FsReadDir(pNode, i)) != 0)
@@ -517,6 +600,8 @@ void ShellExecuteCommand(char* p)
 						pSubnode->m_name);
 			i++;
 		}
+		
+		FsCloseDir(pNode);
 	}
 	else if (strcmp (token, "gt") == 0)
 	{

@@ -22,22 +22,43 @@ enum
 typedef struct NotepadData
 {
 	bool m_untitled;
+	bool m_ackChanges;
 	char m_filename[PATH_MAX + 2];
 }
 NotepadData;
 
 #define NOTEPDATA(Window) ((NotepadData*)(Window->m_data))
 
+void NotepadUpdateTitle(Window* pWindow)
+{
+	char buffer[WINDOW_TITLE_MAX];
+	sprintf(
+		buffer,
+		"%s%s - Notepad",
+		TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW) ? "*" : "",
+		NOTEPDATA(pWindow)->m_untitled ? "untitled" : NOTEPDATA(pWindow)->m_filename
+	);
+	strcpy (pWindow->m_title, buffer);
+	
+	RequestRepaintNew(pWindow);
+}
+
 void NotepadOpenFile (Window* pWindow, const char*pFileName)
 {
-	//SetTextInputText(pWindow, int comboID, pText)
 	int fd = FiOpen (pFileName, O_RDONLY);
 	if (fd < 0)
 	{
 		//no file
 		char buff[1024];
-		sprintf(buff, "Can't open '%s'!", pFileName);
-		MessageBox(pWindow, buff, "NotepadOpenFile", MB_OK | ICON_ERROR << 16);
+		sprintf(buff, "Cannot find the file '%s'.\n\nWould you like to create a new file?", pFileName);
+		if (MessageBox(pWindow, buff, "Notepad", MB_YESNO | ICON_WARNING << 16) == MBID_YES)
+		{
+			SetTextInputText(pWindow, NOTEP_TEXTVIEW, "");
+			NOTEPDATA(pWindow)->m_untitled = true;
+			NOTEPDATA(pWindow)->m_filename[0] = 0;
+			TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
+			NotepadUpdateTitle(pWindow);
+		}
 		return;
 	}
 	else
@@ -60,6 +81,13 @@ void NotepadOpenFile (Window* pWindow, const char*pFileName)
 		
 		// internally this function copies the text anyway, so free it here:
 		MmFree (buffer);
+		
+		
+		strcpy(NOTEPDATA(pWindow)->m_filename, pFileName);
+		NOTEPDATA(pWindow)->m_untitled   = false;
+		NOTEPDATA(pWindow)->m_ackChanges = false;
+			
+		NotepadUpdateTitle(pWindow);
 	}
 }
 
@@ -67,10 +95,49 @@ void NotepadOnSave(UNUSED Window* pWindow)
 {
 	//This function requests a save
 	SLogMsg("SAVE REQUEST!");
+	if (NOTEPDATA(pWindow)->m_untitled)
+	{
+		// Request a name to save to
+		char* data = InputBox(pWindow, "Type in a file path to save to.", "Notepad", NULL);
+		if (!data) return;//No input
+		SLogMsg("Properly got fed data: '%s'", data);
+		if (strlen (data) > sizeof (NOTEPDATA(pWindow)->m_filename)-5)
+		{
+			return;//don't bof
+		}
+		
+		strcpy (NOTEPDATA(pWindow)->m_filename, data);
+		NOTEPDATA(pWindow)->m_untitled = false;
+			
+		NotepadUpdateTitle(pWindow);
+	}
+	
+	// Write to the file
+	int fd = FiOpen(NOTEPDATA(pWindow)->m_filename, O_WRONLY | O_CREAT);
+	if (fd < 0)
+	{
+		char buffer[1024];
+		sprintf(buffer, "Could not save to %s, try saving to another directory.", NOTEPDATA(pWindow)->m_filename);
+		MessageBox(pWindow, buffer, "Notepad", ICON_WARNING << 16 | MB_OK);
+		NOTEPDATA(pWindow)->m_untitled = true;
+	}
+	
+	const char* p = TextInputGetRawText(pWindow, NOTEP_TEXTVIEW);
+	if (!p)
+	{
+		MessageBox(pWindow, "Could not save file.  The text input control is gone!?", "Notepad", ICON_ERROR << 16 | MB_OK);
+		return;
+	}
+	FiWrite(fd, (void*)p, strlen (p));
+	FiClose(fd);
+	
+	NOTEPDATA(pWindow)->m_ackChanges = false;
+	TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
+	NotepadUpdateTitle(pWindow);
 }
 
-#define NOTEP_WIDTH  800
-#define NOTEP_HEIGHT 600
+#define NOTEP_WIDTH  500
+#define NOTEP_HEIGHT 400
 
 void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 {
@@ -78,6 +145,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 	{
 		case EVENT_CREATE:
 		{
+			void *pOldData = pWindow->m_data;
 			Rectangle r;
 			// Add a list view control.
 			
@@ -101,11 +169,19 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			AddControl (pWindow, CONTROL_BUTTON, r, "Save", NOTEP_BTNSAVE, 0, 0);
 			
 			//NotepadOpenFile (pWindow, "/hello2.txt");
+			
 			SetTextInputText (pWindow, NOTEP_TEXTVIEW, "");
 			
 			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			NOTEPDATA(pWindow)->m_untitled = true;
 			NOTEPDATA(pWindow)->m_filename[0] = 0;
+			
+			if (pOldData)
+			{
+				//If we have a parameter
+				NotepadOpenFile(pWindow, (const char*)pOldData);
+				MmFree((void*)pOldData);
+			}
 			
 			break;
 		}
@@ -174,6 +250,16 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 					RequestRepaint(pWindow);
 					break;
 				}
+				case NOTEP_BTNSAVE:
+				{
+					// Create a new document:
+					if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+					{
+						//The document has been changed, save this
+						NotepadOnSave(pWindow);
+					}
+					break;
+				}
 			}
 			break;
 		}
@@ -205,6 +291,18 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			DefaultWindowProc (pWindow, msg, parm1, parm2);
 			break;
 		}
+		case EVENT_KEYRAW:
+		{
+			if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+			{
+				if (!NOTEPDATA(pWindow)->m_ackChanges)
+				{
+					NOTEPDATA(pWindow)->m_ackChanges = true;
+					NotepadUpdateTitle(pWindow);
+				}
+			}
+			break;
+		}
 		case EVENT_PAINT:
 			
 			break;
@@ -214,7 +312,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 	}
 }
 
-void BigTextEntry (UNUSED int arg)
+void BigTextEntry (int arg)
 {
 	Window *pWindow = CreateWindow ("Notepad", 50, 50, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, 0);
 	
@@ -222,6 +320,8 @@ void BigTextEntry (UNUSED int arg)
 		LogMsg("Could not create window.");
 		return;
 	}
+	
+	pWindow->m_data = (void*)arg;
 	
 	while (HandleMessages (pWindow));
 }

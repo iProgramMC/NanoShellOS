@@ -671,7 +671,8 @@ void MmDebugDump()
 				g_memoryAllocationAuthor[i],
 				g_memoryAllocationAuthorLine[i]
 			);
-			entryCount++;
+			entryCount += 1 + g_memoryAllocationSize[i];
+			i += g_memoryAllocationSize[i];
 		}
 	}
 	LogMsgNoCr("There are %d unfreed allocations.", entryCount);

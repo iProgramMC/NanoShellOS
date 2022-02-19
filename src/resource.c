@@ -66,9 +66,10 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
     Task* pTask = KeStartTask (TerminalHostTask, (int)buffer, &errorCode);
     if (errorCode != TASK_SUCCESS)
     {
-		char buffer[1024];
-        sprintf (buffer, "Cannot create thread to execute '%s'. Out of memory?", pFileName);
-        MessageBox(NULL, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+		MmFree(buffer);
+		char buffer1[1024];
+        sprintf (buffer1, "Cannot create thread to execute '%s'. Out of memory?", pFileName);
+        MessageBox(NULL, buffer1, "Error", ICON_ERROR << 16 | MB_OK);
 		
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
     }
@@ -76,6 +77,32 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 	// After the task was created, give it a tag.
 	cli;
 	KeTaskAssignTag(pTask, pFileName);
+	sti;
+	
+	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
+	return RESOURCE_LAUNCH_SUCCESS;
+}
+
+RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
+{
+	char *buffer = (char*)MmAllocate(512);
+	strcpy (buffer, pResource);
+	
+	int errorCode = 0;
+	Task* pTask = KeStartTask(BigTextEntry, (int)buffer, &errorCode);
+	if (errorCode != TASK_SUCCESS)
+	{
+		MmFree(buffer);
+		char buffer1[1024];
+        sprintf (buffer1, "Cannot create thread to execute '%s'. Out of memory?", pResource);
+        MessageBox(NULL, buffer1, "Error", ICON_ERROR << 16 | MB_OK);
+		
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	}
+	
+	// After the task was created, give it a tag.
+	cli;
+	KeTaskAssignTag(pTask, "Notepad");
 	sti;
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
@@ -93,7 +120,7 @@ const RESOURCE_INVOKE g_ResourceInvokes[] = {
 	NULL,//RESOURCE_NONE
 	NULL,//RESOURCE_FATAL
 	LaunchResourceLauncher,//RESOURCE_SHELL
-	NULL,//RESOURCE_TED
+	NotepadLaunchResource,//RESOURCE_TED
 	CabinetExecuteScript,//RESOURCE_EXSCRIPT
 	NULL,//RESOURCE_EXCONSOLE
 	CabinetExecute,//RESOURCE_EXWINDOW
