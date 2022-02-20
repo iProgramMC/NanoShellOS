@@ -37,6 +37,7 @@ typedef struct ConsoleStruct {
 	bool m_dirty;
 	char m_inputBuffer[KB_BUF_SIZE];
 	int  m_inputBufferBeg, m_inputBufferEnd;
+	int  m_cursorFlashTimer, m_cursorFlashState;
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

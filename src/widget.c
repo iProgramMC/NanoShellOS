@@ -628,7 +628,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 										break;
 								}
 								//word wrap
-								if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
+								if (xPos + 7 >= this->m_rect.right - 4 || *text == '\n')
 								{
 									xPos = this->m_rect.left + 4;
 									if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
@@ -668,7 +668,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 								if (*text != '\n')
 								{
 									// Increment the X,Y positions
-									xPos += GetCharWidth (*text);
+									xPos += 7;
 									offsetInsideLineCur++;
 								}
 								
@@ -848,7 +848,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			}
 			
 			if (this->m_textInputData.m_onlyOneLine)
-				this->m_rect.bottom = this->m_rect.top + 16 + 8;
+				this->m_rect.bottom = this->m_rect.top + 14 + 8;
 			
 			// setup some blank text:
 			CtlSetTextInputText(this, pWindow, "");
@@ -889,7 +889,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			if (this->m_textInputData.m_pText)
 			{
 				//HACK
-				VidSetFont(FONT_TAMSYN_BOLD);
+				VidSetFont(FONT_TAMSYN_MED_REGULAR);
 				
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
@@ -914,6 +914,13 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				}
 				int offset  = 0;
 				
+				char line_string[10];
+				curLine2 ++;
+				if (curLine >= scrollLine && xPos >= this->m_rect.left)
+				{
+					sprintf   (line_string, "%5d", curLine2);
+					VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
+				}
 				while (*text)
 				{
 					if (!this->m_textInputData.m_readOnly)
@@ -932,17 +939,17 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						{
 							xPos += LINE_NUM_GAP;
 						}
+						yPos += lineHeight;
 						if (*text == '\n')
 						{
 							char string[10];
 							curLine2 ++;
 							if (curLine >= scrollLine && xPos >= this->m_rect.left)
 							{
-								sprintf(string, "%5d", curLine2);
-								VidTextOut(string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
+								sprintf   (line_string, "%5d", curLine2);
+								VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
 							}
 						}
-						yPos += lineHeight;
 						curLine ++;
 					}
 					if (*text != '\n')

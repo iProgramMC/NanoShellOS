@@ -16,7 +16,11 @@
 #include <memory.h>
 #include <storabs.h>
 
-#ifdef FSDEBUG
+#define FSDEBUG
+
+#ifdef FSDEBUGX
+#define DebugLogMsg LogMsg
+#elif defined(FSDEBUG)
 #define DebugLogMsg SLogMsg
 #else
 #define DebugLogMsg(...)
@@ -1467,7 +1471,7 @@ void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName)
 	// If file exists:
 	if (pFN)
 	{
-		SLogMsg("Found! pFN: %x", (FatFileSystem*)pFN->m_implData);
+		DebugLogMsg("Found! pFN: %x", (FatFileSystem*)pFN->m_implData);
 		FatZeroFatChain    (pSystem,   pFN->m_inode);//TODO
 		FatUpdateFileEntryNotOpened (pFN, 0, FatAllocateCluster(pSystem));
 		FatFlushFat(pSystem);//Since we allocated a new cluster
@@ -1897,6 +1901,7 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 				pCurrent->Write = FsFatWrite;
 				pCurrent->Open  = FsFatOpen;
 				pCurrent->Close = FsFatClose;
+				pCurrent->EmptyFile = FatEmptyExistingFile;
 			}
 			else
 			{
@@ -1905,7 +1910,6 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 				pCurrent->ReadDir  = FsFatReadNonRootDir;
 				pCurrent->FindDir  = FsFatFindNonRootDir;
 				pCurrent->CreateFile = FatCreateEmptyFile;
-				pCurrent->EmptyFile  = FatEmptyExistingFile;
 			}
 			
 			entry = nextEntry;
@@ -2173,6 +2177,7 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 				pCurrent->Write = FsFatWrite;
 				pCurrent->Open  = FsFatOpen;
 				pCurrent->Close = FsFatClose;
+				pCurrent->EmptyFile = FatEmptyExistingFile;
 			}
 			else
 			{
@@ -2181,7 +2186,6 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 				pCurrent->ReadDir  = FsFatReadNonRootDir;
 				pCurrent->FindDir  = FsFatFindNonRootDir;
 				pCurrent->CreateFile = FatCreateEmptyFile;
-				pCurrent->EmptyFile  = FatEmptyExistingFile;
 			}
 			
 			entry = nextEntry;
@@ -2220,7 +2224,6 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	pFatRoot->OpenDir  = NULL;
 	pFatRoot->CloseDir = NULL;
 	pFatRoot->CreateFile = FatCreateEmptyFile;
-	pFatRoot->EmptyFile  = FatEmptyExistingFile;
 	pFatRoot->ReadDir  = FsFatReadRootDir;
 	pFatRoot->FindDir  = FsFatFindRootDir;
 	

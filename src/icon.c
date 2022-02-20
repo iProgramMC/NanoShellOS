@@ -87,6 +87,9 @@
 #include <icons/mouse.h>
 // Icons V1.31
 #include <icons/ambulance.h>
+// Icons V1.32
+#include <icons/fonts.h>
+#include <icons/fonts16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -166,6 +169,8 @@ Image * g_iconTable[] = {
 	&g_desktop2_icon,
 	&g_mouse_icon,
 	&g_ambulance_icon,
+	&g_fonts_icon,
+	&g_fonts16_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -197,6 +202,7 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(CLOCK)
 			CASE(APPLICATION)
 			CASE(CALCULATOR)
+			CASE(FONTS)
 			#undef CASE
 		}
 	}

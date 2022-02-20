@@ -267,6 +267,8 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			// Try creating a file
 			pFile = FsCreateEmptyFile (pDir, fileNameSimple);
 			hasClearedAlready = true;
+			SLogMsg("Has cleared file already");
+			
 			if (!pFile)
 			{
 				FREE_LOCK (g_fileSystemLock);
@@ -311,7 +313,9 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	{
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
+		{
 			FsClearFile(pFile);
+		}
 	}
 	
 	//open it:

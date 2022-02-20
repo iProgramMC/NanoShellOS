@@ -713,15 +713,22 @@ void ShellExecuteCommand(char* p)
 				else
 					LogMsgNoCr("%x ", pAddr[i+j]);
 			}
+			for (int j = 0; j < (8 >> as_bytes); j++)
+			{
+				#define FIXUP(c) ((c<32||c>126)?'.':c)
+				char c1 = pAddrB[((i+j)<<2)+0], c2 = pAddrB[((i+j)<<2)+1], c3 = pAddrB[((i+j)<<2)+2], c4 = pAddrB[((i+j)<<2)+3];
+				LogMsgNoCr("%c%c%c%c", FIXUP(c1), FIXUP(c2), FIXUP(c3), FIXUP(c4));
+			}
 			LogMsg("");
 		}
 		goto dont_print_usage;
 	print_usage:
-		LogMsg("Virtual Memory Spy");
+		LogMsg("Virtual Memory Spy (TM)");
 		LogMsg("Usage: mspy <page number> <numBytes> [/b]");
 		LogMsg("- bytes will be printed as groups of 4 unless [/b] is specified");
 		LogMsg("- numBytes will be capped off at 4096 and rounded down to 32");
 		LogMsg("- pageNumber must be a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");
+		LogMsg("- if it's not valid or mapped then the system may CRASH or HANG!");
 		LogMsg("- pageNumber is in\x01\x0C DECIMAL\x01\x0F");
 		LogMsg("- note: cut off the last 3 digits of an address in hex and turn it to decimal to get a pageNumber");
 	dont_print_usage:;

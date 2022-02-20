@@ -189,18 +189,10 @@ void CoScrollUpByOne(Console *this) {
 			return;
 		}
 		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
-		//uint16_t* p = &this->textBuffer[this->width * (this->height - 1) * sizeof(short)];
 		for (int i = 0; i < this->width; i++)
 		{
 			CoPlotChar (this, i, this->height - 1, 0);
 		}
-		/*for (int j = 0; j < this->height-1; j++)
-		{
-			for (int i = 0; i < this->width; i++)
-			{
-				CoRefreshChar(this, i, j);
-			}
-		}*/
 	}
 	else if (this->type == CONSOLE_TYPE_TEXT) {
 		if (this->pushOrWrap) {
@@ -209,7 +201,6 @@ void CoScrollUpByOne(Console *this) {
 			return;
 		}
 		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
-		//uint16_t* p = &this->textBuffer[this->width * (this->height - 1) * sizeof(short)];
 		for (int i=0; i<this->width; i++)
 		{
 			CoPlotChar (this, i, this->height - 1, 0);

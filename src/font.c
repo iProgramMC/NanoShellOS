@@ -52,6 +52,10 @@ BitmapFont;
 		g_FamiSans8x8,
 		g_BasicFontData,
 		g_GlcdData,
+		g_TamsynRegu7x14,
+		g_TamsynBold7x14,
+		g_TamsynRegu6x12,
+		g_TamsynBold6x12,
 		//g_TestFont16x16,
 		//g_TestFont216x16,
 	};
@@ -292,7 +296,7 @@ void KillFont (int fontID)
 			int fontType2 = fontType - 0xF000;
 			if (fontType2 < 0 || fontType2 > (int)ARRAY_COUNT(g_pLoadedFontsPool))
 			{
-				LogMsg("Can't set the font to that! (%d)", fontType);
+				SLogMsg("Can't set the font to that! (%d)", fontType);
 			}
 			else if (g_pLoadedFontsPool [fontType2])
 			{
@@ -309,6 +313,41 @@ void KillFont (int fontID)
 		g_pCurrentFont  = g_pBasicFontData[fontType];
 		g_uses8by16Font = (g_pCurrentFont[1] != 8);
 	}
+	
+	const char* VidGetFontName(unsigned fontType)
+	{
+		if (fontType >= FONT_LAST)
+		{
+			int fontType2 = fontType - 0xF000;
+			if (fontType2 < 0 || fontType2 > (int)ARRAY_COUNT(g_pLoadedFontsPool))
+			{
+				return "Unrecognized Font";
+			}
+			else if (g_pLoadedFontsPool [fontType2])
+			{
+				return "User loaded font";
+			}
+			else
+			{
+				return "Unloaded Font";
+			}
+		}
+		switch (fontType)
+		{
+			case FONT_TAMSYN_REGULAR:       return "Tamsyn Regular 8x16";
+			case FONT_TAMSYN_BOLD:          return "Tamsyn Bold 8x16";
+			case FONT_TAMSYN_MED_REGULAR:   return "Tamsyn Regular 7x14";
+			case FONT_TAMSYN_MED_BOLD:      return "Tamsyn Bold 7x14";
+			case FONT_TAMSYN_SMALL_REGULAR: return "Tamsyn Regular 6x12";
+			case FONT_TAMSYN_SMALL_BOLD:    return "Tamsyn Bold 6x12";
+			case FONT_BASIC:                return "NanoShell System font";
+			case FONT_GLCD:                 return "GLCD font 6x8";
+			case FONT_FAMISANS:             return "Fami Sans font 8x8";
+			case FONT_PAPERM:               return "Paper M font 8x16";
+		}
+		return "Unknown Font";
+	}
+	
 	void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
 	{
 		if (!g_pCurrentFont) {
@@ -399,7 +438,7 @@ void KillFont (int fontID)
 		{
 			for (int y = 0; y < height; y++)
 			{
-				for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
+				for (int x = 0, bitmask = /*(1 << (width - 1))*/ 1 << 7; x < width; x++, bitmask >>= 1)
 				{
 					if (test[c * height + y] & bitmask)
 					{
