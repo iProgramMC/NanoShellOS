@@ -39,26 +39,7 @@ uint32_t g_vgaColorsToRGB[] = {
 	0x00FFFF55,
 	0x00FFFFFF,
 };
-/*
-uint32_t g_vgaColorsToRGB[] = {
-	0x00000000,
-	0x000000AA,
-	0x0000AA00,
-	0x0000AAAA,
-	0x00AA0000,
-	0x00AA00AA,
-	0x00AAAA00,
-	0x00AAAAAA,
-	0x00555555,
-	0x005555FF,
-	0x0055FF55,
-	0x0055FFFF,
-	0x00FF5555,
-	0x00FF55FF,
-	0x00FFFF55,
-	0x00FFFFFF,
-};
-*/
+
 extern bool g_uses8by16Font;
 Console g_debugConsole; // for LogMsg
 Console g_debugSerialConsole; // for SLogMsg
@@ -162,11 +143,11 @@ void CoPlotChar (Console *this, int x, int y, char c) {
 		VidPlotChar (c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 		g_vbeData = backup;
 	}
-	/*if (this->type == CONSOLE_TYPE_WINDOW)
+	if (this->type == CONSOLE_TYPE_WINDOW)
 	{
 		VidPlotChar (c, this->offX + x * this->cwidth, this->offY + y  * this->cheight, g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 		g_vbeData = backup;
-	}*/
+	}
 }
 void CoRefreshChar (Console *this, int x, int y) {
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
@@ -189,9 +170,17 @@ void CoScrollUpByOne(Console *this) {
 			return;
 		}
 		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
+		//uint16_t* p = &this->textBuffer[this->width * (this->height - 1) * sizeof(short)];
 		for (int i = 0; i < this->width; i++)
 		{
 			CoPlotChar (this, i, this->height - 1, 0);
+		}
+		for (int j = 0; j < this->height-1; j++)
+		{
+			for (int i = 0; i < this->width; i++)
+			{
+				CoRefreshChar(this, i, j);
+			}
 		}
 	}
 	else if (this->type == CONSOLE_TYPE_TEXT) {
@@ -201,6 +190,7 @@ void CoScrollUpByOne(Console *this) {
 			return;
 		}
 		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
+		//uint16_t* p = &this->textBuffer[this->width * (this->height - 1) * sizeof(short)];
 		for (int i=0; i<this->width; i++)
 		{
 			CoPlotChar (this, i, this->height - 1, 0);

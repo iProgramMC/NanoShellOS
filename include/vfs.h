@@ -37,39 +37,32 @@ enum
 #define PERM_EXEC  (4)
 
 // Function pointer definitions so we can just call `file_node->Read(...);` etc.
-typedef uint32_t 		(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*);
-typedef uint32_t 		(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, void*);
-typedef bool     		(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
-typedef void     		(*FileCloseFunc)      (struct FSNodeS*);
-typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
-typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
-typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t);
-typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
-typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
+typedef uint32_t 		(*FileReadFunc)    (struct FSNodeS*, uint32_t, uint32_t, void*);
+typedef uint32_t 		(*FileWriteFunc)   (struct FSNodeS*, uint32_t, uint32_t, void*);
+typedef bool     		(*FileOpenFunc)    (struct FSNodeS*, bool, bool);
+typedef void     		(*FileCloseFunc)   (struct FSNodeS*);
+typedef bool            (*FileOpenDirFunc) (struct FSNodeS*);
+typedef void            (*FileCloseDirFunc)(struct FSNodeS*);
+typedef struct DirEntS* (*FileReadDirFunc) (struct FSNodeS*, uint32_t);
+typedef struct FSNodeS* (*FileFindDirFunc) (struct FSNodeS*, const char* pName);
 
 typedef struct FSNodeS
 {
-	char 	           m_name[128]; //+nullterm, so 127 concrete chars
-	uint32_t           m_type;
-	uint32_t           m_perms;
-	uint32_t           m_flags;
-	uint32_t           m_inode;      //device specific
-	uint32_t           m_length;     //file size
-	uint32_t           m_implData;   //implementation data. TODO
-	uint32_t           m_implData1;
-	uint32_t           m_implData2;
-	uint32_t           m_implData3;
-	FileReadFunc       Read;
-	FileWriteFunc      Write;
-	FileOpenFunc       Open;
-	FileCloseFunc      Close;
-	FileOpenDirFunc    OpenDir;
-	FileReadDirFunc    ReadDir;      //returns the n-th child of a directory
-	FileFindDirFunc    FindDir;      //try to find a child in a directory by name
-	FileCloseDirFunc   CloseDir;
-	FileCreateFileFunc CreateFile;
-	FileEmptyFileFunc  EmptyFile;
+	char 	         m_name[128]; //+nullterm, so 127 concrete chars
+	uint32_t         m_type;
+	uint32_t         m_perms;
+	uint32_t         m_flags;
+	uint32_t         m_inode;      //device specific
+	uint32_t         m_length;     //file size
+	uint32_t         m_implData;   //implementation data. TODO
+	FileReadFunc     Read;
+	FileWriteFunc    Write;
+	FileOpenFunc     Open;
+	FileCloseFunc    Close;
+	FileOpenDirFunc  OpenDir;
+	FileReadDirFunc  ReadDir;      //returns the n-th child of a directory
+	FileFindDirFunc  FindDir;      //try to find a child in a directory by name
+	FileCloseDirFunc CloseDir;
 }
 FileNode;
 
@@ -90,7 +83,6 @@ FileNode* FsGetRootNode();
 
 //Remember the definitions above.
 
-//These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
 uint32_t FsRead    (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
 uint32_t FsWrite   (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
 bool     FsOpen    (FileNode* pNode, bool read, bool write);
@@ -104,13 +96,6 @@ FileNode*FsFindDir (FileNode* pNode, const char* pName);
 FileNode*FsResolvePath (const char* pPath);
 
 void FiDebugDump();
-
-//Ramdisk API:
-#if 1
-
-void FsMountRamDisk(void* pRamDisk);
-
-#endif
 
 //Initrd stuff:
 #if 1
@@ -142,18 +127,6 @@ void FsMountRamDisk(void* pRamDisk);
 
 // Basic POSIX-like API
 #if 1
-	//For internal use.
-	typedef struct {
-		bool      m_bOpen;
-		FileNode *m_pNode;
-		char      m_sPath[PATH_MAX+2];
-		int       m_nStreamOffset;
-		int       m_nFileEnd;
-		bool      m_bIsFIFO; //is a char device, basically
-		const char* m_openFile;
-		int       m_openLine;
-	}
-	FileDescriptor;
 
 	#define O_RDONLY (1)
 	#define O_WRONLY (2)

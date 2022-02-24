@@ -23,8 +23,6 @@ void KeTaskDone(void);
 #include <keyboard.h>
 #include <wbuiltin.h>
 #include <wcall.h>
-#include <vfs.h>
-#include <image.h>
 
 #undef cli
 #undef sti
@@ -34,8 +32,7 @@ void KeTaskDone(void);
 //fps counter:
 #if 1
 
-int  g_FPS, g_FPSThisSecond, g_FPSLastCounted;
-bool g_RenderWindowContents = false;//while moving
+int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
 
 void UpdateFPSCounter()
 {
@@ -58,44 +55,48 @@ int GetWindowManagerFPS()
 //background code:
 #if 1
 
-uint32_t g_BackgroundSolidColor = BACKGROUND_COLOR;
-bool     g_BackgroundSolidColorActive = true;
-
-#define CHECKER_PATTERN
+//#define CHECKER_PATTERN
 #ifdef CHECKER_PATTERN
-	#define B 0x000000,
-	#define X 0xFFFFFF,
-	#define o 0x7F0000,
+	#define BG_WHITE 0xFF007F7F
+	#define BG_BLACK 0xFF005C5C
 	const uint32_t g_placeholderBackground[] = {
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
-	o B X X X X X X X X X B o o
-	o B X X X X X X X X X B o o
-	o B X X B X B X B X X B o o
-	o B X X X B X B X X X B o o
-	o B B X X X B X X X B B o o
-	o o B B X X X X X B B o o o
-	o o o B B X B X B B o o o o
-	o o o o B B X B B o o o o o
-	o o o o B B X B B o o o o o
-	o o o B B X X X B B o o o o
-	o o B B X X B X X B B o o o
-	o B B X X X X X X X B B o o
-	o B X X X X B X X X X B o o
-	o B X X X B X B X X X B o o
-	o B X X B X B X B X X B o o
-	o B X B X B X B X B X B o o
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
+		BACKGROUND_COLOR,
+		/*00*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*01*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*02*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*03*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*04*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*05*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*06*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*07*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*08*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*09*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0A*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0B*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0C*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0D*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0E*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*0F*/BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,
+		/*10*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*11*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*12*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*13*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*14*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*15*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*16*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*17*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*18*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*19*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1A*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1B*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1C*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1D*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1E*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
+		/*1F*/BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_WHITE,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,BG_BLACK,
 	};
-	#undef B
-	#undef X
-	#undef o
 	
 	Image* g_background, g_defaultBackground = {
-		14, 22, g_placeholderBackground
+		32, 32, g_placeholderBackground
 	};
 #else
 	const uint32_t g_placeholderBackground[] = {
@@ -106,248 +107,28 @@ bool     g_BackgroundSolidColorActive = true;
 		1, 1, g_placeholderBackground
 	};
 #endif
-extern uint32_t* g_framebufferCopy;
-extern VBEData * g_vbeData;
 
-__attribute__((always_inline))
-inline void VidPlotPixelToCopyInlineUnsafeRF(unsigned x, unsigned y, unsigned color)
-{
-	g_framebufferCopy[x + y * g_vbeData->m_width] = color;
-}
-__attribute__((always_inline))
-inline void VidPlotPixelRaw32IRF (unsigned x, unsigned y, unsigned color)
-{
-	g_vbeData->m_dirty = 1;
-	g_vbeData->m_framebuffer32[x + y * g_vbeData->m_pitch32] = color;
-}
-short GetWindowIndexInDepthBuffer (int x, int y);
-__attribute__((always_inline))
-inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
-{
-	if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
-	{
-		if (GetWindowIndexInDepthBuffer(x, y) < 0)
-		{
-			VidPlotPixelToCopyInlineUnsafeRF(x, y, color);
-			VidPlotPixelRaw32IRF (x, y, color);
-		}
-	}
-}
-
-extern const unsigned char g_BasicFontData[];
-extern const unsigned char g_TestFont216x16[];
-void WinPlotCharBkgd (char c, unsigned ox, unsigned oy, unsigned colorFg)
-{
-	VidSetVBEData(NULL);
-	bool bold = false;
-	if (colorFg & TEXT_RENDER_BOLD)
-	{
-		bold = true;
-	}
-	colorFg &= 0xFFFFFF;
-	
-	//big text?
-	/*
-	if (c > '~' || c < ' ') c = '?';
-	int width = g_TestFont216x16[0], height = g_TestFont216x16[1];
-	const unsigned char* testa = (const unsigned char*)(g_TestFont216x16 + 3);
-	for (int y = 0; y < height; y++)
-	{
-		int to = ((c-' ') * height + y)*2;
-		unsigned short test1 = testa[to+1]|testa[to]<<8;
-		
-		for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
-		{
-			if (test1 & bitmask)
-			{
-				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
-				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
-			}
-		}
-	}
-	*/
-	
-	//standard font?
-	int width = g_BasicFontData[0], height = g_BasicFontData[1];
-	const unsigned char* test = (const unsigned char*)(g_BasicFontData + 3);
-	for (int y = 0; y < height; y++)
-	{
-		for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
-		{
-			if (test[c * height + y] & bitmask)
-			{
-				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
-				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
-			}
-		}
-	}
-}
-enum
-{
-	JUSTIFY_LEFT,
-	JUSTIFY_CENTER,
-	JUSTIFY_RIGHT,
-};
-//really basic, no lf support
-void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
-{
-	int text_width = 0;
-	const char* text1 = text;
-	bool bold = false;
-	if (color & TEXT_RENDER_BOLD)
-	{
-		bold = true;
-	}
-	
-	while (*text1)
-	{
-		//text_width += GetCharWidth(*text);
-		text_width += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text1)];
-		if (bold) text_width++;
-		text1++;
-	}
-	int xaxis = 0;
-	if (justify > JUSTIFY_LEFT)
-		xaxis = (GetScreenWidth()-text_width);
-	if (justify == JUSTIFY_CENTER)
-		xaxis /= 2;
-	while (*text)
-	{
-		WinPlotCharBkgd (*text, xaxis, yaxis, color);
-		xaxis += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text)];
-		if (bold) xaxis++;
-		text++;
-	}
-}
-	
-extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RedrawBackground (Rectangle rect)
 {
-	if (g_BackgroundSolidColorActive)
-	{
-		VidFillRectangle(g_BackgroundSolidColor, rect);
-		return;
-	}
-	
-	if (rect.left < 0) rect.left = 0;
-	if (rect.top  < 0) rect.top  = 0;
-	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
-	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight()-1;
-	// if the rectangle is FULLY inside the 0,0 tile:
-	// (TODO: Make this work on any tile)
-	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
-	//  and call RedrawBackground on them)
-	int rlc = rect.left / g_background->width,  rrc = rect.right  / g_background->width;
-	int rtc = rect.top  / g_background->height, rbc = rect.bottom / g_background->height;
-	if (rlc == rrc && rtc == rbc && rlc == 0 && rtc == 0)
-	{
-		//just draw the clipped portion
-		for (int y = rect.top; y < rect.bottom; y++)
-		{
-			memcpy_ints (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
-			memcpy_ints (&g_framebufferCopy         [y * g_vbeData->m_width   + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
-		}
-		
-		return;
-	}
-	
-	// Fill in the grid pattern ...
-	int grid_left  = (rect.left  - 1 + g_background->width)  / g_background->width;
-	int grid_right = (rect.right + 1 - g_background->width)  / g_background->width;
-	int grid_top   = (rect.top   - 1 + g_background->height) / g_background->height;
-	int grid_bottom= (rect.bottom+ 1 - g_background->height) / g_background->height;
-	
-	for (int y = grid_top, yi = grid_top * g_background->height; y <= grid_bottom; y++, yi += g_background->height)
-	{
-		for (int x = grid_left, xi = grid_left * g_background->width; x <= grid_right; x++, xi += g_background->width)
-		{
-			VidBlitImageForceOpaque (g_background, xi, yi);
-		}
-	}
-	
-	// Then fill in the edges.
-	int xl = grid_left  * g_background->width;
-	int xr = grid_right * g_background->width;
-	int yt = grid_top   * g_background->height;
-	int yb = grid_bottom* g_background->height;
-	
-	rect.bottom++, rect.right++;
+	/*rect.bottom++, rect.right++;
 	for (int y = rect.top; y != rect.bottom; y++)
 	{
-		int ymod = (y % g_background->height);
-		for (int x = rect.left, xa = rect.left % g_background->width; x != rect.right; x++, xa++)
+		for (int x = rect.left; x != rect.right; x++)
 		{
-			if (y >= yt && y < yb)
-			{
-				if (x == xl) 
-				{
-					x = xr;
-					xa = x % g_background->width;
-				}
-				else if (x >= xr)
-					xa = xa % g_background->width;
-			}
-			else
-				xa = xa % g_background->width;
 			//TODO: is a z-buffer check necessary?
-			VidPlotPixel (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
+			if (true/ * && ...* /)
+			{
+				VidPlotPixel (x, y, g_background->framebuffer[(x % g_background->width) + g_background->width * (y % g_background->height)]);
+			}
 		}
-	}
-	
+	}*/
 	//simple background:
-	/*VidFillRectangle (BACKGROUND_COLOR, rect);*/
-}
-
-void RedrawBackgdDetails()
-{
-	//WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, 0, JUSTIFY_CENTER, 0xFFFFFF);
-	WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, GetScreenHeight()-22, JUSTIFY_RIGHT, 0xFFFFFF);
-	WinRenderTextBkgd("For evaluation purposes only.",                  GetScreenHeight()-12, JUSTIFY_RIGHT, 0xFFFFFF);
+	VidFillRectangle (BACKGROUND_COLOR, rect);
 }
 
 void SetDefaultBackground()
 {
-	SLogMsg("Loading Wallpaper...");
 	g_background = &g_defaultBackground;
-	
-	//Try to open a file now.
-	//WORK: Change the file name here.  Should work
-	int fd = FiOpen("/Fat0/penile.bmp", O_RDONLY);
-	if (fd < 0)
-	{
-		SLogMsg("Could not open wallpaper. Using default one!");
-		g_BackgroundSolidColorActive = true;
-		return;
-	}
-	
-	int size = FiTellSize(fd);
-	
-	uint8_t*pData=MmAllocate(size);
-	if (!pData)
-	{
-		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
-		g_BackgroundSolidColorActive = true;
-		return;
-	}
-	
-	FiRead(fd, pData, size);
-	
-	FiClose(fd);
-	
-	int errorCode = 0;
-	Image* pImage = LoadBitmap(pData, &errorCode);
-	MmFree(pData);
-	
-	if (pImage)
-	{
-		g_background = pImage;
-		g_BackgroundSolidColorActive = false;
-	}
-	else
-	{
-		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
-		g_BackgroundSolidColorActive = true;
-	}
 }
 
 #endif
@@ -411,7 +192,6 @@ void MovePreExistingWindowToFront(short windowIndex)
 	{
 		if (g_windowDrawOrder[i] == windowIndex)
 		{
-			g_windowDrawOrder[i] = -1;
 			//move everything after it back
 			memcpy (g_windowDrawOrder + i, g_windowDrawOrder + i + 1, sizeof (short) * (WINDOWS_MAX - i - 1));
 			g_windowDrawOrder[WINDOWS_MAX-1] = windowIndex;
@@ -427,7 +207,7 @@ void KillWindowDepthBuffer ()
 {
 	if (g_windowDepthBuffer)
 	{
-		MmFreeK(g_windowDepthBuffer);
+		MmFree(g_windowDepthBuffer);
 		g_windowDepthBuffer = NULL;
 		g_windowDepthBufferSzBytes = 0;
 	}
@@ -437,7 +217,7 @@ void InitWindowDepthBuffer ()
 	KillWindowDepthBuffer();
 	
 	g_windowDepthBufferSzBytes = sizeof (short) * GetScreenSizeX() * GetScreenSizeY();
-	g_windowDepthBuffer = MmAllocateK(g_windowDepthBufferSzBytes);
+	g_windowDepthBuffer = MmAllocate(g_windowDepthBufferSzBytes);
 }
 void SetWindowDepthBuffer (int windowIndex, int x, int y)
 {
@@ -453,29 +233,46 @@ short GetWindowIndexInDepthBuffer (int x, int y)
 //TODO: make this really work
 void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int index)
 {
-	int hx = GetScreenSizeX(), hy = GetScreenSizeY();
-	int idxl = r.left, idxr = r.right;
-	if (idxl < 0) idxl = 0;
-	if (idxr < 0) idxr = 0;
-	if (idxl >= hx) return;//completely OOB
-	if (idxr >= hx) idxr = hx;
-	int gap = idxr - idxl;
-	if (gap <= 0) return;//it will never be bigger than zero if it is now
-	int gapdiv2 = gap / 2;
-	idxl += hx * r.top;
-	for (int y = r.top; y < r.bottom; y++)
+	//if (!framebuffer)
 	{
-		if (y >= hy) break;//no point.
-		if (y < 0) continue;
-		memset_ints(&g_windowDepthBuffer[idxl], index<<16|index, gapdiv2);
-		g_windowDepthBuffer[idxr-1] = index;
-		
-		idxl += hx;
+		int hx = GetScreenSizeX(), hy = GetScreenSizeY();
+		for (int y = r.top; y < r.bottom; y++)
+		{
+			if (y >= hy) break;//no point.
+			if (y < 0) continue;
+			for (int x = r.left; x < r.right; x++)
+			{
+				int idx = GetScreenSizeX() * y + x;
+				if (x < 0) continue;
+				if (x >= hx) break;//no point.
+				
+				g_windowDepthBuffer[idx] = index;
+			}		
+		}
 	}
+	/*else
+	{
+		int hx = GetScreenSizeX(), hy = GetScreenSizeY();
+		for (int y = r.top; y < r.bottom; y++)
+		{
+			if (y >= hy) break;//no point.
+			if (y < 0) continue;
+			for (int x = r.left; x < r.right; x++)
+			{
+				int idx = GetScreenSizeX() * y + x;
+				if (x < 0) continue;
+				if (x >= hx) break;//no point.
+				
+				if (*framebuffer != TRANSPARENT)
+					g_windowDepthBuffer[idx] = index;
+				framebuffer++;
+			}		
+		}
+	}*/
 }
 void UpdateDepthBuffer (void)
 {
-	memset_ints (g_windowDepthBuffer, 0xFFFFFFFF, g_windowDepthBufferSzBytes/4);
+	memset (g_windowDepthBuffer, 0xFF, g_windowDepthBufferSzBytes);
 	
 	for (int i = 0; i < WINDOWS_MAX; i++)
 	{
@@ -533,8 +330,9 @@ void WindowManagerShutdown()
 	g_shutdownRequest = true;
 }
 
-void UndrawWindow (Window* pWindow)
+void HideWindow (Window* pWindow)
 {
+	pWindow->m_hidden = true;
 	UpdateDepthBuffer();
 	
 	//redraw the background and all the things underneath:
@@ -544,8 +342,10 @@ void UndrawWindow (Window* pWindow)
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
 	
 	//higher = faster, but may miss some smaller windows
-	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += 1) {
-		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += 1) {
+	//a precision of 10 is a-ok if the window will never go beyond 11x11 in size
+	#define PRECISION 10
+	for (int y = pWindow->m_rect.top; y <= pWindow->m_rect.bottom; y += PRECISION) {
+		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += PRECISION) {
 			short h = GetWindowIndexInDepthBuffer(x,y);
 			if (h == -1) continue;
 			//check if it's present in the windowDrawList
@@ -577,12 +377,6 @@ void UndrawWindow (Window* pWindow)
 	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 }
 
-void HideWindow (Window* pWindow)
-{
-	pWindow->m_hidden = true;
-	UndrawWindow(pWindow);
-}
-
 void ShowWindow (Window* pWindow)
 {
 	pWindow->m_hidden = false;
@@ -603,13 +397,13 @@ void ReadyToDestroyWindow (Window* pWindow)
 	
 	if (pWindow->m_vbeData.m_framebuffer32)
 	{
-		MmFreeK (pWindow->m_vbeData.m_framebuffer32);
+		MmFree (pWindow->m_vbeData.m_framebuffer32);
 		pWindow->m_vbeData.m_available     = 0;
 		pWindow->m_vbeData.m_framebuffer32 = NULL;
 	}
 	if (pWindow->m_pControlArray)
 	{
-		MmFreeK(pWindow->m_pControlArray);
+		MmFree(pWindow->m_pControlArray);
 		pWindow->m_controlArrayLen = 0;
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
@@ -705,19 +499,17 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
 	pWnd->m_vbeData.m_available     = true;
-	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
+	pWnd->m_vbeData.m_framebuffer32 = MmAllocate (sizeof (uint32_t) * xSize * ySize);
 	ZeroMemory (pWnd->m_vbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
 	pWnd->m_vbeData.m_width         = xSize;
 	pWnd->m_vbeData.m_height        = ySize;
 	pWnd->m_vbeData.m_pitch32       = xSize;
 	pWnd->m_vbeData.m_bitdepth      = 2;     // 32 bit :)
 	
-	pWnd->m_iconID = ICON_APPLICATION;
-	
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
 	size_t controlArraySize = sizeof(Control) * pWnd->m_controlArrayLen;
-	pWnd->m_pControlArray   = (Control*)MmAllocateK(controlArraySize);
+	pWnd->m_pControlArray   = (Control*)MmAllocate(controlArraySize);
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
@@ -761,15 +553,11 @@ void OnUILeftClick (int mouseX, int mouseY)
 		{
 			SelectThisWindowAndUnselectOthers (window);
 			
-			//bool wasSelectedBefore = g_currentlyClickedWindow == idx;
 			g_currentlyClickedWindow = idx;
 			
-			if (!window->m_minimized)
-			{
-				int x = mouseX - window->m_rect.left;
-				int y = mouseY - window->m_rect.top;
-				WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-			}
+			int x = mouseX - window->m_rect.left;
+			int y = mouseY - window->m_rect.top;
+			WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
 	else
@@ -791,58 +579,39 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
 	
 	// if we're not frozen AND we have a title to drag on
-	if (window->m_minimized || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
+	if (!(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
 	{
 		if (!window->m_isBeingDragged)
 		{
 			//are we in the title bar region? TODO
 			Rectangle recta = window->m_rect;
-			if (!window->m_minimized)
-			{
-				recta.right  -= recta.left; recta.left = 0;
-				recta.bottom -= recta.top;  recta.top  = 0;
-				recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS;
-				recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
-				recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
-			}
+			recta.right  -= recta.left; recta.left = 0;
+			recta.bottom -= recta.top;  recta.top  = 0;
+			recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS;
+			recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
+			recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
 			
 			int x = mouseX - window->m_rect.left;
 			int y = mouseY - window->m_rect.top;
 			Point mousePoint = {x, y};
 			
-			if (RectangleContains(&recta, &mousePoint) || window->m_minimized)
+			if (RectangleContains(&recta, &mousePoint))
 			{
 				window->m_isBeingDragged = true;
 				
-				if (g_RenderWindowContents)
-				{
-					HideWindow(window);
-				}
+				HideWindow(window);
 				
 				//change cursor:
-				if (window->m_minimized)
-				{
-					Image* p = GetIconImage(window->m_iconID, 32);
-					g_windowDragCursor.width    = p->width;
-					g_windowDragCursor.height   = p->height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = p->framebuffer;
-					g_windowDragCursor.m_transparency = true;
-				}
-				else
-				{
-					g_windowDragCursor.width    = window->m_vbeData.m_width;
-					g_windowDragCursor.height   = window->m_vbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
-					g_windowDragCursor.m_transparency = false;
-				}
+				g_windowDragCursor.width    = window->m_vbeData.m_width;
+				g_windowDragCursor.height   = window->m_vbeData.m_height;
+				g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
+				g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+				g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+				g_windowDragCursor.m_transparency = false;
 				
 				SetCursor (&g_windowDragCursor);
 			}
-			else if (!window->m_minimized)
+			else
 			{
 				WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
@@ -869,16 +638,9 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
 	if (window->m_isBeingDragged)
 	{
-		if (!g_RenderWindowContents)
-		{
-			HideWindow(window);
-		}
-		
 		Rectangle newWndRect;
 		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
 		newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
-		if (newWndRect.top < 0)
-			newWndRect.top = 0;
 		newWndRect.right  = newWndRect.left + GetWidth(&window->m_rect);
 		newWndRect.bottom = newWndRect.top  + GetHeight(&window->m_rect);
 		window->m_rect = newWndRect;
@@ -911,11 +673,7 @@ void OnUIRightClick (int mouseX, int mouseY)
 	
 	if (idx > -1)
 	{
-		Window* window = GetWindowFromIndex(idx);
-		
-		if (window)
-			if (window->m_minimized)
-				WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
+		//Window* window = GetWindowFromIndex(idx);
 		
 		//hide this window:
 		//HideWindow(window);
@@ -932,12 +690,19 @@ void OnUIRightClick (int mouseX, int mouseY)
 
 void RedrawEverything()
 {
-	VBEData* pBkp = g_vbeData;
-	VidSetVBEData(NULL);
+	//cli;
+//	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
+	/*VidFillScreen(BACKGROUND_COLOR);
+	
+	//wait for apps to fully setup their windows:
+	sti;
+	for (int i = 0; i < 50000; i++)
+		hlt;
+	cli;*/
+	
 	UpdateDepthBuffer();
 	
-	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
-	RedrawBackground (r);
+	//sti;
 	
 	//for each window, send it a EVENT_PAINT:
 	for (int p = 0; p < WINDOWS_MAX; p++)
@@ -945,10 +710,8 @@ void RedrawEverything()
 		Window* pWindow = &g_windows [p];
 		if (!pWindow->m_used) continue;
 		
-		//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
-		pWindow->m_renderFinished = true;
+		WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 	}
-	VidSetVBEData(pBkp);
 }
 
 bool HandleMessages(Window* pWindow);
@@ -973,22 +736,14 @@ void WindowManagerOnShutdown(void)
 	UNUSED int useless = 0;
 	KeStartTask(WindowManagerOnShutdownTask, 0, &useless);
 }
-void SetupWindowManager()
+
+void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
-	if (g_windowManagerRunning)
-	{
-		LogMsg("Cannot start up window manager again.");
-		return;
-	}
-	
-	LogMsg("Please wait...");
-	
-	g_debugConsole.curY = g_debugConsole.height / 2;
 	g_clickQueueSize = 0;
 	// load background?
 	memset (&g_windows, 0, sizeof (g_windows));
 	InitWindowDepthBuffer();
-	//CoClearScreen (&g_debugConsole);
+	CoClearScreen (&g_debugConsole);
 	g_debugConsole.curX = g_debugConsole.curY = 0;
 	g_debugConsole.pushOrWrap = 1;
 	
@@ -1015,7 +770,6 @@ void SetupWindowManager()
 	//VidSetFont(FONT_TAMSYN_REGULAR);
 	//VidSetFont(FONT_FAMISANS);
 	//VidSetFont(FONT_GLCD);
-	//VidSetFont(FONT_BIGTEST);
 	
 	WindowCallInitialize ();
 	
@@ -1031,69 +785,36 @@ void SetupWindowManager()
 	errorCode = 0;
 	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	/*
-	//create the debug monitor task.
-	errorCode = 0;
-	char* pb = MmAllocate(512);
-	strcpy(pb, "--HookDebugConsole");
-	pTask = KeStartTask(TerminalHostTask, (int)pb, &errorCode);
-	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
-	*/
 #endif
-}
-
-bool g_heldAlt = false;
-void HandleKeypressOnWindow(unsigned char key)
-{
-	if (key == KEY_ALT)
-	{
-		g_heldAlt = true;
-	}
-	else if (key == (KEY_ALT | SCANCODE_RELEASE))
-	{
-		g_heldAlt = false;
-		KillAltTab();
-	}
-	else if (key == KEY_TAB && g_heldAlt)
-		OnPressAltTabOnce();
-}
-void WindowManagerTask(__attribute__((unused)) int useless_argument)
-{
-	SetupWindowManager();
 	
 	int timeout = 10;
 	int UpdateTimeout = 100, shutdownTimeout = 500;
 	
 	while (true)
 	{
-		bool handled = false, hasRedrawnThem = false;
 		UpdateFPSCounter();
-		CrashReporterCheck();
+		bool bufferHasSomething = false;
+		char nextTypedChar = '\0';
+		if (!KbIsBufferEmpty())
+		{
+			bufferHasSomething = true;
+			
+			nextTypedChar = KbGetKeyFromBuffer();
+		}
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
 			Window* pWindow = &g_windows [p];
 			if (!pWindow->m_used) continue;
 			
-			/*if (UpdateTimeout == 0)
+			if (UpdateTimeout == 0)
 			{
 				WindowRegisterEvent (pWindow, EVENT_UPDATE, 0, 0);
 				UpdateTimeout = 100;
-			}*/
+			}
 			
-			if (pWindow->m_isSelected)
+			if (pWindow->m_isSelected && bufferHasSomething)
 			{
-				while (!KbIsBufferEmpty())
-					WindowRegisterEvent (pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
-				
-				while (!KbIsRawBufferEmpty())
-				{
-					unsigned char key = KbGetKeyFromRawBuffer();
-					WindowRegisterEvent(pWindow, EVENT_KEYRAW, key, 0);
-					
-					HandleKeypressOnWindow(key);
-					handled = true;
-				}
+				WindowRegisterEvent (pWindow, EVENT_KEYPRESS, nextTypedChar, 0);
 			}
 			
 		#if !THREADING_ENABLED
@@ -1110,11 +831,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				//cli;
 				if (pWindow->m_renderFinished)
 				{
-					if (!hasRedrawnThem)
-					{
-						hasRedrawnThem = true;
-						RedrawBackgdDetails();
-					}
 					pWindow->m_renderFinished = false;
 					RenderWindow(pWindow);
 					Point p = { g_mouseX, g_mouseY };
@@ -1135,12 +851,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		}
 		UpdateTimeout--;
 		
-		if (!handled)
-		{
-			unsigned char key = KbGetKeyFromRawBuffer();
-			HandleKeypressOnWindow(key);
-		}
-		UpdateAltTabWindow();
 		//cli;
 		ACQUIRE_LOCK (g_clickQueueLock);
 		
@@ -1195,7 +905,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			{
 				LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
 				LogMsg("STATUS: We survived!  Exitting in a brief moment.");
-				//g_windowManagerRunning = false;
+				g_windowManagerRunning = false;
 				
 				// On Shutdown:
 				g_shutdownWaiting = false;
@@ -1270,14 +980,14 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		//series: 2, 3, 4, 6, 9, 13, 19, 28, 42, ...
 		
 		size_t newSize = sizeof(Control) * cal;
-		Control* newCtlArray = (Control*)MmAllocateK(newSize);
+		Control* newCtlArray = (Control*)MmAllocate(newSize);
 		memset(newCtlArray, 0, newSize);
 		
 		// copy stuff into the new control array:
 		memcpy(newCtlArray, pWindow->m_pControlArray, sizeof(Control) * pWindow->m_controlArrayLen);
 		
 		// free the previous array:
-		MmFreeK(pWindow->m_pControlArray);
+		MmFree(pWindow->m_pControlArray);
 		
 		// then assign the new one
 		pWindow->m_pControlArray   = newCtlArray;
@@ -1332,25 +1042,6 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 		if (pControl->m_scrollBarData.m_pos >= pControl->m_scrollBarData.m_max)
 			pControl->m_scrollBarData.m_pos =  pControl->m_scrollBarData.m_max - 1;
 	}
-	else if (type == CONTROL_TEXTINPUT)
-	{
-		//by default you have single line
-		pControl->m_textInputData.m_onlyOneLine     = true;
-		pControl->m_textInputData.m_showLineNumbers = false;
-		pControl->m_textInputData.m_focused         = false;
-		if (pControl->m_parm1 & TEXTEDIT_MULTILINE)
-			pControl->m_textInputData.m_onlyOneLine     = false;
-		if (pControl->m_parm1 & TEXTEDIT_LINENUMS)
-			pControl->m_textInputData.m_showLineNumbers = true;
-		if (pControl->m_parm1 & TEXTEDIT_READONLY)
-			pControl->m_textInputData.m_readOnly        = true;
-	}
-	else if (type == CONTROL_CHECKBOX)
-	{
-		//by default you have single line
-		pControl->m_checkBoxData.m_checked = p1 != 0;
-		pControl->m_checkBoxData.m_clicked = 0;
-	}
 	
 	//register an event for the window:
 	//WindowRegisterEvent(pWindow, EVENT_PAINT, 0, 0);
@@ -1383,53 +1074,278 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 	// Go backwards, because some controls might spawn other controls
 	// They may want to be checked AFTER their children controls, so
 	// we just go backwards.
-	
-	//Prioritise menu bar, as it's always at the top
-	Control* pMenuBar = NULL;
-	
-	WidgetEventHandler pHandler = GetWidgetOnEventFunction(CONTROL_MENUBAR);
 	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
 	{
-		if (pWindow->m_pControlArray[i].m_active)
-		{
-			Control* p = &pWindow->m_pControlArray[i];
-			if (p->OnEvent == pHandler)
-			{
-				pMenuBar = &pWindow->m_pControlArray[i];
-				break;
-			}
-		}
-	}
-	
-	if (eventType != EVENT_PAINT && eventType != EVENT_CLICKCURSOR)
-		if (pMenuBar)
-			if (pMenuBar->OnEvent)
-				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
-					return;
-	
-	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
-	{
-		if (&pWindow->m_pControlArray[i] == pMenuBar) continue; // Skip over the menu bar.
-		
 		if (pWindow->m_pControlArray[i].m_active)
 		{
 			Control* p = &pWindow->m_pControlArray[i];
 			if (p->OnEvent)
-				if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
-					return;
+				p->OnEvent(p, eventType, parm1, parm2, pWindow);
 		}
 	}
-	
-	if (eventType == EVENT_PAINT || eventType == EVENT_CLICKCURSOR)
-		if (pMenuBar)
-			if (pMenuBar->OnEvent)
-				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
-					return;
 }
 
 #endif
 
-#include "modals.h"
+// Modal dialog box code.
+#if 1
+
+//Forward declaration
+void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+
+void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	DefaultWindowProc (pWindow, messageType, parm1, parm2);
+}
+
+void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	if (messageType == EVENT_COMMAND)
+	{
+		//Which button did we click?
+		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
+		{
+			//We clicked a valid button.  Return.
+			pWindow->m_data = (void*)parm1;
+		}
+	}
+	else
+		DefaultWindowProc (pWindow, messageType, parm1, parm2);
+}
+
+int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
+{
+	// Free the locks that have been acquired.
+	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
+	if  (wnLock) FREE_LOCK (g_windowLock);
+	if  (scLock) FREE_LOCK (g_screenLock);
+	
+	bool wasSelectedBefore = false;
+	if (pWindow)
+	{
+		eqLock = pWindow->m_eventQueueLock;
+		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+	
+		wasSelectedBefore = pWindow->m_isSelected;
+		if (wasSelectedBefore)
+		{
+			pWindow->m_isSelected = false;
+			PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		}
+	}
+	
+	VBEData* pBackup = g_vbeData;
+	
+	VidSetVBEData(NULL);
+	// Freeze the current window.
+	int old_flags = 0;
+	WindowProc pProc;
+	if (pWindow)
+	{
+		pProc = pWindow->m_callback;
+		old_flags = pWindow->m_flags;
+		pWindow->m_callback = MessageBoxWindowLightCallback;
+		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
+	}
+	
+	int szX, szY;
+	// Measure the pText text.
+	VidTextOutInternal (pText, 0, 0, 0, 0, true, &szX, &szY);
+	
+	szY += 12;
+	
+	int  iconID = style >> 16;
+	bool iconAvailable = iconID != ICON_NULL;
+	
+	if (iconAvailable)
+		if (szY < 32)
+			szY = 32;
+	
+	int buttonWidth  = 70;
+	int buttonWidthG = 76;
+	int buttonHeight = 20;
+	
+	// We now have the text's size in szX and szY.  Get the window size.
+	int wSzX = szX + 
+			   40 + //X padding on both sides
+			   10 + //Gap between icon and text.
+			   32 * iconAvailable + //Icon's size.
+			   5 +
+			   WINDOW_RIGHT_SIDE_THICKNESS;//End.
+	int wSzY = szY + 
+			   20 + //Y padding on both sides
+			   buttonHeight + //Button's size.
+			   TITLE_BAR_HEIGHT +
+			   5 + 
+			   WINDOW_RIGHT_SIDE_THICKNESS;
+	
+	int wPosX = (GetScreenSizeX() - wSzX) / 2,
+		wPosY = (GetScreenSizeY() - wSzY) / 2;
+	
+	// Spawn a new window.
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE);
+	
+	// Add the basic controls required.
+	Rectangle rect;
+	rect.left   = 20 + iconAvailable*32 + 10;
+	rect.top    = 20;
+	rect.right  = wSzX - 20;
+	rect.bottom = wSzY - buttonHeight - 20;
+	AddControl (pBox, CONTROL_TEXTCENTER, rect, pText, 0x10000, 0, TEXTSTYLE_VCENTERED);
+	
+	if (iconAvailable)
+	{
+		rect.left = 20;
+		rect.top  = 20 + (szY - 32) / 2;
+		rect.right = rect.left + 32;
+		rect.bottom= rect.top  + 32;
+		AddControl (pBox, CONTROL_ICON, rect, NULL, 0x10001, iconID, 0);
+	}
+	
+	int buttonStyle = style & 0x7;
+	switch (buttonStyle)
+	{
+		case MB_OK:
+		{
+			rect.left = (wSzX - buttonWidth) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
+			break;
+		}
+		case MB_RESTART:
+		{
+			rect.left = (wSzX - buttonWidth) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Restart", MBID_OK, 0, 0);
+			break;
+		}
+		case MB_YESNOCANCEL:
+		{
+			rect.left = (wSzX - buttonWidth) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "No", MBID_NO, 0, 0);
+			rect.right -= buttonWidthG;
+			rect.left  -= buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Yes", MBID_YES, 0, 0);
+			rect.right += 2 * buttonWidthG;
+			rect.left  += 2 * buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
+			break;
+		}
+		case MB_ABORTRETRYIGNORE:
+		{
+			rect.left = (wSzX - buttonWidth) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Retry", MBID_RETRY, 0, 0);
+			rect.right -= buttonWidthG;
+			rect.left  -= buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Abort", MBID_ABORT, 0, 0);
+			rect.right += 2 * buttonWidthG;
+			rect.left  += 2 * buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Ignore", MBID_IGNORE, 0, 0);
+			break;
+		}
+		case MB_CANCELTRYCONTINUE:
+		{
+			rect.left = (wSzX - buttonWidth) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Try again", MBID_TRY_AGAIN, 0, 0);
+			rect.right -= buttonWidthG;
+			rect.left  -= buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
+			rect.right += 2 * buttonWidthG;
+			rect.left  += 2 * buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Continue", MBID_CONTINUE, 0, 0);
+			break;
+		}
+		case MB_YESNO:
+		{
+			rect.left = (wSzX - buttonWidthG * 2) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Yes", MBID_YES, 0, 0);
+			rect.right += buttonWidthG;
+			rect.left  += buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "No", MBID_NO, 0, 0);
+			break;
+		}
+		case MB_OKCANCEL:
+		{
+			rect.left = (wSzX - buttonWidthG * 2) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
+			rect.right += buttonWidthG;
+			rect.left  += buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
+			break;
+		}
+		case MB_RETRYCANCEL:
+		{
+			rect.left = (wSzX - buttonWidthG * 2) / 2;
+			rect.top  = (wSzY - buttonHeight - 10);
+			rect.right  = rect.left + buttonWidth;
+			rect.bottom = rect.top  + buttonHeight;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Retry", MBID_RETRY, 0, 0);
+			rect.right += buttonWidthG;
+			rect.left  += buttonWidthG;
+			AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
+			break;
+		}
+	}
+	
+	// Handle messages for this modal dialog window.
+	while (HandleMessages(pBox))
+	{
+		if (pBox->m_data)
+		{
+			break;//we're done.
+		}
+		//hlt;
+		KeTaskDone();
+	}
+	
+	int dataReturned = (int)pBox->m_data;
+	
+	ReadyToDestroyWindow (pBox);
+	
+	if (pWindow)
+	{
+		pWindow->m_callback = pProc;
+		pWindow->m_flags    = old_flags;
+	}
+	g_vbeData = pBackup;
+	
+	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
+	if (wasSelectedBefore)
+	{
+		pWindow->m_isSelected = true;
+		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+	}
+	
+	// Re-acquire the locks that have been freed before.
+	if (pWindow)
+	{
+		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+	}
+	if (wnLock) ACQUIRE_LOCK (g_windowLock);
+	if (scLock) ACQUIRE_LOCK (g_screenLock);
+	return dataReturned;
+}
+
+#endif
 
 // Event processors called by user processes.
 #if 1
@@ -1462,14 +1378,6 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
-	if (pWindow->m_minimized)
-	{
-		// Draw as icon
-		RenderIconForceSize(pWindow->m_iconID, pWindow->m_rect.left, pWindow->m_rect.top, 32);
-		
-		return;
-	}
-	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
 	int sx = GetScreenWidth(), sy = GetScreenHeight();
@@ -1482,7 +1390,7 @@ void RenderWindow (Window* pWindow)
 	int o = 0;
 	int x2 = x + tw, y2 = y + th;
 	
-	while (y <= -1)
+	while (y < -1)
 	{
 		o += pWindow->m_vbeData.m_width;
 		y++;
@@ -1492,15 +1400,16 @@ void RenderWindow (Window* pWindow)
 	{
 		UpdateDepthBuffer();
 	}
+	
 	bool isAboveEverything = true;
 	
 	// we still gotta decide...
 	if (!pWindow->m_isSelected)
 	{
-		for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
+		for (int j = y; j < y2; j += WINDOW_MIN_WIDTH-1)
 		{
 			if (j >= sy) break;
-			for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+			for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
 			{
 				short n = GetWindowIndexInDepthBuffer (i, j);
 				if (n != windIndex)
@@ -1509,25 +1418,12 @@ void RenderWindow (Window* pWindow)
 					break;
 				}
 			}
-			short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
-			if (n != windIndex)
-			{
-				isAboveEverything = false;
-			}
-		}
-		short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
-		if (n != windIndex)
-		{
-			isAboveEverything = false;
 		}
 	}
 	
 	if (isAboveEverything)
 	{
 		//optimization
-		//TODO FIXME: Crash when placing at the top right of the screen so that:
-		//1) The y top position < 0
-		//2) The x right position > ScreenWidth.
 		int ys = pWindow->m_rect.top;
 		int ye = ys + pWindow->m_vbeData.m_height;
 		int kys = 0, kzs = 0;
@@ -1550,46 +1446,41 @@ void RenderWindow (Window* pWindow)
 		if (xe >= GetScreenWidth())
 			xe =  GetScreenWidth();
 		
-		int xd = (xe - xs);
-		int oms = ys * g_mainScreenVBEData.m_pitch32 + xs,
-		    omc = ys * g_mainScreenVBEData.m_width + xs;
+		int xd = (xe - xs) * sizeof (uint32_t);
+		int oms = y * g_mainScreenVBEData.m_pitch32 + xs,
+		    omc = y * g_mainScreenVBEData.m_width + xs;
 		for (int y = ys, ky = kys, kz = kzs; y != ye; y++, kz++)
 		{
 			ky = kz * pWindow->m_vbeData.m_width + off;
 			//just memcpy shit
-			memcpy_ints(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
-			memcpy_ints(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			align4_memcpy(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
+			align4_memcpy(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
 			oms += g_mainScreenVBEData.m_pitch32;
 			omc += g_mainScreenVBEData.m_width;
 		}
 	}
 	else
 	{
-		int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
-		int offfb,                         offcp;
 		for (int j = y; j != y2; j++)
 		{
 			if (j >= sy) break;
-			offfb = j * pitch + x, offcp = j * width + x;
 			for (int i = x; i != x2; i++)
 			{
-				if (i < sx && i >= 0)
+				if (i < sx && i > 0)
 				{
-					short n = g_windowDepthBuffer [offcp];
+					short n = GetWindowIndexInDepthBuffer (i, j);
 					if (n == windIndex)
 					{
-						g_framebufferCopy         [offcp] = texture[o];
-						g_vbeData->m_framebuffer32[offfb] = texture[o];
+						blpxinl (i, j, texture[o]);
 					}
-					offcp++;
-					offfb++;
 				}
 				o++;
 			}
 		}
 	}
+	//FREE_LOCK(g_screenLock);
 }
-extern const unsigned char* g_pCurrentFont;
+
 void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 {
 	Rectangle recta = pWindow->m_rect;
@@ -1638,11 +1529,9 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	{
 		Rectangle rectc = rectb;
 		rectc.left++;
-		rectc.top += TITLE_BAR_HEIGHT-2;
+		rectc.top += TITLE_BAR_HEIGHT;
 		rectc.right--;
 		rectc.bottom--;
-		
-		int iconGap = 16 * (pWindow->m_iconID != ICON_NULL);
 		
 		VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
 		
@@ -1650,11 +1539,11 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		rectb.left++;
 		rectb.top ++;
 		rectb.right--;
-		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 1;
+		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT + 1;
 		
 		//todo: gradients?
 		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
-		VidFillRectHGradient(
+		VidFillRectVGradient(
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
 			rectb.left,
@@ -1663,23 +1552,8 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 			rectb.bottom
 		);
 	
-		int textwidth, __attribute__((unused)) height;
-		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
-		
-		int MinimizAndCloseGap = ((pWindow->m_flags & WF_NOMINIMZ) ? 0:16) + ((pWindow->m_flags & WF_NOCLOSE) ? 0:16);
-		
-		int offset = (rectb.right-rectb.left-iconGap*2-textwidth-MinimizAndCloseGap)/2;
-	
-		/*const unsigned char* pBkp = g_pCurrentFont;
-		VidSetFont(FONT_BIGTEST2);*/
-		
-		VidTextOut(pWindow->m_title, rectb.left + offset + 1 + iconGap, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pWindow->m_title, rectb.left + offset + 0 + iconGap, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
-		
-		//g_pCurrentFont = pBkp;
-		
-		if (pWindow->m_iconID != ICON_NULL)
-			RenderIconForceSize(pWindow->m_iconID, rectb.left+1, rectb.top+1, 16);
+		VidTextOut(pWindow->m_title, rectb.left + 2, rectb.top + 3, WINDOW_TITLE_TEXT_COLOR_SHADOW, TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + 1, rectb.top + 2, WINDOW_TITLE_TEXT_COLOR, TRANSPARENT);
 	}
 	
 #undef X
@@ -1699,16 +1573,8 @@ void PaintWindowBorder(Window* pWindow)
 }
 void PaintWindowBackgroundAndBorder(Window* pWindow)
 {
-	//VidFillScreen(TRANSPARENT);
+	VidFillScreen(TRANSPARENT);
 	PaintWindowBorder(pWindow);
-}
-
-void RequestRepaintNew (Window* pWindow)
-{
-	//paint the window background:
-	PaintWindowBackgroundAndBorder (pWindow);
-	
-	CallWindowCallbackAndControls  (pWindow, EVENT_PAINT, 0, 0);
 }
 bool IsEventDestinedForControlsToo(int type)
 {
@@ -1719,8 +1585,6 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_MOVECURSOR:
 		case EVENT_CLICKCURSOR:
 		case EVENT_RELEASECURSOR:
-		case EVENT_KEYPRESS:
-		case EVENT_KEYRAW:
 			return true;
 	}
 	return false;
@@ -1733,20 +1597,13 @@ int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, int eq
 	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
 	return eq * eqp1 * eqp2;
 }
-int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2)
-{
-	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
-	
-	if (IsEventDestinedForControlsToo(eq))
-		ControlProcessEvent(pWindow, eq, eqp1, eqp2);
-	
-	return eq * eqp1 * eqp2;
-}
 
 int someValue = 0;
 bool HandleMessages(Window* pWindow)
 {
 	// grab the lock
+	//ACQUIRE_LOCK (g_screenLock);
+	//ACQUIRE_LOCK (g_windowLock);
 	ACQUIRE_LOCK (pWindow->m_eventQueueLock);
 	
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
@@ -1755,39 +1612,6 @@ bool HandleMessages(Window* pWindow)
 		VidSetVBEData (&pWindow->m_vbeData);
 		pWindow->m_vbeData.m_dirty = 0;
 		pWindow->m_renderFinished = false;
-		if (pWindow->m_eventQueue[i] == EVENT_MINIMIZE)
-		{
-			VidSetVBEData (NULL);
-			HideWindow(pWindow);
-			if (!pWindow->m_minimized)
-			{
-				pWindow->m_minimized   = true;
-				pWindow->m_rectBackup  = pWindow->m_rect;
-				
-				pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
-				pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
-				pWindow->m_rect.right  = pWindow->m_rect.left + 32;
-				pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
-			}
-			pWindow->m_hidden = false;
-			UpdateDepthBuffer();
-			VidSetVBEData (&pWindow->m_vbeData);
-		}
-		else if (pWindow->m_eventQueue[i] == EVENT_UNMINIMIZE)
-		{
-			VidSetVBEData (NULL);
-			HideWindow(pWindow);
-			pWindow->m_minimized   = false;
-			pWindow->m_rect = pWindow->m_rectBackup;
-			pWindow->m_hidden = false;
-			//pWindow->m_rect.right  = pWindow->m_rect.left + pWindow->m_vbeData.m_width;
-			//pWindow->m_rect.bottom = pWindow->m_rect.top  + pWindow->m_vbeData.m_height;
-			UpdateDepthBuffer();
-			VidSetVBEData (&pWindow->m_vbeData);
-			PaintWindowBackgroundAndBorder(pWindow);
-			pWindow->m_eventQueue[pWindow->m_eventQueueSize++] = EVENT_PAINT;
-			pWindow->m_renderFinished = true;
-		}
 		if (pWindow->m_eventQueue[i] == EVENT_CREATE)
 		{
 			PaintWindowBackgroundAndBorder(pWindow);
@@ -1795,21 +1619,17 @@ bool HandleMessages(Window* pWindow)
 		}
 		if (pWindow->m_eventQueue[i] == EVENT_PAINT)
 		{
-			PaintWindowBorderNoBackgroundOverpaint(pWindow);
+			PaintWindowBackgroundAndBorder(pWindow);
 		}
 		
-		someValue = CallWindowCallbackAndControls(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
+		someValue = CallWindowCallback(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
+		
+		if (IsEventDestinedForControlsToo(pWindow->m_eventQueue[i]))
+			ControlProcessEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
 		
 		//reset to main screen
 		VidSetVBEData (NULL);
-		if (!pWindow->m_minimized)
-		{
-			if (pWindow->m_vbeData.m_dirty)
-			{
-				pWindow->m_renderFinished = true;
-			}
-		}
-		else
+		if (pWindow->m_vbeData.m_dirty)
 			pWindow->m_renderFinished = true;
 		
 		//if the contents of this window have been modified, redraw them:
@@ -1827,9 +1647,18 @@ bool HandleMessages(Window* pWindow)
 			pWindow->m_eventQueueSize = 0;
 			
 			FREE_LOCK (pWindow->m_eventQueueLock);
-			KeTaskDone();
+			//FREE_LOCK (g_windowLock);
+			//FREE_LOCK (g_screenLock);
+			//hlt;
+			KeTaskDone();//hlt; //give it a good halt
+			
+			//Ready to destroy the window.
+			//VBEData* p = g_vbeData;
+			//p = &g_mainScreenVBEData;
 			
 			ReadyToDestroyWindow(pWindow);
+			//BOOM!
+			//p = backup;
 			
 			return false;
 		}
@@ -1837,6 +1666,9 @@ bool HandleMessages(Window* pWindow)
 	pWindow->m_eventQueueSize = 0;
 	
 	FREE_LOCK (pWindow->m_eventQueueLock);
+	//FREE_LOCK (g_windowLock);
+	//FREE_LOCK (g_screenLock);
+	//hlt;
 	KeTaskDone();//hlt; //give it a good halt
 	return true;
 }
@@ -1863,23 +1695,14 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		case EVENT_CREATE:
 		{
 			// Add a default QUIT button control.
+			Rectangle rect;
+			rect.right = pWindow->m_vbeData.m_width - 4 - WINDOW_RIGHT_SIDE_THICKNESS;
+			rect.left  = rect.right - 12; //The button will be 8x8.
+			rect.top   = 3;
+			rect.bottom= rect.top + 12;
 			
 			if (!(pWindow->m_flags & WF_NOCLOSE))
-			{
-				Rectangle rect;
-				rect.right = pWindow->m_vbeData.m_width - 4 - WINDOW_RIGHT_SIDE_THICKNESS;
-				rect.left  = rect.right - TITLE_BAR_HEIGHT+2;
-				rect.top   = 4;
-				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
-				
-				if (!(pWindow->m_flags & WF_NOMINIMZ))
-				{
-					rect.left -= TITLE_BAR_HEIGHT;
-					rect.right -= TITLE_BAR_HEIGHT;
-					AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
-				}
-			}
 			
 			break;
 		}

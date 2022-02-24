@@ -48,18 +48,28 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 
 void VersionProgramTask (__attribute__((unused)) int argument)
 {
-	// create ourself a window:
-	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 115 + TITLE_BAR_HEIGHT, VersionProgramProc, 0);
-	pWindow->m_iconID = ICON_NANOSHELL_LETTERS16;
-	
-	if (!pWindow)
+	Heap local_heap;
+	if (!AllocateHeap (&local_heap, 128))
 	{
-		DebugLogMsg("Hey, the window couldn't be created. Why?");
+		LogMsg("Can't allocate heap?");
 		return;
 	}
+	UseHeap (&local_heap);
+	// create ourself a window:
+	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 115 + TITLE_BAR_HEIGHT, VersionProgramProc, 0);
+	
+	if (!pWindow)
+		DebugLogMsg("Hey, the window couldn't be created");
+	
+	// setup:
+	//ShowWindow(pWindow);
 	
 	// event loop:
 #if THREADING_ENABLED
 	while (HandleMessages (pWindow));
 #endif
+
+	//LogMsg("Exited");
+	UseHeap (NULL);
+	FreeHeap (&local_heap);
 }

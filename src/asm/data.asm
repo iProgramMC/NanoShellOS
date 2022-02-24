@@ -14,7 +14,9 @@ global g_pageTableArray
 global e_temporary1
 global e_temporary2
 
-e_placement dd 0x000000
+; WORK: Change this if necessary.  Paging is not setup at this stage
+;       so this address is purely PHYSICAL.
+e_placement dd 0x400000
 
 section .bss
 

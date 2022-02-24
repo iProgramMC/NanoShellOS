@@ -27,8 +27,8 @@ extern void KeTaskDone();
 #define cli __asm__ volatile("cli\n\t")//do{__asm__("cli\n\t");SLogMsg("CLI request at " __FILE__ ":%d",__LINE__);}while(0)
 #define sti __asm__ volatile("sti\n\t")//do{__asm__("sti\n\t");SLogMsg("STI request at " __FILE__ ":%d",__LINE__);}while(0)
 
-#define VersionNumber 30
-#define VersionString "V0.30"
+#define VersionNumber 20
+#define VersionString "V0.20"
 
 #define UNUSED __attribute__((unused))
 
@@ -52,8 +52,6 @@ extern void KeTaskDone();
 } while (0)
 
 #define FREE_LOCK(lock_var) do {\
-	if (lock_var == 0)\
-		SLogMsg("warning: attempted to release not-acquired lock at " __FILE__ ":%d", __LINE__);\
 	lock_var = 0;\
 } while (0);
 
@@ -68,8 +66,6 @@ extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);
 extern void WritePortW(unsigned short port, unsigned short data);
 extern unsigned short ReadPortW(unsigned short port);
-extern void WritePortL(unsigned short port, unsigned int data);
-extern unsigned int ReadPortL(unsigned int port);
 
 __attribute__((noreturn))
 void KeStopSystem();

@@ -9,57 +9,27 @@
 #include <widget.h>
 #include <vfs.h>
 #include <elf.h>
-#include <wterm.h>
-#include <resource.h>
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
 //TODO: Move this to its own space.
-typedef struct
-{
-char m_cabinetCWD[PATH_MAX+2];
-char m_cbntOldCWD[PATH_MAX+2];
-}
-CabData;
-
-#define g_cabinetCWD (((CabData*)pWindow->m_data)->m_cabinetCWD)
-#define g_cbntOldCWD (((CabData*)pWindow->m_data)->m_cbntOldCWD)
+char g_cabinetCWD[PATH_MAX+2];
 
 enum
 {
 	ZERO,
 	MAIN_LISTVIEW,
-	MAIN_MENU_BAR,
-};
-enum
-{
-	                     MENU$=0,
-	//  +-------------------+-------------------+
-	//  |                   |                   |
-	MENU$FILE,          MENU$VIEW,          MENU$HELP,
-	//  |                   |                   |
-	//  v                   v                   v
-	MENU$FILE$ROOT, MENU$VIEW$REFRESH,   MENU$HELP$ABOUT,
-	MENU$FILE$EXIT, MENU$VIEW$CHVWMOD,
-	
+	MAIN_PARENTDIR,
 };
 
 void UpdateDirectoryListing (Window* pWindow)
 {
-reset:
 	ResetList        (pWindow, MAIN_LISTVIEW);
-	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
+	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT16);
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
 	DirEnt* pEnt = NULL;
 	int i = 0;
-	
-	if (!FsOpenDir(pFolderNode))
-	{
-		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", ICON_ERROR | ICON_WARNING << 16);
-		strcpy (g_cabinetCWD, "/");
-		goto reset;
-	}
 	
 	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
 	{
@@ -71,22 +41,18 @@ reset:
 		}
 		else
 		{
-			IconType icon = ICON_FILE;
+			IconType icon = ICON_FILE16;
 			if (pNode->m_type & FILE_TYPE_DIRECTORY)
 			{
-				icon = ICON_FOLDER;
+				icon = ICON_FOLDER16_CLOSED;
 			}
 			else if (EndsWith (pNode->m_name, ".nse"))
 			{
-				icon = ICON_EXECUTE_FILE;
-			}
-			else if (EndsWith (pNode->m_name, ".c"))
-			{
-				icon = ICON_FILE_CSCRIPT;
+				icon = ICON_EXECUTE_FILE16;
 			}
 			else if (EndsWith (pNode->m_name, ".txt"))
 			{
-				icon = ICON_TEXT_FILE;
+				icon = ICON_TEXT_FILE16;
 			}
 			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, icon);
 			i++;
@@ -96,35 +62,46 @@ reset:
 	RequestRepaint(pWindow);
 }
 
+char g_cabinetExecutableToExecute[PATH_MAX+4];
+
 //TODO FIXME: Spawn a console window if the ELF file is not marked as using the GUI.
-void LaunchExecutable (int fd)
+void LaunchExecutable (int argument)
 {
-	//The argument is assumed to be a valid file descriptor.
-	//The CabinetExecute function gave us a tag and everything.
-	//We just need to load the data and execute it.
+	//The argument is assumed to point to a valid const char*.
+	cli;
+	const char* pFileNameUnsafe = (const char*)argument;
+	char filename[1024];
 	
-	// Get the length we need to take
-	int length = FiTellSize (fd);
+	strcpy (filename, g_cabinetCWD);
+	if (g_cabinetCWD[1] != 0)
+		strcat (filename, "/");
+	strcat (filename, pFileNameUnsafe);
+	sti;
 	
-	// Allocate a buffer sufficient enough
-	char* pData = (char*)MmAllocate(length + 1);
-	if (!pData)
+	KeTaskAssignTag(KeGetRunningTask(), filename);
+	
+	int fd = FiOpen (filename, O_RDONLY | O_EXEC);
+	if (fd < 0)
 	{
-		LogMsg("Out of memory in LaunchExecutable?!");
-		//just kill the file
-		FiClose (fd);
+		//LogMsg("Got error %d while trying to open %s", fd, filename);
+		char buffer[1024];
+		sprintf (buffer, "Got error %d while trying to open %s", fd, filename);
+		MessageBox(NULL, buffer, "File cabinet", MB_OK | ICON_ERROR << 16);
 		return;
 	}
+	
+	int length = FiTellSize (fd);
+	//LogMsg("File Length: %d", length);
+	char* pData = (char*)MmAllocate(length + 1);
 	pData[length] = 0;
 	
-	// Read the data from the file and close the file
 	FiRead(fd, pData, length);
+	
 	FiClose (fd);
 	
-	// And execute!
+	//LogMsg("Executing...");
 	ElfExecute(pData, length);
 	
-	// Once done executing, free the exacutable data from memory.
 	MmFree(pData);
 }
 
@@ -135,17 +112,18 @@ void CdBack(Window* pWindow)
 	{
 		if (g_cabinetCWD[i] == PATH_SEP)
 		{
-			g_cabinetCWD[i+(i == 0)] = 0;
+			bool o = i == 0;
+			g_cabinetCWD[i+o] = 0;
 			FileNode* checkNode = FsResolvePath(g_cabinetCWD);
 			if (!checkNode)
 			{
-				MessageBox(pWindow, "Cannot find parent directory.\n\nGoing back to root.", pWindow->m_title, ICON_ERROR << 16 | MB_OK);
+				MessageBox(pWindow, "Cannot find parent directory.\n\nSince we can't go back, just exit.", pWindow->m_title, ICON_STOP << 16 | MB_OK);
 				
-				strcpy (g_cabinetCWD, "/");
+				//fake a destroy call
+				DestroyWindow(pWindow);
 				return;
 			}
 			UpdateDirectoryListing (pWindow);
-			break;
 		}
 	}
 }
@@ -156,9 +134,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	{
 		case EVENT_PAINT:
 		{
-			VidTextOut (g_cbntOldCWD, 8, 15 + TITLE_BAR_HEIGHT*2, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2, 0x00000000000000000, WINDOW_BACKGD_COLOR);
-			strcpy(g_cbntOldCWD, g_cabinetCWD);
+			VidTextOut (g_cabinetCWD, 8, 8 + TITLE_BAR_HEIGHT, 0, TRANSPARENT);
 			break;
 		}
 		case EVENT_COMMAND:
@@ -200,54 +176,25 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					else if (EndsWith (pFileName, ".nse"))
 					{
 						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[512];
+						char buffer[256];
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
 						{
-							// Get the file name.
-							char filename[1024];
-							strcpy (filename, "exwindow:");
-							strcat (filename, g_cabinetCWD);
-							if (g_cabinetCWD[1] != 0)
-								strcat (filename, "/");
-							strcat (filename, pFileName);
-							//CabinetExecute(pWindow, filename);
-							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
+							int errorCode = 0;
+							strcpy (g_cabinetExecutableToExecute, pFileName);
+							KeStartTask (LaunchExecutable, (int)g_cabinetExecutableToExecute, &errorCode);
+							
+							if (errorCode != TASK_SUCCESS)
+							{
+								sprintf (buffer, "Can not create thread to execute '%s'. Out of memory?", pFileName);
+								MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
+							}
 						}
 					}
-					else if (EndsWith (pFileName, ".c"))
+					/*else if (EndsWith (pFileName, ".txt"))
 					{
-						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[512];
-						sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
-						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_FILE_CSCRIPT << 16 | MB_YESNO) == MBID_YES)
-						{
-							// Get the file name.
-							char filename[1024];
-							strcpy (filename, "exscript:");
-							strcat (filename, g_cabinetCWD);
-							if (g_cabinetCWD[1] != 0)
-								strcat (filename, "/");
-							strcat (filename, pFileName);
-							//CabinetExecute(pWindow, filename);
-							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
-						}
-					}
-					else if (EndsWith (pFileName, ".txt"))
-					{
-						// Get the file name.
-						char filename[1024];
-						strcpy (filename, "ted:");
-						strcat (filename, g_cabinetCWD);
-						if (g_cabinetCWD[1] != 0)
-							strcat (filename, "/");
-						strcat (filename, pFileName);
-						//CabinetExecute(pWindow, filename);
-						RESOURCE_STATUS status = LaunchResource(filename);
-						SLogMsg("Resource launch status: %x", status);
-					}
+						// TODO!
+					}*/
 					else
 					{
 						char buffer[256];
@@ -262,35 +209,10 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					MessageBox(pWindow, buffer, pWindow->m_title, ICON_ERROR << 16 | MB_OK);
 				}
 			}
-			else if (parm1 == MAIN_MENU_BAR)
-			{
-				switch (parm2)
-				{
-					case MENU$FILE$EXIT:
-						//Exit.
-						DestroyWindow (pWindow);
-						break;
-					case MENU$FILE$ROOT:
-						strcpy (g_cabinetCWD, "/");
-						UpdateDirectoryListing(pWindow);
-						break;
-					case MENU$VIEW$REFRESH:
-						UpdateDirectoryListing(pWindow);
-						break;
-					case MENU$VIEW$CHVWMOD:
-						//TODO
-						//MessageBox(pWindow, "Not Implemented!", "File Cabinet", MB_OK|ICON_HELP<<16);
-						break;
-					case MENU$HELP$ABOUT:
-						LaunchVersion();
-						break;
-				}
-			}
 			break;
 		}
 		case EVENT_CREATE:
 		{
-			strcpy (g_cbntOldCWD, "");
 			Rectangle r;
 			// Add a list view control.
 			
@@ -303,28 +225,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControl (pWindow, CONTROL_ICONVIEW, r, NULL, MAIN_LISTVIEW, 0, 0);
-			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
-			
-			// Initialize the menu-bar
-			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$FILE, "File");
-			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$VIEW, "View");
-			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$HELP, "Help");
-			
-			// File:
-			{
-				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$ROOT, "Back to root");
-				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$EXIT, "Exit");
-			}
-			// View:
-			{
-				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$VIEW, MENU$VIEW$REFRESH, "Refresh");
-				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$VIEW, MENU$VIEW$CHVWMOD, "Change list view mode");
-			}
-			// Help:
-			{
-				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$HELP, MENU$HELP$ABOUT, "About File Cabinet");
-			}
+			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, MAIN_LISTVIEW, 0, 0);
 			
 			strcpy (g_cabinetCWD, "/");
 			
@@ -332,18 +233,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			break;
 		}
-		case EVENT_DESTROY:
-		{
-			if (pWindow->m_data)
-			{
-				MmFree(pWindow->m_data);
-				pWindow->m_data = NULL;
-			}
-			DefaultWindowProc(pWindow, messageType, parm1, parm2);
-			break;
-		}
-		//TODO: Fix crash when shutting down cabinet?
-		//TODO: SysMon crashes too? (c0103389)  Perhaps it's a widget dispose bug? (they both have listview widgets)
+		
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
@@ -355,15 +245,12 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - CABINET_HEIGHT) / 2;
 	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, 0);
-	pWindow->m_iconID = ICON_CABINET;
 	
 	if (!pWindow)
 	{
 		MessageBox(NULL, "Hey, the window couldn't be created. File " __FILE__ ".", "Cabinet", MB_OK | ICON_STOP << 16);
 		return;
 	}
-	
-	pWindow->m_data = MmAllocate(sizeof(CabData));
 	
 	// setup:
 	//ShowWindow(pWindow);

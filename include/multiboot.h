@@ -86,14 +86,11 @@
 /* Is there a boot loader name? */
 #define MULTIBOOT_INFO_BOOT_LOADER_NAME         0x00000200
 
-/* Is there an APM table? */
+/* Is there a APM table? */
 #define MULTIBOOT_INFO_APM_TABLE                0x00000400
 
 /* Is there video information? */
 #define MULTIBOOT_INFO_VIDEO_INFO               0x00000800
-
-//small jerry-rig
-#define MULTIBOOT_INFO_FRAMEBUFFER_INFO         0x00001000
 
 #ifndef ASM_FILE
 

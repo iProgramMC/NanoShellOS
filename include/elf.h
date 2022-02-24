@@ -107,23 +107,6 @@ enum {
 	ELF_CANT_MAKE_HEAP,
 };
 
-enum
-{
-	SHT_NULL,
-	SHT_PROGBITS,
-	SHT_SYMTAB,
-	SHT_STRTAB,
-	SHT_RELA,
-	SHT_HASH,
-	SHT_DYNAMIC,
-	SHT_NOTE,
-	SHT_NOBITS,
-	SHT_REL,
-	SHT_SHLIB,
-	SHT_DYNSYM,
-	//...
-};
-
 void ElfPerformTest();
 int ElfExecute (void *pElfFile, size_t size);
 

@@ -8,7 +8,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>icontest</RootNamespace>
     <AssemblyName>icontest</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <supportedRuntime>Version=v5.0.0</supportedRuntime>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>

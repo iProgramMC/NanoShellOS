@@ -16,4 +16,4 @@ g_initrd:
 incbin 'nanoshell_initrd'
 g_initrdEnd:
 
-%endif 
+%endif

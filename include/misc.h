@@ -75,7 +75,7 @@ const char* GetCPUType();
  *
  * Note:  MUST call KeCPUID().  KiStartupSystem already does that though.
  */
-const char* GetCPUName();
+const char* GetCPUType();
 
 /**
  * Gets the CPU feature bits.

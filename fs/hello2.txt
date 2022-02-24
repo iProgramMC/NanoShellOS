@@ -2,4 +2,5 @@ Hey!
 
 I support newlines too.
 
-Here are some nanoshell specific color things: Blue Green Cyan Red Purp Black White
+Here are some nanoshell specific color things: 	Blue Green 
+Cyan Red Purp Black White

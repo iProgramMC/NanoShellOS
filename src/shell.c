@@ -20,7 +20,6 @@
 #include <icon.h>
 #include <vfs.h>
 #include <elf.h>
-#include <cinterp.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -78,11 +77,11 @@ void GraphicsTest()
 	
 	//demonstrate some of the apis that the kernel provides:
 	//VidFillRect(0xFF0000, 10, 150, 210, 310);
-	/**((uint32_t*)0xC0007CFC) = 14;
+	*((uint32_t*)0xC0007CFC) = 14;
 	
 	Pointer ptr = (Pointer) 0xC0007C00;
 	
-	ptr(0xFF0000, 10, 150, 210, 310);return;*/
+	ptr(0xFF0000, 10, 150, 210, 310);return;
 	VidDrawRect(0x00FF00, 100, 150, 250, 250);
 	
 	//lines, triangles, polygons, circles perhaps?
@@ -131,9 +130,6 @@ void funnytest(UNUSED int argument)
 }
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
-
-bool FatCreateEmptyFile(FileNode *pDirNode, char* pFileName);//fs/fat.c
-void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName);//fs/fat.c
 void ShellExecuteCommand(char* p)
 {
 	TokenState state;
@@ -164,19 +160,20 @@ void ShellExecuteCommand(char* p)
 		LogMsg("lt         - list currently running threads (pauses them during the print)");
 		LogMsg("mode X     - change the screen mode");
 		LogMsg("mspy       - Memory Spy! (TM)");
-		LogMsg("mrd        - mounts a RAM Disk from a file");
-		
-		//wait for new key
-		LogMsg("Strike a key to print more.");
-		CoGetChar();
-		
+		LogMsg("mrd        - mounts a testing RAM Disk");
 		LogMsg("ph         - prints current heap's address in kernel address space (or NULL for the default heap)");
+		LogMsg("rd         - reads and dumps a sector from the RAM Disk");
 		LogMsg("sysinfo    - dump system information");
 		LogMsg("sysinfoa   - dump advanced system information");
 		LogMsg("time       - get timing information");
 		LogMsg("stt        - spawns a single thread that doesn't last forever");
 		LogMsg("st         - spawns a single thread that makes a random line forever");
 		LogMsg("tt         - spawns 64 threads that makes random lines forever");
+		
+		//wait for new key
+		LogMsg("Strike a key to print more.");
+		CoGetChar();
+		
 		LogMsg("tte        - spawns 1024 threads that makes random lines forever");
 		LogMsg("ttte       - spawns 1024 threads that prints stuff");
 		LogMsg("ver        - print system version");
@@ -196,18 +193,13 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			if (strcmp (fileName, PATH_THISDIR) == 0) return;
-			if (strcmp (fileName, "/") == 0)
-			{
-				strcpy(g_cwd, "/");
-				g_pCwdNode = FsResolvePath(g_cwd);
-			}
 			if (strcmp (fileName, PATH_PARENTDIR) == 0)
 			{
 				for (int i = PATH_MAX - 1; i >= 0; i--)
 				{
 					if (g_cwd[i] == PATH_SEP)
 					{
-						g_cwd[i+(i==0)] = 0;
+						g_cwd[i+1] = 0;
 						g_pCwdNode = FsResolvePath(g_cwd);
 						if (!g_pCwdNode)
 						{
@@ -285,89 +277,25 @@ void ShellExecuteCommand(char* p)
 		{
 			LogMsg("Expected filename");
 		}
-		else if (!g_windowManagerRunning)
-		{
-			LogMsg("Running apps outside the window manager is broken for now so don't.");
-		}
 		else
 		{
-			char s[1024];
-			if (*fileName != '/')
+			//TODO: open/close
+			FileNode* pNode = g_pCwdNode;
+			FileNode* pFile = FsFindDir(pNode, fileName);
+			if (!pFile)
+				LogMsg("No such file or directory");
+			else
 			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
+				int length = pFile->m_length;
+				char* pData = (char*)MmAllocate(length + 1);
+				pData[length] = 0;
+				
+				FsRead(pFile, 0, length, pData);
+				
+				ElfExecute(pData, length);
+				
+				MmFree(pData);
 			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			ElfExecute(pData, length);
-			
-			MmFree(pData);
-			
-			LogMsg("");
-		}
-	}
-	else if (strcmp (token, "ec") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			//ElfExecute(pData, length);
-			
-			CCSTATUS status = CcRunCCode(pData, length);
-			LogMsg("Exited with status %d", status);
-			
-			MmFree(pData);
-			
 			LogMsg("");
 		}
 	}
@@ -386,12 +314,9 @@ void ShellExecuteCommand(char* p)
 		{
 			//TODO: open/close
 			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
+			strcpy (s, g_cwd);
+			if (g_cwd[1] != 0) //not just a '/'
+				strcat(s, "/");
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_RDONLY);
@@ -411,6 +336,7 @@ void ShellExecuteCommand(char* p)
 			while ((result = FiRead(fd, data, 1), result > 0))
 			{
 				CoPrintChar(g_currentConsole, data[0]);
+				hlt;hlt;hlt;hlt;
 			}
 			
 			FiClose (fd);
@@ -431,124 +357,9 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "fce") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY | O_CREAT);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "fc") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			bool b = FatCreateEmptyFile(g_pCwdNode, fileName);
-			LogMsg("Done. Result=%d", (int)b);
-		}
-	}
-	else if (strcmp (token, "fz") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			FatZeroOutFile(g_pCwdNode, fileName);
-			LogMsg("Done. ");
-		}
-	}
-	else if (strcmp (token, "ffa") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
+			strcpy (s, g_cwd);
+			if (g_cwd[1] != 0) //not just a '/'
+				strcat(s, "/");
 			strcat (s, fileName);
 			
 			int fd = FiOpen (s, O_WRONLY);
@@ -576,13 +387,6 @@ void ShellExecuteCommand(char* p)
 	{
 		FileNode* pNode = g_pCwdNode;
 		LogMsg("Directory of %s (%x)", pNode->m_name, pNode);
-		
-		if (!FsOpenDir(pNode))
-		{
-			LogMsg("ERROR: Could not open '%s', try 'cd'-ing back?", pNode->m_name);
-			return;
-		}
-		
 		DirEnt* pDirEnt;
 		int i = 0;
 		while ((pDirEnt = FsReadDir(pNode, i)) != 0)
@@ -591,7 +395,7 @@ void ShellExecuteCommand(char* p)
 			if (!pSubnode)
 				LogMsg("- [NULL?!]");
 			else
-				LogMsg("- %s\t%c%c%c\t%d\x02\x16\"%s\"", 
+				LogMsg("- %s\t%c%c%c\t%d\x02\x16%s", 
 						(pSubnode->m_type & FILE_TYPE_DIRECTORY) ? "<DIR>" : "     ", 
 						"-R"[!!(pSubnode->m_perms & PERM_READ )],
 						"-W"[!!(pSubnode->m_perms & PERM_WRITE)],
@@ -600,8 +404,6 @@ void ShellExecuteCommand(char* p)
 						pSubnode->m_name);
 			i++;
 		}
-		
-		FsCloseDir(pNode);
 	}
 	else if (strcmp (token, "gt") == 0)
 	{
@@ -622,46 +424,13 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "mrd") == 0)
 	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
+		if (g_ramDiskMounted)
 		{
-			LogMsg("You want to mount what, exactly?");
+			LogMsg("Have a ramdisk mounted already.");
+			return;
 		}
-		else if (*fileName == 0)
-		{
-			LogMsg("You want to mount what, exactly?");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			FsMountRamDisk(pData);
-			
-			//Do not free as the file system now owns this pointer.
-		}
+//		g_ramDiskID = StMountTestRamDisk();
+//		g_ramDiskMounted = true;
 	}
 	else if (strcmp (token, "mspy") == 0)
 	{
@@ -713,25 +482,64 @@ void ShellExecuteCommand(char* p)
 				else
 					LogMsgNoCr("%x ", pAddr[i+j]);
 			}
-			for (int j = 0; j < (8 >> as_bytes); j++)
-			{
-				#define FIXUP(c) ((c<32||c>126)?'.':c)
-				char c1 = pAddrB[((i+j)<<2)+0], c2 = pAddrB[((i+j)<<2)+1], c3 = pAddrB[((i+j)<<2)+2], c4 = pAddrB[((i+j)<<2)+3];
-				LogMsgNoCr("%c%c%c%c", FIXUP(c1), FIXUP(c2), FIXUP(c3), FIXUP(c4));
-			}
 			LogMsg("");
 		}
 		goto dont_print_usage;
 	print_usage:
-		LogMsg("Virtual Memory Spy (TM)");
+		LogMsg("Virtual Memory Spy");
 		LogMsg("Usage: mspy <page number> <numBytes> [/b]");
 		LogMsg("- bytes will be printed as groups of 4 unless [/b] is specified");
 		LogMsg("- numBytes will be capped off at 4096 and rounded down to 32");
 		LogMsg("- pageNumber must be a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");
-		LogMsg("- if it's not valid or mapped then the system may CRASH or HANG!");
 		LogMsg("- pageNumber is in\x01\x0C DECIMAL\x01\x0F");
 		LogMsg("- note: cut off the last 3 digits of an address in hex and turn it to decimal to get a pageNumber");
 	dont_print_usage:;
+	}
+	else if (strcmp (token, "rd") == 0)
+	{
+		if (!g_ramDiskMounted)
+		{
+			LogMsg("Must mount a ramdisk first.  Please use \"mrd\".");
+			return;
+		}
+		char* secNum = Tokenize (&state, NULL, " ");
+		if (!secNum)
+		{
+			LogMsg("Expected sector number");
+		}
+		else if (*secNum == 0)
+		{
+			LogMsg("Expected sector number");
+		}
+		else
+		{
+			int e = atoi (secNum);
+			
+			char sector[512];
+			DriveStatus f = StDeviceRead(e, sector, g_ramDiskID, 1);
+			LogMsg("Printing sector number %d.  The returned %x.", e, f);
+			
+			for (int i = 0; i < SECTOR_SIZE; i += 16)
+			{
+				LogMsgNoCr(" %x:", i);
+				for (int j = 0; j < 16; j++)
+				{
+					LogMsgNoCr(" %B", sector[i+j]);
+				}
+				LogMsgNoCr("   ");
+				for (int j = 0; j < 16; j++)
+				{
+					char e = sector[i+j];
+					/**/ if (e == 0x00) e = ' ';
+					else if (e <  0x20) e = '.';
+					else if (e >= 0x7F) e = '.';
+					LogMsgNoCr("%c", e);
+				}
+				LogMsg("");
+			}
+			
+			//PrInitialize();
+		}
 	}
 	else if (strcmp (token, "cls") == 0)
 	{
@@ -841,7 +649,6 @@ void ShellExecuteCommand(char* p)
 		{
 			SwitchMode (*modeNum - '0');
 			//PrInitialize();
-			CoInitAsText(g_currentConsole);
 		}
 	}
 	else if (strcmp (token, "font") == 0)

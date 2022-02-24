@@ -105,10 +105,8 @@ void MmFreePage(void* pAddr);
  *
  * See: MmFree
  */
-void* MmAllocateD (size_t size, const char* callFile, int callLine);
-void* MmAllocateKD(size_t size, const char* callFile, int callLine);
-#define MmAllocate(size)  MmAllocateD (size, __FILE__, __LINE__)
-#define MmAllocateK(size) MmAllocateKD(size, __FILE__, __LINE__)
+void* MmAllocateD(size_t size, const char* callFile, int callLine);
+#define MmAllocate(size) MmAllocateD(size, __FILE__, __LINE__)
 
 /**
  * Frees a memory range allocated with MmAllocate. A NULL pointer is carefully ignored.
@@ -119,8 +117,7 @@ void* MmAllocateKD(size_t size, const char* callFile, int callLine);
  * So for example MmFree(MmAllocate(400)) behaves exactly the same as MmFree(MmAllocate(400)+500),
  * but not as MmFree(MmAllocate(400)+4100).
  */
-void MmFree (void* pAddr);
-void MmFreeK(void* pAddr);
+void MmFree(void* pAddr);
 
 /**
  * Uses a certain page directory address (and its physical one) as the current page directory.

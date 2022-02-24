@@ -45,13 +45,9 @@ void PrgPaintTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("Scribble!", 200, 300, 500, 400, PrgPaintProc, 0);
-	pWindow->m_iconID = ICON_DRAW;
 	
 	if (!pWindow)
-	{
 		DebugLogMsg("Hey, the window couldn't be created");
-		return;
-	}
 	
 	// setup:
 	//ShowWindow(pWindow);

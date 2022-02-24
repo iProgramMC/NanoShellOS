@@ -9,121 +9,66 @@
 #include <wterm.h>
 #include <vfs.h>
 #include <elf.h>
-#include <resource.h>
 
-#define LAUNCHER_CONFIG_PATH "/launcher_config.txt"
-
-// Shell resource handlers
-#if 1
-
-RESOURCE_STATUS LaunchVersionApplet()
+void LaunchSystem()
 {
 	int errorCode = 0;
-	Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
-	DebugLogMsg("Created version window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
-}
-RESOURCE_STATUS LaunchSystem()
-{
-	int errorCode = 0;
+	//Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
 	Task* pTask = KeStartTask(SystemMonitorEntry, 0, &errorCode);
 	DebugLogMsg("Created System window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
 }
-RESOURCE_STATUS LaunchIconTest()
-{
-	int errorCode = 0;
-	Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
-	DebugLogMsg("Created icon test window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
-}
-RESOURCE_STATUS LaunchTextShell()
+void LaunchNotepad()
 {
 	int errorCode = 0;
 	Task* pTask = KeStartTask(TerminalHostTask, 0, &errorCode);
 	//Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
-	DebugLogMsg("Created Text Shell window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
+	DebugLogMsg("Created Notepad window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
-RESOURCE_STATUS LaunchPaint()
+void LaunchPaint()
 {
 	int errorCode = 0;
 	Task* pTask = KeStartTask(PrgPaintTask, 0, &errorCode);
 	DebugLogMsg("Created Paint window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
 }
-
-RESOURCE_STATUS LaunchControlPanel()
+extern FileNode *g_pCwdNode;
+void ExecuteSomeElfFile(UNUSED int argument)
 {
-	int errorCode = 0;
-	Task* pTask = KeStartTask(ControlEntry, 0, &errorCode);
-	DebugLogMsg("Created Control Panel window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
+	FileNode* pNode = g_pCwdNode;
+	FileNode* pFile = FsFindDir(pNode, "win.nse");
+	if (!pFile)
+		LogMsg("No such file or directory");
+	else
+	{
+		KeTaskAssignTag(KeGetRunningTask(), "win.nse");
+		int length = pFile->m_length;
+		char* pData = (char*)MmAllocate(length + 1);
+		pData[length] = 0;
+		
+		FsRead(pFile, 0, length, pData);
+		
+		ElfExecute(pData, length);
+		
+		MmFree(pData);
+	}
 }
-RESOURCE_STATUS LaunchNotepad()
+void LaunchCabinet(UNUSED Window* pWindow)
 {
-	int errorCode = 0;
-	Task* pTask = KeStartTask(BigTextEntry, 0, &errorCode);
-	DebugLogMsg("Created Notepad window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
-}
-RESOURCE_STATUS LaunchCabinet()
-{
+	/*if (MessageBox (pWindow, "Would you like to launch 'win.nse'?", "Hey!", MB_YESNO | ICON_EXECUTE_FILE << 16) == MBID_YES)
+	{
+		int errorCode = 0;
+		Task* pTask = KeStartTask(ExecuteSomeElfFile, 0, &errorCode);
+		DebugLogMsg("Created ELF TASK. Pointer returned:%x, errorcode:%x", pTask, errorCode);
+	}*/
+	/*if (MessageBox (pWindow, "Would you like to launch Cabinet?", "Home Menu", MB_YESNO | ICON_CABINET << 16) == MBID_YES)
+	{
+		int errorCode = 0;
+		Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
+		DebugLogMsg("Created Cabinet window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
+	}*/
 	int errorCode = 0;
 	Task* pTask = KeStartTask(CabinetEntry, 0, &errorCode);
-	DebugLogMsg("Created Cabinet window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
+	DebugLogMsg("Created list view test window", pTask, errorCode);
 }
-
-#endif
-
-// Misc. launcher stuff
-#if 1
-
-void LaunchVersion()
-{
-	LaunchVersionApplet();
-}
-
-#define STREQ(str1,str2) (!strcmp(str1,str2))
-RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
-{
-	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet();
-	else if (STREQ(pResourceID, "sysmon"))   return LaunchSystem();
-	else if (STREQ(pResourceID, "icontest")) return LaunchIconTest();
-	else if (STREQ(pResourceID, "cmdshell")) return LaunchTextShell();
-	else if (STREQ(pResourceID, "scribble")) return LaunchPaint();
-	else if (STREQ(pResourceID, "cpanel"))   return LaunchControlPanel();
-	else if (STREQ(pResourceID, "notepad"))  return LaunchNotepad();
-	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
-	else return RESOURCE_LAUNCH_NOT_FOUND;
-}
-
-
 void WindowManagerShutdown();
 void ConfirmShutdown(Window* pWindow)
 {
@@ -134,152 +79,28 @@ void ConfirmShutdown(Window* pWindow)
 }
 
 enum {
+	LAUNCHER_SYSTEM = 0x10,
+	LAUNCHER_NOTEPAD,
+	LAUNCHER_PAINT,
+	LAUNCHER_CABINET,
+	LAUNCHER_TEXTBOX1,
 	
-	LAUNCHER_LISTVIEW = 0x10,
-	LAUNCHER_MENUBAR  = 0xFE,
-	LAUNCHER_LABEL1   = 0xFF,
+	
+	LAUNCHER_LABEL1 = 0xE0,
+	LAUNCHER_LABEL2,
+	LAUNCHER_LABEL3,
+	LAUNCHER_LABEL4,
+	LAUNCHER_LABEL5,
+	LAUNCHER_ICON1 = 0xF0,
+	LAUNCHER_ICON2,
+	LAUNCHER_ICON3,
+	LAUNCHER_ICON4,
+	LAUNCHER_ICON5,
+	
+	LAUNCHER_SHUTDOWN = 0xFF,
 };
 
-/*const char* g_LauncherResources[] = {
-	"shell:sysmon",
-	"shell:cabinet",
-	"shell:icontest",
-	"shell:notepad",
-	"shell:scribble",
-	"shell:cmdshell",
-	"shell:cpanel",
-	"shell:shutdown",
-};*/
-
-int g_nLauncherItems = 0;
-typedef struct
-{
-	char m_text[61];
-	char m_resourceID[31];
-	int  m_icon;
-}
-LauncherItem;
-LauncherItem* g_pLauncherItems = NULL;
-
-#endif
-
-// Configuration loader:
-#if 1
-
-#define Macro_ReadStringTillSeparator(lineData,strToRead,separator,size,index)\
-	do {\
-		index = 0;\
-		while (*lineData != separator && *lineData != 0 && index < size)\
-		{\
-			strToRead[index++] = *lineData;\
-			lineData++;\
-		}\
-		strToRead[idx] = 0;\
-	} while (0)
-
-void HomeMenu$LoadConfigLine(Window* pWindow, char* lineData, int *itemIndex)
-{
-	if (lineData[0] == '/' && lineData[1] == '/') return;//comment
-	char instruction[25]; int idx = 0;
-	while (*lineData != '|' && *lineData != 0 && idx < 24)
-	{
-		instruction[idx++] = *lineData;
-		lineData++;
-	}
-	instruction[idx] = 0;
-	
-	if (strcmp (instruction, "add_item") == 0)
-	{
-		char iconNumStr[11], text[31], resID[61];
-		lineData++;
-		Macro_ReadStringTillSeparator(lineData, iconNumStr, '|', 10, idx);
-		lineData++;
-		Macro_ReadStringTillSeparator(lineData, text, '|', 30, idx);
-		lineData++;
-		Macro_ReadStringTillSeparator(lineData, resID, '|', 60, idx);
-		
-		//LogMsg("Add_item: %s %s %s", iconNumStr, text, resID);
-		strcpy(g_pLauncherItems[*itemIndex].m_text,       text);
-		strcpy(g_pLauncherItems[*itemIndex].m_resourceID, resID);
-		g_pLauncherItems[*itemIndex].m_icon = atoi(iconNumStr);
-		(*itemIndex) ++;
-	}
-}
-
-int HomeMenu$GetNumLines(Window* pWindow, const char* pData)
-{
-	char lineData[500];
-	int idx = 0, numLines = 0;
-	while (1)
-	{
-		idx = 0;
-		//avoid going past 500, no stack overflows please
-		while (*pData != '\r' && *pData != '\n' && *pData != '\0' && idx < 499)
-		{
-			lineData[idx++] = *pData;
-			pData++;
-		}
-		lineData[idx++] = 0;
-		numLines++;
-		if (*pData == 0) return numLines;
-		while (*pData == '\r' || *pData == '\n') pData++;//skip newlines
-	}
-	return numLines;
-}
-void HomeMenu$LoadConfigFromString(Window* pWindow, const char* pData)
-{
-	char lineData[500];
-	int idx = 0;
-	while (1)
-	{
-		idx = 0;
-		//avoid going past 500, no stack overflows please
-		while (*pData != '\r' && *pData != '\n' && *pData != '\0' && idx < 499)
-		{
-			lineData[idx++] = *pData;
-			pData++;
-		}
-		lineData[idx++] = 0;
-		HomeMenu$LoadConfigLine(pWindow, lineData, &g_nLauncherItems);
-		if (*pData == 0) return;
-		while (*pData == '\r' || *pData == '\n') pData++;//skip newlines
-	}
-}
-
-void HomeMenu$LoadConfig(Window* pWindow)
-{
-	if (g_pLauncherItems) return;//only load once
-	
-	//WORK: You can change the launcher config path here:
-	int fd = FiOpen(LAUNCHER_CONFIG_PATH, O_RDONLY);
-	if (fd < 0)
-	{
-		MessageBox(pWindow, "Could not load launcher configuration files.  The Home menu will now close, and open a text shell.", "Home Menu", ICON_ERROR << 16 | MB_OK);
-		LaunchTextShell();
-		return;
-	}
-	int size = FiTellSize(fd);
-	char* pText = MmAllocate(size + 1);
-	pText[size] = 0;
-	FiRead(fd, pText, size);
-	FiClose(fd);
-	
-	int nLines = HomeMenu$GetNumLines(pWindow, pText);
-	g_nLauncherItems = 0;
-	g_pLauncherItems = MmAllocate(nLines * sizeof(LauncherItem));
-	
-	HomeMenu$LoadConfigFromString(pWindow, pText);
-	
-	MmFree(pText);
-}
-
-#endif
-
-// Main program
-
-#if 1
-
-void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK LauncherProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -287,78 +108,99 @@ void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int
 		case EVENT_CREATE: {
 			#define START_X 20
 			#define STEXT_X 60
-			#define START_Y 40
+			#define START_Y 30
 			#define DIST_ITEMS 36
 			// Add a label welcoming the user to NanoShell.
 			Rectangle r;
-			
-			RECT(r, 0, 0, 0, 0);
-			AddControl (pWindow, CONTROL_MENUBAR, r, NULL, LAUNCHER_MENUBAR, 0, 0);
-			
-			// Add some testing elements to the menubar.  A comboID of zero means you're adding to the root.
-			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 0, 1, "Help");
-			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR, 1, 2, "About Launcher...");
-			
-			RECT(r, START_X, TITLE_BAR_HEIGHT * 2 + 15, 200, 20);
+			RECT(r, START_X, 20, 200, 20);
 			AddControl (pWindow, CONTROL_TEXT, r, "Welcome to NanoShell!", LAUNCHER_LABEL1, 0, TRANSPARENT);
 			
-			// Add a icon list view.
-			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             (TITLE_BAR_HEIGHT + TITLE_BAR_HEIGHT + 15)
-			RECT(r, 
-				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
-				/*X Size */ 400 - PADDING_AROUND_LISTVIEW * 2, 
-				/*Y Size */ 270 - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
-			);
-			AddControl(pWindow, CONTROL_ICONVIEW, r, NULL, LAUNCHER_LISTVIEW, 0, 0);
+			// Add the system icon.
+			RECT(r, START_X, START_Y+0*DIST_ITEMS, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON1, ICON_BOMB, 0);
 			
-			// Load config:
-			HomeMenu$LoadConfig(pWindow);
+			RECT(r, STEXT_X, START_Y+0*DIST_ITEMS, 200, 32);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "System Monitor", LAUNCHER_SYSTEM, 0, 0);
 			
-			// Add list items:
-			ResetList(pWindow, LAUNCHER_LISTVIEW);
+			// Add the notepad icon.
+			RECT(r, START_X, START_Y+1*DIST_ITEMS, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON2, ICON_CABINET, 0);
 			
-			for (int i = 0; i < g_nLauncherItems; i++)
-			{
-				AddElementToList(pWindow, LAUNCHER_LISTVIEW, g_pLauncherItems[i].m_text, g_pLauncherItems[i].m_icon);
-			}
+			RECT(r, STEXT_X, START_Y+1*DIST_ITEMS, 200, 32);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "File cabinet", LAUNCHER_CABINET, 0, 0);
 			
+			// Add the notepad icon.
+			RECT(r, START_X, START_Y+2*DIST_ITEMS, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON3, ICON_KEYBOARD2, 0);
+			
+			RECT(r, STEXT_X, START_Y+2*DIST_ITEMS, 200, 32);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Text Shell", LAUNCHER_NOTEPAD, 0, 0);
+			
+			// Add the paint icon.
+			RECT(r, START_X, START_Y+3*DIST_ITEMS, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON4, ICON_DRAW, 0);
+			
+			RECT(r, STEXT_X, START_Y+3*DIST_ITEMS, 200, 32);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Scribble!", LAUNCHER_PAINT, 0, 0);
+			
+			// Add the shutdown icon.
+			RECT(r, START_X, START_Y+5*DIST_ITEMS, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, LAUNCHER_ICON5, ICON_COMPUTER_SHUTDOWN, 0);
+			
+			RECT(r, STEXT_X, START_Y+5*DIST_ITEMS, 200, 32);
+			AddControl(pWindow, CONTROL_CLICKLABEL, r, "Shutdown", LAUNCHER_SHUTDOWN, 0, 0);
+			
+			// Add a testing textbox.
+			RECT(r, 200, 50, 300, 15);
+			
+			//parms after rectangle: default text, comboID for getting the text from the textbox, max characters
+			AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, LAUNCHER_TEXTBOX1, 128, 0);
+			
+			//DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			
+			break;
+		}
+		case EVENT_PAINT: {
+			/*char test[100];
+			sprintf(test, "Hi!  Memory usage: %d KB / %d KB", (npp-nfpp)*4, npp*4);
+			VidFillRect (0xFF00FF, 10, 40, 100, 120);
+			VidTextOut (test, 10, 30, 0, TRANSPARENT);*/
+			VidFillRect(0xFFFFFF,
+						3, 4 + TITLE_BAR_HEIGHT, 
+						GetScreenSizeX() - WINDOW_RIGHT_SIDE_THICKNESS - 4, 
+						GetScreenSizeY() - WINDOW_RIGHT_SIDE_THICKNESS - 4);
+			VidDrawRect(0x7F7F7F,
+						3, 4 + TITLE_BAR_HEIGHT, 
+						GetScreenSizeX() - WINDOW_RIGHT_SIDE_THICKNESS - 4, 
+						GetScreenSizeY() - WINDOW_RIGHT_SIDE_THICKNESS - 4);
 			break;
 		}
 		case EVENT_COMMAND: {
 			switch (parm1)
 			{
-				case LAUNCHER_MENUBAR:
-				{
-					switch (parm2)
-					{
-						case 2: 
-							LaunchVersion ();
-							break;
-					}
+				case LAUNCHER_SYSTEM:
+					LaunchSystem();
 					break;
-				}
-				case LAUNCHER_LISTVIEW:
-				{
-					//hack:
-					if (g_pLauncherItems)
-					{
-						if (strcmp(g_pLauncherItems[parm2].m_resourceID, "shell:shutdown") == 0)
-							ConfirmShutdown(pWindow);
-						else
-							LaunchResource(g_pLauncherItems[parm2].m_resourceID);
-					}
-					else
-					{
-						MessageBox(pWindow, "Object does not exist.", "Home Menu", ICON_ERROR << 16 | MB_OK);
-					}
-					
+				case LAUNCHER_NOTEPAD:
+					LaunchNotepad();
 					break;
-				}
-				default:
-					LogMsg("Unknown command.  Parm1: %d Parm2: %d", parm1, parm2);
+				case LAUNCHER_PAINT:
+					LaunchPaint();
 					break;
+				case LAUNCHER_CABINET:
+					LaunchCabinet(pWindow);
+					break;
+				case LAUNCHER_SHUTDOWN:
+					ConfirmShutdown(pWindow);
+					break;
+				/*{
+					//The only button:
+					int randomX = GetRandom() % 320;
+					int randomY = GetRandom() % 240;
+					int randomColor = GetRandom();
+					VidTextOut("*click*", randomX, randomY, randomColor, TRANSPARENT);
+					break;
+				}*/
 			}
 			break;
 		}
@@ -370,17 +212,13 @@ void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int
 void LauncherEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = 400, wh = 270, sw = GetScreenSizeX(), sh = GetScreenSizeY();
+	int ww = 400, wh = 260, sw = GetScreenSizeX(), sh = GetScreenSizeY();
 	int wx = (sw - ww) / 2, wy = (sh - wh) / 2;
 	
-	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, HomeMenu$WndProc, 0);//WF_NOCLOSE);
-	pWindow->m_iconID = ICON_HOME;
+	Window* pWindow = CreateWindow ("Home", wx, wy, ww, wh, LauncherProgramProc, 0);//WF_NOCLOSE);
 	
 	if (!pWindow)
-	{
-		DebugLogMsg("Hey, the window couldn't be created");
-		return;
-	}
+		DebugLogMsg("Hey, the main launcher window couldn't be created");
 	
 	// setup:
 	//ShowWindow(pWindow);
@@ -390,5 +228,3 @@ void LauncherEntry(__attribute__((unused)) int arg)
 	while (HandleMessages (pWindow));
 #endif
 }
-
-#endif

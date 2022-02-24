@@ -9,8 +9,7 @@
 
 #include <video.h>
 
-//#define DefaultConsoleColor 0x1F
-#define DefaultConsoleColor 0x0F
+#define DefaultConsoleColor 0x1F
 
 enum ConsoleType {
 	CONSOLE_TYPE_NONE, // uninitialized
@@ -21,7 +20,7 @@ enum ConsoleType {
 	CONSOLE_TYPE_WINDOW,
 };
 
-#define KB_BUF_SIZE 512
+#define KB_BUF_SIZE 128
 
 typedef struct ConsoleStruct {
 	int  type; // ConsoleType enum
@@ -37,7 +36,6 @@ typedef struct ConsoleStruct {
 	bool m_dirty;
 	char m_inputBuffer[KB_BUF_SIZE];
 	int  m_inputBufferBeg, m_inputBufferEnd;
-	int  m_cursorFlashTimer, m_cursorFlashState;
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

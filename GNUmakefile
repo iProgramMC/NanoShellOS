@@ -13,17 +13,16 @@ IDIR=./include
 BDIR=./build
 
 # C Compiler and flags
-CC=i686-elf-gcc
+CC=./tools/i686-gcc/bin/i686-elf-gcc
 CFLAGS_BEG=-DTEST
 
 #O2=-O2
-OPTIMIZATION_DEFAULT=-O0
-OPTIMIZATION_OPTIMIZ=-O2
+O2=-O0
 
-CFLAGS=-I$(IDIR) -I$(BDIR) -ffreestanding -g $(OPTIMIZATION_DEFAULT) -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
+CFLAGS=-I$(IDIR) -I$(BDIR) -ffreestanding -g $(O2) -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
 
 # TODO: Make everything capable of being compiled under -O2 without affecting system stability.
-CFLAGS_OPTIMIZ=-I$(IDIR) -I$(BDIR) -ffreestanding -g $(OPTIMIZATION_OPTIMIZ) -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
+CFLAGS_NOOPTIMIZ=-I$(IDIR) -I$(BDIR) -ffreestanding -g -Wall -Wextra -fno-exceptions -std=c99 -DRANDOMIZE_MALLOCED_MEMORY
 
 # Special flags for linker
 CLFLAGS_BEG=-T ./link.ld 
@@ -42,10 +41,8 @@ BUILD=build
 SRC=src
 ICONS=icons
 FS=fs
-OPTIMIZ=optimiz
+NOOPTIMIZ=nooptimiz
 BUICO=build/icons
-
-INITRD=nanoshell_initrd
 
 # Convert the icons
 
@@ -60,13 +57,13 @@ $(BUICO)/%.h: $(ICONS)/%.png
 C_MAIN_FILES=$(wildcard $(SRC)/*.c)
 C_KAPP_FILES=$(wildcard $(SRC)/kapp/*.c)
 C__FS__FILES=$(wildcard $(SRC)/fs/*.c)
-C_OPTI_FILES=$(wildcard $(SRC)/optimiz/*.c)
+C_NOOP_FILES=$(wildcard $(SRC)/nooptimiz/*.c)
 ASSEMB_FILES=$(wildcard $(SRC)/asm/*.asm)
 
 O_FILES := $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_MAIN_FILES),$(BUILD)/$(file:.c=.o))) \
 		   $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_KAPP_FILES),$(BUILD)/$(file:.c=.o))) \
 		   $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C__FS__FILES),$(BUILD)/$(file:.c=.o))) \
-		   $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_OPTI_FILES),$(BUILD)/$(file:.c=.o))) \
+		   $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(C_NOOP_FILES),$(BUILD)/$(file:.c=.o))) \
 		   $(patsubst $(BUILD)/$(SRC)/%.o, $(BUILD)/%.o, $(foreach file,$(ASSEMB_FILES),$(BUILD)/$(file:.asm=.o)))
 
 TARGET := kernel.bin
@@ -82,14 +79,21 @@ $(BUILD)/%.o: $(SRC)/%.asm
 $(BUILD)/%.o: $(SRC)/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 	
-$(BUILD)/$(OPTIMIZ)/%.o: $(SRC)/$(OPTIMIZ)/%.c
-	$(CC) -c $< -o $@ $(CFLAGS_OPTIMIZ)
+$(BUILD)/$(NOOPTIMIZ)/%.o: $(SRC)/$(NOOPTIMIZ)/%.c
+	$(CC) -c $< -o $@ $(CFLAGS_NOOPTIMIZ)
 
 
-initramdisk:
-	$(FSMAKER) $(FS) $(INITRD)
+iso:
+	mkdir -pv iso/boot/grub
+	cp grub.cfg iso/boot/grub
+	cp fs/* iso
+	cp kernel.bin iso/boot
+	grub-mkrescue iso/ --output=nanoshell.iso
 
 # Make Clean
 clean: 
-		$(RM) $(BUILD)/*
-		$(RM) ./kernel.bin
+		rm -rf $(BUILD)/*
+		mkdir $(BUILD)/asm $(BUILD)/kapp $(BUILD)/fs $(BUILD)/nooptimiz $(BUILD)/icons
+		rm -rf ./kernel.bin
+		rm -rf iso nanoshell.iso
+		

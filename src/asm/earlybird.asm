@@ -80,8 +80,7 @@ KeEntry:
 section .text
 KeHigherHalfEntry:
 	; Unmap the identity mapping, we don't need it anymore
-	mov dword [g_kernelPageDirectory+0], 0
-	mov dword [g_kernelPageDirectory+4], 0
+	mov dword [g_kernelPageDirectory], 0
 	
 	; Reload CR3 to force a TLB flush (we updated the PDT but TLB isn't aware of that)
 	; NOTE: you can probably also use invlpg.  We won't use that

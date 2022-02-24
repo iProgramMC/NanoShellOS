@@ -20,34 +20,29 @@
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
-#define TITLE_BAR_HEIGHT 18
+#define TITLE_BAR_HEIGHT 11
 
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
 
-#define BACKGROUND_COLOR                0x00007f7f
-#define BUTTON_MIDDLE_COLOR             0x00CCCCCC
-#define WINDOW_BACKGD_COLOR             0x00AAAAAA
-#define WINDOW_EDGE_COLOR               0x00000000
-#define WINDOW_TITLE_ACTIVE_COLOR       0x0000003F
-#define WINDOW_TITLE_INACTIVE_COLOR     0x007F7F7F
-//#define WINDOW_TITLE_ACTIVE_COLOR_B   0x000000FF
-//#define WINDOW_TITLE_INACTIVE_COLOR_B 0x00AAAAAA
-#define WINDOW_TITLE_ACTIVE_COLOR_B     0x000000FF
-#define WINDOW_TITLE_INACTIVE_COLOR_B   0x00EEEEEE
-#define WINDOW_TITLE_TEXT_COLOR_SHADOW  0x0000003F
-#define WINDOW_TITLE_TEXT_COLOR         0x00FFFFFF
+#define BACKGROUND_COLOR 0xFF007F7F
+#define BUTTON_MIDDLE_COLOR 0xFFCCCCCC
+#define WINDOW_BACKGD_COLOR 0xFFAAAAAA
+#define WINDOW_EDGE_COLOR 0xFF000000
+#define WINDOW_TITLE_ACTIVE_COLOR 0xFF00007F
+#define WINDOW_TITLE_INACTIVE_COLOR 0xFF7F7F7F
+#define WINDOW_TITLE_ACTIVE_COLOR_B 0xFF0000FF
+#define WINDOW_TITLE_INACTIVE_COLOR_B 0xFFAAAAAA
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW 0xFF00003F
+#define WINDOW_TITLE_TEXT_COLOR 0x00FFFFFF
 
-#define WINDOW_MIN_WIDTH  (32) //that's already very small.
-#define WINDOW_MIN_HEIGHT (14)
-
-#define WINDOW_MINIMIZED_WIDTH  (160)
-#define WINDOW_MINIMIZED_HEIGHT (3+TITLE_BAR_HEIGHT)
+#define WINDOW_MIN_WIDTH 200 //that's already very small.
+#define WINDOW_MIN_HEIGHT 15
 
 enum {
 	EVENT_NULL,
-	EVENT_CREATE,  // Shall be only called once, when a window or widget is created.
-	EVENT_DESTROY, // Shall be only called once, when a window or widget is destroyed.
+	EVENT_CREATE,
+	EVENT_DESTROY,
 	EVENT_PAINT,
 	EVENT_MOVE,
 	EVENT_SIZE,
@@ -61,15 +56,8 @@ enum {
 	EVENT_COMMAND,
 	EVENT_KEYPRESS,
 	EVENT_CLOSE,
-	EVENT_KEYRAW,
-	EVENT_MINIMIZE,//do not call this normally.
-	EVENT_UNMINIMIZE,
 	EVENT_MAX
 };
-
-//NOTE WHEN WORKING WITH CONTROLS:
-//While yes, the window manager technically supports negative comboIDs, you're not supposed
-//to use them.  They are used internally by other controls (for example list views and text input views).
 
 enum {
 	//A null control.  Does nothing.
@@ -99,17 +87,6 @@ enum {
 	CONTROL_VSCROLLBAR,
 	//A horizontal scroll bar.
 	CONTROL_HSCROLLBAR,
-	//A menu bar attached to the top of a window.
-	//Adding more than one control is considered UB
-	CONTROL_MENUBAR,
-	//A text control printing big text (>127 chars)
-	CONTROL_TEXTHUGE,
-	//Same as CONTROL_LISTVIEW but with bigger icons.
-	CONTROL_ICONVIEW,
-	//Does nothing except surround other controls with a rectangle.  Useful for grouping settings.
-	CONTROL_SURROUND_RECT,
-	//Button with a colored background (parm2)
-	CONTROL_BUTTON_COLORED,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -141,7 +118,7 @@ enum
 
 struct WindowStruct;
 struct ControlStruct;
-typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
+typedef void (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
 typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
 
 typedef struct
@@ -152,8 +129,6 @@ typedef struct
 ListItem;
 
 #define LIST_ITEM_HEIGHT 16
-#define ICON_ITEM_WIDTH  90
-#define ICON_ITEM_HEIGHT 60
 
 typedef struct
 {
@@ -173,50 +148,11 @@ typedef struct
 }
 ScrollBarData;
 
-typedef struct tagMenuBarTreeItem
-{
-	int  m_comboID;//can be searchable
-	int  m_childrenCount,
-	     m_childrenCapacity;//if childrenCount reaches this and we need to add another, double this
-	struct tagMenuBarTreeItem* m_childrenArray;
-	char m_text [104];
-	//if this value is set, it gets drawn if this is an item part of the root tree, or the parent is open too.
-	bool m_isOpen;
-}
-MenuBarTreeItem;
-
 typedef struct
 {
 	bool m_clicked;
 }
 ButtonData;
-
-typedef struct
-{
-	MenuBarTreeItem m_root;
-}
-MenuBarData;
-
-typedef struct
-{
-	bool  m_focused;
-	bool  m_dirty;//Has it been changed since the dirty flag was set to false?
-	bool  m_onlyOneLine, m_showLineNumbers;//note that these are mutually exclusive, but both can be turned off
-	int   m_textCapacity, m_textLength;//The text length needs to be 1 less than the text capacity.
-	                                   //If the text capacity is 65, for example, the textLength may not be bigger than 64.
-	int   m_textCursorIndex, m_textCursorSelStart, m_textCursorSelEnd,
-	      m_scrollY;
-	char* m_pText;
-	bool  m_readOnly;
-}
-TextInputData;
-
-typedef struct
-{
-	bool m_clicked;
-	bool m_checked;
-}
-CheckBoxData;
 
 typedef struct ControlStruct
 {
@@ -235,9 +171,6 @@ typedef struct ControlStruct
 		ListViewData  m_listViewData;
 		ScrollBarData m_scrollBarData;
 		ButtonData    m_buttonData;
-		MenuBarData   m_menuBarData;
-		TextInputData m_textInputData;
-		CheckBoxData  m_checkBoxData;
 	};
 	
 	//event handler
@@ -249,12 +182,10 @@ Control;
 #define WF_FROZEN   0x00000002
 #define WF_NOTITLE  0x00000004
 #define WF_NOBORDER 0x00000008
-#define WF_NOMINIMZ 0x00000010
 
 typedef struct WindowStruct
 {
 	bool       m_used;
-	bool       m_minimized;
 	bool       m_hidden;
 	bool       m_isBeingDragged;
 	bool       m_isSelected;
@@ -267,12 +198,9 @@ typedef struct WindowStruct
 	
 	WindowProc m_callback;
 	Rectangle  m_rect;
-	Rectangle  m_rectBackup;
 	//uint32_t*  m_framebuffer;
 	//int        m_fbWidth, m_fbHeight;
 	VBEData    m_vbeData;
-	
-	int        m_iconID;
 	
 	bool       m_eventQueueLock;
 	short      m_eventQueue[EVENT_QUEUE_MAX];
@@ -312,7 +240,6 @@ bool RectangleContains(Rectangle*r, Point*p) ;
  * Register an event to a certain window.
  */
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2);
-void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int parm2);
 
 /**
  * Entry point of the window manager.
@@ -355,7 +282,6 @@ void DestroyWindow (Window* pWindow);
  * Requests a safe re-paint of the window from the window manager.
  */
 void RequestRepaint (Window* pWindow);
-void RequestRepaintNew (Window* pWindow);
 
 /**
  * Displays a modal dialog box that contains a system icon, a set of buttons, and 
@@ -363,21 +289,6 @@ void RequestRepaintNew (Window* pWindow);
  * box returns an integer value that indicates which button the user clicked.
  */
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t type);
-
-/**
- * Pops up a modal dialog box requesting an input string, and returns a MmAllocate'd
- * region of memory with the text inside.  Make sure to free the result, if it's non-null.
- *
- * Returns NULL if the user clicks "Cancel".
- *
- * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
- */
-char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
-
-/**
- * TBA
- */
-uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaption);
 
 /**
  * Adds a control to the window.
@@ -394,9 +305,5 @@ int GetWindowManagerFPS();
  */
 int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
 
-/**
- * Call the WindowCallback of a window and its controls.
- */
-int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
 
 #endif//_WINDOW_H

@@ -11,8 +11,6 @@ global ReadPort
 global WritePort
 global ReadPortW
 global WritePortW
-global ReadPortL
-global WritePortL
 global WriteFont8px
 global WriteFont16px
 
@@ -58,27 +56,6 @@ WritePortW:
 	mov  edx, [ebp + 8]
 	mov  ax,  [ebp + 12]
 	out  dx,  ax
-	
-	mov  esp, ebp
-	pop  ebp
-	ret
-ReadPortL:
-	push ebp
-	mov  ebp, esp
-	
-	mov  edx, [ebp + 8]
-	in   eax, dx
-	
-	mov  esp, ebp
-	pop  ebp
-	ret
-WritePortL:
-	push ebp
-	mov  ebp, esp
-	
-	mov  edx, [ebp + 8]
-	mov  eax, [ebp + 12]
-	out  dx,  eax
 	
 	mov  esp, ebp
 	pop  ebp
@@ -196,69 +173,9 @@ fast_memcpy:
 	pop ebp
 	ret
 	
-global memset_ints
-global memcpy_ints
 global align4_memcpy
 global align8_memcpy
 global align16_memcpy
-memset_ints:
-	push ebp
-	mov  ebp, esp
-	
-	push ebx
-	push esi
-	push edi
-	
-	mov esi, [ebp + 0Ch]
-	mov edi, [ebp + 08h]
-	mov ecx, [ebp + 10h]
-	
-	.some_loop:
-		mov [edi], esi
-		add edi, 4
-		dec ecx
-		jnz .some_loop
-	
-	pop edi
-	pop esi
-	pop ebx
-	
-	mov esp, ebp
-	pop ebp
-	ret
-memcpy_ints:
-	push ebp
-	mov  ebp, esp
-	
-	push ebx
-	push esi
-	push edi
-	
-	mov esi, [ebp + 0Ch]
-	mov edi, [ebp + 08h]
-	mov ecx, [ebp + 10h]
-	
-	push ebp
-	prefetchnta [esi]
-	.some_loop:
-		prefetchnta [esi+4]
-		mov eax, [esi]
-		mov [edi   ], eax
-		add esi, 4
-		add edi, 4
-		dec ecx
-		jnz .some_loop
-		
-	; done!
-	pop ebp
-	
-	pop edi
-	pop esi
-	pop ebx
-	
-	mov esp, ebp
-	pop ebp
-	ret
 align4_memcpy:
 	push ebp
 	mov  ebp, esp
@@ -481,11 +398,7 @@ KeIdtLoad:
 
 global MmStartupStuff
 MmStartupStuff:
-; WORK: Change this if necessary.  Paging is not setup at this stage
-;       so this address is purely PHYSICAL.
-; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
-	mov ecx, 0x600000
-	mov dword [e_placement], ecx
+	mov ecx, dword [e_placement]
 	add ecx, 0xC0000000
 	mov dword [e_frameBitsetVirt], ecx
 	ret
@@ -554,10 +467,10 @@ extern UserCallStuffNotSupportedC
 global UserCallStuff
 global UserCallStuffEnd
 UserCallStuff:
-	MOV ECX, [0xC0007CFC]
-	SHL ECX, 2
+	MOV EBX, [0xC0007CFC]
+	SHL EBX, 2
 	
-	MOV EAX, [WindowCall+ECX]
+	MOV EAX, [WindowCall+EBX]
 	JMP EAX
 	
 	RET
@@ -581,7 +494,7 @@ g_cpuidNameEDX resd 1
 g_cpuidNameECX resd 1
 g_cpuidNameNUL resd 1
 
-g_cpuidBrandingInfo resd 13
+g_cpuidBrandingInfo resd 49
 
 ; eax=1, eax's value:
 g_cpuidFeatureBits resd 1

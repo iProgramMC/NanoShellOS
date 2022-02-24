@@ -12,13 +12,9 @@
 
 #define TASKBAR_WIDTH (GetScreenWidth())
 #define TASKBAR_HEIGHT TITLE_BAR_HEIGHT + 14 // padding around button: 4 px, padding around text: 2 px
-#define TASKBAR_BUTTON_WIDTH 40
+#define TASKBAR_BUTTON_WIDTH 60
 #define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
-#define TASKBAR_TIME_THING_WIDTH 40
-
-//hack.
-#undef  TITLE_BAR_HEIGHT
-#define TITLE_BAR_HEIGHT 11
+#define TASKBAR_TIME_THING_WIDTH 90
 
 enum {
 	TASKBAR_HELLO = 0x1,
@@ -44,7 +40,7 @@ void UpdateTaskbar (Window* pWindow)
 	//TODO: Window buttons.
 	
 	// FPS
-	sprintf(buffer, "FPS: %d     ", GetWindowManagerFPS());
+	sprintf(buffer, "<-- Click this button to start.  FPS: %d", GetWindowManagerFPS());
 	SetLabelText(pWindow, TASKBAR_START_TEXT, buffer);
 	
 	// Time
@@ -63,10 +59,10 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			RECT (r, 4, 2, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Start", TASKBAR_HELLO, 0, 0);
-			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 8, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXT, r, "FPS: Wait...", TASKBAR_START_TEXT, 0, WINDOW_BACKGD_COLOR);
-			RECT (r, GetScreenWidth() - 2 - TASKBAR_TIME_THING_WIDTH, 8, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXT, r, "?", TASKBAR_TIME_TEXT, 0, WINDOW_BACKGD_COLOR);
+			RECT (r, 8 + TASKBAR_BUTTON_WIDTH, 2, TASKBAR_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXTCENTER, r, "<-- Click this button to start.", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED);
+			RECT (r, GetScreenWidth() - 2 - TASKBAR_TIME_THING_WIDTH, 2, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED |TEXTSTYLE_HCENTERED);
 			
 			break;
 		}
@@ -95,18 +91,13 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT;//, sh = GetScreenHeight();
-	int wx = 0, wy = 0;//(sh - wh)+2;
+	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT, sh = GetScreenHeight();
+	int wx = 0, wy = (sh - wh)+2;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
+	Window* pWindow = CreateWindow ("Task Bar", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
 	
 	if (!pWindow)
-	{
-		DebugLogMsg("Hey, the window couldn't be created. Why?");
-		return;
-	}
-	
-	pWindow->m_iconID = ICON_DESKTOP2;
+		DebugLogMsg("Hey, the taskbar couldn't be created.  Why?");
 	
 	// setup:
 	//ShowWindow(pWindow);

@@ -106,11 +106,9 @@ void VidSetFont(unsigned fontType);
 void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
 
 /**
- * Blits an image onto the screen.  VidBlitImageResize automatically optimizes this to a VidBlitImage
- * if the width and height specified match the image width and height.
+ * Blits an image onto the screen.
  */
 void VidBlitImage(Image* pImage, int x, int y);
-void VidBlitImageResize(Image* pImage, int x, int y, int w, int h);
 
 /**
  * Prints a string in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).

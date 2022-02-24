@@ -7,9 +7,6 @@
 #ifndef _IDT_H
 #define _IDT_H
 
-#include <debug.h>
-#include <task.h>
-
 typedef struct {
 	unsigned short offset_lowerbits;
 	unsigned short int selector;
@@ -28,20 +25,10 @@ typedef struct
 __attribute__((packed))
 IdtPointer;
 
-typedef struct
-{
-	Registers m_regs;
-	Task*     m_pTaskKilled;
-	char      m_tag[33];
-	uint32_t  m_stackTrace[51];
-}
-CrashInfo;
-
 extern void KiIdtInit();
 extern void KeTimerInit();
 extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
-extern void WaitMS(int ms);
 
 #endif//_IDT_H

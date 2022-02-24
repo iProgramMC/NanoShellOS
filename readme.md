@@ -7,7 +7,8 @@ Copyright (C) 2022 iProgramInCpp
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation, version 3 of the License only.
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see [the GNU licenses](https://www.gnu.org/licenses/).
 
-This software is licensed under the GNU General Public License V3 only.
+This software is licensed under the GNU General Public License V3.
 
 
 #### Be warned that building this is not for the average Linux user nor is it for the faint of heart.  Soon I'll work on a way to compile this in an easier way.
@@ -25,7 +26,7 @@ This software is licensed under the GNU General Public License V3 only.
 ## Goals
 
 Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
-I'm not particularly concerned with safety, any app is free to do anything.  The design is NOT the best, by ANY means, so do not inspire yours from this design.
+I'm not particularly concerned with safety, any app is free to do anything.
 
 Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
 
@@ -38,7 +39,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] A basic shell, can execute applications
 - [x] Get a GUI running (Also in a task)
 - [x] Applications can use the GUI API
-- [x] Port DOOM
+- [ ] Port DOOM
 - [ ] (ultimate boss) Port Mesa and Super Mario 64 (based on the DOS port, please)
 #### Drivers
 - [x] PS/2 Mouse and Keyboard
@@ -64,7 +65,11 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 ## Build instructions
 
 ### Linux build:
-Not supported.  Could be supported soon, but currently not supported.
+install python3, make, and grub-legacy
+gcc and nasm are already in the tools folder.
+
+then run `make`
+then run `make iso`
 
 ### Windows build:
 
@@ -72,7 +77,7 @@ Not supported.  Could be supported soon, but currently not supported.
 
 Create the `build` folder.  Inside it create the folders `asm`, `kapp`, `fs`, `nooptimiz` and `icons`.
 
-Create the `tools` directory.  Download [the i686-elf GCC+binutils](https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-windows.zip), and extract it into `tools/i686-gcc/`.
+Create the `tools` directory.  Download [the i686-elf GCC+binutils](://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-windows.zip), and extract it into `tools/i686-gcc/`.
 Also download NASM and place it inside `tools/nasm` so that it is reachable at `tools/nasm/nasm.exe`.
 
 Make sure that `make` is easily accessible by opening a command prompt anywhere and typing `make`.

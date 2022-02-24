@@ -27,7 +27,6 @@
 typedef struct 
 {
 	uint32_t//:
-		cr2,
 		edi, esi, ebp, esp, ebx, edx, ecx, eax,
 		error_code, 
 		eip, cs, eflags;

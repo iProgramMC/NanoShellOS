@@ -8,7 +8,7 @@ copy kernel.bin F:\boot\kernel.bin /y
 cd /d c:\Program Files\qemu
 set path=%path%;%NSPath%
 
-qemu-system-i386 -m 16M -drive file=\\.\PHYSICALDRIVE2,format=raw -display sdl -debugcon stdio -d cpu_reset -monitor telnet:127.0.0.1:55555,server,nowait
+qemu-system-i386 -m 16M -drive file=\\.\PHYSICALDRIVE2,format=raw -debugcon stdio -d cpu_reset -monitor telnet:127.0.0.1:55555,server,nowait
 : --accel whpx
 rem -s -S 
 

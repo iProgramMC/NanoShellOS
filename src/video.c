@@ -11,6 +11,9 @@
 #include <string.h>
 #include <icon.h>
 
+//! TODO: perhaps merge vga.c with this?
+#include "extra/fonts.h"
+
 // Basic definitions for video
 #if 1
 bool g_isVideoMode = false;
@@ -29,43 +32,16 @@ VBEData g_mainScreenVBEData;
 VBEData* g_vbeData = NULL;
 #endif
 
-extern bool g_RenderWindowContents;
-
 // Mouse graphics stuff
 #if 1
 
 int g_mouseX = 0, g_mouseY = 0;
 
-#define SEMI_TRANSPARENT 0x7F7F7F7F
 
 #define X 0X00FFFFFF,
-//#define S 0X007F7F7F,
-#define S SEMI_TRANSPARENT,
 #define B 0XFF000000,
 #define o TRANSPARENT,
 
-/*uint32_t g_cursorColorsNoShadow[] = 
-{
-	B o o o o o o o o o o
-	B B o o o o o o o o o
-	B X B o o o o o o o o
-	B X X B o o o o o o o
-	B X X X B o o o o o o
-	B X X X X B o o o o o
-	B X X X X X B o o o o
-	B X X X X X X B o o o
-	B X X X X X X X B o o
-	B X X X X X X X X B o
-	B X X X X X B B B B B
-	B X X B X X B S S S S
-	B X B S B X X B o o o
-	B B S o B X X B o o o
-	B S o o S B X X B o o
-	S o o o o B X X B o o
-	o o o o o S B X X B o
-	o o o o o o B X X B o
-	o o o o o o S B B S o
-};*/
 uint32_t g_cursorColors[] = 
 {
 	B o o o o o o o o o o o
@@ -78,16 +54,17 @@ uint32_t g_cursorColors[] =
 	B X X X X X X B o o o o
 	B X X X X X X X B o o o
 	B X X X X X X X X B o o
-	B X X X X X B B B B B o
-	B X X B X X B S S S S S
-	B X B S B X X B o o o o
-	B B S S B X X B S o o o
-	B S S o o B X X B o o o
-	o S o o o B X X B S o o
+	B X X X X X X X X X B o
+	B X X X X X X B B B B B
+	B X X X B X X B o o o o
+	B X X B B X X B o o o o
+	B X B o o B X X B o o o
+	B B o o o B X X B o o o
+	B o o o o o B X X B o o
 	o o o o o o B X X B o o
-	o o o o o o B X X B S o
-	o o o o o o o B B S S o
-	o o o o o o o o S S o o
+	o o o o o o o B X X B o
+	o o o o o o o B X X B o
+	o o o o o o o o B B o o
 };
 uint32_t g_waitCursorColors[] = 
 {
@@ -115,15 +92,8 @@ uint32_t g_waitCursorColors[] =
 	B B B B B B B B B B B B B o
 };
 
-
-//const for now, TODO
-//bool g_disableShadows = true;
-#define g_disableShadows 0
-
 Cursor g_defaultCursor = {
-	//11, 19, 0, 0, 
-	//g_cursorColorsNoShadow,
-	12, 20, 0, 0, 
+	12, 21, 0, 0, 
 	g_cursorColors,
 	true
 };
@@ -261,7 +231,7 @@ Cursor* GetCurrentCursor()
 {
 	return g_currentCursor;
 }
-void RenderCursor(void);
+
 void SetCursor(Cursor* pCursor)
 {
 	if (!pCursor) pCursor = g_pDefaultCursor;
@@ -275,7 +245,7 @@ void SetCursor(Cursor* pCursor)
 	int mx = g_mouseX, my = g_mouseY;
 	
 	//undraw the old cursor:
-	/*if (g_currentCursor)
+	if (g_currentCursor)
 	{
 		for (int i = -2; i <= g_currentCursor->height + 1; i++)
 		{
@@ -286,56 +256,27 @@ void SetCursor(Cursor* pCursor)
 				VidPlotPixelIgnoreCursorChecksChecked (x, y, VidReadPixel(x, y));
 			}
 		}
-	}*/
-	if (g_currentCursor)
-	{
-		int sx = mx - g_currentCursor->leftOffs;
-		int sy = my - g_currentCursor->topOffs;
-		int ex = sx + g_currentCursor->width;
-		int ey = sy + g_currentCursor->height;
-		if (sx < 0) { sx = 0; }//we decrease psx by sx because sx is negative so it's just adding abs(sx)
-		if (sx >= GetScreenWidth()) return;
-		if (sy < 0) { sy = 0; }
-		if (sy >= GetScreenWidth()) return;
-		
-		if (ex < 0) return;
-		if (ey < 0) return;
-		if (ex >= GetScreenWidth())  ex = GetScreenWidth();
-		if (ey >= GetScreenHeight()) ey = GetScreenHeight();
-		
-		int dist = ex-sx;
-		for (int cy = sy; cy != ey; cy++)
-		{
-			int offf = cy * g_vbeData->m_pitch32 + sx, offc = cy * g_vbeData->m_width + sx;
-			memcpy_ints(&g_vbeData->m_framebuffer32[offf], &g_framebufferCopy[offc], dist);
-		}
 	}
 	
 	//draw the new cursor:
 	g_currentCursor = pCursor;
-	/*for (int i = 0; i < g_currentCursor->height; i++)
+	for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
 		{
 			int id = i * g_currentCursor->width + j;
 			if (g_currentCursor->bitmap[id] != TRANSPARENT)
 			{
-				uint32_t test = g_currentCursor->bitmap[id];
-				if (test == SEMI_TRANSPARENT)
-				{
-					//if (g_disableShadows) continue;
-					test = VidReadPixel(j + mx - g_currentCursor->leftOffs, i + my - g_currentCursor->topOffs);
-					test = ((test>>1) & 0xFF0000) | ((test>>1) & 0xFF00) | ((test>>1) & 0xFF);
-				}
 				VidPlotPixelIgnoreCursorChecksChecked(
 					j + mx - g_currentCursor->leftOffs,
 					i + my - g_currentCursor->topOffs,
-					test
+					g_currentCursor->bitmap[id]
 				);
 			}
 		}
-	}*/
-	RenderCursor();
+	}
+	
+	
 	
 	g_vbeData = backup;
 	
@@ -548,8 +489,7 @@ void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 				int mx = x - g_mouseX + g_currentCursor->leftOffs;
 				int my = y - g_mouseY + g_currentCursor->topOffs;
 				int index = my * g_currentCursor->width + mx;
-				unsigned bru = g_currentCursor->bitmap[index];
-				if (bru != TRANSPARENT)// && bru != SEMI_TRANSPARENT)
+				if (g_currentCursor->bitmap[index] != TRANSPARENT)
 				{
 					return;
 				}
@@ -572,42 +512,50 @@ void VidPrintTestingPattern()
 void VidFillScreen(unsigned color)
 {
 	g_vbeData->m_dirty = 1;
+	int color2 = color;
 	bool alsoToTheCopy = (g_vbeData == &g_mainScreenVBEData);
-	
-	memset_ints (g_vbeData->m_framebuffer32, color, g_vbeData->m_pitch32 * g_vbeData->m_height);
-	if (alsoToTheCopy)
-		memset_ints (g_framebufferCopy, color, g_vbeData->m_width * g_vbeData->m_height);
+	switch (g_vbeData->m_bitdepth)
+	{
+		case 0:
+			color2 = VidColor32to8(color);
+			for (int y = 0; y < GetScreenSizeY(); y++) 
+				for (int x = 0; x < GetScreenSizeX(); x++)
+				{
+					g_vbeData->m_framebuffer8 [x + y * g_vbeData->m_pitch  ] = color2;
+					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
+				}
+			break;
+		case 1:
+			color2 = VidColor32to16(color);
+			for (int y = 0; y < GetScreenSizeY(); y++) 
+				for (int x = 0; x < GetScreenSizeX(); x++)
+				{
+					g_vbeData->m_framebuffer16[x + y * g_vbeData->m_pitch16] = color2;
+					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
+				}
+			break;
+		case 2:
+			for (int y = 0; y < GetScreenSizeY(); y++) 
+				for (int x = 0; x < GetScreenSizeX(); x++)
+				{
+					g_vbeData->m_framebuffer32[x + y * g_vbeData->m_pitch32] = color;
+					if (alsoToTheCopy) g_framebufferCopy[x + y * g_vbeData->m_width] = color;
+				}
+			break;
+	}
 }
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 {
 	//basic clipping:
-	if (left >= GetScreenSizeX()) return;
-	if (top >= GetScreenSizeY()) return;
-	if (right < 0) return;
-	if (bottom < 0) return;
 	if (left < 0) left = 0;
 	if (top < 0) top = 0;
 	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
 	if (bottom >= GetScreenSizeY()) bottom = GetScreenSizeY() - 1;
 	
-	int yoffs = top * g_vbeData->m_pitch32;
-	int start = yoffs + left;
-	int xs = right-left+1;
 	for (int y = top; y <= bottom; y++)
 	{
-		memset_ints (&g_vbeData->m_framebuffer32[start], color, xs);
-		start += g_vbeData->m_pitch32;
-	}
-	if (g_vbeData == &g_mainScreenVBEData)
-	{
-		yoffs = top * g_vbeData->m_width;
-		start = yoffs + left;
-		xs = right-left+1;
-		for (int y = top; y <= bottom; y++)
-		{
-			memset_ints (&g_framebufferCopy[start], color, xs);
-			start += g_vbeData->m_width;
-		}
+		for (int x = left; x <= right; x++)
+			VidPlotPixelInline(x, y, color);
 	}
 }
 void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
@@ -784,18 +732,6 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 		}
 	}
 }
-void VidBlitImageForceOpaque(Image* pImage, int x, int y)
-{
-	//TODO: memcpy method.
-	const uint32_t* fb = pImage->framebuffer;
-	
-	int ixe = x + pImage->width, iye = y + pImage->height;
-	for (int iy = y; iy < iye; iy++)
-		for (int ix = x; ix < ixe; ix++)
-		{
-			VidPlotPixelInline(ix, iy, *(fb++));
-		}
-}
 void VidBlitImage(Image* pImage, int x, int y)
 {
 	const uint32_t* fb = pImage->framebuffer;
@@ -811,11 +747,6 @@ void VidBlitImage(Image* pImage, int x, int y)
 }
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
-	if (width == p->width && height == p->height)
-	{
-		VidBlitImage (p, gx, gy);
-		return;
-	}
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -867,6 +798,133 @@ void VidSetVBEData(VBEData* pData)
 
 
 // Font rendering
+bool g_uses8by16Font = 0;
+
+const unsigned char* g_fontIDToData[] = {
+	g_TamsynRegu8x16,
+	g_TamsynBold8x16,
+	g_PaperMFont8x16,
+	g_FamiSans8x8,
+	g_BasicFontData,
+	g_GlcdData,
+};
+const unsigned char* g_pCurrentFont = NULL;
+void VidSetFont(unsigned fontType)
+{
+	if (fontType >= FONT_LAST) 
+	{
+		LogMsg("Can't set the font to that! (%d)", fontType);
+		return;
+	}
+	g_pCurrentFont  = g_fontIDToData[fontType];
+	g_uses8by16Font = (g_pCurrentFont[1] != 8);
+}
+void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
+{
+	if (!g_pCurrentFont) {
+		SLogMsg("FUCK!");
+		return;
+	}
+	int width = g_pCurrentFont[0], height = g_pCurrentFont[1];
+	const unsigned char* test = g_pCurrentFont + 3;
+	if (g_pCurrentFont[2] == 2)
+	{
+		int x = 0;
+		for (x = 0; x < width; x++)
+		{
+			for (int y = 0, bitmask = 1; y < height; y++, bitmask <<= 1)
+			{
+				if (test[c * width + x] & bitmask)
+					VidPlotPixelInline(ox + x, oy + y, colorFg);
+				else if (colorBg != TRANSPARENT)
+					VidPlotPixelInline(ox + x, oy + y, colorBg);
+			}
+		}
+		for (int y = 0; y < height; y++)
+		{
+			if (colorBg != TRANSPARENT)
+				VidPlotPixelInline(ox + x, oy + y, colorBg);
+		}
+		
+		return;
+	}
+	else
+	{
+		for (int y = 0; y < height; y++)
+		{
+			for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
+			{
+				if (test[c * height + y] & bitmask)
+					VidPlotPixelInline(ox + x, oy + y, colorFg);
+				else if (colorBg != TRANSPARENT)
+					VidPlotPixelInline(ox + x, oy + y, colorBg);
+			}
+		}
+	}
+}
+void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx)
+{
+	int x = ox, y = oy;
+	int lineHeight = g_pCurrentFont[1], charWidth = g_pCurrentFont[0];
+	bool hasVariableCharWidth = g_pCurrentFont[2] == 1;
+	if (g_pCurrentFont[2] == 2)
+		charWidth++;
+	
+	int width = 0;
+	int cwidth = 0, height = lineHeight;
+	
+	while (*pText)
+	{
+		//print this character:
+		char c = *pText;
+		if (c == '\n')
+		{
+			y += lineHeight;
+			height += lineHeight;
+			x = ox;
+			if (cwidth < width)
+				cwidth = width;
+			width = 0;
+		}
+		else
+		{
+			int cw = charWidth;
+			if (hasVariableCharWidth) cw = g_pCurrentFont[3 + 256 * lineHeight + c];
+			
+			if (!doNotActuallyDraw)
+				VidPlotChar(c, x, y, colorFg, colorBg);
+			
+			x += cw;
+			width += cw;
+		}
+		pText++;
+	}
+	if (cwidth < width)
+		cwidth = width;
+	
+	*widthx  = cwidth;
+	*heightx = height;
+}
+void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg)
+{
+	UNUSED int a, b;
+	VidTextOutInternal (pText, ox, oy, colorFg, colorBg, false, &a, &b);
+}
+
+void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
+{
+	//TODO: Fix this function
+	int w, h;
+	VidTextOutInternal(pText, 0, 0, 0, 0, true, &w, &h);
+	
+	int xStart = rect.left, yStart = rect.top;
+	if (drawFlags & TEXTSTYLE_HCENTERED)
+		xStart = rect.left + ((rect.right - rect.left - w) / 2);
+	if (drawFlags & TEXTSTYLE_VCENTERED)
+		yStart = rect.top  + ((rect.bottom- rect.top  - h) / 2);
+	
+	VidTextOutInternal(pText, xStart, yStart, colorFg, colorBg, false, &w, &h);
+}
 
 //! DO NOT use this on non-main-screen framebuffers!
 unsigned VidReadPixel (unsigned x, unsigned y)
@@ -945,30 +1003,16 @@ static inline void RenderCursorTransparent(void)
 		if (xe >= GetScreenSizeX())
 			xe = GetScreenSizeX() - 1;
 		//int xd = (xe - xs) * sizeof(uint32_t);
-		int off11 = 0;
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
-			off11 = y * g_vbeData->m_pitch32 + xs;
 			ky = kz * g_currentCursor->width + off;
 			//just memcpy shit
 			//memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
 			for (int x = xs; x < xe; x++)
 			{
-				uint32_t test = g_currentCursor->bitmap[ky];
-				if (test != TRANSPARENT)
-				{
-					if (test == SEMI_TRANSPARENT)
-					{
-						test = VidReadPixelInline(x, y);
-						test = (((test & 0xFF0000)>>1) & 0xFF0000) | (((test & 0xFF00)>>1) & 0xFF00) | (((test & 0xFF)>>1) & 0xFF);
-						//if (!g_disableShadows)
-							g_vbeData->m_framebuffer32[off11] = test;
-					}
-					else
-						g_vbeData->m_framebuffer32[off11] = test;
-				}
+				if (g_currentCursor->bitmap[ky] != TRANSPARENT)
+					g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + x] = g_currentCursor->bitmap[ky];
 				ky++;
-				off11++;
 			}
 		}
 	}
@@ -989,19 +1033,13 @@ static inline void RenderCursorTransparent(void)
 				int id = i * g_currentCursor->width + j;
 				if (g_currentCursor->bitmap[id] != TRANSPARENT)
 				{
-					uint32_t test = g_currentCursor->bitmap[id];
-					if (test == SEMI_TRANSPARENT)
-					{
-						test = VidReadPixelInline(kx, ky);
-						test = ((test>>1) & 0xFF0000) | ((test>>1) & 0xFF00) | ((test>>1) & 0xFF);
-					}
 					//int kx = j + g_mouseX - g_currentCursor->leftOffs,
 					//	ky = i + g_mouseY - g_currentCursor->topOffs;
 					if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
 					VidPlotPixelIgnoreCursorChecksChecked (
 						kx,
 						ky,
-						test
+						g_currentCursor->bitmap[id]
 					);
 				}
 			}
@@ -1011,30 +1049,6 @@ static inline void RenderCursorTransparent(void)
 __attribute__((always_inline))
 static inline void RenderCursorOpaque(void)
 {
-	if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                            ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                            ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                        ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky)^0xFFFFFFFF);
-		}
-		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                             VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                            )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                        )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2)^0xFFFFFFFF);
-		}
-		return;
-	}
 	if (g_vbeData->m_bitdepth == 2)
 	{
 		//NEW: Optimization
@@ -1047,8 +1061,6 @@ static inline void RenderCursorOpaque(void)
 			kzs -= ys;
 			ys = 0;
 		}
-		if (ye >= GetScreenHeight())
-			ye =  GetScreenHeight() - 1;
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1058,7 +1070,7 @@ static inline void RenderCursorOpaque(void)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe =  GetScreenSizeX() - 1;
+			xe = GetScreenSizeX() - 1;
 		int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -1105,7 +1117,6 @@ void RenderCursor(void)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
 {
-	// We have no other choice but to do this.
 	for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
@@ -1127,7 +1138,7 @@ static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 {
-	/*for (int i = 0; i < g_currentCursor->height; i++)
+	for (int i = 0; i < g_currentCursor->height; i++)
 	{
 		for (int j = 0; j < g_currentCursor->width; j++)
 		{
@@ -1138,130 +1149,6 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 			//VidPlotPixelInline(
 				kx, ky, VidReadPixelInline (kx, ky)
 			);
-		}
-	}*/
-	if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=oldY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                            ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                            ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                        ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky));
-		}
-		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                             VidReadPixel(kx, oldY - g_currentCursor->topOffs                            ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                        ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2));
-		}
-		return;
-	}
-	
-	// Draw over the Y coordinate.
-	
-	int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
-	int top  = oldY - g_currentCursor->topOffs,  bottom= top  + g_currentCursor->height;
-	int topUpTo = g_mouseY - g_currentCursor->topOffs;
-	if (top < 0) top = 0;
-	if (topUpTo < 0) topUpTo = 0;
-	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
-	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
-	if (bottom < 0) bottom= 0;
-	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight()-1;
-	if (left < 0) left = 0;
-	if (left >= GetScreenWidth()) left = GetScreenWidth();
-	if (right < 0) right = 0;
-	if (right >= GetScreenWidth()) right = GetScreenWidth();
-	int xs = right-left+1;
-	int yoffscp, yoffsfb;
-	int startcp, startfb;
-	if (xs > 0)
-	{
-		// Did we move down?
-		if (oldY < g_mouseY)
-		{
-			yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
-			startcp = yoffscp + left,           startfb = yoffsfb + left;
-			//SLogMsg("top:%d topUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", top, topUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
-			for (int y = top; y < topUpTo; y++)
-			{
-				//to get an awesome glitch effect, switch this out with memset_ints :D
-				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
-				startcp += g_vbeData->m_width;
-				startfb += g_vbeData->m_pitch32;
-			}
-			
-		}
-		// Did we move up?
-		else if (oldY > g_mouseY)
-		{
-			topUpTo = g_mouseY - g_currentCursor->topOffs;
-			int bottomUpTo = topUpTo + g_currentCursor->height;
-			if (bottomUpTo < 0) bottom= 0;
-			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight()-1;
-			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
-			startcp = yoffscp + left,                  startfb = yoffsfb + left;
-			for (int y = bottomUpTo; y < bottom; y++)
-			{
-				//to get an awesome glitch effect, switch this out with memset_ints :D
-				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
-				startcp += g_vbeData->m_width;
-				startfb += g_vbeData->m_pitch32;
-			}
-		}
-	}
-	
-	// Did we move right?
-	if (oldX < g_mouseX)
-	{
-		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
-		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
-		if (leftUpTo < 0) leftUpTo = 0;
-		if (leftUpTo >= GetScreenWidth()) leftUpTo = GetScreenWidth();
-		
-		xs = leftUpTo-left;
-		if (xs > 0)
-		{
-			startcp = yoffscp + left, startfb = yoffsfb + left;
-			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
-			for (int y = top; y < bottom; y++)
-			{
-				//to get an awesome glitch effect, switch this out with memset_ints :D
-				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
-				startcp += g_vbeData->m_width;
-				startfb += g_vbeData->m_pitch32;
-			}
-		}
-	}
-	// Did we move left?
-	else if (oldX > g_mouseX)
-	{
-		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
-		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
-		int rightUpTo = leftUpTo +  g_currentCursor->width;
-		if (rightUpTo < 0) rightUpTo = 0;
-		if (rightUpTo >= GetScreenWidth()) rightUpTo = GetScreenWidth();
-		
-		xs = right-rightUpTo;
-		if (xs > 0)
-		{
-			startcp = yoffscp + rightUpTo, startfb = yoffsfb + rightUpTo;
-			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
-			for (int y = top; y < bottom; y++)
-			{
-				//to get an awesome glitch effect, switch this out with memset_ints :D
-				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
-				startcp += g_vbeData->m_width;
-				startfb += g_vbeData->m_pitch32;
-			}
 		}
 	}
 }
@@ -1293,11 +1180,11 @@ void SetMousePos (unsigned newX, unsigned newY)
 	//VidPlotPixelIgnoreCursorChecks (g_mouseX, g_mouseY, 0xFF);
 	//VidPlotPixel (oldX, oldY, VidReadPixel(oldX, oldY));
 	
-	//Redraw all the pixels under where the cursor was previously:
-	RedrawOldPixels(oldX, oldY);
-	
 	//Draw the cursor image at the new position:
 	RenderCursor();
+	
+	//Redraw all the pixels under where the cursor was previously:
+	RedrawOldPixels(oldX, oldY);
 	//TODO: check flags here
 	
 	g_vbeData = backup;
@@ -1327,102 +1214,19 @@ void VidInitializeVBEData(multiboot_info_t* pInfo)
 	g_vbeData->m_framebuffer16 = (uint16_t*)FRAMEBUFFER_MAPPED_ADDR;
 	g_vbeData->m_framebuffer8  = (uint8_t *)FRAMEBUFFER_MAPPED_ADDR;
 }
-
-bool     g_IsBGADevicePresent;
-uint32_t g_BGADeviceBAR0;
-void BgaWriteRegister(unsigned short index, unsigned short data)
-{
-	WritePortW(VBE_DISPI_IOPORT_INDEX, index);
-	WritePortW(VBE_DISPI_IOPORT_DATA,  data);
-}
-unsigned short BgaReadRegister(unsigned short index)
-{
-	WritePortW(VBE_DISPI_IOPORT_INDEX, index);
-	return ReadPortW(VBE_DISPI_IOPORT_DATA);
-}
-bool BgaIsAvailable()
-{
-	return (BgaReadRegister(VBE_DISPI_INDEX_ID) & 0xFFF0) == VBE_DISPI_ID0;//can be 0xB0C0-0xB0CF or else
-}
-bool BgaChangeScreenResolution(int xSize, int ySize)
-{
-	if (!BgaIsAvailable())
-	{
-		SLogMsg("BGA device not available.");
-		return false;
-	}
-	
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_DISABLED);
-	BgaWriteRegister(VBE_DISPI_INDEX_XRES,   xSize);
-	BgaWriteRegister(VBE_DISPI_INDEX_YRES,   ySize);
-	BgaWriteRegister(VBE_DISPI_INDEX_BPP,    32);
-	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED | VBE_DISPI_NOCLEARMEM);
-	return true;
-}
-bool VidChangeScreenResolution(int xSize, int ySize)
-{
-	if (!g_IsBGADevicePresent)
-	{
-		//may want to test it?
-		if (BgaIsAvailable())
-		{
-			g_IsBGADevicePresent = true;
-			SLogMsg("Found BGA device.");
-			return VidChangeScreenResolution(xSize, ySize);
-		}
-	}
-	else
-	{
-		if (g_mainScreenVBEData.m_framebuffer32 != (uint32_t*)0xE0000000)
-		{
-			SLogMsg("Attempt to VidChangeScreenResolution may fail!");
-		}
-		
-		if (!BgaChangeScreenResolution(xSize, ySize))
-		{
-			g_IsBGADevicePresent = false;
-			return false;
-		}
-		
-		//Assume that everything went ok, and set our main screen VBE data to have that:
-		g_mainScreenVBEData.m_available = true;
-		g_mainScreenVBEData.m_width     = xSize;
-		g_mainScreenVBEData.m_height    = ySize;
-		g_mainScreenVBEData.m_pitch     = xSize * 4;//TODO: Hack
-		g_mainScreenVBEData.m_pitch16   = xSize * 2;//TODO: Hack
-		g_mainScreenVBEData.m_pitch32   = xSize * 1;//TODO: Hack
-		g_mainScreenVBEData.m_bitdepth  = 2;
-		g_mainScreenVBEData.m_dirty     = 1;
-		//else, preserve the address
-		
-		//if  we have a g_framebufferCopy allocated yet, free it and replace it with something new:
-		if (g_framebufferCopy)
-		{
-			MmFree(g_framebufferCopy);
-		}
-		g_framebufferCopy = (uint32_t*)MmAllocate(xSize * ySize * 32);
-		
-		return true;
-	}
-	return false;
-}
-
 //present, read/write, user/supervisor, writethrough
 #define VBE_PAGE_BITS (1 | 2 | 4 | 8)
 void VidInitialize(multiboot_info_t* pInfo)
 {
 	cli;
-	SLogMsg("Initializing video subsystem");
 	g_vbeData = &g_mainScreenVBEData;
 	
 	g_vbeData->m_available = false;
-	
-	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
+	if (pInfo->flags & MULTIBOOT_INFO_VIDEO_INFO)
 	{
-		SLogMsg("Passed in VBE info. Physical address: %x", pInfo->framebuffer_addr);
 		if (pInfo->framebuffer_type != 1)
 		{
-			SLogMsg("Need direct RGB framebuffer!");
+			LogMsg("Need direct RGB framebuffer!");
 			sti;
 			return;
 		}
@@ -1449,7 +1253,6 @@ void VidInitialize(multiboot_info_t* pInfo)
 			index++;
 		}
 		
-		SLogMsg("Allocating framebuffer copy: %dx%d.  Pitch:%d",pInfo->framebuffer_width,pInfo->framebuffer_height,pInfo->framebuffer_pitch);
 		g_framebufferCopy = MmAllocate (pInfo->framebuffer_width * pInfo->framebuffer_height * 4);
 		
 		MmTlbInvalidate();
@@ -1461,18 +1264,13 @@ void VidInitialize(multiboot_info_t* pInfo)
 		// initialize the console:
 		//LogMsg("Setting font.");
 		VidSetFont (FONT_TAMSYN_REGULAR);
-		//VidSetFont (FONT_FAMISANS);
 		//VidSetFont (FONT_BASIC);
-		
-		//int fontID = CreateFont (fnt_text, fnt_data, 128,128, 15);
-		//VidSetFont(fontID);
 		//LogMsg("Re-initializing debug console with graphics");
 		CoInitAsGraphics(&g_debugConsole);
 		//sti;
 	}
 	else
 	{
-		SLogMsg("Sorry, didn't pass in VBE info.");
 		SwitchMode (1);
 		CoInitAsText(&g_debugConsole);
 		//LogMsg("Warning: no VBE mode specified.");

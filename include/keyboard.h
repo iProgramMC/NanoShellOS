@@ -118,10 +118,6 @@ typedef uint8_t KeyState;
 #define KEYBOARD_DATA_PORT 0x60
 #define KEYBOARD_STATUS_PORT 0x64
 
-#define SCANCODE_RELEASE 0x80
-#define SCANCODE_NOTREL 0x7f
-
-void KbInitialize();
 void IrqKeyboard();
 void KbAddKeyToBuffer(char key);
 char KbGetKeyFromBuffer();
@@ -130,20 +126,6 @@ void KbFlushBuffer();
 bool KbIsBufferEmpty();
 KeyState KbGetKeyState(unsigned char keycode);
 void SetFocusedConsole(Console *pConsole);
-bool KbIsRawBufferEmpty();
-char KbGetKeyFromRawBuffer();
-
-enum
-{
-	KBPROPERTY_DELAY_BEFORE_REPEAT,
-	KBPROPERTY_REPEAT_FREQUENCY,
-	KBPROPERTY_DELAY_BEFORE_REPEAT_MAX,
-	KBPROPERTY_REPEAT_FREQUENCY_MAX,
-};
-uint8_t GetKeyboardProperty(int index);
-void    SetKeyboardProperty(int index, uint8_t data);
-void    FlushKeyboardProperties();
-void    RevertKeyboardProperties();
 
 // max_size is not optional, contrary to popular belief :)
 void KbGetString(char* buffer, int max_size);

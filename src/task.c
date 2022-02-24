@@ -21,15 +21,13 @@ static int s_lastRunningTaskIndex = 1;
 static int s_currentRunningTask = -1;
 static CPUSaveState g_kernelSaveState;
 __attribute__((aligned(16)))
-static int            g_kernelFPUState[128];
-static VBEData*       g_kernelVBEContext = NULL;
-static Heap*          g_kernelHeapContext = NULL;
-static Console*       g_kernelConsoleContext = NULL;
-static const uint8_t* g_kernelFontContext = NULL;
+static int          g_kernelFPUState[128];
+static VBEData*     g_kernelVBEContext = NULL;
+static Heap*        g_kernelHeapContext = NULL;
+static Console*     g_kernelConsoleContext = NULL;
 
-extern Heap*          g_pHeap;
-extern Console*       g_currentConsole; //logmsg
-extern const uint8_t* g_pCurrentFont;
+extern Heap*        g_pHeap;
+extern Console*     g_currentConsole; //logmsg
 
 bool g_forceKernelTaskToRunNext = false;
 
@@ -97,7 +95,6 @@ const char* KeTaskGetTag(Task* pTask)
 extern void KeTaskStartup();
 extern uint32_t g_curPageDirP; //memory.c
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-void KeFxSave(int *fpstate);
 void KeConstructTask (Task* pTask)
 {
 	pTask->m_state.esp = ((int)pTask->m_pStack + C_STACK_BYTES_PER_TASK) & ~0xF; //Align to 4 bits
@@ -123,13 +120,9 @@ void KeConstructTask (Task* pTask)
 	pTask->m_state.esp -= sizeof(int) * 5;
 	memcpy ((void*)(pTask->m_state.esp), &pTask->m_state.eip, sizeof(int)*3);
 	
-	pTask->m_pVBEContext     = &g_mainScreenVBEData;
-	pTask->m_pCurrentHeap    = g_pHeap;//default kernel heap.
+	pTask->m_pVBEContext = &g_mainScreenVBEData;
+	pTask->m_pCurrentHeap = g_pHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
-	pTask->m_pFontContext    = g_pCurrentFont;
-	
-	memset   (pTask->m_fpuState, 0, sizeof (pTask->m_fpuState));
-	KeFxSave (pTask->m_fpuState);
 }
 
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
@@ -152,7 +145,7 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 		return NULL;
 	}
 	
-	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
+	void *pStack = MmAllocate(C_STACK_BYTES_PER_TASK);
 	if (pStack)
 	{
 		//Setup our new task here:
@@ -203,7 +196,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		if (killing && pTask->m_pStack)
 		{
 			//SLogMsg("Freeing this task's stack");
-			MmFreeK(pTask->m_pStack);
+			MmFree(pTask->m_pStack);
 		}
 		pTask->m_pStack = NULL;
 		
@@ -303,7 +296,6 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		pTask->m_pVBEContext = g_vbeData;
 		pTask->m_pCurrentHeap = g_pHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
-		pTask->m_pFontContext = g_pCurrentFont;
 	}
 	else
 	{
@@ -312,7 +304,6 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_kernelVBEContext = g_vbeData;
 		g_kernelHeapContext = g_pHeap;
 		g_kernelConsoleContext = g_currentConsole;
-		g_kernelFontContext = g_pCurrentFont;
 	}
 	ResetToKernelHeap();
 	
@@ -362,7 +353,6 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		KeFxRestore(pNewTask->m_fpuState);
 		g_vbeData = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
-		g_pCurrentFont = pNewTask->m_pFontContext;
 		UseHeap (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
@@ -373,7 +363,6 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		KeFxRestore(g_kernelFPUState);
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
-		g_pCurrentFont = g_kernelFontContext;
 		UseHeap (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}
