@@ -6,6 +6,7 @@
 ******************************************/
 #include <wterm.h>
 #include <icon.h>
+#include <misc.h>
 
 int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
 

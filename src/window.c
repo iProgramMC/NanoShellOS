@@ -494,6 +494,78 @@ void UpdateDepthBuffer (void)
 // Window event processor
 #if 1
 
+typedef Window* PWINDOW;
+#define OFFSET_FROM_WINDOW_POINTER(pWindow) (pWindow - g_windows)
+typedef struct
+{
+    PWINDOW m_destWindow;
+    int m_eventType, m_parm1, m_parm2;
+}
+WindowEventQueueItem;
+#define MASTER_WIN_EVT_QUEUE_MAX 4096
+WindowEventQueueItem g_windowEventQueue[MASTER_WIN_EVT_QUEUE_MAX];
+
+int g_windowEventQueueHead = 0;
+int g_windowEventQueueTails[WINDOWS_MAX];
+
+void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
+{
+    WindowEventQueueItem item;
+    item.m_destWindow = pWindow;
+    item.m_eventType = eventType;
+    item.m_parm1 = parm1;
+    item.m_parm2 = parm2;
+    g_windowEventQueue[g_windowEventQueueHead] = item;
+
+    // Allow infinite re-use of the queue by looping it around.
+    g_windowEventQueueHead = (g_windowEventQueueHead + 1) % MASTER_WIN_EVT_QUEUE_MAX;
+}
+//This pops an event on the master queue with the window id.  If there isn't one, return false,
+//otherwise, return true and fill in the pointers.
+bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, int *parm1, int *parm2)
+{
+    // Start from the window event queue tail.  Go through the queue until you hit the same point you started at.
+    int offset = OFFSET_FROM_WINDOW_POINTER(pWindow);
+    int backup = g_windowEventQueueTails[offset];
+
+    // First of all, do we have an event right now right in front of us?
+    if (g_windowEventQueue[backup].m_destWindow == pWindow)
+    {
+        // Yes! Advance the tail and return
+        g_windowEventQueueTails[offset] = (g_windowEventQueueTails[offset] + 1) % MASTER_WIN_EVT_QUEUE_MAX;
+
+        g_windowEventQueue[backup].m_destWindow = NULL;
+        *eventType = g_windowEventQueue[backup].m_eventType;
+        *parm1     = g_windowEventQueue[backup].m_parm1;
+        *parm2     = g_windowEventQueue[backup].m_parm2;
+        return true;
+    }
+
+    // No.  Look through the entire queue array
+    for (
+        g_windowEventQueueTails[offset] = (g_windowEventQueueTails[offset] + 1) % MASTER_WIN_EVT_QUEUE_MAX;
+        g_windowEventQueueTails[offset] != backup;
+        g_windowEventQueueTails[offset] = (g_windowEventQueueTails[offset] + 1) % MASTER_WIN_EVT_QUEUE_MAX
+    )
+    {
+        int tail = g_windowEventQueueTails[offset];
+        if (g_windowEventQueue[tail].m_destWindow == pWindow)
+        {
+            // Yes! Advance the tail and return
+            g_windowEventQueueTails[offset] = (g_windowEventQueueTails[offset] + 1) % MASTER_WIN_EVT_QUEUE_MAX;
+
+            g_windowEventQueue[tail].m_destWindow = NULL;
+            *eventType = g_windowEventQueue[tail].m_eventType;
+            *parm1 = g_windowEventQueue[tail].m_parm1;
+            *parm2 = g_windowEventQueue[tail].m_parm2;
+            return true;
+        }
+    }
+
+    // No, we still have not found it.  Return false, to signify that there are no more elements on the queue for now.
+    return false;
+}
+
 //Registers an event to a window.  Not recommended for use.
 void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int parm2)
 {
@@ -614,11 +686,22 @@ void ReadyToDestroyWindow (Window* pWindow)
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
 	UseHeap (pHeapBackup);
+	
+	int et, p1, p2;
+	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
 }
 
 void DestroyWindow (Window* pWindow)
 {
-	WindowRegisterEventUnsafe(pWindow, EVENT_DESTROY, 0, 0);
+	if (!pWindow)
+	{
+		SLogMsg("Tried to destroy nullptr window?");
+		return;
+	}
+	if (!pWindow->m_used)
+		return;
+	
+	WindowAddEventToMasterQueue(pWindow, EVENT_DESTROY, 0, 0);
 	// the task's last WindowCheckMessages call will see this and go
 	// "ah yeah they want my window gone", then the WindowCallback will reply and say
 	// "yeah you're good to go" and call ReadyToDestroyWindow().
@@ -662,9 +745,29 @@ void SelectThisWindowAndUnselectOthers(Window* pWindow)
 
 // Window creation
 #if 1
+
+int g_NewWindowX = 10, g_NewWindowY = 10;
+
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
 	ACQUIRE_LOCK(g_createLock);
+	
+	if (xPos < 0 || yPos < 0)
+	{
+		g_NewWindowX += 10;
+		g_NewWindowY += 10;
+		if((g_NewWindowX + xSize + 50) >= GetScreenWidth())
+			g_NewWindowX = GetScreenWidth() - xSize - 50;
+		if((g_NewWindowY + ySize + 50) >= GetScreenHeight())
+			g_NewWindowY = GetScreenHeight() - ySize - 50;
+		xPos = g_NewWindowX;
+		yPos = g_NewWindowY;
+	}
+	
+	if (xPos >= GetScreenWidth () - xSize)
+		xPos  = GetScreenWidth () - xSize-1;
+	if (yPos >= GetScreenHeight() - ySize)
+		yPos  = GetScreenHeight() - ySize-1;
 	
 	int freeArea = -1;
 	for (int i = 0; i < WINDOWS_MAX; i++)
@@ -677,6 +780,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (freeArea == -1) return NULL;//can't create the window.
 	
 	Window* pWnd = &g_windows[freeArea];
+	memset (pWnd, 0, sizeof *pWnd);
 	
 	pWnd->m_used = true;
 	int strl = strlen (title) + 1;
@@ -713,6 +817,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_bitdepth      = 2;     // 32 bit :)
 	
 	pWnd->m_iconID = ICON_APPLICATION;
+	
+	pWnd->m_eventQueueSize = 0;
 	
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
@@ -768,7 +874,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 			{
 				int x = mouseX - window->m_rect.left;
 				int y = mouseY - window->m_rect.top;
-				WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
+				//WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
 		}
 	}
@@ -777,6 +884,7 @@ void OnUILeftClick (int mouseX, int mouseY)
 	
 	//FREE_LOCK(g_windowLock);
 }
+bool g_heldAlt = false;
 Cursor g_windowDragCursor;
 void OnUILeftClickDrag (int mouseX, int mouseY)
 {
@@ -829,7 +937,22 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
 					g_windowDragCursor.bitmap   = p->framebuffer;
 					g_windowDragCursor.m_transparency = true;
+					g_windowDragCursor.m_resizeMode   = false;
+					g_windowDragCursor.boundsWidth  = p->width;
+					g_windowDragCursor.boundsHeight = p->height;
 				}
+				/*else if (g_heldAlt)
+				{
+					g_windowDragCursor.width    = window->m_vbeData.m_width;
+					g_windowDragCursor.height   = window->m_vbeData.m_height;
+					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+					g_windowDragCursor.m_transparency = false;
+					g_windowDragCursor.m_resizeMode   = true;
+					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+				}*/
 				else
 				{
 					g_windowDragCursor.width    = window->m_vbeData.m_width;
@@ -838,13 +961,16 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
 					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
+					g_windowDragCursor.m_resizeMode   = false;
+					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
 				}
 				
 				SetCursor (&g_windowDragCursor);
 			}
 			else if (!window->m_minimized)
 			{
-				WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
 		}
 	}
@@ -852,6 +978,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	//FREE_LOCK(g_windowLock);
 }
 extern int g_mouseX, g_mouseY;//video.c
+void RenderWindow (Window* pWindow);
 void OnUILeftClickRelease (int mouseX, int mouseY)
 {
 	if (!g_windowManagerRunning) return;
@@ -866,37 +993,91 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	
 //	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
 	
-	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
-	if (window->m_isBeingDragged)
+	Window* pWindow = GetWindowFromIndex(g_currentlyClickedWindow);
+	if (pWindow->m_isBeingDragged)
 	{
 		if (!g_RenderWindowContents)
 		{
-			HideWindow(window);
+			HideWindow(pWindow);
 		}
 		
-		Rectangle newWndRect;
-		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
-		newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
-		if (newWndRect.top < 0)
-			newWndRect.top = 0;
-		newWndRect.right  = newWndRect.left + GetWidth(&window->m_rect);
-		newWndRect.bottom = newWndRect.top  + GetHeight(&window->m_rect);
-		window->m_rect = newWndRect;
-		
-		ShowWindow(window);
+		if (GetCurrentCursor()->m_resizeMode)
+		{
+			//EVENT_SIZE parms: PARM1: MakeMouseParm(NewSizeX,NewSizeY), PARM2: MakeMouseParm(OldSizeX,OldSizeY)
+			
+			bool bkp = pWindow->m_isSelected;
+			pWindow->m_isSelected = true;
+			RenderWindow(pWindow);
+			pWindow->m_isSelected = bkp;
+			
+			// Resize framebuffer and stuff
+			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
+			if (newWidth < WINDOW_MIN_WIDTH)
+				newWidth = WINDOW_MIN_WIDTH;
+			if (newHeight< WINDOW_MIN_HEIGHT)
+				newHeight= WINDOW_MIN_HEIGHT;
+			uint32_t* pNewFb = (uint32_t*)MmAllocate(newWidth * newHeight * sizeof(uint32_t));
+			
+			// Copy the entire framebuffer's contents from old to new.
+			int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
+			int minWidth = newWidth, minHeight = newHeight;
+			if (minWidth > oldWidth)
+				minWidth = oldWidth;
+			if (minHeight > oldHeight)
+				minHeight = oldHeight;
+			
+			for (int i = 0; i < minHeight; i++)
+			{
+				memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_vbeData.m_framebuffer32[i * oldWidth], minWidth);
+			}
+			
+			// Free the old framebuffer.  This action should be done atomically.
+			// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
+			cli;
+			MmFree(pWindow->m_vbeData.m_framebuffer32);
+			pWindow->m_vbeData.m_framebuffer32 = pNewFb;
+			pWindow->m_vbeData.m_width   = newWidth;
+			pWindow->m_vbeData.m_pitch32 = newWidth;
+			pWindow->m_vbeData.m_pitch16 = newWidth*2;
+			pWindow->m_vbeData.m_pitch   = newWidth*4;
+			pWindow->m_vbeData.m_height  = newHeight;
+			sti;
+			
+			pWindow->m_rect.right  = pWindow->m_rect.left + newWidth;
+			pWindow->m_rect.bottom = pWindow->m_rect.top  + newHeight;
+			
+			// Mark as dirty.
+			pWindow->m_vbeData.m_dirty = true;
+			
+			// Send window events: EVENT_SIZE, EVENT_PAINT.
+			WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  MAKE_MOUSE_PARM(newWidth, newHeight), MAKE_MOUSE_PARM(oldWidth, oldHeight));
+			WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
+		}
+		else
+		{
+			Rectangle newWndRect;
+			newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
+			newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
+			if (newWndRect.top < 0)
+				newWndRect.top = 0;
+			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_rect);
+			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_rect);
+			pWindow->m_rect = newWndRect;
+		}
+		ShowWindow(pWindow);
 		
 		if (GetCurrentCursor() == &g_windowDragCursor)
 		{
 			SetCursor(NULL);
 		}
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
-		window->m_vbeData.m_dirty = true;
-		window->m_renderFinished = true;
-		window->m_isBeingDragged = false;
+		pWindow->m_vbeData.m_dirty = true;
+		pWindow->m_renderFinished = true;
+		pWindow->m_isBeingDragged = false;
 	}
-	int x = mouseX - window->m_rect.left;
-	int y = mouseY - window->m_rect.top;
-	WindowRegisterEvent (window, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
+	int x = mouseX - pWindow->m_rect.left;
+	int y = mouseY - pWindow->m_rect.top;
+	WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
 	
 	//FREE_LOCK(g_windowLock);
 }
@@ -952,7 +1133,6 @@ void RedrawEverything()
 }
 
 bool HandleMessages(Window* pWindow);
-void RenderWindow (Window* pWindow);
 void TerminalHostTask(int arg);
 void RefreshMouse(void);
 void RenderCursor(void);
@@ -1017,6 +1197,8 @@ void SetupWindowManager()
 	//VidSetFont(FONT_GLCD);
 	//VidSetFont(FONT_BIGTEST);
 	
+	LogMsg("\n\n\n");
+	
 	WindowCallInitialize ();
 	
 	//test:
@@ -1043,7 +1225,6 @@ void SetupWindowManager()
 #endif
 }
 
-bool g_heldAlt = false;
 void HandleKeypressOnWindow(unsigned char key)
 {
 	if (key == KEY_ALT)
@@ -1058,18 +1239,21 @@ void HandleKeypressOnWindow(unsigned char key)
 	else if (key == KEY_TAB && g_heldAlt)
 		OnPressAltTabOnce();
 }
+int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
 	SetupWindowManager();
 	
 	int timeout = 10;
-	int UpdateTimeout = 100, shutdownTimeout = 500;
+	#define UPDATE_TIMEOUT 50
+	int UpdateTimeout = UPDATE_TIMEOUT, shutdownTimeout = 500;
 	
 	while (true)
 	{
 		bool handled = false, hasRedrawnThem = false;
 		UpdateFPSCounter();
 		CrashReporterCheck();
+		bool updated = false;
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
 			Window* pWindow = &g_windows [p];
@@ -1081,19 +1265,51 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				UpdateTimeout = 100;
 			}*/
 			
+			if (UpdateTimeout == 0 || updated)
+			{
+				//WindowAddEventToMasterQueue (pWindow, EVENT_UPDATE2, 0, 0);
+				UpdateTimeout = UPDATE_TIMEOUT;
+				updated = true;
+			}
+			
+			//TODO: This method is missing a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
+			//into a window's input buffer and read that instead of doing this hacky method right here?
 			if (pWindow->m_isSelected)
 			{
 				while (!KbIsBufferEmpty())
+					//WindowAddEventToMasterQueue(pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
 					WindowRegisterEvent (pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
 				
 				while (!KbIsRawBufferEmpty())
 				{
 					unsigned char key = KbGetKeyFromRawBuffer();
+					//WindowAddEventToMasterQueue(pWindow, EVENT_KEYRAW, key, 0);
 					WindowRegisterEvent(pWindow, EVENT_KEYRAW, key, 0);
 					
 					HandleKeypressOnWindow(key);
 					handled = true;
 				}
+				
+				if (updated)
+				{
+					//Also send an EVENT_MOVECURSOR
+					int posX = g_mouseX - pWindow->m_rect.left;
+					int posY = g_mouseY - pWindow->m_rect.top;
+					if (g_oldMouseX != posX || g_oldMouseY != posY)
+					{
+						if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
+						{
+							WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						}
+					}
+					g_oldMouseX = g_mouseX;
+					g_oldMouseY = g_mouseY;
+				}
+			}
+			
+			if (pWindow->m_bWindowManagerUpdated)
+			{
+				HandleMessages(pWindow);
 			}
 			
 		#if !THREADING_ENABLED
@@ -1482,10 +1698,15 @@ void RenderWindow (Window* pWindow)
 	int o = 0;
 	int x2 = x + tw, y2 = y + th;
 	
-	while (y <= -1)
+	/*while (y <= -1)
 	{
 		o += pWindow->m_vbeData.m_width;
 		y++;
+	}*/
+	if (y < 0)
+	{
+		o += -y * pWindow->m_vbeData.m_width;
+		y = 0;
 	}
 	short n = GetWindowIndexInDepthBuffer (x, y);
 	if (n == -1)
@@ -1556,7 +1777,7 @@ void RenderWindow (Window* pWindow)
 		for (int y = ys, ky = kys, kz = kzs; y != ye; y++, kz++)
 		{
 			ky = kz * pWindow->m_vbeData.m_width + off;
-			//just memcpy shit
+			//just memcpy stuff
 			memcpy_ints(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
 			memcpy_ints(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
 			oms += g_mainScreenVBEData.m_pitch32;
@@ -1570,7 +1791,8 @@ void RenderWindow (Window* pWindow)
 		for (int j = y; j != y2; j++)
 		{
 			if (j >= sy) break;
-			offfb = j * pitch + x, offcp = j * width + x;
+			offfb = j * pitch, offcp = j * width;
+			if (x > 0) offfb += x, offcp += x;
 			for (int i = x; i != x2; i++)
 			{
 				if (i < sx && i >= 0)
@@ -1600,40 +1822,25 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	
 	if (!(pWindow->m_flags & WF_NOBORDER))
 	{
-		//! X adjusts the size of the dropshadow on the window.
-		recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-		recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
+		VidDrawHLine(0x000000, 0, rectb.right,  rectb.bottom-1);
+		VidDrawVLine(0x000000, 0, rectb.bottom, rectb.right-1);
 		
-		rectb = recta;
-		
-		//VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
-		VidDrawRectangle(WINDOW_EDGE_COLOR, recta);
-		
-		for (int i = 0; i < WINDOW_RIGHT_SIDE_THICKNESS; i++) {
-			//recta.left++;  recta.top++;
-			recta.right++; recta.bottom++;
-			VidDrawHLine(WINDOW_EDGE_COLOR, recta.left, recta.right, recta.bottom);
-			VidDrawVLine(WINDOW_EDGE_COLOR, recta.top, recta.bottom, recta.right);
-		}
-		
-		//draw a white border thing:
 		rectb.left++;
-		rectb.top ++;
+		rectb.top++;
 		rectb.right--;
 		rectb.bottom--;
-		//VidDrawRectangle(WINDOW_TITLE_TEXT_COLOR, rectb);
-		VidDrawHLine (WINDOW_TITLE_TEXT_COLOR,     rectb.left, rectb.right, rectb.top);
-		VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.left, rectb.right, rectb.bottom);
-		VidDrawVLine (WINDOW_TITLE_TEXT_COLOR,     rectb.top, rectb.bottom, rectb.left);
-		VidDrawVLine (WINDOW_TITLE_INACTIVE_COLOR, rectb.top, rectb.bottom, rectb.right);
+		
+		VidDrawHLine(0x808080, 0, rectb.right-1,  rectb.bottom-1);
+		VidDrawVLine(0x808080, 0, rectb.bottom-1, rectb.right-1);
+		
+		VidDrawHLine(0xFFFFFF, 1, rectb.right-2,  1);
+		VidDrawVLine(0xFFFFFF, 1, rectb.bottom-2, 1);
+		
+		rectb.left++;
+		rectb.top++;
+		rectb.right--;
+		rectb.bottom--;
 	}
-	/*
-	rectc.left++;
-	rectc.top++;
-	rectc.right--;
-	rectc.bottom--;
-	VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);*/
-	
 	if (!(pWindow->m_flags & WF_NOTITLE))
 	{
 		Rectangle rectc = rectb;
@@ -1644,13 +1851,13 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		
 		int iconGap = 16 * (pWindow->m_iconID != ICON_NULL);
 		
-		VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
+		//VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
 		
 		//draw the window title:
 		rectb.left++;
 		rectb.top ++;
-		rectb.right--;
-		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 1;
+		rectb.right -= 2;
+		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 2;
 		
 		//todo: gradients?
 		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
@@ -1721,6 +1928,7 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_RELEASECURSOR:
 		case EVENT_KEYPRESS:
 		case EVENT_KEYRAW:
+		case EVENT_MENU_CLOSE:
 			return true;
 	}
 	return false;
@@ -1744,95 +1952,130 @@ int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int
 }
 
 int someValue = 0;
+
+void UpdateControlsBasedOnAnchoringModes(UNUSED Window* pWindow)
+{
+	SLogMsg("TODO!");
+}
+
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
+{
+	//setup paint stuff so the window can only paint in their little box
+	VidSetVBEData (&pWindow->m_vbeData);
+	pWindow->m_vbeData.m_dirty = 0;
+	pWindow->m_renderFinished = false;
+	if (eventType == EVENT_MINIMIZE)
+	{
+		VidSetVBEData (NULL);
+		HideWindow(pWindow);
+		if (!pWindow->m_minimized)
+		{
+			pWindow->m_minimized   = true;
+			pWindow->m_rectBackup  = pWindow->m_rect;
+			
+			pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
+			pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
+			pWindow->m_rect.right  = pWindow->m_rect.left + 32;
+			pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
+		}
+		pWindow->m_hidden = false;
+		UpdateDepthBuffer();
+		VidSetVBEData (&pWindow->m_vbeData);
+	}
+	else if (eventType == EVENT_UNMINIMIZE)
+	{
+		VidSetVBEData (NULL);
+		HideWindow(pWindow);
+		pWindow->m_minimized   = false;
+		pWindow->m_rect = pWindow->m_rectBackup;
+		pWindow->m_hidden = false;
+		//pWindow->m_rect.right  = pWindow->m_rect.left + pWindow->m_vbeData.m_width;
+		//pWindow->m_rect.bottom = pWindow->m_rect.top  + pWindow->m_vbeData.m_height;
+		UpdateDepthBuffer();
+		VidSetVBEData (&pWindow->m_vbeData);
+		PaintWindowBackgroundAndBorder(pWindow);
+		/*pWindow->m_eventQueue[pWindow->m_eventQueueSize++] = EVENT_PAINT;*/
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		
+		pWindow->m_renderFinished = true;
+	}
+	else if (eventType == EVENT_SIZE)
+	{
+		PaintWindowBackgroundAndBorder(pWindow);
+		
+		// Update controls based on their anchoring modes.
+		UpdateControlsBasedOnAnchoringModes (pWindow);
+		
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		
+		pWindow->m_renderFinished = true;
+	}
+	if (eventType == EVENT_CREATE)
+	{
+		PaintWindowBackgroundAndBorder(pWindow);
+		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
+	}
+	if (eventType == EVENT_PAINT)
+	{
+		PaintWindowBorderNoBackgroundOverpaint(pWindow);
+	}
+	
+	someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
+	
+	//reset to main screen
+	VidSetVBEData (NULL);
+	if (!pWindow->m_minimized)
+	{
+		if (pWindow->m_vbeData.m_dirty)
+		{
+			pWindow->m_renderFinished = true;
+		}
+	}
+	else
+		pWindow->m_renderFinished = true;
+	
+	//if the contents of this window have been modified, redraw them:
+	//if (pWindow->m_vbeData.m_dirty && !pWindow->m_hidden)
+	//	RenderWindow(pWindow);
+	
+	if (eventType == EVENT_CREATE)
+	{
+		AddWindowToDrawOrder (pWindow - g_windows);
+		ShowWindow(pWindow);
+		SelectThisWindowAndUnselectOthers(pWindow);
+	}
+	if (eventType == EVENT_DESTROY)
+	{
+		pWindow->m_eventQueueSize = 0;
+		
+		FREE_LOCK (pWindow->m_eventQueueLock);
+		KeTaskDone();
+		
+		ReadyToDestroyWindow(pWindow);
+		
+		return false;
+	}
+	return true;
+}
+
 bool HandleMessages(Window* pWindow)
 {
 	// grab the lock
 	ACQUIRE_LOCK (pWindow->m_eventQueueLock);
 	
+	// While we have events in the master queue...
+	int et = 0, p1 = 0, p2 = 0;
+	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
+	{
+		if (!OnProcessOneEvent(pWindow, et, p1, p2))
+			return false;
+	}
+	
+	// While we have events in our own queue...
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
-		//setup paint stuff so the window can only paint in their little box
-		VidSetVBEData (&pWindow->m_vbeData);
-		pWindow->m_vbeData.m_dirty = 0;
-		pWindow->m_renderFinished = false;
-		if (pWindow->m_eventQueue[i] == EVENT_MINIMIZE)
-		{
-			VidSetVBEData (NULL);
-			HideWindow(pWindow);
-			if (!pWindow->m_minimized)
-			{
-				pWindow->m_minimized   = true;
-				pWindow->m_rectBackup  = pWindow->m_rect;
-				
-				pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
-				pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
-				pWindow->m_rect.right  = pWindow->m_rect.left + 32;
-				pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
-			}
-			pWindow->m_hidden = false;
-			UpdateDepthBuffer();
-			VidSetVBEData (&pWindow->m_vbeData);
-		}
-		else if (pWindow->m_eventQueue[i] == EVENT_UNMINIMIZE)
-		{
-			VidSetVBEData (NULL);
-			HideWindow(pWindow);
-			pWindow->m_minimized   = false;
-			pWindow->m_rect = pWindow->m_rectBackup;
-			pWindow->m_hidden = false;
-			//pWindow->m_rect.right  = pWindow->m_rect.left + pWindow->m_vbeData.m_width;
-			//pWindow->m_rect.bottom = pWindow->m_rect.top  + pWindow->m_vbeData.m_height;
-			UpdateDepthBuffer();
-			VidSetVBEData (&pWindow->m_vbeData);
-			PaintWindowBackgroundAndBorder(pWindow);
-			pWindow->m_eventQueue[pWindow->m_eventQueueSize++] = EVENT_PAINT;
-			pWindow->m_renderFinished = true;
-		}
-		if (pWindow->m_eventQueue[i] == EVENT_CREATE)
-		{
-			PaintWindowBackgroundAndBorder(pWindow);
-			DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
-		}
-		if (pWindow->m_eventQueue[i] == EVENT_PAINT)
-		{
-			PaintWindowBorderNoBackgroundOverpaint(pWindow);
-		}
-		
-		someValue = CallWindowCallbackAndControls(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]);
-		
-		//reset to main screen
-		VidSetVBEData (NULL);
-		if (!pWindow->m_minimized)
-		{
-			if (pWindow->m_vbeData.m_dirty)
-			{
-				pWindow->m_renderFinished = true;
-			}
-		}
-		else
-			pWindow->m_renderFinished = true;
-		
-		//if the contents of this window have been modified, redraw them:
-		//if (pWindow->m_vbeData.m_dirty && !pWindow->m_hidden)
-		//	RenderWindow(pWindow);
-		
-		if (pWindow->m_eventQueue[i] == EVENT_CREATE)
-		{
-			AddWindowToDrawOrder (pWindow - g_windows);
-			ShowWindow(pWindow);
-			SelectThisWindowAndUnselectOthers(pWindow);
-		}
-		if (pWindow->m_eventQueue[i] == EVENT_DESTROY)
-		{
-			pWindow->m_eventQueueSize = 0;
-			
-			FREE_LOCK (pWindow->m_eventQueueLock);
-			KeTaskDone();
-			
-			ReadyToDestroyWindow(pWindow);
-			
+		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]))
 			return false;
-		}
 	}
 	pWindow->m_eventQueueSize = 0;
 	
@@ -1840,22 +2083,6 @@ bool HandleMessages(Window* pWindow)
 	KeTaskDone();//hlt; //give it a good halt
 	return true;
 }
-/*
-void PostQuitMessage (Window* pWindow)
-{
-	VBEData* backup = g_vbeData;
-	g_vbeData = &g_mainScreenVBEData;
-	LogMsg("ReadyToDestroyWindow");
-	ReadyToDestroyWindow(pWindow);
-	
-	#if THREADING_ENABLED
-	LogMsg("KeExit");
-	KeExit();
-	LogMsg("KeExit done?");
-	#endif
-	g_vbeData = backup;
-}
-*/
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	switch (messageType)
@@ -1867,7 +2094,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			if (!(pWindow->m_flags & WF_NOCLOSE))
 			{
 				Rectangle rect;
-				rect.right = pWindow->m_vbeData.m_width - 4 - WINDOW_RIGHT_SIDE_THICKNESS;
+				rect.right = pWindow->m_vbeData.m_width - 5 - WINDOW_RIGHT_SIDE_THICKNESS;
 				rect.left  = rect.right - TITLE_BAR_HEIGHT+2;
 				rect.top   = 4;
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;

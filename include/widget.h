@@ -106,4 +106,9 @@ bool CheckboxGetChecked(Window* pWindow, int comboID);
  */
 void CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
 
+/**
+ * Gets the raw text of a TextInput control.
+ */
+const char* TextInputGetRawText(Window* pWindow, int comboID);
+
 #endif//_WIDGET_H

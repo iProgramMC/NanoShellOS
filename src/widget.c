@@ -10,6 +10,7 @@
 #include <print.h>
 #include <misc.h>
 #include <keyboard.h>
+#include <wmenu.h>
 
 // Utilitary functions
 #if 1
@@ -69,30 +70,34 @@ void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, 
 	rect.left++, rect.right--, rect.top++, rect.bottom--;
 	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
 }
-void RenderButtonShapeSmall(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
+void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
-	//draw some lines
-	VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
-	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right);
-	VidDrawHLine (colorDark,  rect.left,  rect.right,      rect.bottom - 1);
-	VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
-	
-	//shrink
-	rect.left++, rect.top++, rect.right--, rect.bottom--;
-	
-	//do the same
-	//VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
-	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right);
-	VidDrawHLine (colorDark,  rect.left,  rect.right,      rect.bottom - 1);
-	//VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
-	
-	//shrink again
-	//rect.left++, rect.top++,
-	rect.right--, rect.bottom -= 2;
-	
-	//fill the background:
+	rectb.bottom--;
 	if (colorMiddle != TRANSPARENT)
-		VidFillRectangle(colorMiddle, rect);
+		VidFillRectangle(colorMiddle, rectb);
+	rectb.right++;
+	rectb.bottom++;
+	
+	VidDrawHLine(0x000000, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(0x000000, rectb.top,  rectb.bottom-1, rectb.right-1);
+	
+	VidDrawHLine(colorLight, rectb.left, rectb.right-1,  rectb.top);
+	VidDrawVLine(colorLight, rectb.top,  rectb.bottom-1, rectb.left);
+	
+	rectb.left++;
+	rectb.top++;
+	rectb.right--;
+	rectb.bottom--;
+	
+	VidDrawHLine(colorDark, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(colorDark, rectb.top,  rectb.bottom-1, rectb.right-1);
+	
+	int colorAvg = 0;
+	colorAvg |= ((colorLight & 0xff0000) + (colorMiddle & 0xff0000)) >> 1;
+	colorAvg |= ((colorLight & 0x00ff00) + (colorMiddle & 0x00ff00)) >> 1;
+	colorAvg |= ((colorLight & 0x0000ff) + (colorMiddle & 0x0000ff)) >> 1;
+	VidDrawHLine(colorAvg, rectb.left, rectb.right-1,  rectb.top);
+	VidDrawVLine(colorAvg, rectb.top,  rectb.bottom-1, rectb.left);
 }
 #endif
 
@@ -570,10 +575,14 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
 	switch (eventType)
 	{
-		case EVENT_RELEASECURSOR:
+		//case EVENT_RELEASECURSOR:
 			//TODO: Allow selection across the text.
-			break;
+			//break;
+			
+		// -- Uncomment this if you want to get smooth scrolling through text.
+		// I like to keep it on
 		case EVENT_CLICKCURSOR:
+		case EVENT_RELEASECURSOR:
 		{
 			//TODO: Allow change of cursor via click.
 			if (!this->m_textInputData.m_onlyOneLine)
@@ -894,7 +903,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
 				int xPos = this->m_rect.left + 4,
-					yPos = this->m_rect.top  + 4 - lineHeight * this->m_textInputData.m_scrollY;
+					yPos = this->m_rect.top  + 4;// - lineHeight * this->m_textInputData.m_scrollY;
 				if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
 				{
 					xPos += LINE_NUM_GAP;
@@ -903,20 +912,19 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				if (this->m_textInputData.m_onlyOneLine)
 				{
 					xPos = this->m_rect.left + 4 - 8 * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
-					yPos = this->m_rect.top  + 4;
 				}
 				
-				int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY, linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
+				int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY;// linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
 				if (this->m_textInputData.m_onlyOneLine)
 				{
-					linesPerScreen = 1;
+					//linesPerScreen = 1;
 					scrollLine     = 0;
 				}
 				int offset  = 0;
 				
 				char line_string[10];
 				curLine2 ++;
-				if (curLine >= scrollLine && xPos >= this->m_rect.left)
+				if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
 				{
 					sprintf   (line_string, "%5d", curLine2);
 					VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
@@ -939,12 +947,15 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						{
 							xPos += LINE_NUM_GAP;
 						}
-						yPos += lineHeight;
+						if (curLine2 >= scrollLine)
+						{
+							yPos += lineHeight;
+						}
 						if (*text == '\n')
 						{
-							char string[10];
 							curLine2 ++;
-							if (curLine >= scrollLine && xPos >= this->m_rect.left)
+							if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
+							if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
 							{
 								sprintf   (line_string, "%5d", curLine2);
 								VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
@@ -955,8 +966,8 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					if (*text != '\n')
 					{
 						// render this character:
-						if (curLine >= scrollLine + linesPerScreen) break;//no point in drawing anymore.
-						if (curLine >= scrollLine && xPos >= this->m_rect.left)
+						if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
+						if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
 							VidPlotChar(*text, xPos, yPos, 0, TRANSPARENT);
 						// Increment the X,Y positions
 						xPos += GetCharWidth (*text);
@@ -1567,146 +1578,6 @@ void WidgetMenuBar_DeInitializeRoot(Control* this)
 	WidgetMenuBar_DeInitializeChild (&this->m_menuBarData.m_root);
 }
 
-void WidgetMenuBar_RenderSubMenu (MenuBarTreeItem* this, int x, int y)
-{
-	// calculate the width and height of the menu
-	if (this->m_childrenCount == 0) return;
-	int width = 1, height = 1;
-	
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight = 0;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		
-		if ((width-20) < twidth) width = twidth + 20;
-		height += theight + 2;
-	}
-	
-	// Render the base rectangle.
-	VidFillRect(0xFFFFFF, x, y, x+width, y+height);
-	VidDrawRect(0x000000, x, y, x+width, y+height);
-	
-	height++;
-	
-	// Draw the text.
-	int ypos = 1;
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight = 0;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		if (this->m_childrenArray[i].m_isOpen)
-		{
-			VidFillRect(0x7F, x + 1, y + ypos, x + 1 + width, y + ypos + theight);
-			VidTextOut(this->m_childrenArray[i].m_text, x + 6, y + ypos + 1, 0xFFFFFF, TRANSPARENT);
-			
-			// Render the sub-menu above this menu.
-		}
-		else
-		{
-			VidTextOut(this->m_childrenArray[i].m_text, x + 6, y + ypos + 1, 0, TRANSPARENT);
-		}
-		
-		ypos += theight + 2;
-	}
-	
-	// Render the open submenu.
-	ypos = 1;
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight = 0;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		if (this->m_childrenArray[i].m_isOpen)
-		{
-			// Render the sub-menu above this menu.
-			WidgetMenuBar_RenderSubMenu(&this->m_childrenArray[i], x + width - 2, y + ypos);
-		}
-		
-		ypos += theight;
-	}
-	
-	height++;
-}
-void WidgetMenuBar_CheckChildHighlight (MenuBarTreeItem* this, Point mousePos, int x, int y)
-{
-	// calculate the width and height of the menu
-	if (this->m_childrenCount == 0) return;
-	int width = 1, height = 1;
-	
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		
-		if ((width-20) < twidth) width = twidth + 20;
-		height += theight + 1;
-	}
-	height++;
-	
-	// Draw the text.
-	int ypos = 1;
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		
-		Rectangle rect = { x + 1, y + ypos, x + 1 + width, y + ypos + theight };
-		
-		if (RectangleContains(&rect, &mousePos))
-		{
-			for (int i = 0; i < this->m_childrenCount; i++)
-			{
-				this->m_childrenArray[i].m_isOpen = false;
-			}
-			this->m_childrenArray[i].m_isOpen = true;
-		}
-		
-		ypos += theight + 2;
-	}
-	ypos = 1;
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		// Measure the text.
-		int twidth, theight;
-		VidTextOutInternal (this->m_childrenArray[i].m_text, 0, 0, 0, 0, true, &twidth, &theight);
-		
-		if (this->m_childrenArray[i].m_isOpen)
-		{
-			// Check this child for any highlights too.
-			WidgetMenuBar_CheckChildHighlight(&this->m_childrenArray[i], mousePos, x + width - 2, y + ypos);
-			
-			return;
-		}
-		
-		ypos += theight + 2;
-	}
-	//LogMsgNoCr("NO INTERSECTION! (comboID %d) ", this->m_comboID);
-}
-bool WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(MenuBarTreeItem* this, Control* pControl, Window* pWindow)
-{
-	if (!this->m_childrenCount)
-	{
-		CallWindowCallback (pWindow, EVENT_COMMAND, pControl->m_comboID, this->m_comboID);
-		return true;
-	}
-	bool alright = false;
-	for (int i = 0; i < this->m_childrenCount; i++)
-	{
-		MenuBarTreeItem* pChild = &this->m_childrenArray[i];
-		if (pChild->m_isOpen)
-		{
-			// attempt to call:
-			alright |= WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent (pChild, pControl, pWindow);
-			//if (alright) return alright;
-		}
-		pChild->m_isOpen = false;
-	}
-	return alright;
-}
 bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	Rectangle menu_bar_rect;
@@ -1759,7 +1630,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0xFFFFFF, TRANSPARENT);
 						//render the child menu as well:
 						
-						WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);
+						/*WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);*/
 					}
 					else
 						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0, TRANSPARENT);
@@ -1770,7 +1641,8 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			break;
 		}
-		case EVENT_CLICKCURSOR:
+		//case EVENT_CLICKCURSOR:
+		case EVENT_RELEASECURSOR:
 		{
 			Point p = {GET_X_PARM(parm1), GET_Y_PARM(parm1)};
 			// Determine what item we've clicked.
@@ -1802,11 +1674,12 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						}
 						// Open this and call the paint event.
 						pChild->m_isOpen = true;
-						// Close out all of this child's children
-						for (int i = 0; i < pChild->m_childrenCount; i++)
-						{
-							pChild->m_childrenArray[i].m_isOpen = false;
-						}
+						
+						//spawn a menu
+						WindowMenu menu;
+						ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
+						SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + TITLE_BAR_HEIGHT);
+						MenuRecursivelyFreeEntries (&menu);
 						
 						//WidgetMenuBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 						//break;
@@ -1815,8 +1688,6 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					
 					if (pChild->m_isOpen)
 					{
-						//Check if the child has any children we need to highlight.
-						WidgetMenuBar_CheckChildHighlight(pChild, p, menu_bar_rect.left + current_x, menu_bar_rect.bottom);
 						needsUpdate = true;
 					}
 					
@@ -1829,7 +1700,20 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			}
 			break;
 		}
-		case EVENT_RELEASECURSOR:
+		case EVENT_MENU_CLOSE:
+		{
+			if (parm1 == this->m_comboID)
+			{
+				for (int i = 0; i < this->m_menuBarData.m_root.m_childrenCount; i++)
+				{
+					MenuBarTreeItem* pChild = &this->m_menuBarData.m_root.m_childrenArray[i];
+					pChild->m_isOpen = false;
+				}
+				RequestRepaintNew(pWindow);
+			}
+			break;
+		}
+		/*case EVENT_RELEASECURSOR:
 		{
 			// Unopen all the controls. TODO
 			if (this->m_menuBarData.m_root.m_childrenArray)
@@ -1841,7 +1725,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 				return check;
 			}
 			break;
-		}
+		}*/
 	}
 	return false;//Fall through to other controls.
 }
@@ -1985,11 +1869,15 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 		{
 			Rectangle r = this->m_rect;
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
 			{
 				this->m_buttonData.m_clicked = true;
 				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
+			break;
+		}
+		case EVENT_MOVECURSOR:
+		{
 			break;
 		}
 		case EVENT_PAINT:
@@ -2006,6 +1894,200 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			{
 				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			}
+			
+			break;
+		}
+	}
+	return false;
+}
+bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_RELEASECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			{
+				//send a command event to the window:
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+			}
+			this->m_buttonData.m_clicked = false;
+			WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			{
+				this->m_buttonData.m_clicked = true;
+				WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_MOVECURSOR:
+		{
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
+			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
+			
+			if (this->m_buttonData.m_clicked)
+			{
+				x++, y++;
+				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+			}
+			else
+			{
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+			}
+			
+			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			
+			break;
+		}
+	}
+	return false;
+}
+bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_RELEASECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			{
+				//send a command event to the window:
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+			}
+			this->m_buttonData.m_clicked = false;
+			WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			{
+				this->m_buttonData.m_clicked = true;
+				WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_MOVECURSOR:
+		{
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
+			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
+			x++, y++;
+			
+			if (this->m_buttonData.m_clicked)
+			{
+				x++, y++;
+				RenderButtonShapeSmall (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+			}
+			else
+			{
+				//RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+			}
+			
+			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			
+			break;
+		}
+	}
+	return false;
+}
+bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_RELEASECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			{
+				//send a command event to the window:
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+			}
+			this->m_buttonData.m_clicked = false;
+			WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			{
+				this->m_buttonData.m_clicked = true;
+				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_MOVECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p))
+			{
+				if (!this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = true;
+					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
+			}
+			else if (this->m_buttonData.m_hovered)
+			{
+				this->m_buttonData.m_hovered = false;
+				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			if (this->m_buttonData.m_clicked)
+			{
+				Rectangle r = this->m_rect;
+				//draw the button as slightly pushed in
+				r.left++; r.right++; r.bottom++; r.top++;
+				VidFillRectangle(0x7F, this->m_rect);
+				r.left += 30;
+				r.top += 1;
+				r.bottom += 1;
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0xFFFFFF, TRANSPARENT);
+			}
+			else if (this->m_buttonData.m_hovered)
+			{
+				VidFillRectangle(0x7F, this->m_rect);
+				Rectangle r = this->m_rect;
+				r.left += 30;
+				r.top += 1;
+				r.bottom += 1;
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0xFFFFFF, TRANSPARENT);
+			}
+			else
+			{
+				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+				Rectangle r = this->m_rect;
+				r.left += 30;
+				r.top += 1;
+				r.bottom += 1;
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
 			}
 			
 			break;
@@ -2034,7 +2116,7 @@ bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 		{
 			Rectangle r = this->m_rect;
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
 			{
 				this->m_buttonData.m_clicked = true;
 				WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -2085,7 +2167,7 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 		{
 			Rectangle r = this->m_rect;
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
 			{
 				this->m_buttonData.m_clicked = true;
 				WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -2276,6 +2358,9 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetIconView_OnEvent,
 	WidgetSurroundRect_OnEvent,
 	WidgetButtonColor_OnEvent,
+	WidgetButtonList_OnEvent,
+	WidgetButtonIcon_OnEvent,
+	WidgetButtonIconBar_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

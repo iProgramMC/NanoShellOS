@@ -85,7 +85,7 @@ Image *LoadBitmap (void* pBmpData, int *error)
 	{
 		for (int j = 0; j < pImage->height; j++)
 		{
-			for (uint32_t i=0; i<pImage->width; i++)
+			for (int i=0; i<pImage->width; i++)
 			{
 				if (bpp == 32)
 				{

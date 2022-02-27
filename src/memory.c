@@ -680,4 +680,7 @@ void MmDebugDump()
 		LogMsg("");
 	else
 		LogMsg(" Either you're leak-free or you haven't actually allocated anything.");
+	
+	LogMsg("Memory usage state: H:%d Kb U:%d Kb F:%d Kb A:%d Kb", entryCount * 4, (GetNumPhysPages()-GetNumFreePhysPages()) * 4, GetNumFreePhysPages() * 4, GetNumPhysPages() * 4);
+	LogMsg("H - Heap usage, F - Free Memory, A - Available Memory");
 }

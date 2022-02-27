@@ -24,6 +24,12 @@
 #define WINDOW_TITLE_TEXT_COLOR_SHADOW 0xFF00003F
 #define WINDOW_TITLE_TEXT_COLOR 0x00FFFFFF
 
+// This flag tells the operating system that it may choose where to place a window.
+// If the xPos and yPos are bigger than or equal to zero, the application tells the OS where it should place the window.
+// The OS will use this as a guideline, for example, if an application wants to go off the screen, the OS
+// will reposition its window to be fully inside the screen boundaries.
+#define CW_AUTOPOSITION   (-1)
+
 //WORK: Add in your icons here in this enum:
 enum 
 {

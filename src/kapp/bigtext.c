@@ -12,11 +12,19 @@
 
 enum
 {
-	NOTHING,
+	NOTEP_MENUBAR_ROOT,//=0, Start by adding to comboid 0
 	NOTEP_TEXTVIEW,
+	NOTEP_MENUBAR,
+	NOTEP_MENUBAR_FILE,
+	NOTEP_MENUBAR_EDIT,
+	NOTEP_MENUBAR_VIEW,
+	NOTEP_MENUBAR_HELP,
 	NOTEP_BTNNEW,
 	NOTEP_BTNOPEN,
 	NOTEP_BTNSAVE,
+	NOTEP_BTNSAVEAS,
+	NOTEP_BTNEXIT,
+	NOTEP_BTNABOUT,
 };
 
 typedef struct NotepadData
@@ -161,12 +169,23 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, NOTEP_TEXTVIEW, 1 | 2, 0);
 			
 			// Add some basic controls
-			RECT(r, PADDING_AROUND_LISTVIEW, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
+			/*RECT(r, PADDING_AROUND_LISTVIEW, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "New", NOTEP_BTNNEW, 0, 0);
 			RECT(r, PADDING_AROUND_LISTVIEW + 55, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Open", NOTEP_BTNOPEN, 0, 0);
 			RECT(r, PADDING_AROUND_LISTVIEW +110, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Save", NOTEP_BTNSAVE, 0, 0);
+			AddControl (pWindow, CONTROL_BUTTON, r, "Save", NOTEP_BTNSAVE, 0, 0);*/
+			
+			RECT(r, 0, 0, 0, 0);
+			AddControl(pWindow, CONTROL_MENUBAR, r, NULL, NOTEP_MENUBAR, 0, 0);
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_ROOT, NOTEP_MENUBAR_FILE, "File");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_ROOT, NOTEP_MENUBAR_HELP, "Help");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNNEW,       "New file");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNOPEN,      "Open...");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSAVE,      "Save");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSAVEAS,    "Save as...");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNEXIT,      "Exit");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_HELP, NOTEP_BTNABOUT,     "About Notepad");
 			
 			//NotepadOpenFile (pWindow, "/hello2.txt");
 			
@@ -187,78 +206,89 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 		}
 		case EVENT_COMMAND:
 		{
-			switch (parm1)
+			if (parm1 == NOTEP_MENUBAR)
 			{
-				case NOTEP_BTNNEW:
+				switch (parm2)
 				{
-					// Create a new document:
-					if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+					case NOTEP_BTNNEW:
 					{
-						//The document has been changed, ask user if they'd like to save first
-						char buffer[1024];
-						sprintf(
-							buffer,
-							"You haven't saved your changes to \"%s\".\n\nWould you like to save them before creating a new document?",
-							NOTEPDATA(pWindow)->m_untitled ? "Untitled" : NOTEPDATA(pWindow)->m_filename
-						);
-						int result = MessageBox (pWindow, buffer, "Notepad", MB_YESNOCANCEL | ICON_TEXT_FILE << 16);
-						if (result == MBID_CANCEL)
+						// Create a new document:
+						if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
 						{
-							break;//Do nothing
+							//The document has been changed, ask user if they'd like to save first
+							char buffer[1024];
+							sprintf(
+								buffer,
+								"You haven't saved your changes to \"%s\".\n\nWould you like to save them before creating a new document?",
+								NOTEPDATA(pWindow)->m_untitled ? "Untitled" : NOTEPDATA(pWindow)->m_filename
+							);
+							int result = MessageBox (pWindow, buffer, "Notepad", MB_YESNOCANCEL | ICON_TEXT_FILE << 16);
+							if (result == MBID_CANCEL)
+							{
+								break;//Do nothing
+							}
+							else if (result == MBID_YES)
+							{
+								NotepadOnSave(pWindow);
+							}
 						}
-						else if (result == MBID_YES)
-						{
-							NotepadOnSave(pWindow);
-						}
+						//Now that we've saved (or not), create the new document.
+						TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
+						SetTextInputText (pWindow, NOTEP_TEXTVIEW, "");
+						NOTEPDATA(pWindow)->m_untitled = true;
+						NOTEPDATA(pWindow)->m_filename[0] = 0;
+						RequestRepaint(pWindow);
+						break;
 					}
-					//Now that we've saved (or not), create the new document.
-					TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
-					SetTextInputText (pWindow, NOTEP_TEXTVIEW, "");
-					NOTEPDATA(pWindow)->m_untitled = true;
-					NOTEPDATA(pWindow)->m_filename[0] = 0;
-					RequestRepaint(pWindow);
-					break;
-				}
-				case NOTEP_BTNOPEN:
-				{
-					// Create a new document:
-					if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+					case NOTEP_BTNOPEN:
 					{
-						//The document has been changed, ask user if they'd like to save first
-						char buffer[1024];
-						sprintf(
-							buffer,
-							"You haven't saved your changes to \"%s\".\n\nWould you like to save them before opening another document?",
-							NOTEPDATA(pWindow)->m_untitled ? "Untitled" : NOTEPDATA(pWindow)->m_filename
-						);
-						int result = MessageBox (pWindow, buffer, "Notepad", MB_YESNOCANCEL | ICON_TEXT_FILE << 16);
-						if (result == MBID_CANCEL)
+						// Create a new document:
+						if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
 						{
-							break;//Do nothing
+							//The document has been changed, ask user if they'd like to save first
+							char buffer[1024];
+							sprintf(
+								buffer,
+								"You haven't saved your changes to \"%s\".\n\nWould you like to save them before opening another document?",
+								NOTEPDATA(pWindow)->m_untitled ? "Untitled" : NOTEPDATA(pWindow)->m_filename
+							);
+							int result = MessageBox (pWindow, buffer, "Notepad", MB_YESNOCANCEL | ICON_TEXT_FILE << 16);
+							if (result == MBID_CANCEL)
+							{
+								break;//Do nothing
+							}
+							else if (result == MBID_YES)
+							{
+								NotepadOnSave(pWindow);
+							}
 						}
-						else if (result == MBID_YES)
-						{
-							NotepadOnSave(pWindow);
-						}
+						//Now that we've saved (or not), open the new document.
+						char* data = InputBox(pWindow, "Type in a file path to open.", "Notepad", NULL);
+						if (!data) break;
+						SLogMsg("Properly got fed data: '%s'", data);
+						NotepadOpenFile(pWindow, data);
+						MmFree(data);
+						RequestRepaint(pWindow);
+						break;
 					}
-					//Now that we've saved (or not), open the new document.
-					char* data = InputBox(pWindow, "Type in a file path to open.", "Notepad", NULL);
-					if (!data) break;
-					SLogMsg("Properly got fed data: '%s'", data);
-					NotepadOpenFile(pWindow, data);
-					MmFree(data);
-					RequestRepaint(pWindow);
-					break;
-				}
-				case NOTEP_BTNSAVE:
-				{
-					// Create a new document:
-					if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+					case NOTEP_BTNSAVEAS:
 					{
-						//The document has been changed, save this
+						//Now that we've saved (or not), open the new document.
+						NOTEPDATA(pWindow)->m_untitled = true;
 						NotepadOnSave(pWindow);
+						RequestRepaint(pWindow);
+						break;
 					}
-					break;
+					case NOTEP_BTNSAVE:
+					{
+						// Create a new document:
+						if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+						{
+							//The document has been changed, save this
+							NotepadOnSave(pWindow);
+						}
+						break;
+					}
 				}
 			}
 			break;
@@ -314,14 +344,15 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 
 void BigTextEntry (int arg)
 {
-	Window *pWindow = CreateWindow ("Notepad", 50, 50, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, 0);
+	Window *pWindow = CreateWindow ("Notepad", CW_AUTOPOSITION, CW_AUTOPOSITION, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, 0);
 	
 	if (!pWindow) {
 		LogMsg("Could not create window.");
 		return;
 	}
 	
-	pWindow->m_data = (void*)arg;
+	pWindow->m_iconID = ICON_NOTES;
+	pWindow->m_data   = (void*)arg;
 	
 	while (HandleMessages (pWindow));
 }

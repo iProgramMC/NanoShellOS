@@ -84,6 +84,9 @@ typedef struct
 	int16_t leftOffs, topOffs;
 	const uint32_t* bitmap;
 	bool m_transparency;//optimization
+	
+	bool m_resizeMode;
+	uint16_t boundsWidth, boundsHeight;
 }
 Cursor;
 
@@ -352,6 +355,11 @@ int CountLinesInText (const char* pText);
  * Handler routine to update mouse data.
  */
 void OnUpdateMouse (uint8_t flags, uint8_t dx, uint8_t dy, uint8_t dz);
+
+/**
+ * Gets the name of a font.
+ */
+const char* VidGetFontName(unsigned fontType);
 
 
 #endif//_VIDEO_H

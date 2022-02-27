@@ -394,7 +394,7 @@ void KeClockInit()
 	
 	//32768>>(5-1) = 2048 hz.  The fastest you can pick is a division rate of
 	//3, which gets you a 8192Hz interrupt rate.
-	int divisionRate = 8;
+	int divisionRate = 7;
 	WritePort(0x70, 0x8A);
 	flags = ReadPort(0x71);
 	WritePort(0x70, 0x8A);

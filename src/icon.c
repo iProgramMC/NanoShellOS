@@ -90,6 +90,10 @@
 // Icons V1.32
 #include <icons/fonts.h>
 #include <icons/fonts16.h>
+// Icons V1.33
+#include <icons/resmon16.h>
+#include <icons/notes16.h>
+#include <icons/file_nano.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -171,6 +175,9 @@ Image * g_iconTable[] = {
 	&g_ambulance_icon,
 	&g_fonts_icon,
 	&g_fonts16_icon,
+	&g_resmon16_icon,
+	&g_notes16_icon,
+	&g_file_nano_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -203,6 +210,8 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(APPLICATION)
 			CASE(CALCULATOR)
 			CASE(FONTS)
+			CASE(RESMON)
+			CASE(NOTES)
 			#undef CASE
 		}
 	}

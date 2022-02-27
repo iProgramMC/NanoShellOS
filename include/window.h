@@ -16,7 +16,7 @@
 
 #define THREADING_ENABLED 1 //0
 
-#define WINDOWS_MAX 64
+#define WINDOWS_MAX 256
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
@@ -38,8 +38,14 @@
 #define WINDOW_TITLE_TEXT_COLOR_SHADOW  0x0000003F
 #define WINDOW_TITLE_TEXT_COLOR         0x00FFFFFF
 
+// This flag tells the operating system that it may choose where to place a window.
+// If the xPos and yPos are bigger than or equal to zero, the application tells the OS where it should place the window.
+// The OS will use this as a guideline, for example, if an application wants to go off the screen, the OS
+// will reposition its window to be fully inside the screen boundaries.
+#define CW_AUTOPOSITION   (-1)
+
 #define WINDOW_MIN_WIDTH  (32) //that's already very small.
-#define WINDOW_MIN_HEIGHT (14)
+#define WINDOW_MIN_HEIGHT (3+TITLE_BAR_HEIGHT)
 
 #define WINDOW_MINIMIZED_WIDTH  (160)
 #define WINDOW_MINIMIZED_HEIGHT (3+TITLE_BAR_HEIGHT)
@@ -64,6 +70,8 @@ enum {
 	EVENT_KEYRAW,
 	EVENT_MINIMIZE,//do not call this normally.
 	EVENT_UNMINIMIZE,
+	EVENT_UPDATE2,
+	EVENT_MENU_CLOSE,
 	EVENT_MAX
 };
 
@@ -110,6 +118,12 @@ enum {
 	CONTROL_SURROUND_RECT,
 	//Button with a colored background (parm2)
 	CONTROL_BUTTON_COLORED,
+	//Button as part of a list
+	CONTROL_BUTTON_LIST,
+	//Button with an icon on top.  Parm1= icon type, Parm2= icon size (16 or 32)
+	CONTROL_BUTTON_ICON,
+	//Button with an icon on top.  Parm1= icon type, Parm2= icon size (16 or 32)
+	CONTROL_BUTTON_ICON_BAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -187,7 +201,8 @@ MenuBarTreeItem;
 
 typedef struct
 {
-	bool m_clicked;
+	bool m_clicked,
+	     m_hovered;
 }
 ButtonData;
 
@@ -218,6 +233,26 @@ typedef struct
 }
 CheckBoxData;
 
+// By default, the control's anchoring mode is:
+// ANCHOR_LEFT_TO_LEFT | ANCHOR_RIGHT_TO_LEFT | ANCHOR_TOP_TO_TOP | ANCHOR_BOTTOM_TO_TOP
+
+// If the control's left edge anchors to the window's left edge.
+#define ANCHOR_LEFT_TO_LEFT  1
+// If the control's left edge anchors to the window's right edge.
+#define ANCHOR_LEFT_TO_RIGHT 2
+// If the control's right edge anchors to the window's left edge.
+#define ANCHOR_RIGHT_TO_LEFT  4
+// If the control's right edge anchors to the window's right edge.
+#define ANCHOR_RIGHT_TO_RIGHT 8
+// If the control's top edge anchors to the window's top edge.
+#define ANCHOR_TOP_TO_TOP 16
+// If the control's top edge anchors to the window's bottom edge.
+#define ANCHOR_TOP_TO_BOTTOM 32
+// If the control's bottom edge anchors to the window's top edge.
+#define ANCHOR_BOTTOM_TO_TOP  64
+// If the control's bottom edge anchors to the window's bottom edge.
+#define ANCHOR_BOTTOM_TO_BOTTOM 128
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -242,14 +277,21 @@ typedef struct ControlStruct
 	
 	//event handler
 	WidgetEventHandler OnEvent;
+	
+	// A rect that was tried.  This is what the control's size _should_ be,
+	// but due to some limitation m_triedRect may not match m_rect.
+	Rectangle m_triedRect;
+	
+	// The smallest rectangle a control can occupy is 10x10.
 }
 Control;
 
-#define WF_NOCLOSE  0x00000001
-#define WF_FROZEN   0x00000002
-#define WF_NOTITLE  0x00000004
-#define WF_NOBORDER 0x00000008
-#define WF_NOMINIMZ 0x00000010
+#define WF_NOCLOSE  0x00000001//Disable close button
+#define WF_FROZEN   0x00000002//Freeze window
+#define WF_NOTITLE  0x00000004//Disable title
+#define WF_NOBORDER 0x00000008//Disable border
+#define WF_NOMINIMZ 0x00000010//Disable minimize button
+#define WF_ALWRESIZ 0x00000020//Allow resize
 
 typedef struct WindowStruct
 {
@@ -280,6 +322,8 @@ typedef struct WindowStruct
 	int        m_eventQueueParm2[EVENT_QUEUE_MAX];
 	int        m_eventQueueSize;
 	
+	int        m_minWidth, m_minHeight;
+	
 	bool       m_markedForDeletion;
 	
 	Control*   m_pControlArray;
@@ -291,6 +335,8 @@ typedef struct WindowStruct
 	          *m_pSubThread;//in case you ever want to use this
 	
 	Console*   m_consoleToFocusKeyInputsTo;
+	
+	bool       m_bWindowManagerUpdated;
 } Window;
 
 /**
@@ -302,6 +348,8 @@ typedef struct WindowStruct
 #define MAKE_MOUSE_PARM(x, y) ((x)<<16|(y))
 #define GET_X_PARM(parm1)  (parm1>>16)
 #define GET_Y_PARM(parm2)  (parm1&0xFFFF)
+
+typedef Window* PWINDOW;
 
 /**
  * Check if a rectangle contains a point.
@@ -398,5 +446,10 @@ int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
  * Call the WindowCallback of a window and its controls.
  */
 int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
+
+/**
+ * Requests an event for that window in the master queue.  The window will still get it at some point.
+ */
+void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2);
 
 #endif//_WINDOW_H

@@ -1112,7 +1112,7 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 			extended_attrs |= FAT_MSFLAGS_NAMELOWER;
 		
 		firstLetterCap = pFileName[dotIndex+1] >= 'a' && pFileName[dotIndex+1] <= 'z';
-		for (int i = dotIndex + 1; i < fileNameLen; i++)
+		for (uint32_t i = dotIndex + 1; i < fileNameLen; i++)
 		{
 			//do caps not match?
 			bool a = ((pFileName[i] < 'a' || pFileName[i] > 'z') &&  firstLetterCap), b = ((pFileName[i] < 'A' || pFileName[i] > 'Z') && !firstLetterCap);

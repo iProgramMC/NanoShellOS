@@ -125,12 +125,14 @@ Cursor g_defaultCursor = {
 	//g_cursorColorsNoShadow,
 	12, 20, 0, 0, 
 	g_cursorColors,
-	true
+	true,
+	false, 12, 20
 };
 Cursor g_waitCursor = {
 	14, 22, 0, 0, 
 	g_waitCursorColors,
-	true
+	true,
+	false, 14, 22
 };
 #undef X
 #undef B
@@ -159,12 +161,46 @@ MouseMoveQueue;
 
 MouseMoveQueue g_queueMouseUpdateTo;
 
+void RenderCursor(void);
+void RedrawOldPixels(int oldX, int oldY);
+void RedrawOldPixelsFull(int oldX, int oldY);
 void RefreshMouse()
 {
 	if (g_queueMouseUpdateTo.updated)
 	{
 		g_queueMouseUpdateTo.updated = false;
-		SetMousePos(g_queueMouseUpdateTo.newX, g_queueMouseUpdateTo.newY);
+		
+		if (g_currentCursor->m_resizeMode)
+		{
+			VBEData* backup = g_vbeData;
+			g_vbeData = &g_mainScreenVBEData;
+			
+			RedrawOldPixels(g_mouseX, g_mouseY);
+			
+			g_currentCursor->boundsWidth  += g_queueMouseUpdateTo.newX;
+			g_currentCursor->boundsHeight += g_queueMouseUpdateTo.newY;
+			
+			if (g_currentCursor->boundsWidth  < 200)
+				g_currentCursor->boundsWidth  = 200;
+			if (g_currentCursor->boundsHeight < 20)
+				g_currentCursor->boundsHeight = 20;
+			
+			RenderCursor();
+			
+			g_vbeData = backup;
+		}
+		else
+		{
+			int newMouseX = g_mouseX + g_queueMouseUpdateTo.newX;
+			int newMouseY = g_mouseY + g_queueMouseUpdateTo.newY;
+			if (newMouseX < 0) newMouseX = 0;
+			if (newMouseY < 0) newMouseY = 0;
+			
+			SetMousePos(newMouseX, newMouseY);
+		}
+		
+		g_queueMouseUpdateTo.newX = 0;
+		g_queueMouseUpdateTo.newY = 0;
 	}
 	hlt;
 }
@@ -224,14 +260,8 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 	dy = (flags & (1 << 5)) ? (int8_t)Dy : Dy;
 	
 	//move the cursor:
-	int newX = g_mouseX + dx;
-	int newY = g_mouseY - dy;
-	if (newX < 0) newX = 0;
-	if (newY < 0) newY = 0;
-	//SetMousePos (newX, newY);
-	
-	g_queueMouseUpdateTo.newX = newX;
-	g_queueMouseUpdateTo.newY = newY;
+	g_queueMouseUpdateTo.newX += dx;
+	g_queueMouseUpdateTo.newY += -dy;
 	g_queueMouseUpdateTo.updated = true;
 	
 	if (flags & MOUSE_FLAG_R_BUTTON)
@@ -272,69 +302,18 @@ void SetCursor(Cursor* pCursor)
 	VBEData* backup = g_vbeData;
 	g_vbeData = &g_mainScreenVBEData;
 	
-	int mx = g_mouseX, my = g_mouseY;
-	
 	//undraw the old cursor:
-	/*if (g_currentCursor)
-	{
-		for (int i = -2; i <= g_currentCursor->height + 1; i++)
-		{
-			for (int j = -2; j <= g_currentCursor->width + 1; j++)
-			{
-				int x = mx + j - g_currentCursor->leftOffs;
-				int y = my + i - g_currentCursor->topOffs;
-				VidPlotPixelIgnoreCursorChecksChecked (x, y, VidReadPixel(x, y));
-			}
-		}
-	}*/
 	if (g_currentCursor)
 	{
-		int sx = mx - g_currentCursor->leftOffs;
-		int sy = my - g_currentCursor->topOffs;
-		int ex = sx + g_currentCursor->width;
-		int ey = sy + g_currentCursor->height;
-		if (sx < 0) { sx = 0; }//we decrease psx by sx because sx is negative so it's just adding abs(sx)
-		if (sx >= GetScreenWidth()) return;
-		if (sy < 0) { sy = 0; }
-		if (sy >= GetScreenWidth()) return;
-		
-		if (ex < 0) return;
-		if (ey < 0) return;
-		if (ex >= GetScreenWidth())  ex = GetScreenWidth();
-		if (ey >= GetScreenHeight()) ey = GetScreenHeight();
-		
-		int dist = ex-sx;
-		for (int cy = sy; cy != ey; cy++)
-		{
-			int offf = cy * g_vbeData->m_pitch32 + sx, offc = cy * g_vbeData->m_width + sx;
-			memcpy_ints(&g_vbeData->m_framebuffer32[offf], &g_framebufferCopy[offc], dist);
-		}
+		if (g_currentCursor->m_resizeMode)
+			RedrawOldPixels(g_mouseX, g_mouseY);
+		else
+			RedrawOldPixelsFull(g_mouseX, g_mouseY);
 	}
 	
 	//draw the new cursor:
 	g_currentCursor = pCursor;
-	/*for (int i = 0; i < g_currentCursor->height; i++)
-	{
-		for (int j = 0; j < g_currentCursor->width; j++)
-		{
-			int id = i * g_currentCursor->width + j;
-			if (g_currentCursor->bitmap[id] != TRANSPARENT)
-			{
-				uint32_t test = g_currentCursor->bitmap[id];
-				if (test == SEMI_TRANSPARENT)
-				{
-					//if (g_disableShadows) continue;
-					test = VidReadPixel(j + mx - g_currentCursor->leftOffs, i + my - g_currentCursor->topOffs);
-					test = ((test>>1) & 0xFF0000) | ((test>>1) & 0xFF00) | ((test>>1) & 0xFF);
-				}
-				VidPlotPixelIgnoreCursorChecksChecked(
-					j + mx - g_currentCursor->leftOffs,
-					i + my - g_currentCursor->topOffs,
-					test
-				);
-			}
-		}
-	}*/
+	
 	RenderCursor();
 	
 	g_vbeData = backup;
@@ -1094,10 +1073,101 @@ static inline void RenderCursorOpaque(void)
 		}
 	}
 }
+
+__attribute__((always_inline))
+static inline void RenderCursorStretchy(void)
+{
+	//if (!g_RenderWindowContents)
+	{
+		//Just XOR the pixels around the window frame
+		
+		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->boundsHeight; i++, ky++)
+		{
+			if (ky < 0) i = -ky, ky = 0;
+			if (ky >= GetScreenHeight()) break;
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                                  ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                              ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky)^0xFFFFFFFF);
+		}
+		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
+		{
+			if (kx < 0) j = -kx, kx = 0;
+			if (kx >= GetScreenWidth()) break;
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                                   VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                                  )^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                              )^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1)^0xFFFFFFFF);
+			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2)^0xFFFFFFFF);
+		}
+		return;
+	}
+	if (g_vbeData->m_bitdepth == 2)
+	{
+		//NEW: Optimization
+		int ys =                         - g_currentCursor->topOffs + g_mouseY;
+		int ye = g_currentCursor->height - g_currentCursor->topOffs + g_mouseY;
+		int kys = 0, kzs = 0;
+		if (ys < 0)
+		{
+			kys -= ys * g_currentCursor->width;
+			kzs -= ys;
+			ys = 0;
+		}
+		if (ye >= GetScreenHeight())
+			ye =  GetScreenHeight() - 1;
+		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
+		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
+		int off = 0;
+		if (xs < 0)
+		{
+			off = -xs;
+			xs = 0;
+		}
+		if (xe >= GetScreenSizeX())
+			xe =  GetScreenSizeX() - 1;
+		int xd = (xe - xs) * sizeof(uint32_t);
+		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
+		{
+			ky = kz * g_currentCursor->width + off;
+			//just memcpy shit
+			align4_memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_currentCursor->bitmap[ky], xd);
+		}
+	}
+	else//use the slower but more reliable method:
+	{
+		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
+		{
+			if (ky < 0) {
+				i += ky;
+				ky = 0;
+			}
+			for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
+			{
+				if (kx < 0) {
+					j += kx;
+					kx = 0;
+				}
+				int id = i * g_currentCursor->width + j;
+				//int kx = j + g_mouseX - g_currentCursor->leftOffs,
+				//	ky = i + g_mouseY - g_currentCursor->topOffs;
+				if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
+				VidPlotPixelIgnoreCursorChecksChecked (
+					kx,
+					ky,
+					g_currentCursor->bitmap[id]
+				);
+			}
+		}
+	}
+}
+
+
 void RenderCursor(void)
 {
 	if (g_currentCursor->m_transparency)
 		RenderCursorTransparent();
+	else if (g_currentCursor->m_resizeMode)
+		RenderCursorStretchy();
 	else
 		RenderCursorOpaque();
 }
@@ -1265,13 +1335,184 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 		}
 	}
 }
+__attribute__((always_inline))
+static inline void RedrawOldPixelsStretchy(int oldX, int oldY)
+{
+	/*for (int i = 0; i < g_currentCursor->height; i++)
+	{
+		for (int j = 0; j < g_currentCursor->width; j++)
+		{
+			int kx = j + oldX - g_currentCursor->leftOffs,
+				ky = i + oldY - g_currentCursor->topOffs;
+			if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
+			VidPlotPixelCheckCursor (
+			//VidPlotPixelInline(
+				kx, ky, VidReadPixelInline (kx, ky)
+			);
+		}
+	}*/
+	//if (!g_RenderWindowContents)
+	{
+		//Just XOR the pixels around the window frame
+		
+		for (int i = 0, ky=oldY - g_currentCursor->topOffs; i < g_currentCursor->boundsHeight; i++, ky++)
+		{
+			if (ky < 0) i = -ky, ky = 0;
+			if (ky >= GetScreenHeight()) break;
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                                  ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                              ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky));
+			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky));
+		}
+		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
+		{
+			if (kx < 0) j = -kx, kx = 0;
+			if (kx >= GetScreenWidth()) break;
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                                   VidReadPixel(kx, oldY - g_currentCursor->topOffs                                        ));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                                    ));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1));
+			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2));
+		}
+		return;
+	}
+	
+	// Draw over the Y coordinate.
+	
+	int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
+	int top  = oldY - g_currentCursor->topOffs,  bottom= top  + g_currentCursor->height;
+	int topUpTo = g_mouseY - g_currentCursor->topOffs;
+	if (top < 0) top = 0;
+	if (topUpTo < 0) topUpTo = 0;
+	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
+	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+	if (bottom < 0) bottom= 0;
+	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight()-1;
+	if (left < 0) left = 0;
+	if (left >= GetScreenWidth()) left = GetScreenWidth();
+	if (right < 0) right = 0;
+	if (right >= GetScreenWidth()) right = GetScreenWidth();
+	int xs = right-left+1;
+	int yoffscp, yoffsfb;
+	int startcp, startfb;
+	if (xs > 0)
+	{
+		// Did we move down?
+		if (oldY < g_mouseY)
+		{
+			yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+			startcp = yoffscp + left,           startfb = yoffsfb + left;
+			//SLogMsg("top:%d topUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", top, topUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < topUpTo; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+			
+		}
+		// Did we move up?
+		else if (oldY > g_mouseY)
+		{
+			topUpTo = g_mouseY - g_currentCursor->topOffs;
+			int bottomUpTo = topUpTo + g_currentCursor->height;
+			if (bottomUpTo < 0) bottom= 0;
+			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight()-1;
+			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
+			startcp = yoffscp + left,                  startfb = yoffsfb + left;
+			for (int y = bottomUpTo; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
+	}
+	
+	// Did we move right?
+	if (oldX < g_mouseX)
+	{
+		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
+		if (leftUpTo < 0) leftUpTo = 0;
+		if (leftUpTo >= GetScreenWidth()) leftUpTo = GetScreenWidth();
+		
+		xs = leftUpTo-left;
+		if (xs > 0)
+		{
+			startcp = yoffscp + left, startfb = yoffsfb + left;
+			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
+	}
+	// Did we move left?
+	else if (oldX > g_mouseX)
+	{
+		yoffscp = g_vbeData->m_width * top, yoffsfb = g_vbeData->m_pitch32 * top;
+		int leftUpTo = g_mouseX - g_currentCursor->leftOffs;
+		int rightUpTo = leftUpTo +  g_currentCursor->width;
+		if (rightUpTo < 0) rightUpTo = 0;
+		if (rightUpTo >= GetScreenWidth()) rightUpTo = GetScreenWidth();
+		
+		xs = right-rightUpTo;
+		if (xs > 0)
+		{
+			startcp = yoffscp + rightUpTo, startfb = yoffsfb + rightUpTo;
+			//SLogMsg("left:%d leftUpTo:%d yoffscp:%d startcp:%d yoffsfb:%d startfb:%d xs:%d", left, leftUpTo,yoffscp,startcp,yoffsfb,startfb,xs);
+			for (int y = top; y < bottom; y++)
+			{
+				//to get an awesome glitch effect, switch this out with memset_ints :D
+				memcpy_ints(&g_vbeData->m_framebuffer32[startfb], &g_framebufferCopy[startcp], xs);
+				startcp += g_vbeData->m_width;
+				startfb += g_vbeData->m_pitch32;
+			}
+		}
+	}
+}
 
 void RedrawOldPixels(int oldX, int oldY)
 {
 	if (g_currentCursor->m_transparency)
 		RedrawOldPixelsTransparent(oldX, oldY);
+	else if (g_currentCursor->m_resizeMode)
+		RedrawOldPixelsStretchy   (oldX, oldY);
 	else
 		RedrawOldPixelsOpaque     (oldX, oldY);
+}
+void RedrawOldPixelsFull(int oldX, int oldY)
+{
+	//NEW: Optimization
+	int ys =                         - g_currentCursor->topOffs + oldY;
+	int ye = g_currentCursor->height - g_currentCursor->topOffs + oldY;
+	if (ys < 0)
+	{
+		ys = 0;
+	}
+	if (ye >= GetScreenHeight())
+		ye =  GetScreenHeight();
+	int xs =                        - g_currentCursor->leftOffs+ oldX;
+	int xe = g_currentCursor->width - g_currentCursor->leftOffs+ oldX;
+	if (xs < 0)
+	{
+		xs = 0;
+	}
+	if (xe >= GetScreenSizeX())
+		xe =  GetScreenSizeX();
+	int xd = (xe - xs) * sizeof(uint32_t);
+	for (int y = ys; y < ye; y++)
+	{
+		int ky = y * g_vbeData->m_width + xs;
+		//just memcpy shit
+		align4_memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_framebufferCopy[ky], xd);
+	}
+	return;
 }
 
 void SetMousePos (unsigned newX, unsigned newY)
