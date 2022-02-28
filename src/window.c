@@ -55,10 +55,76 @@ int GetWindowManagerFPS()
 
 #endif
 
+// Theming
+#if 1
+uint32_t g_ThemingParms[P_THEME_PARM_COUNT];
+
+uint32_t GetThemingParameter(int type)
+{
+	if (type < 0 || type >= P_THEME_PARM_COUNT) return 0;
+	return g_ThemingParms[type];
+}
+void SetThemingParameter(int type, uint32_t parm)
+{
+	if (type < 0 || type >= P_THEME_PARM_COUNT) return;
+	g_ThemingParms[type] = parm;
+}
+void SetDefaultTheme()
+{
+	SetThemingParameter(P_BACKGROUND_COLOR              , DEFAULT_BACKGROUND_COLOR              );
+	SetThemingParameter(P_BUTTON_MIDDLE_COLOR           , DEFAULT_BUTTON_MIDDLE_COLOR           );
+	SetThemingParameter(P_WINDOW_BACKGD_COLOR           , DEFAULT_WINDOW_BACKGD_COLOR           );
+	SetThemingParameter(P_WINDOW_EDGE_COLOR             , DEFAULT_WINDOW_EDGE_COLOR             );
+	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     , DEFAULT_WINDOW_TITLE_ACTIVE_COLOR     );
+	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   , DEFAULT_WINDOW_TITLE_INACTIVE_COLOR   );
+	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   , DEFAULT_WINDOW_TITLE_ACTIVE_COLOR_B   );
+	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B , DEFAULT_WINDOW_TITLE_INACTIVE_COLOR_B );
+	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW, DEFAULT_WINDOW_TITLE_TEXT_COLOR_SHADOW);
+	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       , DEFAULT_WINDOW_TITLE_TEXT_COLOR       );
+	SetThemingParameter(P_WINDOW_TEXT_COLOR             , DEFAULT_WINDOW_TEXT_COLOR             );
+	SetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       , DEFAULT_WINDOW_TEXT_COLOR_LIGHT       );
+}
+
+void SetDarkTheme()
+{
+	SetThemingParameter(P_BACKGROUND_COLOR              , 0x00003f);
+	SetThemingParameter(P_BUTTON_MIDDLE_COLOR           , 0x303030);
+	SetThemingParameter(P_WINDOW_BACKGD_COLOR           , 0x202020);
+	SetThemingParameter(P_WINDOW_EDGE_COLOR             , 0x000000);
+	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     , 0x000000);
+	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   , 0x0f0f0f);
+	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   , 0x000044);
+	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B , 0x3f3f3f);
+	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW, 0x000000);
+	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       , 0xffffff);
+	SetThemingParameter(P_WINDOW_TEXT_COLOR             , 0xffffff);
+	SetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       , 0x000000);
+}
+void LoadDefaultThemingParms()
+{
+	SetThemingParameter(P_BLACK, 0x000000);
+	
+	// Dark mode:
+	SetDarkTheme();
+}
+void LoadThemingParmsFromFile(const char* pString)
+{
+	//TODO
+	SLogMsg("TODO: LoadThemingParmsFromFile (\"%s\")", pString);
+}
+void SaveThemingParmsToFile(const char* pString)
+{
+	//TODO
+	SLogMsg("TODO: SaveThemingParmsToFile (\"%s\")", pString);
+}
+
+#endif
+
 //background code:
 #if 1
 
-uint32_t g_BackgroundSolidColor = BACKGROUND_COLOR;
+#define g_BackgroundSolidColor (GetThemingParameter(BACKGROUND_COLOR))
+//uint32_t g_BackgroundSolidColor = BACKGROUND_COLOR;
 bool     g_BackgroundSolidColorActive = true;
 
 #define CHECKER_PATTERN
@@ -225,7 +291,7 @@ void RedrawBackground (Rectangle rect)
 {
 	if (g_BackgroundSolidColorActive)
 	{
-		VidFillRectangle(g_BackgroundSolidColor, rect);
+		VidFillRectangle(GetThemingParameter(P_BACKGROUND_COLOR), rect);
 		return;
 	}
 	
@@ -941,7 +1007,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.boundsWidth  = p->width;
 					g_windowDragCursor.boundsHeight = p->height;
 				}
-				/*else if (g_heldAlt)
+				else if (g_heldAlt && (window->m_flags & WF_ALWRESIZ))
 				{
 					g_windowDragCursor.width    = window->m_vbeData.m_width;
 					g_windowDragCursor.height   = window->m_vbeData.m_height;
@@ -952,7 +1018,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.m_resizeMode   = true;
 					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
 					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
-				}*/
+				}
 				else
 				{
 					g_windowDragCursor.width    = window->m_vbeData.m_width;
@@ -1005,10 +1071,10 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		{
 			//EVENT_SIZE parms: PARM1: MakeMouseParm(NewSizeX,NewSizeY), PARM2: MakeMouseParm(OldSizeX,OldSizeY)
 			
-			bool bkp = pWindow->m_isSelected;
-			pWindow->m_isSelected = true;
-			RenderWindow(pWindow);
-			pWindow->m_isSelected = bkp;
+			//bool bkp = pWindow->m_isSelected;
+			//pWindow->m_isSelected = true;
+			//RenderWindow(pWindow);
+			//pWindow->m_isSelected = bkp;
 			
 			// Resize framebuffer and stuff
 			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
@@ -1016,7 +1082,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 				newWidth = WINDOW_MIN_WIDTH;
 			if (newHeight< WINDOW_MIN_HEIGHT)
 				newHeight= WINDOW_MIN_HEIGHT;
-			uint32_t* pNewFb = (uint32_t*)MmAllocate(newWidth * newHeight * sizeof(uint32_t));
+			uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
 			
 			// Copy the entire framebuffer's contents from old to new.
 			int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
@@ -1064,7 +1130,6 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_rect);
 			pWindow->m_rect = newWndRect;
 		}
-		ShowWindow(pWindow);
 		
 		if (GetCurrentCursor() == &g_windowDragCursor)
 		{
@@ -1074,6 +1139,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		pWindow->m_isBeingDragged = false;
+		ShowWindow(pWindow);
 	}
 	int x = mouseX - pWindow->m_rect.left;
 	int y = mouseY - pWindow->m_rect.top;
@@ -1126,6 +1192,9 @@ void RedrawEverything()
 		Window* pWindow = &g_windows [p];
 		if (!pWindow->m_used) continue;
 		
+		int prm = MAKE_MOUSE_PARM(pWindow->m_rect.right - pWindow->m_rect.left, pWindow->m_rect.bottom - pWindow->m_rect.top);
+		WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  prm, prm);
+		WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0,   0);
 		//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_renderFinished = true;
 	}
@@ -1180,6 +1249,8 @@ void SetupWindowManager()
 	g_shutdownWaiting			 = false;
 	
 	UpdateDepthBuffer();
+	
+	LoadDefaultThemingParms ();
 	//VidFillScreen(BACKGROUND_COLOR);
 	SetDefaultBackground ();
 	
@@ -1457,7 +1528,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 #if 1
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
-int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2)
+int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
 	if (!pWindow->m_pControlArray)
 	{
@@ -1520,11 +1591,12 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 	pControl->m_active  = true;
 	pControl->m_type    = type;
 	pControl->m_dataPtr = NULL;
-	pControl->m_rect    = rect;
+	pControl->m_rect    = pControl->m_triedRect = rect;
 	pControl->m_comboID = comboID;
 	pControl->m_parm1   = p1;
 	pControl->m_parm2   = p2;
 	pControl->m_bMarkedForDeletion = false;
+	pControl->m_anchorMode = anchoringMode;
 	
 	if (text)
 		strcpy (pControl->m_text, text);
@@ -1574,7 +1646,15 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 	//call EVENT_CREATE to let the ctl initialize its data
 	pControl->OnEvent(pControl, EVENT_CREATE, 0, 0, pWindow);
 	
+	//The control should be able to adjust its starting rect when created.
+	pControl->m_triedRect = pControl->m_rect;
+	
 	return index;
+}
+int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2)
+{
+	return
+	AddControlEx(pWindow, type, 0, rect, text, comboID, p1, p2);
 }
 
 void RemoveControl (Window* pWindow, int controlIndex)
@@ -1620,8 +1700,15 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 	if (eventType != EVENT_PAINT && eventType != EVENT_CLICKCURSOR)
 		if (pMenuBar)
 			if (pMenuBar->OnEvent)
+			{
 				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
 					return;
+				if (eventType == EVENT_CREATE)
+				{
+					// Let the control adjust itself
+					pMenuBar->m_triedRect = pMenuBar->m_rect;
+				}
+			}
 	
 	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
 	{
@@ -1631,16 +1718,30 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 		{
 			Control* p = &pWindow->m_pControlArray[i];
 			if (p->OnEvent)
+			{
 				if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
 					return;
+				if (eventType == EVENT_CREATE)
+				{
+					// Let the control adjust itself
+					p->m_triedRect = p->m_rect;
+				}
+			}
 		}
 	}
 	
 	if (eventType == EVENT_PAINT || eventType == EVENT_CLICKCURSOR)
 		if (pMenuBar)
 			if (pMenuBar->OnEvent)
+			{
 				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
 					return;
+				if (eventType == EVENT_CREATE)
+				{
+					// Let the control adjust itself
+					pMenuBar->m_triedRect = pMenuBar->m_rect;
+				}
+			}
 }
 
 #endif
@@ -1734,6 +1835,15 @@ void RenderWindow (Window* pWindow)
 			if (n != windIndex)
 			{
 				isAboveEverything = false;
+			}
+		}
+		for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+		{
+			short n = GetWindowIndexInDepthBuffer (i, y2 - 1);
+			if (n != windIndex)
+			{
+				isAboveEverything = false;
+				break;
 			}
 		}
 		short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
@@ -1873,15 +1983,22 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		int textwidth, __attribute__((unused)) height;
 		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
 		
-		int MinimizAndCloseGap = ((pWindow->m_flags & WF_NOMINIMZ) ? 0:16) + ((pWindow->m_flags & WF_NOCLOSE) ? 0:16);
-		
-		int offset = (rectb.right-rectb.left-iconGap*2-textwidth-MinimizAndCloseGap)/2;
+		int MinimizAndCloseGap = 0;
+		if (!(pWindow->m_flags & WF_NOCLOSE))
+		{
+			MinimizAndCloseGap += 16;
+			if (!(pWindow->m_flags & WF_NOMINIMZ))
+			{
+				MinimizAndCloseGap += 16;
+			}
+		}
+		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
 	
 		/*const unsigned char* pBkp = g_pCurrentFont;
 		VidSetFont(FONT_BIGTEST2);*/
 		
-		VidTextOut(pWindow->m_title, rectb.left + offset + 1 + iconGap, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pWindow->m_title, rectb.left + offset + 0 + iconGap, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		
 		//g_pCurrentFont = pBkp;
 		
@@ -1928,6 +2045,7 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_RELEASECURSOR:
 		case EVENT_KEYPRESS:
 		case EVENT_KEYRAW:
+		case EVENT_SIZE:
 		case EVENT_MENU_CLOSE:
 			return true;
 	}
@@ -1946,16 +2064,46 @@ int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int
 	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
 	
 	if (IsEventDestinedForControlsToo(eq))
+	{
 		ControlProcessEvent(pWindow, eq, eqp1, eqp2);
+	}
 	
 	return eq * eqp1 * eqp2;
 }
 
 int someValue = 0;
 
-void UpdateControlsBasedOnAnchoringModes(UNUSED Window* pWindow)
+void UpdateControlsBasedOnAnchoringModes(UNUSED Window* pWindow, int oldSizeParm, int newSizeParm)
 {
-	SLogMsg("TODO!");
+	//SLogMsg("TODO!");
+	int oldSizeX = GET_X_PARM(oldSizeParm), oldSizeY = GET_Y_PARM(oldSizeParm);
+	int newSizeX = GET_X_PARM(newSizeParm), newSizeY = GET_Y_PARM(newSizeParm);
+	
+	int sizeDifX = oldSizeX - newSizeX;
+	int sizeDifY = oldSizeY - newSizeY;
+	
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_active)
+		{
+			Control *pControl = &pWindow->m_pControlArray[i];
+			
+			if (pControl->m_anchorMode & ANCHOR_LEFT_TO_RIGHT)
+				pControl->m_triedRect.left   += sizeDifX;
+			if (pControl->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				pControl->m_triedRect.right  += sizeDifX;
+			if (pControl->m_anchorMode & ANCHOR_TOP_TO_BOTTOM)
+				pControl->m_triedRect.top    += sizeDifY;
+			if (pControl->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				pControl->m_triedRect.bottom += sizeDifY;
+			
+			pControl->m_rect = pControl->m_triedRect;
+			if (pControl->m_rect.right  - pControl->m_rect.left < 10)
+				pControl->m_rect.right  = pControl->m_rect.left + 10;
+			if (pControl->m_rect.bottom - pControl->m_rect.top  < 10)
+				pControl->m_rect.bottom = pControl->m_rect.top  + 10;
+		}
+	}
 }
 
 static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
@@ -1964,6 +2112,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	VidSetVBEData (&pWindow->m_vbeData);
 	pWindow->m_vbeData.m_dirty = 0;
 	pWindow->m_renderFinished = false;
+	//todo: switch case much?
 	if (eventType == EVENT_MINIMIZE)
 	{
 		VidSetVBEData (NULL);
@@ -2004,18 +2153,14 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		PaintWindowBackgroundAndBorder(pWindow);
 		
 		// Update controls based on their anchoring modes.
-		UpdateControlsBasedOnAnchoringModes (pWindow);
-		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
-		
-		pWindow->m_renderFinished = true;
+		UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
 	}
-	if (eventType == EVENT_CREATE)
+	else if (eventType == EVENT_CREATE)
 	{
 		PaintWindowBackgroundAndBorder(pWindow);
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
 	}
-	if (eventType == EVENT_PAINT)
+	else if (eventType == EVENT_PAINT)
 	{
 		PaintWindowBorderNoBackgroundOverpaint(pWindow);
 	}
@@ -2038,13 +2183,19 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	//if (pWindow->m_vbeData.m_dirty && !pWindow->m_hidden)
 	//	RenderWindow(pWindow);
 	
-	if (eventType == EVENT_CREATE)
+	if (eventType == EVENT_SIZE)
+	{
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		
+		pWindow->m_renderFinished = true;
+	}
+	else if (eventType == EVENT_CREATE)
 	{
 		AddWindowToDrawOrder (pWindow - g_windows);
 		ShowWindow(pWindow);
 		SelectThisWindowAndUnselectOthers(pWindow);
 	}
-	if (eventType == EVENT_DESTROY)
+	else if (eventType == EVENT_DESTROY)
 	{
 		pWindow->m_eventQueueSize = 0;
 		
@@ -2098,13 +2249,13 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				rect.left  = rect.right - TITLE_BAR_HEIGHT+2;
 				rect.top   = 4;
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
-				AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
+				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
 				if (!(pWindow->m_flags & WF_NOMINIMZ))
 				{
 					rect.left -= TITLE_BAR_HEIGHT;
 					rect.right -= TITLE_BAR_HEIGHT;
-					AddControl (pWindow, CONTROL_BUTTON_EVENT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
+					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
 				}
 			}
 			

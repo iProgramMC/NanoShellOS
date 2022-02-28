@@ -16,9 +16,9 @@
 #if 1
 
 #define BUTTONDARK 0x808080
-#define BUTTONMIDD 0xC0C0C0
+#define BUTTONMIDD BUTTON_MIDDLE_COLOR
 #define BUTTONLITE 0xFFFFFF
-#define BUTTONMIDC 0xA0A0A0
+#define BUTTONMIDC WINDOW_BACKGD_COLOR
 
 /***************************************************************************
 	Explanation of how this is supposed to render:
@@ -59,17 +59,6 @@ void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned co
 	if (colorMiddle != TRANSPARENT)
 		VidFillRectangle(colorMiddle, rect);
 }
-void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
-{
-	//draw some lines
-	VidDrawHLine (0x000000, rect.left+1,rect.right-1,  rect.top);
-	VidDrawHLine (0x000000, rect.left+1,rect.right-1,  rect.bottom-1);
-	VidDrawVLine (0x000000, rect.top+1, rect.bottom-2, rect.left);
-	VidDrawVLine (0x000000, rect.top+1, rect.bottom-2, rect.right);
-	
-	rect.left++, rect.right--, rect.top++, rect.bottom--;
-	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
-}
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	rectb.bottom--;
@@ -78,8 +67,8 @@ void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorL
 	rectb.right++;
 	rectb.bottom++;
 	
-	VidDrawHLine(0x000000, rectb.left, rectb.right-1,  rectb.bottom-1);
-	VidDrawVLine(0x000000, rectb.top,  rectb.bottom-1, rectb.right-1);
+	VidDrawHLine(WINDOW_TEXT_COLOR, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(WINDOW_TEXT_COLOR, rectb.top,  rectb.bottom-1, rectb.right-1);
 	
 	VidDrawHLine(colorLight, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorLight, rectb.top,  rectb.bottom-1, rectb.left);
@@ -98,6 +87,47 @@ void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorL
 	colorAvg |= ((colorLight & 0x0000ff) + (colorMiddle & 0x0000ff)) >> 1;
 	VidDrawHLine(colorAvg, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorAvg, rectb.top,  rectb.bottom-1, rectb.left);
+}
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle)
+{
+	rectb.bottom--;
+	if (colorMiddle != TRANSPARENT)
+		VidFillRectangle(colorMiddle, rectb);
+	rectb.right++;
+	rectb.bottom++;
+	
+	VidDrawHLine(WINDOW_TEXT_COLOR_LIGHT, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(WINDOW_TEXT_COLOR_LIGHT, rectb.top,  rectb.bottom-1, rectb.right-1);
+	
+	VidDrawHLine(colorDark, rectb.left, rectb.right-1,  rectb.top);
+	VidDrawVLine(colorDark, rectb.top,  rectb.bottom-1, rectb.left);
+	
+	rectb.left++;
+	rectb.top++;
+	rectb.right--;
+	rectb.bottom--;
+	
+	VidDrawHLine(colorLight, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(colorLight, rectb.top,  rectb.bottom-1, rectb.right-1);
+	
+	int colorAvg = 0;
+	colorAvg |= (colorDark & 0xff0000) >> 1;
+	colorAvg |= (colorDark & 0x00ff00) >> 1;
+	colorAvg |= (colorDark & 0x0000ff) >> 1;
+	VidDrawHLine(colorAvg, rectb.left, rectb.right-1,  rectb.top);
+	VidDrawVLine(colorAvg, rectb.top,  rectb.bottom-1, rectb.left);
+}
+void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
+{
+	//draw some lines
+	/*VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.top);
+	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.bottom-1);
+	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.left);
+	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.right);
+	
+	rect.left++, rect.right--, rect.top++, rect.bottom--;*/
+	//RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
+	RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
 }
 #endif
 
@@ -272,24 +302,24 @@ go_back:;
 			VidFillRectangle (0x7F7F7F, basic_rectangle);
 		
 			if (this->m_scrollBarData.m_yMinButton)
-				RenderButtonShapeNoRounding (left_button,   BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				RenderButtonShapeSmall (left_button,   BUTTONLITE, BUTTONDARK, BUTTONMIDC);
 			else
-				RenderButtonShapeNoRounding (left_button,   BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				RenderButtonShapeSmall (left_button,   BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
 			if (this->m_scrollBarData.m_yMaxButton)
-				RenderButtonShapeNoRounding (right_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				RenderButtonShapeSmall (right_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
 			else
-				RenderButtonShapeNoRounding (right_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				RenderButtonShapeSmall (right_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
-			RenderButtonShapeNoRounding (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
+			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
 			
 			left_button .left++; left_button .right++; left_button .bottom++; left_button .top++;
 			right_button.left++; right_button.right++; right_button.bottom++; right_button.top++;
 			scroller    .left++; scroller    .right++; scroller    .bottom++; scroller    .top++;
 			
-			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			//VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			//VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			break;
 		}
 	}
@@ -399,24 +429,24 @@ go_back:;
 		{
 			VidFillRectangle (BUTTONDARK-0x111111, clickable_rect);
 			if (this->m_scrollBarData.m_yMinButton)
-				RenderButtonShapeNoRounding (top_button,     BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				RenderButtonShapeSmall (top_button,     BUTTONLITE, BUTTONDARK, BUTTONMIDC);
 			else
-				RenderButtonShapeNoRounding (top_button,     BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				RenderButtonShapeSmall (top_button,     BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
 			if (this->m_scrollBarData.m_yMaxButton)
-				RenderButtonShapeNoRounding (bottom_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				RenderButtonShapeSmall (bottom_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
 			else
-				RenderButtonShapeNoRounding (bottom_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				RenderButtonShapeSmall (bottom_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
-			RenderButtonShapeNoRounding (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
+			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
 			
 			top_button   .left++; top_button   .right++; top_button   .bottom++; top_button   .top++;
 			bottom_button.left++; bottom_button.right++; bottom_button.bottom++; bottom_button.top++;
 			scroller     .left++; scroller     .right++; scroller     .bottom++; scroller     .top++;
 			
-			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
-			//VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			//VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			break;
 		}
 	}
@@ -426,6 +456,12 @@ go_back:;
 
 // TextEdit view
 #if 1
+
+void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
+{
+	int c = CountLinesInText(this->m_textInputData.m_pText);
+	SetScrollBarMax (pWindow, -this->m_comboID, c);
+}
 
 void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 {
@@ -444,8 +480,7 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	this->m_textInputData.m_textCursorSelEnd   = -1;
 	this->m_textInputData.m_textCursorIndex    = this->m_textInputData.m_textLength;
 	
-	int c = CountLinesInText(this->m_textInputData.m_pText);
-	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	CtlTextInputUpdateScrollSize (this, pWindow);
 }
 
 void SetTextInputText(Window* pWindow, int comboID, const char* pText)
@@ -513,8 +548,7 @@ void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 	this->m_textInputData.m_pText[this->m_textInputData.m_textLength++] = charToAppend;
 	this->m_textInputData.m_pText[this->m_textInputData.m_textLength  ] = 0;
 	
-	int c = CountLinesInText(this->m_textInputData.m_pText);
-	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	CtlTextInputUpdateScrollSize (this, pWindow);
 	
 	this->m_textInputData.m_dirty = true;
 }
@@ -545,8 +579,7 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 	memmove (&this->m_textInputData.m_pText[indexToAppendTo+1], &this->m_textInputData.m_pText[indexToAppendTo], this->m_textInputData.m_textLength-1-indexToAppendTo);
 	this->m_textInputData.m_pText[indexToAppendTo] = charToAppend;
 	
-	int c = CountLinesInText(this->m_textInputData.m_pText);
-	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	CtlTextInputUpdateScrollSize (this, pWindow);
 	
 	this->m_textInputData.m_dirty = true;
 }
@@ -562,8 +595,7 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 	this->m_textInputData.m_textLength--;
 	this->m_textInputData.m_pText[this->m_textInputData.m_textLength] = 0;
 	
-	int c = CountLinesInText(this->m_textInputData.m_pText);
-	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	CtlTextInputUpdateScrollSize (this, pWindow);
 	
 	this->m_textInputData.m_dirty = true;
 }
@@ -597,6 +629,9 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 			//RequestRepaint (pWindow);
 			break;
 		}
+		case EVENT_SIZE:
+			CtlTextInputUpdateScrollSize (this, pWindow);
+			break;
 		case EVENT_KEYRAW:
 		{
 			if (this->m_textInputData.m_readOnly) break;
@@ -850,7 +885,13 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				r.bottom= this->m_rect.bottom, 
 				r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
 				
-				AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, 1, 1);
+				int flags = 0;
+				if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+					flags |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
+				if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+					flags |= ANCHOR_BOTTOM_TO_BOTTOM;
+				
+				AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, 1, 1);
 			
 				//shrink our rectangle:
 				this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
@@ -891,7 +932,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				rk1.right = rk.left;
 			}
 			
-			VidFillRectangle(0xffffff, rk);
+			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
 				VidFillRectangle(0x3f3f3f, rk1);
 			
@@ -927,7 +968,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
 				{
 					sprintf   (line_string, "%5d", curLine2);
-					VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
+					VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 				}
 				while (*text)
 				{
@@ -958,7 +999,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 							if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
 							{
 								sprintf   (line_string, "%5d", curLine2);
-								VidTextOut(line_string, this->m_rect.left + 6, yPos, 0xffffff, TRANSPARENT);
+								VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 							}
 						}
 						curLine ++;
@@ -968,7 +1009,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						// render this character:
 						if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
 						if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
-							VidPlotChar(*text, xPos, yPos, 0, TRANSPARENT);
+							VidPlotChar(*text, xPos, yPos, WINDOW_TEXT_COLOR, TRANSPARENT);
 						// Increment the X,Y positions
 						xPos += GetCharWidth (*text);
 					}
@@ -983,9 +1024,9 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				VidSetFont(FONT_BASIC);
 			}
 			else
-				VidTextOut("NOTHING!", this->m_rect.left, this->m_rect.top, 0xFF0000, 0x000000);
+				VidTextOut("NOTHING!", this->m_rect.left, this->m_rect.top, 0xFF0000, WINDOW_TEXT_COLOR);
 			
-			RenderButtonShapeNoRounding (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			
 			break;
 		}
@@ -997,6 +1038,14 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 
 // List View.
 #if 1
+static void CtlUpdateScrollBarSize(Control *pCtl, Window* pWindow)
+{
+	ListViewData* pData = &pCtl->m_listViewData;
+	int c = pData->m_elementCount;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, -pCtl->m_comboID, c);
+}
 static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalIcon, Window* pWindow)
 {
 	ListViewData* pData = &pCtl->m_listViewData;
@@ -1019,10 +1068,7 @@ static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalI
 	pData->m_highlightedElementIdx = -1;
 	
 	//also update the scroll bar.
-	int c = pData->m_elementCount;
-	if (c <= 0)
-		c  = 1;
-	SetScrollBarMax (pWindow, -pCtl->m_comboID, c);
+	CtlUpdateScrollBarSize(pCtl, pWindow);
 	
 	pItem->m_icon = optionalIcon;
 	strcpy(pItem->m_contents, pText);
@@ -1035,10 +1081,7 @@ static void CtlRemoveElementFromList(Control* pCtl, int index, Window* pWindow)
 	pData->m_highlightedElementIdx = -1;
 	
 	//also update the scroll bar.
-	int c = pData->m_elementCount;
-	if (c <= 0)
-		c  = 1;
-	SetScrollBarMax (pWindow, -pCtl->m_comboID, c);
+	CtlUpdateScrollBarSize(pCtl, pWindow);
 }
 static void CtlResetList (Control* pCtl, Window* pWindow)
 {
@@ -1055,10 +1098,7 @@ static void CtlResetList (Control* pCtl, Window* pWindow)
 	memset (pData->m_pItems, 0, itemsSize);
 	
 	//also update the scroll bar.
-	int c = pData->m_elementCount;
-	if (c <= 0)
-		c  = 1;
-	SetScrollBarMax (pWindow, -pCtl->m_comboID, c);
+	CtlUpdateScrollBarSize(pCtl, pWindow);
 }
 static const char* CtlGetElementStringFromList (Control *pCtl, int index)
 {
@@ -1074,6 +1114,11 @@ bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 go_back:
 	switch (eventType)
 	{
+		case EVENT_SIZE:
+		{
+			CtlUpdateScrollBarSize (this, pWindow);
+			break;
+		}
 	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
@@ -1128,7 +1173,7 @@ go_back:
 			rk.top    += 2;
 			rk.right  -= 2;
 			rk.bottom -= 2;
-			VidFillRectangle(0xFFFFFF, rk);
+			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			ListViewData* pData = &this->m_listViewData;
 			
 			int elementStart =   pData->m_scrollY;
@@ -1145,13 +1190,13 @@ go_back:
 			
 			for (int i = elementStart, j = 0; i <= elementEnd; i++, j++)
 			{
-				uint32_t color = 0x000000, colorT = TRANSPARENT;
+				uint32_t color = WINDOW_TEXT_COLOR, colorT = TRANSPARENT;
 				if (pData->m_highlightedElementIdx == i)
 				{
 					/*int l = this->m_rect.left + 4, t = this->m_rect.top + 2 + j * LIST_ITEM_HEIGHT, 
 						r = this->m_rect.right - 4, b = t + LIST_ITEM_HEIGHT - 1;
 					VidFillRect (0x7F, l, t, r, b);*/
-					color = 0xFFFFFF, colorT = 0x7F;
+					color = WINDOW_TEXT_COLOR_LIGHT, colorT = 0x7F;
 				}
 				if (pData->m_hasIcons)
 				{
@@ -1161,7 +1206,7 @@ go_back:
 				VidTextOut (pData->m_pItems[i].m_contents, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
 			}
 			
-			RenderButtonShapeNoRounding (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			
 			break;
 		}
@@ -1188,7 +1233,13 @@ go_back:
 			if (c <= 0)
 				c  = 1; 
 			
-			AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, c, 1);
+			int flags = 0;
+			if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				flags |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
+			if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				flags |= ANCHOR_BOTTOM_TO_BOTTOM;
+			
+			AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, c, 1);
 			
 			//shrink our rectangle:
 			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
@@ -1214,6 +1265,16 @@ go_back:
 
 // Icon list view
 #if 1
+static void CtlIconUpdateScrollBarSize(Control* pCtlIcon, Window* pWindow)
+{
+	//also update the scroll bar.
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	int elementColsPerScreen = (pCtlIcon->m_rect.right - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+	int c = pData->m_elementCount / elementColsPerScreen;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+}
 static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int optionalIcon, Window* pWindow)
 {
 	ListViewData* pData = &pCtlIcon->m_listViewData;
@@ -1235,12 +1296,7 @@ static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int o
 	pData->m_elementCount++;
 	pData->m_highlightedElementIdx = -1;
 	
-	//also update the scroll bar.
-	int elementColsPerScreen = (pCtlIcon->m_rect.right - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
-	int c = pData->m_elementCount / elementColsPerScreen;
-	if (c <= 0)
-		c  = 1;
-	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+	CtlIconUpdateScrollBarSize(pCtlIcon, pWindow);
 	
 	pItem->m_icon = optionalIcon;
 	strcpy(pItem->m_contents, pText);
@@ -1255,11 +1311,7 @@ static void CtlIconRemoveElementFromList(Control* pCtlIcon, int index, Window* p
 	pData->m_highlightedElementIdx = -1;
 	
 	//also update the scroll bar.
-	int elementColsPerScreen = (pCtlIcon->m_rect.right - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
-	int c = pData->m_elementCount / elementColsPerScreen;
-	if (c <= 0)
-		c  = 1;
-	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+	CtlIconUpdateScrollBarSize(pCtlIcon, pWindow);
 }
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
 bool WidgetIconView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
@@ -1267,6 +1319,11 @@ bool WidgetIconView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 go_back:
 	switch (eventType)
 	{
+		case EVENT_SIZE:
+		{
+			CtlIconUpdateScrollBarSize (this, pWindow);
+			break;
+		}
 	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
@@ -1326,7 +1383,7 @@ go_back:
 			rk.top    += 2;
 			rk.right  -= 2;
 			rk.bottom -= 2;
-			VidFillRectangle(0xFFFFFF, rk);
+			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			ListViewData* pData = &this->m_listViewData;
 			
 			int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
@@ -1348,10 +1405,10 @@ go_back:
 			
 			for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
 			{
-				uint32_t color = 0x000000, colorT = TRANSPARENT;
+				uint32_t color = WINDOW_TEXT_COLOR, colorT = TRANSPARENT;
 				if (pData->m_highlightedElementIdx == i)
 				{
-					color = 0xFFFFFF, colorT = 0x7F;
+					color = WINDOW_TEXT_COLOR_LIGHT, colorT = 0x7F;
 				}
 				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
 				if (pData->m_hasIcons)
@@ -1373,7 +1430,7 @@ go_back:
 				}
 			}
 			
-			RenderButtonShapeNoRounding (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			
 			break;
 		}
@@ -1400,7 +1457,13 @@ go_back:
 			if (c <= 0)
 				c  = 1; 
 			
-			AddControl (pWindow, CONTROL_VSCROLLBAR, r, NULL, -this->m_comboID, c, 1);
+			int flags = 0;
+			if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				flags |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
+			if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				flags |= ANCHOR_BOTTOM_TO_BOTTOM;
+			
+			AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, c, 1);
 			
 			//shrink our rectangle:
 			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
@@ -1627,13 +1690,13 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						
 						VidFillRectangle (0x7F, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0xFFFFFF, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 						//render the child menu as well:
 						
 						/*WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);*/
 					}
 					else
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, 0, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, WINDOW_TEXT_COLOR, TRANSPARENT);
 					
 					current_x += width;
 				}
@@ -1673,13 +1736,19 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 							pChild->m_isOpen = false;
 						}
 						// Open this and call the paint event.
-						pChild->m_isOpen = true;
 						
-						//spawn a menu
-						WindowMenu menu;
-						ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
-						SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + TITLE_BAR_HEIGHT);
-						MenuRecursivelyFreeEntries (&menu);
+						if (pChild->m_childrenCount)
+						{
+							pChild->m_isOpen = true;
+							WindowMenu menu;
+							ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
+							SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + TITLE_BAR_HEIGHT);
+							MenuRecursivelyFreeEntries (&menu);
+						}
+						else
+						{
+							CallWindowCallback (pWindow, EVENT_COMMAND, this->m_comboID, pChild->m_comboID);
+						}
 						
 						//WidgetMenuBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 						//break;
@@ -1795,8 +1864,14 @@ bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	switch (eventType)
 	{
 		case EVENT_PAINT:
+		{
+			if (this->m_parm2 & TEXTSTYLE_FORCEBGCOL)
+			{
+				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+			}
 			VidDrawText(this->m_text, this->m_rect, this->m_parm2, this->m_parm1, TRANSPARENT);
 			break;
+		}
 	}
 	return false;
 }
@@ -1888,12 +1963,12 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
 				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
-				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
 			{
 				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			
 			break;
@@ -2060,35 +2135,36 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		}
 		case EVENT_PAINT:
 		{
+			Rectangle r = this->m_rect;
 			if (this->m_buttonData.m_clicked)
 			{
-				Rectangle r = this->m_rect;
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
 				VidFillRectangle(0x7F, this->m_rect);
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;
-				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0xFFFFFF, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 			}
 			else if (this->m_buttonData.m_hovered)
 			{
 				VidFillRectangle(0x7F, this->m_rect);
-				Rectangle r = this->m_rect;
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;
-				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0xFFFFFF, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 			}
 			else
 			{
 				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
-				Rectangle r = this->m_rect;
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;
-				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
+			r.left -= 30;
+			if (this->m_parm1)
+				RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
 			
 			break;
 		}
@@ -2183,14 +2259,14 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
 				RenderButtonShapeSmall (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
-				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
 			{
 				this->m_rect.right--;
 				RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 				this->m_rect.right++;//ugly hack
-				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0, TRANSPARENT);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			
 			break;
@@ -2247,11 +2323,25 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			Rectangle r = this->m_rect;
 			r.top += GetLineHeight() / 2;
 			
-			VidDrawRectangle(0x000000, r);
+			VidDrawRectangle(WINDOW_TEXT_COLOR, r);
 			
 			// Draw the text
 			VidTextOut(this->m_text, this->m_rect.left + 10, this->m_rect.top, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
 			VidTextOut(this->m_text, this->m_rect.left + 12, this->m_rect.top, 0x00000,             WINDOW_BACKGD_COLOR);
+			
+			break;
+		}
+	}
+	return false;
+}
+bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_PAINT:
+		{
+			// Draw a rectangle to surround the things we put inside
+			VidDrawHLine(WINDOW_BACKGD_COLOR - 0x0F0F0F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
 			
 			break;
 		}
@@ -2296,8 +2386,8 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	{
 		case EVENT_PAINT:
 		{
-			VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : 0xffffff, check_rect);
-			VidDrawRectangle(0x000000,                                             check_rect);
+			VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT, check_rect);
+			VidDrawRectangle(WINDOW_TEXT_COLOR,                                                   check_rect);
 			//if checked, mark it as "checked"
 			if (this->m_checkBoxData.m_checked)
 			{
@@ -2305,10 +2395,10 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				check_rect.top ++;
 				check_rect.left++;
 				check_rect.top ++;
-				VidDrawText("\x09", check_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, 0x000000, TRANSPARENT);
+				VidDrawText("\x09", check_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			
-			VidDrawText(this->m_text, text_rect, TEXTSTYLE_WORDWRAPPED, 0x000000, WINDOW_BACKGD_COLOR);
+			VidDrawText(this->m_text, text_rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
@@ -2361,6 +2451,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetButtonList_OnEvent,
 	WidgetButtonIcon_OnEvent,
 	WidgetButtonIconBar_OnEvent,
+	WidgetSimpleLine_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

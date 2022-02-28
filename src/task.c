@@ -110,7 +110,16 @@ void KeConstructTask (Task* pTask)
 	pTask->m_state.edx = 0xCE999999;
 	pTask->m_state.esi = 0xAAAAAAAA;
 	pTask->m_state.edi = 0xBBBBBBBB;
-	pTask->m_state.cs  = 0x8;//same as our CS
+	
+	//seg registers
+	pTask->m_state.cs  = SEGMENT_KECODE;//same as our CS
+	pTask->m_state.ds  = SEGMENT_KEDATA;
+	pTask->m_state.es  = SEGMENT_KEDATA;
+	pTask->m_state.fs  = SEGMENT_KEDATA;
+	pTask->m_state.gs  = SEGMENT_KEDATA;
+	pTask->m_state.ss  = SEGMENT_KEDATA;
+	
+	
 	pTask->m_state.eflags = 0x297; //same as our own EFL register
 	pTask->m_state.cr3 = g_curPageDirP; //same as our own CR3 register
 	
@@ -283,7 +292,7 @@ void KeExit()
 	KeGetRunningTask()->m_bMarkedForDeletion = true;
 	while (1) hlt;
 }
-
+#ifdef USE_SSE_FXSAVE
 void KeFxSave(int *fpstate)
 {
 	asm("fxsave (%0)" :: "r"(fpstate));
@@ -292,6 +301,18 @@ void KeFxRestore(int *fpstate)
 {
 	asm("fxrstor (%0)" :: "r"(fpstate));
 }
+#else
+void KeFxSave(int *fpstate)
+{
+	asm("fwait\n"
+		"fsave (%0)" :: "r"(fpstate));
+}
+void KeFxRestore(int *fpstate)
+{
+	asm("fwait\n"
+		"frstor (%0)" :: "r"(fpstate));
+}
+#endif
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	Task* pTask = KeGetRunningTask();

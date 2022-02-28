@@ -17,6 +17,7 @@ global IrqTaskA
 global IrqTaskB
 IrqTaskA:
 	cli
+	; Preserve basic registers
 	push esp
 	push ebp
 	push edi
@@ -26,7 +27,20 @@ IrqTaskA:
 	push ebx
 	push eax
 	
+	; Preserve page table
 	mov eax, cr3
+	push eax
+	
+	; Preserve segment registers
+	mov eax, ds
+	push eax
+	mov eax, es
+	push eax
+	mov eax, fs
+	push eax
+	mov eax, gs
+	push eax
+	mov eax, ss
 	push eax
 	
 	; acknowledge the interrupt
@@ -41,9 +55,23 @@ IrqTaskA:
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack
 	
+	; Restore the seg registers
+	pop eax
+	mov ss, eax
+	pop eax
+	mov gs, eax
+	pop eax
+	mov fs, eax
+	pop eax
+	mov es, eax
+	pop eax
+	mov ds, eax
+	
+	; Restore page table
 	pop eax
 	mov cr3, eax
 	
+	; Restore working registers
 	pop eax
 	pop ebx
 	pop ecx
@@ -58,6 +86,7 @@ IrqTaskA:
 	iretd
 IrqTaskB:
 	cli
+	; Preserve basic registers
 	push esp
 	push ebp
 	push edi
@@ -67,19 +96,51 @@ IrqTaskB:
 	push ebx
 	push eax
 	
+	; Preserve page table
 	mov eax, cr3
 	push eax
 	
-	; since this is a _software_ interrupt do not acknowledge it
+	; Preserve segment registers
+	mov eax, ds
+	push eax
+	mov eax, es
+	push eax
+	mov eax, fs
+	push eax
+	mov eax, gs
+	push eax
+	mov eax, ss
+	push eax
+	
+	; acknowledge the interrupt
+	mov al, 0x20
+	mov dx, 0x20
+	out dx, al
+	mov dx, 0xA0
+	out dx, al
 	
 	push esp
 	; call the re-schedule function
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack
 	
+	; Restore the seg registers
+	pop eax
+	mov ss, eax
+	pop eax
+	mov gs, eax
+	pop eax
+	mov fs, eax
+	pop eax
+	mov es, eax
+	pop eax
+	mov ds, eax
+	
+	; Restore page table
 	pop eax
 	mov cr3, eax
 	
+	; Restore working registers
 	pop eax
 	pop ebx
 	pop ecx
@@ -98,11 +159,26 @@ global KeStartedNewTask
 global KeStartedNewKernelTask
 KeStartedNewTask:
 KeStartedNewKernelTask:
+	; Get the save state pointer to restore
 	mov esp, [g_saveStateToRestore1]
 	
+	; Restore the seg registers
+	pop eax
+	mov ss, eax
+	pop eax
+	mov gs, eax
+	pop eax
+	mov fs, eax
+	pop eax
+	mov es, eax
+	pop eax
+	mov ds, eax
+	
+	; Restore page table
 	pop eax
 	mov cr3, eax
 	
+	; Restore working registers
 	pop eax
 	pop ebx
 	pop ecx

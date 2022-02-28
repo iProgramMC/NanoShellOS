@@ -39,12 +39,22 @@ typedef void (*TaskedFunction) (int arg);
 // This is why we use CPUSaveState instead. (as we did in NanoShell2)
 typedef struct CPUSaveState
 {
+	int ds,  es,  fs,  gs,  ss;
 	int cr3;
 	int eax, ebx, ecx, edx,
 	    esi, edi, ebp, esp,
 		eip, cs, eflags;
 }
 CPUSaveState;
+
+enum
+{
+	SEGMENT_NULL   = 0x0000,
+	SEGMENT_KECODE = 0x0008,
+	SEGMENT_KEDATA = 0x0010,
+	SEGMENT_USCODE = 0x0018,//planned?
+	SEGMENT_USDATA = 0x0020,
+};
 
 // Task structure definition:
 typedef struct

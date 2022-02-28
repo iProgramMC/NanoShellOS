@@ -5,6 +5,7 @@
             Icon listing module
 ******************************************/
 #include <icon.h>
+#include <misc.h>
 
 //WORK: Add in your icons here:
 #include <icons/cabinet.h>
@@ -94,6 +95,8 @@
 #include <icons/resmon16.h>
 #include <icons/notes16.h>
 #include <icons/file_nano.h>
+// Icons V1.34
+#include <icons/clock_empty.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -178,6 +181,7 @@ Image * g_iconTable[] = {
 	&g_resmon16_icon,
 	&g_notes16_icon,
 	&g_file_nano_icon,
+	&g_clock_empty_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -195,7 +199,8 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(CABINET)
 			CASE(COMPUTER)
 			CASE(ERROR)
-			case ICON_FOLDER: type = ICON_FOLDER16_CLOSED; break;
+			case ICON_FOLDER:      type = ICON_FOLDER16_CLOSED; break;
+			case ICON_CLOCK_EMPTY: type = ICON_CLOCK16;         break;
 			CASE(FOLDER_PARENT)
 			CASE(EXECUTE_FILE)
 			CASE(FILE)
@@ -229,6 +234,12 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 {
 	Image *p = GetIconImage(type, size);
 	if (p)
+	{
 		VidBlitImageResize(p, x, y, size, size);
+		if (type == ICON_CLOCK_EMPTY)
+		{
+			RenderThumbClock(x, y, size);
+		}
+	}
 }
 

@@ -87,7 +87,7 @@ int main ()
 		WndProc,
 		0
 	);
-	SetWindowIcon(pWindow, ICON_CLOCK);
+	SetWindowIcon(pWindow, ICON_CLOCK_EMPTY);
 	
 	if (!pWindow)
 		return 1;

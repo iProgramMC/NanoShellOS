@@ -256,9 +256,11 @@ int WrapText(char *pTextOut, const char* pTextToWrap, int xSize);
 /**
  * Draws text inside a rectangle with the specified flags.
  */
-#define TEXTSTYLE_HCENTERED 1
-#define TEXTSTYLE_VCENTERED 2
-#define TEXTSTYLE_WORDWRAPPED 4
+#define TEXTSTYLE_HCENTERED   (1)
+#define TEXTSTYLE_VCENTERED   (2)
+#define TEXTSTYLE_WORDWRAPPED (4)
+#define TEXTSTYLE_RJUSTIFY    (8)
+#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
 //TODO: Add word wrap
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg);
 

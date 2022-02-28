@@ -1,7 +1,14 @@
+/*****************************************
+		NanoShell Operating System
+		  (C) 2022 iProgramInCpp
+
+   Window Popup Menu module header file
+******************************************/
 #ifndef _WMENU_H
 #define _WMENU_H
 
 #define MENU_ITEM_HEIGHT 16
+#define MENU_SEPA_HEIGHT 5
 
 typedef struct MenuEntry
 {
@@ -12,7 +19,10 @@ typedef struct MenuEntry
 	int               nOrigCtlComboID;
 	char              sText[100];
 	bool              bOpen;
+	bool              bHasIcons;
+	int               nLineSeparators;
 	Window*           pOpenWindow;
+	int               nIconID;
 }
 WindowMenu;
 

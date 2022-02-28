@@ -80,10 +80,18 @@ void RedrawEverything();
 		DESKTOP_SHOW_WINDOW_CONTENTS,
 		DESKTOP_APPLY_CHANGES,
 		DESKTOP_CHANGE_BACKGD,
+		DESKTOP_CHOOSETHEMETEXT,
+		DESKTOP_ORMAKEYOUROWNTEXT,
+		
+		DESKTOP_THEME_DEFAULT,
+		DESKTOP_THEME_DARK,
+		
 		DESKTOP_CANCEL,
 	};
+	void SetDefaultTheme();
+	void SetDarkTheme   ();
 	#define DESKTOP_POPUP_WIDTH 300
-	#define DESKTOP_POPUP_HEITE 140
+	#define DESKTOP_POPUP_HEITE 400
 	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 	{
 		switch (messageType)
@@ -101,9 +109,20 @@ void RedrawEverything();
 				RECT(r,10, 30 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
 				
-				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2,8+TITLE_BAR_HEIGHT+80,45,20);
+				RECT(r, 10, 50 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
+				
+				RECT(r, 10, 70 + TITLE_BAR_HEIGHT, (DESKTOP_POPUP_WIDTH - 30) / 2, 20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Default", DESKTOP_THEME_DEFAULT, 0, 0);
+				RECT(r, 10 + (DESKTOP_POPUP_WIDTH - 20) / 2, 70 + TITLE_BAR_HEIGHT, (DESKTOP_POPUP_WIDTH - 30) / 2, 20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Dark", DESKTOP_THEME_DARK, 0, 0);
+				
+				RECT(r, 10, 100 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
+				
+				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2, DESKTOP_POPUP_HEITE - 30 ,45,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
-				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2+55,8+TITLE_BAR_HEIGHT+80,45,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2+55, DESKTOP_POPUP_HEITE - 30 ,45,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "OK",  DESKTOP_APPLY_CHANGES, 0, 0);
 				
 				break;
@@ -114,12 +133,24 @@ void RedrawEverything();
 					uint32_t data = ColorInputBox(pWindow, "Choose a new background color:", "Background color");
 					if (data != TRANSPARENT)
 					{
-						g_BackgroundSolidColor = data & 0xffffff;
+						SetThemingParameter(P_BACKGROUND_COLOR, data & 0xffffff);
 						RedrawEverything();
 					}
 					break;
 				}
-				if (parm1 == DESKTOP_APPLY_CHANGES)
+				else if (parm1 == DESKTOP_THEME_DARK)
+				{
+					SetDarkTheme();
+					RedrawEverything();
+					break;
+				}
+				else if (parm1 == DESKTOP_THEME_DEFAULT)
+				{
+					SetDefaultTheme();
+					RedrawEverything();
+					break;
+				}
+				else if (parm1 == DESKTOP_APPLY_CHANGES)
 				{
 					g_BackgroundSolidColorActive = CheckboxGetChecked(pWindow, DESKTOP_ENABLE_BACKGD);
 					g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);

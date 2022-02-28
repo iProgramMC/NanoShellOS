@@ -252,7 +252,7 @@ void KeTimerInit()
 	
 	*/
 	
-	int pit_frequency = 597;//65536/4096;//~ 74.573875 KHz
+	int pit_frequency = 1194;//65536/4096;//~ 74.573875 KHz
 	WritePort(0x40, (uint8_t)( pit_frequency       & 0xff));
 	WritePort(0x40, (uint8_t)((pit_frequency >> 8) & 0xff));
 }

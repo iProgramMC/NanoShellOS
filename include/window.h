@@ -25,18 +25,72 @@
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
 
-#define BACKGROUND_COLOR                0x00007f7f
-#define BUTTON_MIDDLE_COLOR             0x00CCCCCC
-#define WINDOW_BACKGD_COLOR             0x00AAAAAA
-#define WINDOW_EDGE_COLOR               0x00000000
-#define WINDOW_TITLE_ACTIVE_COLOR       0x0000003F
-#define WINDOW_TITLE_INACTIVE_COLOR     0x007F7F7F
-//#define WINDOW_TITLE_ACTIVE_COLOR_B   0x000000FF
-//#define WINDOW_TITLE_INACTIVE_COLOR_B 0x00AAAAAA
-#define WINDOW_TITLE_ACTIVE_COLOR_B     0x000000FF
-#define WINDOW_TITLE_INACTIVE_COLOR_B   0x00EEEEEE
-#define WINDOW_TITLE_TEXT_COLOR_SHADOW  0x0000003F
-#define WINDOW_TITLE_TEXT_COLOR         0x00FFFFFF
+//Theming
+#define DEFAULT_BACKGROUND_COLOR                0x00007f7f
+#define DEFAULT_BUTTON_MIDDLE_COLOR             0x00CCCCCC
+#define DEFAULT_WINDOW_BACKGD_COLOR             0x00AAAAAA
+#define DEFAULT_WINDOW_EDGE_COLOR               0x00000000
+#define DEFAULT_WINDOW_TITLE_ACTIVE_COLOR       0x0000003F
+#define DEFAULT_WINDOW_TITLE_INACTIVE_COLOR     0x007F7F7F
+#define DEFAULT_WINDOW_TITLE_ACTIVE_COLOR_B     0x000000FF
+#define DEFAULT_WINDOW_TITLE_INACTIVE_COLOR_B   0x00EEEEEE
+#define DEFAULT_WINDOW_TITLE_TEXT_COLOR_SHADOW  0x0000003F
+#define DEFAULT_WINDOW_TITLE_TEXT_COLOR         0x00FFFFFF
+#define DEFAULT_WINDOW_TEXT_COLOR               0x00000000
+#define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
+
+//#define HARDCODE_EVERYTHING
+
+#ifdef HARDCODE_EVERYTHING
+
+#define BACKGROUND_COLOR                DEFAULT_BACKGROUND_COLOR              
+#define BUTTON_MIDDLE_COLOR             DEFAULT_BUTTON_MIDDLE_COLOR           
+#define WINDOW_BACKGD_COLOR             DEFAULT_WINDOW_BACKGD_COLOR           
+#define WINDOW_EDGE_COLOR               DEFAULT_WINDOW_EDGE_COLOR             
+#define WINDOW_TITLE_ACTIVE_COLOR       DEFAULT_WINDOW_TITLE_ACTIVE_COLOR     
+#define WINDOW_TITLE_INACTIVE_COLOR     DEFAULT_WINDOW_TITLE_INACTIVE_COLOR   
+#define WINDOW_TITLE_ACTIVE_COLOR_B     DEFAULT_WINDOW_TITLE_ACTIVE_COLOR_B   
+#define WINDOW_TITLE_INACTIVE_COLOR_B   DEFAULT_WINDOW_TITLE_INACTIVE_COLOR_B 
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW  DEFAULT_WINDOW_TITLE_TEXT_COLOR_SHADOW
+#define WINDOW_TITLE_TEXT_COLOR         DEFAULT_WINDOW_TITLE_TEXT_COLOR       
+#define WINDOW_TEXT_COLOR               DEFAULT_WINDOW_TEXT_COLOR       
+#define WINDOW_TEXT_COLOR_LIGHT         DEFAULT_WINDOW_TEXT_COLOR_LIGHT
+
+#else
+
+enum {
+P_BLACK,
+P_BACKGROUND_COLOR,
+P_BUTTON_MIDDLE_COLOR,
+P_WINDOW_BACKGD_COLOR,
+P_WINDOW_EDGE_COLOR,
+P_WINDOW_TITLE_ACTIVE_COLOR,
+P_WINDOW_TITLE_INACTIVE_COLOR,
+P_WINDOW_TITLE_ACTIVE_COLOR_B,
+P_WINDOW_TITLE_INACTIVE_COLOR_B,
+P_WINDOW_TITLE_TEXT_COLOR_SHADOW,
+P_WINDOW_TITLE_TEXT_COLOR,
+P_WINDOW_TEXT_COLOR,
+P_WINDOW_TEXT_COLOR_LIGHT,
+P_THEME_PARM_COUNT
+};
+uint32_t GetThemingParameter(int type);
+void     SetThemingParameter(int type, uint32_t);
+
+#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR              ))
+#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR           ))
+#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR           ))
+#define WINDOW_EDGE_COLOR               (GetThemingParameter(P_WINDOW_EDGE_COLOR             ))
+#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     ))
+#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   ))
+#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   ))
+#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B ))
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW))
+#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
+#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
+#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
+
+#endif
 
 // This flag tells the operating system that it may choose where to place a window.
 // If the xPos and yPos are bigger than or equal to zero, the application tells the OS where it should place the window.
@@ -124,6 +178,8 @@ enum {
 	CONTROL_BUTTON_ICON,
 	//Button with an icon on top.  Parm1= icon type, Parm2= icon size (16 or 32)
 	CONTROL_BUTTON_ICON_BAR,
+	//A simple line control
+	CONTROL_SIMPLE_HLINE,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -236,22 +292,18 @@ CheckBoxData;
 // By default, the control's anchoring mode is:
 // ANCHOR_LEFT_TO_LEFT | ANCHOR_RIGHT_TO_LEFT | ANCHOR_TOP_TO_TOP | ANCHOR_BOTTOM_TO_TOP
 
-// If the control's left edge anchors to the window's left edge.
-#define ANCHOR_LEFT_TO_LEFT  1
 // If the control's left edge anchors to the window's right edge.
-#define ANCHOR_LEFT_TO_RIGHT 2
-// If the control's right edge anchors to the window's left edge.
-#define ANCHOR_RIGHT_TO_LEFT  4
+// If this bit isn't set, the control's left edge anchors to the window's left edge.
+#define ANCHOR_LEFT_TO_RIGHT 1
 // If the control's right edge anchors to the window's right edge.
-#define ANCHOR_RIGHT_TO_RIGHT 8
-// If the control's top edge anchors to the window's top edge.
-#define ANCHOR_TOP_TO_TOP 16
+// If this bit isn't set, the control's right edge anchors to the window's left edge.
+#define ANCHOR_RIGHT_TO_RIGHT 2
 // If the control's top edge anchors to the window's bottom edge.
-#define ANCHOR_TOP_TO_BOTTOM 32
-// If the control's bottom edge anchors to the window's top edge.
-#define ANCHOR_BOTTOM_TO_TOP  64
+// If this bit isn't set, the control's top edge anchors to the window's top edge.
+#define ANCHOR_TOP_TO_BOTTOM 4
 // If the control's bottom edge anchors to the window's bottom edge.
-#define ANCHOR_BOTTOM_TO_BOTTOM 128
+// If this bit isn't set, the control's bottom edge anchors to the window's top edge.
+#define ANCHOR_BOTTOM_TO_BOTTOM 8
 
 typedef struct ControlStruct
 {
@@ -274,6 +326,8 @@ typedef struct ControlStruct
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
 	};
+	
+	int m_anchorMode;
 	
 	//event handler
 	WidgetEventHandler OnEvent;
@@ -347,7 +401,7 @@ typedef struct WindowStruct
 
 #define MAKE_MOUSE_PARM(x, y) ((x)<<16|(y))
 #define GET_X_PARM(parm1)  (parm1>>16)
-#define GET_Y_PARM(parm2)  (parm1&0xFFFF)
+#define GET_Y_PARM(parm1)  (parm1&0xFFFF)
 
 typedef Window* PWINDOW;
 
@@ -429,8 +483,10 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 
 /**
  * Adds a control to the window.
+ * AddControlEx is an expansion to AddControl which allows caller to set the control's anchoring mode too.
  */
-int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2);
+int AddControl  (Window* pWindow, int type,                    Rectangle rect, const char* text, int comboID, int p1, int p2);
+int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2);
 
 /**
  * Gets the updates per second the window manager could do.

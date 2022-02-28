@@ -16,6 +16,8 @@ typedef char byte;
 typedef char BYTE;
 typedef unsigned uint;
 
+#define USE_SSE_FXSAVE
+
 extern void KeTaskDone();
 
 #define false 0

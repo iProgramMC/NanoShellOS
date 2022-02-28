@@ -157,7 +157,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			Rectangle r;
 			// Add a list view control.
 			
-			#define PADDING_AROUND_LISTVIEW 8
+			#define PADDING_AROUND_LISTVIEW 4
 			#define TOP_PADDING             36
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
@@ -166,7 +166,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 				/*Y Size */ NOTEP_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, NOTEP_TEXTVIEW, 1 | 2, 0);
+			AddControlEx (pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, NOTEP_TEXTVIEW, 1 | 2, 0);
 			
 			// Add some basic controls
 			/*RECT(r, PADDING_AROUND_LISTVIEW, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
@@ -344,7 +344,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 
 void BigTextEntry (int arg)
 {
-	Window *pWindow = CreateWindow ("Notepad", CW_AUTOPOSITION, CW_AUTOPOSITION, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, 0);
+	Window *pWindow = CreateWindow ("Notepad", CW_AUTOPOSITION, CW_AUTOPOSITION, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, WF_ALWRESIZ);
 	
 	if (!pWindow) {
 		LogMsg("Could not create window.");

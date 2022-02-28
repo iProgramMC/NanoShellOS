@@ -131,6 +131,7 @@ void funnytest(UNUSED int argument)
 }
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
+void WindowManagerShutdown ();
 
 bool FatCreateEmptyFile(FileNode *pDirNode, char* pFileName);//fs/fat.c
 void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName);//fs/fat.c
@@ -171,6 +172,7 @@ void ShellExecuteCommand(char* p)
 		CoGetChar();
 		
 		LogMsg("ph         - prints current heap's address in kernel address space (or NULL for the default heap)");
+		LogMsg("rb         - reboots the system");
 		LogMsg("sysinfo    - dump system information");
 		LogMsg("sysinfoa   - dump advanced system information");
 		LogMsg("time       - get timing information");
@@ -181,6 +183,23 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ttte       - spawns 1024 threads that prints stuff");
 		LogMsg("ver        - print system version");
 		LogMsg("w          - start desktop manager");
+	}
+	else if (strcmp (token, "rb") == 0)
+	{
+		bool force = false;
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (fileName)
+		{
+			if (strcmp (fileName, "--force") == 0) force = true;
+		}
+		if (KeGetRunningTask() == NULL)
+			KeRestartSystem();
+		else if (force)
+		{
+			WindowManagerShutdown ();
+		}
+		else
+			LogMsg("Use the launcher's \"Shutdown computer\" option, shut down the computer, and click \"Restart\" to reboot, or use --force.");
 	}
 	else if (strcmp (token, "ph") == 0)
 	{

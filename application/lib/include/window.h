@@ -112,6 +112,17 @@ enum
 	ICON_CALCULATOR16,
 	ICON_DESKTOP2,
 	ICON_MOUSE,
+    //Icons V1.31
+	ICON_AMBULANCE,
+	//icons V1.32
+	ICON_FONTS,
+	ICON_FONTS16,
+	//icons V1.33
+	ICON_RESMON16,
+	ICON_NOTES16,
+	ICON_FILE_NANO,
+	//icons V1.34
+	ICON_CLOCK_EMPTY,//Special case which draws more stuff
 	ICON_COUNT
 };
 
@@ -349,7 +360,7 @@ typedef struct WindowStruct
 
 #define MAKE_MOUSE_PARM(x, y) ((x)<<16|(y))
 #define GET_X_PARM(parm1)  (parm1>>16)
-#define GET_Y_PARM(parm2)  (parm1&0xFFFF)
+#define GET_Y_PARM(parm1)  (parm1&0xFFFF)
 
 /**
  * Creates a window, with its top left corner at (xPos, yPos), and its

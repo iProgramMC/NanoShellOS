@@ -6,8 +6,8 @@
 version|2
 
 add_item|65|0|Clock|exwindow:/Clock.nse
-add_item|70|0|Chart demo|exwindow:/chart.nse
-add_item|35|0|Version applet|exwindow:/Version.nse
+//add_item|70|0|Chart demo|exwindow:/chart.nse
+//add_item|35|0|Version applet|exwindow:/Version.nse
 
 add_item|55|1|System monitor|shell:sysmon
 add_item|1|1|File cabinet|shell:cabinet
@@ -15,6 +15,6 @@ add_item|23|0|Icon demo|shell:icontest
 add_item|27|1|Text editor|shell:notepad
 add_item|7|0|Scribble!|shell:scribble
 add_item|46|1|Command prompt|shell:cmdshell
-add_item|43|0|Control panel|shell:cpanel
+//add_item|43|0|Control panel|shell:cpanel
 
-add_item|5|0|Shutdown computer|shell:shutdown
+//add_item|5|0|Shutdown computer|shell:shutdown

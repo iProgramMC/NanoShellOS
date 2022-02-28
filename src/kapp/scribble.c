@@ -21,7 +21,7 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 			//VidTextOut ("Hey, it's the window :)", 50, 50, TRANSPARENT, 0xe0e0e0);
 			break;
 		case EVENT_CLICKCURSOR:
-		case EVENT_MOVECURSOR:
+		//case EVENT_MOVECURSOR:
 			if (g_paint1X == -1)
 			{
 				VidPlotPixel(GET_X_PARM(parm1), GET_Y_PARM(parm1), parm1);

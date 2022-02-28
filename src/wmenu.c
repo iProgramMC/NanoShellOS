@@ -1,34 +1,47 @@
+/*****************************************
+		NanoShell Operating System
+		  (C) 2022 iProgramInCpp
 
+         Window Popup Menu module
+******************************************/
 #include <window.h>
 #include <wbuiltin.h>
 #include <wmenu.h>
 
-void MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
+bool MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
 {
 	if (pNewMenu->nMenuEntries == 0)
 	{
 		pNewMenu->pMenuEntries = NULL;
-		return;
+		pNewMenu->bHasIcons    = pNewMenu->nIconID != ICON_NULL;
+		return pNewMenu->bHasIcons;
 	}
 	
-	pNewMenu->pMenuEntries = MmAllocate(sizeof(WindowMenu) * pMenu->nMenuEntries);
+	pNewMenu->pMenuEntries = MmAllocateK(sizeof(WindowMenu) * pMenu->nMenuEntries);
 	memcpy(pNewMenu->pMenuEntries, pMenu->pMenuEntries, sizeof(WindowMenu) * pMenu->nMenuEntries);
 	
 	for (int i = 0; i < pNewMenu->nMenuEntries; i++)
 	{
-		MenuRecursivelyCopyEntries(&pNewMenu->pMenuEntries[i], &pMenu->pMenuEntries[i]);
+		if (pNewMenu->pMenuEntries[i].sText[0] == 0)
+		{
+			pNewMenu->nLineSeparators++;
+		}
+		pNewMenu->bHasIcons |= MenuRecursivelyCopyEntries(&pNewMenu->pMenuEntries[i], &pMenu->pMenuEntries[i]);
 	}
+	if (!pNewMenu->bHasIcons) pNewMenu->bHasIcons    = pNewMenu->nIconID != ICON_NULL;
+	return pNewMenu->bHasIcons;
 }
 
 void MenuCopyRoot(WindowMenu**pOutMenu, WindowMenu* pMenu, Window* pWindow)
 {
 	// Allocate the new menu
-	WindowMenu* pNewMenu      = MmAllocate(sizeof *pMenu);
+	WindowMenu* pNewMenu      = MmAllocateK(sizeof *pMenu);
 	memset (pNewMenu, 0, sizeof *pNewMenu);
 	
 	// Set the entries
+	pNewMenu->nLineSeparators = 0;
 	pNewMenu->nMenuEntries    = pMenu->nMenuEntries;
-	MenuRecursivelyCopyEntries(pNewMenu, pMenu);
+	pNewMenu->bHasIcons       = MenuRecursivelyCopyEntries(pNewMenu, pMenu);
 	
 	pNewMenu->pWindow         = pWindow;
 	pNewMenu->nMenuComboID    = pMenu->nMenuComboID;
@@ -47,7 +60,10 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 }
 int GetMenuHeight (UNUSED WindowMenu* pMenu)
 {
-	return 4 + pMenu->nMenuEntries * MENU_ITEM_HEIGHT;
+	int haute = (MENU_ITEM_HEIGHT + pMenu->bHasIcons * 6);
+	return 5 + 
+	       pMenu->nMenuEntries * haute - 
+		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
 }
 
 #define MENU_ITEM_COMBOID (-1000000)
@@ -97,14 +113,25 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				
 				//Add some controls
 				Rectangle r;
+				int height = (MENU_ITEM_HEIGHT + pData->bHasIcons * 6), y = 2;
 				for (int i = 0; i < pData->nMenuEntries; i++)
 				{
-					RECT(r, 2, 2 + i * MENU_ITEM_HEIGHT, GetMenuWidth(pData)-5, MENU_ITEM_HEIGHT-1);
-					
-					char buffer[110];
-					sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
-					
-					AddControl (pWindow, CONTROL_BUTTON_LIST, r, buffer, MENU_ITEM_COMBOID+i, 0, 0);
+					if (pData->pMenuEntries[i].sText[0] == 0)
+					{
+						RECT(r, 2, y, GetMenuWidth(pData)-5, MENU_SEPA_HEIGHT);
+						AddControl (pWindow, CONTROL_SIMPLE_HLINE, r, NULL, MENU_ITEM_COMBOID+i, 0, 0);
+						y += MENU_SEPA_HEIGHT;
+					}
+					else
+					{
+						RECT(r, 2, y, GetMenuWidth(pData)-5, height);
+						char buffer[110];
+						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
+						
+						AddControl (pWindow, CONTROL_BUTTON_LIST, r, buffer, MENU_ITEM_COMBOID+i, pData->pMenuEntries[i].nIconID, pData->pMenuEntries[i].nMenuEntries);
+						
+						y += height;
+					}
 				}
 			}
 			
@@ -216,7 +243,7 @@ void ConvertMenuBarToWindowMenu(WindowMenu* pMenuOut, MenuBarTreeItem* pTreeItem
 	pMenuOut->nMenuEntries = pTreeItem->m_childrenCount;
 	
 	if (pTreeItem->m_childrenCount)
-		pMenuOut->pMenuEntries = MmAllocate(sizeof (WindowMenu) * pTreeItem->m_childrenCount);
+		pMenuOut->pMenuEntries = MmAllocateK(sizeof (WindowMenu) * pTreeItem->m_childrenCount);
 	else
 		pMenuOut->pMenuEntries = NULL;
 	

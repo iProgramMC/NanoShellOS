@@ -157,12 +157,10 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	
 	//KePrintMemoryMapInfo();
 	// Initialize the task scheduler
-	//LogMsg("Initializing task scheduler...");
 	KiTaskSystemInitialize();
 	
 	
 	// Initialize the ramdisk
-	//LogMsg("Initializing initrd...");
 	
 	size_t sz = g_initrdEnd - g_initrdStart;
 	void* mem = MmAllocate(sz);
@@ -170,12 +168,12 @@ void KiStartupSystem (unsigned long check, unsigned long mbaddr)
 	
 	FsInitializeInitRd(mem);
 	// Initialize the IDE driver
-	//LogMsg("Initializing IDE drives...");
 	StIdeInitialize ();
 	
 	// Initialize the FAT partitions.
-	//LogMsg("Mounting FAT partitions...");
 	FsMountFatPartitions();
+	
+	sti;
 	
 	LogMsg("Waiting to get time...");
 	while (!g_gotTime)

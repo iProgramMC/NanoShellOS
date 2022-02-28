@@ -306,7 +306,14 @@ void SetCursor(Cursor* pCursor)
 	if (g_currentCursor)
 	{
 		if (g_currentCursor->m_resizeMode)
-			RedrawOldPixels(g_mouseX, g_mouseY);
+		{
+			if (g_currentCursor->width > g_currentCursor->boundsWidth || g_currentCursor->height > g_currentCursor->boundsHeight)
+			{
+				RedrawOldPixelsFull(g_mouseX, g_mouseY);
+			}
+			else
+				RedrawOldPixels(g_mouseX, g_mouseY);
+		}
 		else
 			RedrawOldPixelsFull(g_mouseX, g_mouseY);
 	}
@@ -365,7 +372,7 @@ void SetMouseVisible (bool b)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe = GetScreenSizeX() - 1;
+			xe = GetScreenSizeX();
 		//int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -922,7 +929,7 @@ static inline void RenderCursorTransparent(void)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe = GetScreenSizeX() - 1;
+			xe = GetScreenSizeX();
 		//int xd = (xe - xs) * sizeof(uint32_t);
 		int off11 = 0;
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
@@ -1027,7 +1034,7 @@ static inline void RenderCursorOpaque(void)
 			ys = 0;
 		}
 		if (ye >= GetScreenHeight())
-			ye =  GetScreenHeight() - 1;
+			ye =  GetScreenHeight();
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1037,7 +1044,7 @@ static inline void RenderCursorOpaque(void)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe =  GetScreenSizeX() - 1;
+			xe =  GetScreenSizeX();
 		int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -1114,7 +1121,7 @@ static inline void RenderCursorStretchy(void)
 			ys = 0;
 		}
 		if (ye >= GetScreenHeight())
-			ye =  GetScreenHeight() - 1;
+			ye =  GetScreenHeight();
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1124,7 +1131,7 @@ static inline void RenderCursorStretchy(void)
 			xs = 0;
 		}
 		if (xe >= GetScreenSizeX())
-			xe =  GetScreenSizeX() - 1;
+			xe =  GetScreenSizeX();
 		int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -1242,10 +1249,10 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 	int topUpTo = g_mouseY - g_currentCursor->topOffs;
 	if (top < 0) top = 0;
 	if (topUpTo < 0) topUpTo = 0;
-	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
-	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+	if (top >= GetScreenHeight()) top = GetScreenHeight();
+	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight();
 	if (bottom < 0) bottom= 0;
-	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight()-1;
+	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight();
 	if (left < 0) left = 0;
 	if (left >= GetScreenWidth()) left = GetScreenWidth();
 	if (right < 0) right = 0;
@@ -1276,7 +1283,7 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 			topUpTo = g_mouseY - g_currentCursor->topOffs;
 			int bottomUpTo = topUpTo + g_currentCursor->height;
 			if (bottomUpTo < 0) bottom= 0;
-			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight()-1;
+			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight();
 			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
 			startcp = yoffscp + left,                  startfb = yoffsfb + left;
 			for (int y = bottomUpTo; y < bottom; y++)
@@ -1383,10 +1390,10 @@ static inline void RedrawOldPixelsStretchy(int oldX, int oldY)
 	int topUpTo = g_mouseY - g_currentCursor->topOffs;
 	if (top < 0) top = 0;
 	if (topUpTo < 0) topUpTo = 0;
-	if (top >= GetScreenHeight()) top = GetScreenHeight()-1;
-	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight()-1;
+	if (top >= GetScreenHeight()) top = GetScreenHeight();
+	if (topUpTo >= GetScreenHeight()) topUpTo = GetScreenHeight();
 	if (bottom < 0) bottom= 0;
-	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight()-1;
+	if (bottom >= GetScreenHeight()) bottom = GetScreenHeight();
 	if (left < 0) left = 0;
 	if (left >= GetScreenWidth()) left = GetScreenWidth();
 	if (right < 0) right = 0;
@@ -1417,7 +1424,7 @@ static inline void RedrawOldPixelsStretchy(int oldX, int oldY)
 			topUpTo = g_mouseY - g_currentCursor->topOffs;
 			int bottomUpTo = topUpTo + g_currentCursor->height;
 			if (bottomUpTo < 0) bottom= 0;
-			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight()-1;
+			if (bottomUpTo >= GetScreenHeight()) bottomUpTo = GetScreenHeight();
 			yoffscp = g_vbeData->m_width * bottomUpTo, yoffsfb = g_vbeData->m_pitch32 * bottomUpTo;
 			startcp = yoffscp + left,                  startfb = yoffsfb + left;
 			for (int y = bottomUpTo; y < bottom; y++)

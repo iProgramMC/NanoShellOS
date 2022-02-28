@@ -101,6 +101,8 @@ enum
 	ICON_RESMON16,
 	ICON_NOTES16,
 	ICON_FILE_NANO,
+	//icons V1.34
+	ICON_CLOCK_EMPTY,//Special case which draws more stuff
 	ICON_COUNT
 };
 

@@ -145,7 +145,7 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 		
 		if (!insn)//blank line?
 		{
-			LogMsg("Blank line?");
+			SLogMsg("Blank line?");
 			continue;
 		}
 			
@@ -264,6 +264,8 @@ void KillFont (int fontID)
 		}
 		else if (g_pCurrentFont[2] == FONTTYPE_SMALL)
 		{
+			if (c == 0x5)
+				return 16;
 			return g_pCurrentFont[3 + 256 * g_pCurrentFont[1] + c];
 		}
 		else if (g_pCurrentFont[2] == FONTTYPE_BIG)
@@ -436,6 +438,11 @@ void KillFont (int fontID)
 		}
 		else
 		{
+			if (c == 0x5)
+			{
+				RenderIcon(ICON_NANOSHELL16, ox, oy + (g_pCurrentFont[1] - 16) / 2);
+				return;
+			}
 			for (int y = 0; y < height; y++)
 			{
 				for (int x = 0, bitmask = /*(1 << (width - 1))*/ 1 << 7; x < width; x++, bitmask >>= 1)
@@ -614,7 +621,7 @@ void KillFont (int fontID)
 		
 		if (drawFlags & TEXTSTYLE_WORDWRAPPED)
 		{
-			if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED))
+			if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY))
 			{
 				//draw some red text to attract the programmer's attention
 				VidTextOut ("Can't do everything at once! >:( -- it's still a todo.  Just centering for now.", rect.left, rect.top, 0xFF0000, TRANSPARENT);
@@ -663,8 +670,13 @@ void KillFont (int fontID)
 			
 			int startX = rect.left;
 			
-			if (drawFlags & TEXTSTYLE_HCENTERED)
-				startX += (rect.right - rect.left - t) / 2;
+			if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_RJUSTIFY))
+			{
+				if (drawFlags & TEXTSTYLE_HCENTERED)
+					startX += (rect.right - rect.left - t) / 2;
+				else
+					startX += (rect.right - rect.left - t);
+			}
 			
 			while (text != text2)
 			{
