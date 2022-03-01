@@ -2,24 +2,7 @@
 .git/*
 
 #directories I don't want added
-application/hellowindow/build/*
-application/hellowindow/Chart.nse
-application/helloworld/build/*
-application/helloworld/HelloWorld.nse
-application/version/build/*
-application/version/Version.nse
-application/listtest/build/*
-application/listtest/list.nse
-application/learn/build/*
-application/learn/learn.nse
-application/oregon/build/*
-application/oregon/learn.nse
-application/doomnanoshell/*
-application/doomnanoshell
-application/nesemu/*
-application/nesemu
-application/nanomod/*
-application/nanomod
+application/*
 build/*
 cp/*
 lol/*
