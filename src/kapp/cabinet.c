@@ -122,7 +122,7 @@ void LaunchExecutable (int fd)
 	FiClose (fd);
 	
 	// And execute!
-	ElfExecute(pData, length);
+	ElfExecute(pData, length, "CabinetExecuted");
 	
 	// Once done executing, free the exacutable data from memory.
 	MmFree(pData);

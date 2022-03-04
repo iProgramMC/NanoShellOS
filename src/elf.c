@@ -134,7 +134,7 @@ void ElfDumpInfo(ElfHeader* pHeader)
 
 extern int g_lastReturnCode;
 
-int ElfExecute (void *pElfFile, size_t size)
+int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 {
 	size += 0; //to circumvent unused warning
 	ElfProcess proc;
@@ -187,12 +187,8 @@ int ElfExecute (void *pElfFile, size_t size)
 	
 	//now that we have switched, call the entry func:
 	ElfEntry entry = (ElfEntry)pHeader->m_entry;
-	//MmUsePageDirectory(newPageDir, newPageDirP);
 	
-	//LogMsg("Loaded ELF successfully! Executing it now.");
-	int e = entry();
-	
-	//LogMsg("(executable returned: %d)", e);
+	int e = entry(pArgs);
 	
 	g_lastReturnCode = e;
 	ResetToKernelHeap();

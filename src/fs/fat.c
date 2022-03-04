@@ -52,7 +52,7 @@
 // will be reset when you write to the file later on).  Not used by NanoShell.
 #define FAT_ARCHIVE   (1<<5)
 
-// Long file name bit.  Useful when we need LFN support.
+// Long file name bits.  Useful when we need LFN support.
 #define FAT_LFN       (FAT_READONLY | FAT_HIDDEN | FAT_SYSTEM | FAT_VOLUME_ID)
 
 // FAT End of chain special magic number cluster.  Marks the end of a chain.
@@ -650,7 +650,7 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
 	{
 		if (entry[0] & 0x40)
 		{
-			//Last entry.  If we had other LFN entries before then, they're orphaned entries.
+			//First entry.  If we had other LFN entries before then, they're orphaned entries.
 			LFNCount = 0;
 		}
         LFNCount++;
@@ -798,13 +798,13 @@ void FatPopulateDir (FatFileSystem* pFS, FatDirectory* pDir, uint32_t cluster)
 		if (pDir->m_pEntries)
 		{
 			//re-allocate:
-			FatDirEntry* pNewDir = (FatDirEntry*)MmAllocate(maxDirs * sizeof(FatDirEntry));
+			FatDirEntry* pNewDir = (FatDirEntry*)MmAllocateK(maxDirs * sizeof(FatDirEntry));
 			memcpy (pNewDir, pDir->m_pEntries, (maxDirs - dirsPerClus) * sizeof(FatDirEntry));
 			MmFree (pDir->m_pEntries);
 			pDir->m_pEntries = pNewDir;
 		}
 		else
-			pDir->m_pEntries = (FatDirEntry*)MmAllocate(maxDirs * sizeof(FatDirEntry));
+			pDir->m_pEntries = (FatDirEntry*)MmAllocateK(maxDirs * sizeof(FatDirEntry));
 		
 		// Double the size in case we need to read a dirent that spans the bounds of a cluster.
 		uint8_t root_cluster [pFS->m_clusSize * 2];
@@ -889,10 +889,17 @@ bool FatDeleteFile (FatFileSystem* pFS, FatDirectory* pDir, const char* fileName
 			uint32_t secondCluster = 0;
 			uint8_t* nextEntry = NULL;
 			FatNextDirEntry (pFS, root_cluster, entry, &nextEntry, &targetDirent, cluster, &secondCluster);
-			if (strcmp (targetDirent.m_pName, filenameUpper) == 0)
+			if (strcmp (targetDirent.m_pName, fileName) == 0)
 			{
 				// We found it! Invalidate all the entries.
-				entry[0] = 0xE5;
+				//entry[0] = 0xE5;
+				uint8_t* entryptr = entry;
+				while (entryptr != nextEntry)
+				{
+					entryptr[0] = 0xe5;
+					entryptr += 32;
+				}
+				
 				FatPutCluster (pFS, root_cluster, cluster);
 				
 				if (secondCluster)
@@ -933,6 +940,11 @@ typedef struct
 				   nClusterProgress, // Number of clusters that have been passed to reach this point.  Useful to check if "offset" has changed at all.
 				   nClusterFirst;    // First cluster.  Used to re-resolve nClusterCurrent if offset has gone back.
 	bool           bAllowWriting;
+	bool           bIsStreamingFromDisk;//If false, the file is fully loaded within memory
+	uint8_t      * pDataPointer;//If bIsStreamingFromDisk is true, this is NULL
+	uint32_t       nDataSize;
+	uint32_t       nDataCapacity;//how much before we need to reallocate the pDataPointer
+	bool           bWasWrittenTo;
 }
 FatInode;
 
@@ -967,10 +979,47 @@ bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, bool write)
 	pNode->bAllowWriting      = write;
 	pNode->bLoadedWorkCluster = false;
 	
+	bool cache_all = true || write;//Experimental
+	pNode->bWasWrittenTo = false;
+	if (cache_all)
+	{
+		pNode->bIsStreamingFromDisk = true;
+		int capacity = pFileNode->m_length;
+		if (capacity < 4096)
+			capacity = 4096;
+		pNode->nDataSize            = pFileNode->m_length;
+		pNode->nDataCapacity        = capacity;
+		pNode->pDataPointer         = MmAllocateK(capacity);
+		
+		uint32_t nCurrentCluster = nFirstCluster;
+		uint32_t nFileSize = pNode->nDataSize, nOffset = 0;
+		do
+		{
+			uint32_t nSectorSize = nFileSize;
+			if (nSectorSize >= pFS->m_clusSize)
+				nSectorSize =  pFS->m_clusSize;
+			
+			FatGetCluster(pFS, &pNode->pDataPointer[nOffset], nCurrentCluster);
+			nCurrentCluster = FatGetNextCluster(pFS, nCurrentCluster);
+			
+			nOffset   += pFS->m_clusSize;
+			nFileSize -= pFS->m_clusSize;
+		}
+		while (nCurrentCluster < FAT_END_OF_CHAIN);
+	}
+	else
+	{
+		pNode->bIsStreamingFromDisk = false;
+		pNode->pDataPointer         = NULL;
+		pNode->nDataSize            = 0;
+	}
+	
 	pFileNode->m_inode = freeInode;
 	
 	return true;
 }
+
+static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t clusterInfo);
 
 void FsFatClose (FileNode* pFileNode)
 {
@@ -991,6 +1040,49 @@ void FsFatClose (FileNode* pFileNode)
 		MmFree(pNode->pWorkCluster);
 		pNode->pWorkCluster = NULL;
 	}
+	
+	if (pNode->pDataPointer)
+	{
+		if (pNode->bWasWrittenTo && pNode->bAllowWriting)
+		{
+			// Free this chain:
+			FatZeroFatChain(pNode->pOpenedIn, pNode->nClusterFirst);
+			
+			// Allocate a NEW chain:
+			uint32_t clustersToAllocate = (pNode->nDataSize + pNode->pOpenedIn->m_clusSize - 1) / pNode->pOpenedIn->m_clusSize;
+			uint32_t nOffset = 0, nFirstCluster = 0, nLastCluster = 0;
+			
+			while (clustersToAllocate)
+			{
+				uint32_t size = pNode->nDataSize - nOffset;
+				if (size > pNode->pOpenedIn->m_clusSize)
+					size = pNode->pOpenedIn->m_clusSize;
+				
+				uint32_t cluster = FatAllocateCluster(pNode->pOpenedIn);
+				if (!nFirstCluster) nFirstCluster = cluster;
+				
+				FatPutCluster(pNode->pOpenedIn, &pNode->pDataPointer[nOffset], cluster);
+				
+				if (nLastCluster)
+					FatSetClusterInFAT(pNode->pOpenedIn, nLastCluster, cluster);
+				
+				FatSetClusterInFAT(pNode->pOpenedIn, cluster, FAT_END_OF_CHAIN);
+				
+				nLastCluster = cluster;
+				
+				nOffset += pNode->pOpenedIn->m_clusSize;
+				clustersToAllocate--;
+			}
+			
+			FatFlushFat(pNode->pOpenedIn);
+			FatUpdateFileEntry(pFileNode, pNode->nDataSize, nFirstCluster);
+			
+			pNode->nClusterFirst = nFirstCluster;
+		}
+		MmFree(pNode->pDataPointer);
+		pNode->pDataPointer = NULL;
+	}
+	pNode->bIsStreamingFromDisk = false;
 	
 	// Deinitialize this fatinode:
 	pNode->pOpenedIn = NULL;
@@ -1069,7 +1161,7 @@ void FatWriteCurrentTimeToEntry (uint8_t* pActualEntry, bool creationDateToo)
 uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer);
 uint32_t FsFatWrite(UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer);
 
-FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
+FileNode* FatCreateFileWithData(FileNode *pDirNode, const char* pFileName, uint8_t* pData, size_t size)
 {
 	FatFileSystem* pOpenedIn = (FatFileSystem*)pDirNode->m_implData;
 	size_t fileNameLen = strlen (pFileName);
@@ -1093,7 +1185,6 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 	uint8_t extended_attrs = 0x00;
 	if (!requiresLFN)
 	{
-		SLogMsg("Are you sure it doesn't require LFN? (Filename:%s)", pFileName);
 		//Are you sure???
 		bool firstLetterCap = pFileName[0] >= 'a' && pFileName[0] <= 'z';
 		for (int i = 1; i < dotIndex; i++)
@@ -1102,7 +1193,6 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 			bool a = ((pFileName[i] < 'a' || pFileName[i] > 'z') &&  firstLetterCap), b = ((pFileName[i] < 'A' || pFileName[i] > 'Z') && !firstLetterCap);
 			if (a || b)
 			{
-				SLogMsg("Requires LFN because caps don't always match in name (A:%d B:%d C:%c)",a,b,pFileName[i]);
 				requiresLFN = true;
 				break;
 			}
@@ -1118,7 +1208,6 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 			bool a = ((pFileName[i] < 'a' || pFileName[i] > 'z') &&  firstLetterCap), b = ((pFileName[i] < 'A' || pFileName[i] > 'Z') && !firstLetterCap);
 			if (a || b)
 			{
-				SLogMsg("Requires LFN because caps don't always match in extension (A:%d B:%d, C:%c)",a,b,pFileName[i]);
 				requiresLFN = true;
 				break;
 			}
@@ -1126,11 +1215,6 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 		
 		if (!requiresLFN && firstLetterCap)
 			extended_attrs |= FAT_MSFLAGS_EXTELOWER;
-		
-		if (requiresLFN)
-			SLogMsg("I'm not so sure");
-		else
-			SLogMsg("Fuck yeah!!!");
 	}
 	
 	// If the filename's length is < 8 AND the extension is less than 4 characters, then there shouldn't be any LFN entries
@@ -1158,22 +1242,56 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 	memset (pActualEntry, 0, 32);
 	FatWrite83FileName(pFileName, pActualEntry, seed);
 	
+	uint32_t requiredClusters = size / pOpenedIn->m_clusSize;
+	if (size % pOpenedIn->m_clusSize != 0) requiredClusters++;
+	
+	uint32_t bytesToWriteTotal = size;
+	
+	uint32_t firstCluster = 0, prevCluster = 0;
+	for (uint32_t i = 0; i < requiredClusters; i++)
+	{
+		uint32_t currCluster = FatAllocateCluster (pOpenedIn);
+		if (!firstCluster)
+			firstCluster = currCluster;
+		
+		uint8_t clusterBuffer [pOpenedIn->m_clusSize];
+		memset (clusterBuffer, 0, pOpenedIn->m_clusSize);
+		
+		uint32_t bytesToWrite = bytesToWriteTotal;
+		if (bytesToWrite > pOpenedIn->m_clusSize)
+			bytesToWrite = pOpenedIn->m_clusSize;
+		
+		bytesToWriteTotal -= bytesToWrite;
+		
+		memcpy (clusterBuffer, pData, bytesToWrite);
+		
+		FatPutCluster(pOpenedIn, clusterBuffer, currCluster);
+		
+		if (prevCluster)
+		{
+			FatSetClusterInFAT(pOpenedIn, prevCluster, currCluster);
+		}
+		prevCluster = currCluster;
+	}
+	
 	// Write other fields
 	pActualEntry[11] = 0x00;
 	pActualEntry[12] = extended_attrs;
 	
 	uint32_t fileCluster = 0;
 	// 0-sized files aren't supposed to have a cluster
-	pActualEntry[20] = 0;
-	pActualEntry[21] = 0;
-	pActualEntry[26] = 0;
-	pActualEntry[27] = 0;
+	pActualEntry[20] = (firstCluster >> 16) & 0xff;
+	pActualEntry[21] = (firstCluster >> 24) & 0xff;
+	pActualEntry[26] = (firstCluster) & 0xff;
+	pActualEntry[27] = (firstCluster >> 8) & 0xff;
 	
 	FatWriteCurrentTimeToEntry (pActualEntry, true);
 
 	*((uint32_t*)(&pActualEntry[0x1C])) = 0;//File length
 	
 	FatPutCluster(pOpenedIn, rootCluster, cluster); 
+	
+	FatFlushFat(pOpenedIn);
 	
 	// Is this root directory?
 	if (pDirNode->m_implData2 == 2)
@@ -1187,7 +1305,7 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 		int       nFNOld = g_fatsMountedListFilesCnt [pDirNode->m_inode];
 		
 		int       nFNNew = nFNOld + 1;//We added a file.
-		FileNode* pFNNew = MmAllocate(sizeof(FileNode) * nFNNew);
+		FileNode* pFNNew = MmAllocateK(sizeof(FileNode) * nFNNew);
 		memcpy (pFNNew, pFN, sizeof (FileNode) * nFNOld);
 		
 		// Add the new file entry:
@@ -1251,7 +1369,7 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 		int       nFNOld = pDCE->m_nFileNodes;
 		
 		int       nFNNew = nFNOld + 1;//We added a file.
-		FileNode* pFNNew = MmAllocate(sizeof(FileNode) * nFNNew);
+		FileNode* pFNNew = MmAllocateK(sizeof(FileNode) * nFNNew);
 		memcpy (pFNNew, pFN, sizeof (FileNode) * nFNOld);
 		
 		// Add the new file entry:
@@ -1306,6 +1424,11 @@ FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
 	return NULL;
 }
 
+FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
+{
+	return FatCreateFileWithData(pDirNode, pFileName, NULL, 0);
+}
+
 static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t clusterInfo)
 {
 	pFileNode->m_length = newSize;
@@ -1327,10 +1450,11 @@ static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t c
 		while ((uint32_t)(entry - root_cluster) < pNode->pOpenedIn->m_clusSize)
 		{
 			uint8_t firstByte = *entry;
-			while (firstByte == 0x00 || firstByte == 0xE5)
+			if (firstByte == 0x00 || firstByte == 0xE5)
 			{
+				// This directory entry has never been written or it has been deleted.
 				entry += 32;
-				firstByte = *entry;
+				continue;
 			}
 			
 			uint32_t secondCluster = 0;
@@ -1338,18 +1462,16 @@ static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t c
 			FatDirEntry targetDirEnt;
 			FatNextDirEntry (pNode->pOpenedIn, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
 			
+			//SLogMsg("Comparing %s and %s", targetDirEnt.m_pName,pFileNode->m_name);
 			if (strcmp(targetDirEnt.m_pName, pFileNode->m_name) == 0)
 			{
 				uint8_t* pEntry2 = entry;
 				
+				//while we have a LFN entry ready:
 				while (pEntry2[11] == FAT_LFN)
 				{
+					//skip it, we're looking for the juicy sfn entry
 					pEntry2 += 32;
-					if (pEntry2 > root_cluster + sizeof(root_cluster))
-					{
-						SLogMsg("Can't overwrite entry! Filesystem may or may not be corrupted.  If you have windows installed be sure to chkdsk this disk");
-						return false;
-					}
 				}
 				
 				//Found it!
@@ -1366,6 +1488,8 @@ static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t c
 				}
 				
 				FatPutCluster(pNode->pOpenedIn, root_cluster, cluster);
+				if (secondCluster)
+					FatPutCluster(pNode->pOpenedIn, root_cluster + pNode->pOpenedIn->m_clusSize, secondCluster);
 				
 				return true;
 			}
@@ -1405,10 +1529,11 @@ static bool FatUpdateFileEntryNotOpened(FileNode *pFileNode, uint32_t newSize, u
 		while ((uint32_t)(entry - root_cluster) < pOpenedIn->m_clusSize)
 		{
 			uint8_t firstByte = *entry;
-			while (firstByte == 0x00 || firstByte == 0xE5)
+			if (firstByte == 0x00 || firstByte == 0xE5)
 			{
+				// This directory entry has never been written or it has been deleted.
 				entry += 32;
-				firstByte = *entry;
+				continue;
 			}
 			
 			uint32_t secondCluster = 0;
@@ -1483,18 +1608,35 @@ void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName)
 }
 
 
-uint32_t FsFatRead1 (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+uint32_t FsFatReadNotStreaming (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
 {
-	//LogMsg("FsFatRead(%x, %d, %d, %x)", pFileNode,offset,size,pBuffer);
 	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
 	
 	if (!pNode->pOpenedIn) return 0;
+	
+	if (offset > pNode->nDataSize)
+		return 0;
+	if (offset + size > pNode->nDataSize)
+		size = pNode->nDataSize - offset;
+	
+	memcpy (pBuffer, &pNode->pDataPointer[offset], size);
+	return size;
+}
+
+uint32_t FsFatReadStreaming (FileNode *pFileNode, uint32_t offset, uint32_t size, void* pBuffer)
+{
+	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
+	
+	if (!pNode->pOpenedIn) return 0;
+	
+	if (pNode->bIsStreamingFromDisk)
+		return FsFatReadNotStreaming(pFileNode, offset, size, pBuffer);
 	
 	bool needsToReloadCluster = false;
 	
 	if (!pNode->pWorkCluster)
 	{
-		pNode->pWorkCluster  = (uint8_t*)MmAllocate (pNode->pOpenedIn->m_clusSize);
+		pNode->pWorkCluster  = (uint8_t*)MmAllocateK (pNode->pOpenedIn->m_clusSize);
 		needsToReloadCluster = true;
 		if (!pNode->pWorkCluster)
 			return 0; //Out of memory
@@ -1505,8 +1647,6 @@ uint32_t FsFatRead1 (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED 
 	{
 		size = pFileNode->m_length - offset;
 	}
-	
-	if (size <= 0) return 0;
 	
 	// Cluster offset to read from.  NOT the cluster number, just the number of cluster steps to go through to reach this.
 	uint32_t clusterOffsetCurrent = offset / pNode->pOpenedIn->m_clusSize;
@@ -1561,7 +1701,7 @@ uint32_t FsFatRead1 (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED 
 	int result = howMuchToRead;
 	if ((uint32_t)howMuchToRead < size) // More to read?
 		// Yeah, read more.
-		result += FsFatRead1 (pFileNode, offset + howMuchToRead, size - howMuchToRead, pointer + howMuchToRead);
+		result += FsFatReadStreaming (pFileNode, offset + howMuchToRead, size - howMuchToRead, pointer + howMuchToRead);
 	
 	return result;
 }
@@ -1570,218 +1710,57 @@ uint32_t FsFatRead (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED u
 {
 	uint32_t off1 = 0, size_left = size;
 	uint32_t rv = 0;
-	#define ITERATION_SIZE 512
+	#define ITERATION_SIZE 16384
 	while (size_left > ITERATION_SIZE)
 	{
-		rv += FsFatRead1(pFileNode, offset + off1, ITERATION_SIZE, (uint8_t*)pBuffer + off1);
+		rv += FsFatReadStreaming(pFileNode, offset + off1, ITERATION_SIZE, (uint8_t*)pBuffer + off1);
 		off1 += ITERATION_SIZE;
 		if (rv < off1)
 			return rv;//TODO
 		size_left -= ITERATION_SIZE;
 	}
 	if (size_left)
-		return rv + FsFatRead1(pFileNode, offset + off1, size_left, (uint8_t*)pBuffer + off1);
+		return rv + FsFatReadStreaming(pFileNode, offset + off1, size_left, (uint8_t*)pBuffer + off1);
 	return rv;
 }
 
-uint32_t FsFatWrite (UNUSED FileNode *pFileNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+uint32_t FsFatWrite (FileNode *pFileNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
-	DebugLogMsg("FsFatWrite(%x, %d, %d, %x)", pFileNode,offset,size,pBuffer);
 	FatInode* pNode = &s_FatInodes[pFileNode->m_inode];
 	
 	if (!pNode->pOpenedIn) return 0;
 	
-	bool needsToReloadCluster = false;
-
-	int remainderToExpandTo = 0;
-	// Determine how much we can read
-	if (offset + size > pFileNode->m_length)
+	if (offset > pNode->nDataSize)
+		return 0;
+	
+	if (offset + size > pNode->nDataSize)
 	{
-		int oldSize = size;
-		size = pFileNode->m_length - offset;
-		remainderToExpandTo = oldSize - size;
+		uint32_t newSize = offset + size;
 		
-		//do we need to expand?
-		if (remainderToExpandTo > 0)
+		if (newSize > pNode->nDataCapacity)//Overrun the capacity?
 		{
-			//Expand here, and then FsFatWrite again.
-			DebugLogMsg("Cluster Size is  %d.",  pNode->pOpenedIn->m_clusSize);
-			DebugLogMsg("Want to expand by %d?", remainderToExpandTo);
+			uint32_t oldCap = pNode->nDataCapacity;
+			pNode->nDataCapacity *= 2;
 			
-			int newSize = pFileNode->m_length + remainderToExpandTo;
-			int clusterSizeOld = (pFileNode->m_length + pNode->pOpenedIn->m_clusSize - 1) / pNode->pOpenedIn->m_clusSize;
-			int clusterSizeNew = (newSize             + pNode->pOpenedIn->m_clusSize - 1) / pNode->pOpenedIn->m_clusSize;
+			// Still not enough?
+			if (pNode->nDataCapacity < newSize)
+				pNode->nDataCapacity = newSize;
 			
-			uint32_t newCluster1 = 0; //0 means don't update that
-			// Do they differ?
-			if (clusterSizeOld != clusterSizeNew)
-			{
-				// yes. Allocate however many cluster it takes:
-				int clustersToAllocate = clusterSizeNew - clusterSizeOld;
-				DebugLogMsg("Yes.  Need to allocate %d clusters.", clustersToAllocate);
-				
-				uint32_t nLastCluster = pNode->nClusterFirst;
-				if (pNode->nClusterFirst == 0)
-				{
-					//Empty file: create one cluster
-					pNode->nClusterFirst = nLastCluster = FatAllocateCluster(pNode->pOpenedIn);
-					
-					DebugLogMsg("FS First cluster is 0, changing it to our own NEW cluster %d!", nLastCluster);
-					
-					FatFlushFat(pNode->pOpenedIn);
-					
-					//We've allocated one cluster.  Remove one from the number of clusters to allocate.
-					clustersToAllocate--;
-					
-					//When updating the file entry, make sure that the entry knows that the file starts here.
-					newCluster1 = nLastCluster;
-					
-					//Also let the abstract FS know
-					pFileNode->m_implData2 = nLastCluster;
-					pNode->nClusterFirst   = nLastCluster;
-					pNode->nClusterCurrent = nLastCluster;
-					pNode->nClusterProgress = 0;
-				}
-				else
-				{
-					//Get the last cluster
-					do
-					{
-						uint32_t clus = FatGetNextCluster(pNode->pOpenedIn, nLastCluster);
-						if (clus < FAT_END_OF_CHAIN)
-						{
-							nLastCluster = clus;
-						}
-						else break;
-					}
-					while (1);
-				}
-				
-				// Avoid fragmentation
-				pNode->pOpenedIn->m_clusAllocHint = nLastCluster;
-				while (clustersToAllocate)
-				{
-					DebugLogMsg("Last Cluster Number is %d.  Expanding by one cluster, %d left.", nLastCluster, clustersToAllocate);
-					uint32_t nextCluster = FatAllocateCluster(pNode->pOpenedIn);
-					if (!nextCluster) 
-					{
-						LogMsg("ERROR! Expansion did not work, drive full?");
-						return 0;
-					}
-					DebugLogMsg("Allocated Cluster Number %d.", nextCluster);
-					FatClearCluster   (pNode->pOpenedIn, nextCluster);
-					FatSetClusterInFAT(pNode->pOpenedIn, nLastCluster, nextCluster);
-					FatSetClusterInFAT(pNode->pOpenedIn, nextCluster,  FAT_END_OF_CHAIN);
-					nLastCluster = nextCluster;
-					clustersToAllocate--;
-				}
-			}
+			uint8_t* newDataPtr = MmAllocateK(pNode->nDataCapacity);
+			memcpy (newDataPtr, pNode->pDataPointer, oldCap);
 			
-			//TODO: Write directory entry to update size.
-			
-			if (!FatUpdateFileEntry(pFileNode, newSize, newCluster1))
-			{
-				LogMsg("ERROR: Could Not Write Entry! FileSystem may be corrupted!!!");
-				return 0;
-			}
-			else
-				DebugLogMsg("Overwrote entry.");
-			
-			FatFlushFat(pNode->pOpenedIn);
-			//return 0;
-			
-			return FsFatWrite(pFileNode, offset, oldSize, pBuffer);
+			MmFree(pNode->pDataPointer);
+			pNode->pDataPointer = newDataPtr;
 		}
-	}
-	
-	if (size <= 0) return 0;
-	
-	if (!pNode->pWorkCluster)
-	{	
-		DebugLogMsg("Didn't allocate work cluster, doing it now");
-		pNode->pWorkCluster  = (uint8_t*)MmAllocate (pNode->pOpenedIn->m_clusSize);
-		needsToReloadCluster = true;
-		pNode->bLoadedWorkCluster = false;
-		if (!pNode->pWorkCluster)
-			return 0; //Out of memory
-	}
-	
-	// Cluster offset to read from.  NOT the cluster number, just the number of cluster steps to go through to reach this.
-	uint32_t clusterOffsetCurrent = offset / pNode->pOpenedIn->m_clusSize;
-	
-	// Did it change from the current cluster? If yes, how?
-	uint32_t clusterToWrite = 0;
-	if (clusterOffsetCurrent < pNode->nClusterProgress)
-	{
-		// It went back.  Re-resolve from the start.
-		clusterToWrite = pNode->nClusterCurrent;
-		pNode->nClusterCurrent  = pNode->nClusterFirst;
-		needsToReloadCluster = true;
 		
-		// Navigate the singly linked list until we reach the cluster.
-		for (pNode->nClusterProgress = 0; pNode->nClusterProgress < clusterOffsetCurrent; pNode->nClusterProgress++)
-		{
-			pNode->nClusterCurrent = FatGetNextCluster (pNode->pOpenedIn, pNode->nClusterCurrent);
-		}
-	}
-	else if (clusterOffsetCurrent > pNode->nClusterProgress)
-	{
-		// It went forwards.  To speed forward reads, start resolving the current cluster
-		// number right from the current offset stored.
-		clusterToWrite = pNode->nClusterCurrent;
-		needsToReloadCluster = true;
-		for (; pNode->nClusterProgress < clusterOffsetCurrent; pNode->nClusterProgress++)
-		{
-			pNode->nClusterCurrent = FatGetNextCluster (pNode->pOpenedIn, pNode->nClusterCurrent);
-		}
-	}
-	else
-	{
-		// ... We're already at the needed cluster.
+		pNode->nDataSize = newSize;
 	}
 	
-	int insideClusterOffset = offset % pNode->pOpenedIn->m_clusSize;
+	if (size) pNode->bWasWrittenTo = true;
 	
-	// Reload the cluster if needed.
-	if (clusterToWrite > 0)
-	{
-		if (pNode->bLoadedWorkCluster)
-		{
-			DebugLogMsg("Writing some cluster!");
-			FatPutCluster (pNode->pOpenedIn, pNode->pWorkCluster, clusterToWrite);
-		}
-	}
-	if (needsToReloadCluster)
-	{
-		DebugLogMsg("Reloading cluster.");
-		FatGetCluster (pNode->pOpenedIn, pNode->pWorkCluster, pNode->nClusterCurrent);
-		pNode->bLoadedWorkCluster = true;
-	}
-	
-	int whereToEndWriting = size + insideClusterOffset, howMuchToWrite = size;
-	if (whereToEndWriting > (int)pNode->pOpenedIn->m_clusSize)
-	{
-		howMuchToWrite -= (whereToEndWriting - (int)pNode->pOpenedIn->m_clusSize);
-		whereToEndWriting = (int)pNode->pOpenedIn->m_clusSize;
-	}
-	
-	// Place the data in it, finally.
-	uint8_t* pointer = (uint8_t*)pBuffer;
-	memcpy (pNode->pWorkCluster + insideClusterOffset, pointer, howMuchToWrite);
-	DebugLogMsg("Written to memory, waiting to write on disk.");
-	pNode->bLoadedWorkCluster = true;
-	
-	int result = howMuchToWrite;
-	if ((uint32_t)howMuchToWrite < size) // More to write?
-		// Yeah, write more.
-		result += FsFatWrite (pFileNode, offset + howMuchToWrite, size - howMuchToWrite, pointer + howMuchToWrite);
-	else
-	{
-		// No more to write
-		DebugLogMsg("No more to write");
-	}
-	
-	return result;
+	//write!
+	memcpy (&pNode->pDataPointer[offset], pBuffer, size);
+	return size;
 }
 
 void FsListOpenedDirs()
@@ -1839,7 +1818,7 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 	}
 	
 	// Allocate a FileNode* pointer.
-	FileNode* pFileNodes = (FileNode*)MmAllocate (sizeof(FileNode) * entryCount);
+	FileNode* pFileNodes = (FileNode*)MmAllocateK (sizeof(FileNode) * entryCount);
 	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
 	
 	// Read the directory AGAIN and fill in the FileNodes
@@ -1861,10 +1840,10 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 			}
 			
 			uint8_t firstByte = *entry;
-			while (firstByte == 0x00 || firstByte == 0xE5 || (firstByte == (uint8_t)'.' && dirEntsUntilReal++ < 2))
+			if (firstByte == 0x00 || firstByte == 0xE5 || (firstByte == (uint8_t)'.' && dirEntsUntilReal++ < 2))
 			{
 				entry += 32;
-				firstByte = *entry;
+				continue;
 			}
 			
 			uint32_t secondCluster = 0;
@@ -1967,7 +1946,7 @@ bool FsFatOpenNonRootDir(FileNode *pFileNode)
 	);
 	
 	// Allocate the same number of tagDirectoryCacheEntries
-	pDce->m_children = MmAllocate (sizeof (DirectoryCacheEntry*) * pDce->m_nFileNodes);
+	pDce->m_children = MmAllocateK (sizeof (DirectoryCacheEntry*) * pDce->m_nFileNodes);
 	memset (pDce->m_children, 0,   sizeof (DirectoryCacheEntry*) * pDce->m_nFileNodes);
 	
 	// This directory entry has been loaded already.  Mark it here.
@@ -2112,7 +2091,7 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	}
 	
 	// Allocate a FileNode* pointer.
-	FileNode* pFileNodes = (FileNode*)MmAllocate (sizeof(FileNode) * entryCount);
+	FileNode* pFileNodes = (FileNode*)MmAllocateK (sizeof(FileNode) * entryCount);
 	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
 	
 	//LogMsg("Counted %d File entries.", entryCount);
@@ -2130,15 +2109,16 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 		{
 			if (index >= entryCount)
 			{
-				//LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");--these entries tend to be garbage.
+				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");//--these entries tend to be garbage.
 				break;
 			}
 			
 			uint8_t firstByte = *entry;
-			while (firstByte == 0x00 || firstByte == 0xE5)
+			if (firstByte == 0x00 || firstByte == 0xE5)
 			{
+				// This directory entry has never been written or it has been deleted.
 				entry += 32;
-				firstByte = *entry;
+				continue;
 			}
 			
 			uint32_t secondCluster = 0;
@@ -2201,7 +2181,7 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	}
 	
 	// Make a root file node and add it to the initrd node.
-	FileNode* pFatRoot = (FileNode*)MmAllocate(sizeof(FileNode));
+	FileNode* pFatRoot = (FileNode*)MmAllocateK(sizeof(FileNode));
 	g_fatsMountedPointers     [g_fatsMountedCount] = pFatRoot;
 	g_fatsMountedAsFileSystems[g_fatsMountedCount] = pSystem;
 	g_fatsMountedListFilesPtrs[g_fatsMountedCount] = pFileNodes;
@@ -2281,8 +2261,8 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	pFat32->m_clusAllocHint   = 0;
 	
 	uint32_t nBytesPerFAT     = 512 * pFat32->m_bpb.m_nSectorsPerFat32;
-	pFat32->m_pFat            = (uint32_t*)MmAllocate (nBytesPerFAT);
-	pFat32->m_pbFatModified   = (bool*)MmAllocate (pFat32->m_bpb.m_nSectorsPerFat32);
+	pFat32->m_pFat            = (uint32_t*)MmAllocateK (nBytesPerFAT);
+	pFat32->m_pbFatModified   = (bool*)MmAllocateK (pFat32->m_bpb.m_nSectorsPerFat32);
 	memset(pFat32->m_pbFatModified, 0, pFat32->m_bpb.m_nSectorsPerFat32);
 	
 	//LogMsgNoCr ("Loading file system from drive(%d)partition(%d).  Please wait.", driveID, partitionStart);

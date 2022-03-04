@@ -16,7 +16,7 @@ typedef uint32_t EAddr;
 typedef uint32_t EWord;
 typedef  int32_t ESwrd;
 
-typedef int (*ElfEntry)(void);
+typedef int (*ElfEntry)(const char*);
 
 #define ELF_IDENT_SIZE 16
 typedef struct {
@@ -125,6 +125,6 @@ enum
 };
 
 void ElfPerformTest();
-int ElfExecute (void *pElfFile, size_t size);
+int ElfExecute (void *pElfFile, size_t size, const char* pArgs);
 
 #endif//_ELF_H

@@ -210,7 +210,7 @@ void FsInitializeDevicesDir ()
 while (0)
 	#include "vfs_dev_defs.h"
 	
-	g_pDevNodes = (FileNode*)MmAllocate(sizeof(FileNode) * devCount);
+	g_pDevNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * devCount);
 	g_nDevNodes = devCount;
 	
 #undef DEFINE_DEVICE
@@ -248,7 +248,7 @@ void FsInitializeInitRd(void* pRamDisk)
 	g_pInitRdFileHeaders  = (InitRdFileHeader*)(pRamDisk + sizeof(InitRdHeader));
 	
 	//initialize the root directory
-	g_pInitRdRoot = (FileNode*)MmAllocate(sizeof(FileNode));
+	g_pInitRdRoot = (FileNode*)MmAllocateK(sizeof(FileNode));
 	strcpy(g_pInitRdRoot->m_name, FS_FSROOT_NAME);
 	g_pInitRdRoot->m_flags = g_pInitRdRoot->m_inode = g_pInitRdRoot->m_length = g_pInitRdRoot->m_implData = g_pInitRdRoot->m_perms = 0;
 	g_pInitRdRoot->m_type = FILE_TYPE_DIRECTORY;
@@ -265,7 +265,7 @@ void FsInitializeInitRd(void* pRamDisk)
 	g_pInitRdRoot->EmptyFile  = NULL;
 	
 	// Initialize the /dev dir.
-	g_pInitRdDev = (FileNode*)MmAllocate(sizeof(FileNode));
+	g_pInitRdDev = (FileNode*)MmAllocateK(sizeof(FileNode));
 	strcpy(g_pInitRdDev->m_name, FS_DEVICE_NAME);
 	g_pInitRdDev->m_flags = g_pInitRdDev->m_inode = g_pInitRdDev->m_length = g_pInitRdDev->m_implData = g_pInitRdDev->m_perms = 0;
 	g_pInitRdDev->m_type = FILE_TYPE_DIRECTORY;
@@ -285,7 +285,7 @@ void FsInitializeInitRd(void* pRamDisk)
 	FsInitializeDevicesDir();
 	
 	// Add files to the ramdisk.
-	g_pRootNodes = (FileNode*)MmAllocate(sizeof(FileNode) * g_pInitRdHeader->m_nFiles);
+	g_pRootNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * g_pInitRdHeader->m_nFiles);
 	g_nRootNodes = g_pInitRdHeader->m_nFiles;
 	
 	// for every file

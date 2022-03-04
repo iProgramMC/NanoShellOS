@@ -123,7 +123,7 @@ void funnytest(UNUSED int argument)
 		
 		FsRead(pFile, 0, length, pData);
 		
-		ElfExecute(pData, length);
+		ElfExecute(pData, length, "");
 		
 		MmFree(pData);
 	}
@@ -335,7 +335,7 @@ void ShellExecuteCommand(char* p)
 			
 			FiClose(fd);
 			
-			ElfExecute(pData, length);
+			ElfExecute(pData, length, g_lastCommandExecuted);
 			
 			MmFree(pData);
 			

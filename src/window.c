@@ -105,7 +105,7 @@ void LoadDefaultThemingParms()
 	SetThemingParameter(P_BLACK, 0x000000);
 	
 	// Dark mode:
-	SetDarkTheme();
+	SetDefaultTheme();
 }
 void LoadThemingParmsFromFile(const char* pString)
 {

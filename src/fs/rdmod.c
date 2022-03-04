@@ -74,7 +74,7 @@ void FsMountRamDisk(void* pRamDisk)
 	
 	//let's mount this thing :)
 	g_rdsMountedCount++;
-	FileNode *pRootNode = (FileNode*)MmAllocate (sizeof (FileNode));
+	FileNode *pRootNode = (FileNode*)MmAllocateK (sizeof (FileNode));
 	g_rdsMountedPointers[g_rdsMountedCount-1] = pRootNode;
 
 	//this is a directory
@@ -100,7 +100,7 @@ void FsMountRamDisk(void* pRamDisk)
 	
 	g_rdsMountedFileHeaders   [pRootNode->m_implData2] = pHeaders;
 	g_rdsMountedRootNodeCounts[pRootNode->m_implData2] = pFileHdr->m_nFiles;
-	g_rdsMountedRootNodes     [pRootNode->m_implData2] = (FileNode*)MmAllocate(sizeof(FileNode) * g_rdsMountedRootNodeCounts[pRootNode->m_implData2]);
+	g_rdsMountedRootNodes     [pRootNode->m_implData2] = (FileNode*)MmAllocateK(sizeof(FileNode) * g_rdsMountedRootNodeCounts[pRootNode->m_implData2]);
 	
 	for (int i = 0; i < pFileHdr->m_nFiles; i++)
 	{
