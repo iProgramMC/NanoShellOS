@@ -94,7 +94,7 @@ enum {
 	TASK_ERROR_TOO_MANY_TASKS,
 	TASK_ERROR_STACK_ALLOC_FAILED,
 	TASK_ERROR_END,
-} TaskError;
+};
 
 /***********************************************************
     Allows you to spawn a new task. Returns an error code 

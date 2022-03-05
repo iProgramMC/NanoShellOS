@@ -65,6 +65,7 @@ const char* g_pBugCheckReasonText[] = {
 	"Reserved",
 	
 	// miscellaneous failures you may encounter
+	"Missing init ramdisk",
 };
 
 const char* GetMemoryRangeString(uint32_t range)

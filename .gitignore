@@ -2,6 +2,7 @@
 .git/*
 
 #directories I don't want added
+limine
 application/*
 build/*
 cp/*

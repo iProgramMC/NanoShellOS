@@ -1,3 +1,7 @@
+/* Tell the linker that we want an ELF32 output file */
+OUTPUT_FORMAT(elf32-i386)
+OUTPUT_ARCH(i386)
+
 /* Linker script for the OS */
 
 OUTPUT_FORMAT(elf32-i386)
@@ -12,10 +16,14 @@ SECTIONS
 	. = 1M;
 	
 	_kernel_start = .;
-	.multibootdata : {
+
+	.multibootdata :
+	{
 		*(.multibootdata)
 	}
-	.multiboottext : {
+
+	.multiboottext :
+	{
 		*(.multiboottext)
 	}
 	
@@ -41,11 +49,7 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 	}
- 
-	/* The compiler may produce other sections, by default it will put them in
-	   a segment with the same name. Simply add stuff here as needed. */
-	   
-	
+
 	/* Add a symbol that indicates the end address of the kernel. */
 	_kernel_end = .;
 }

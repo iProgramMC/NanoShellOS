@@ -20,14 +20,12 @@ along with this program.  If not, see [the GNU licenses](https://www.gnu.org/lic
 This software is licensed under the GNU General Public License V3 only.
 
 
-#### Be warned that building this is not for the faint of heart.
-
 ## Goals
 
 Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
 I'm not particularly concerned with safety, any app is free to do anything.  The design is NOT the best, by ANY means, so do not inspire yours from this design.
 
-Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ).
+Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
 
 - [x] Hello World
 #### Primordial tasks
@@ -47,7 +45,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] Bochs/QEMU debugcon (E9 hack)
 - [ ] Serial port
 - [ ] PCI
-- [ ] VirtualBox/QEMU/Bochs graphics device (*not* VBE)
+- [X] VirtualBox/QEMU/Bochs graphics device (*not* VBE)
 - [ ] VMware SVGA device
 - [ ] Sound devices (e.g. SoundBlaster 16)
 - [ ] USB
@@ -58,35 +56,35 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [ ] USB stick device driver
 #### File system
 - [x] Root contains several files which are packed neatly into the executable
-- [ ] Mounting other file systems to the main one
+- [X] Mounting other file systems to the main one
 - [ ] Cleaning up after a while of not having used a certain directory page (can't apply to root or ram disks, you know why)
 
 ## Build instructions
 
 ### Linux build:
-The following dependencies are required: `clang` `ld`.  Install them, then type `make`.
 
-Currently important details such as initrd and prebuilt icons are not available, if you wish to build the OS join the Discord server linked above to ask me for the files.  This is being worked on and will be resolved soon.
+The following dependencies are required: `xorriso` `clang` `ld`.  Install them first.  An example of how to install them:
+```
+sudo apt-get install xorriso clang
+```
+
+Then, run `make`.
+
+#### Building an image
+
+To build the image, run the following set of commands:
+```
+make
+make initrd
+make limine
+make image
+```
+
+In the `build` directory, you should now have an `image.iso` that you can mount into your favorite x86 emulator and run.
 
 ### Windows build:
 
-#### Preparation
-
-Create the `build` folder.  Inside it create the folders `asm`, `kapp`, `fs`, `nooptimiz` and `icons`.
-
-Create the `tools` directory.  Download [the i686-elf GCC+binutils](https://github.com/lordmilko/i686-elf-tools/releases/download/7.1.0/i686-elf-tools-windows.zip), and extract it into `tools/i686-gcc/`.
-Also download NASM and place it inside `tools/nasm` so that it is reachable at `tools/nasm/nasm.exe`.
-
-Make sure that `make` is easily accessible by opening a command prompt anywhere and typing `make`.
-
-Compile `tools_src/fsmaker` and `tools_src/icontest`.
-
-Place `fsmaker.exe` inside `tools/`.
-Place `icontest.exe` inside `tools/icc/`. (create the directory, if necessary)
-
-#### The Moment of Truth
-
-Run `build.bat`.  It should start building.  Once it's done you should have a `kernel.bin` in the repo root.
+It may or may not come back soon.
 
 ## Installation
 

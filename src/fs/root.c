@@ -10,9 +10,22 @@
 #include <misc.h>
 #include <print.h>
 #include <memory.h>
+#include <tar.h>
 
 // Misc device files
 #if 1
+
+static uint32_t OctToBin(char *data, uint32_t size)
+{
+	uint32_t value = 0;
+	while (size > 0)
+	{
+		size--;
+		value *= 8;
+		value += *data++ - '0';
+	}
+	return value;
+}
 
 static uint32_t FsNullRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
 {
@@ -74,8 +87,6 @@ static uint32_t FsTeletypeWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_
 
 // RAM disk/initrd
 #if 1
-InitRdHeader* g_pInitRdHeader;
-InitRdFileHeader* g_pInitRdFileHeaders;
 FileNode* g_pInitRdRoot;
 FileNode* g_pInitRdDev;  //add a dirnode for /dev to mount stuff later
 FileNode* g_pRootNodes; //list of root nodes.
@@ -87,16 +98,14 @@ static DirEnt g_DirEnt; // directory /dev
 
 static uint32_t FsRootFsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
-	InitRdFileHeader* pHeader = &g_pInitRdFileHeaders[pNode->m_inode];
-	
 	//check lengths
-	if (offset > pHeader->m_length)
+	if (offset > pNode->m_implData)
 		return 0;
-	if (offset + size > pHeader->m_length)
-		size = pHeader->m_length - offset;
+	if (offset + size > pNode->m_implData)
+		size = pNode->m_implData - offset;
 	
 	//read!
-	memcpy (pBuffer, (uint8_t*)pHeader->m_offset + offset, size);
+	memcpy (pBuffer, (uint8_t*)pNode->m_implData1 + offset, size);
 	return size;
 }
 //TODO: open, close etc
@@ -242,11 +251,6 @@ while (0)
 
 void FsInitializeInitRd(void* pRamDisk)
 {
-	uint32_t location = (uint32_t)pRamDisk;
-	//initialize the file headers and stuff.
-	g_pInitRdHeader = (InitRdHeader*)pRamDisk;
-	g_pInitRdFileHeaders  = (InitRdFileHeader*)(pRamDisk + sizeof(InitRdHeader));
-	
 	//initialize the root directory
 	g_pInitRdRoot = (FileNode*)MmAllocateK(sizeof(FileNode));
 	strcpy(g_pInitRdRoot->m_name, FS_FSROOT_NAME);
@@ -284,37 +288,73 @@ void FsInitializeInitRd(void* pRamDisk)
 	// Initialize devices
 	FsInitializeDevicesDir();
 	
-	// Add files to the ramdisk.
-	g_pRootNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * g_pInitRdHeader->m_nFiles);
-	g_nRootNodes = g_pInitRdHeader->m_nFiles;
-	
-	// for every file
-	for (int i = 0; i < g_pInitRdHeader->m_nFiles; i++)
+	// Count the ramdisk entries
+	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
-		g_pInitRdFileHeaders[i].m_offset += location;
-		//create a new filenode
-		strcpy(g_pRootNodes[i].m_name, g_pInitRdFileHeaders[i].m_name);
-		g_pRootNodes[i].m_length = g_pInitRdFileHeaders[i].m_length;
-		g_pRootNodes[i].m_inode = i;
-		g_pRootNodes[i].m_type = FILE_TYPE_FILE;
-		g_pRootNodes[i].Read    = FsRootFsRead;
-		g_pRootNodes[i].Write   = NULL;
-		g_pRootNodes[i].Open    = NULL;
-		g_pRootNodes[i].Close   = NULL;
-		g_pRootNodes[i].ReadDir = NULL;
-		g_pRootNodes[i].FindDir = NULL;
-		g_pRootNodes[i].OpenDir = NULL;
-		g_pRootNodes[i].CloseDir= NULL;
-		g_pRootNodes[i].CreateFile = NULL;
-		g_pRootNodes[i].EmptyFile  = NULL;
-		g_pRootNodes[i].m_perms = PERM_READ;
-		
-		//if it ends with .nse...
-		if (EndsWith(g_pRootNodes[i].m_name, ".nse"))
+		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		bool hasDotSlash = false;
+		int pathLength = strlen (ramDiskTar->name);
+		if (ramDiskTar->name[0] == '.')
 		{
-			//also make it executable
-			g_pRootNodes[i].m_perms |= PERM_EXEC;
+			pathLength -= 2;
+			hasDotSlash = true;
 		}
+
+		// Advance to the next entry
+		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
+
+		if (pathLength > 0)
+			g_nRootNodes++;
+	}
+
+	// Add files to the ramdisk.
+	g_pRootNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * g_nRootNodes);
+
+	int i = 0;
+	
+	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
+	{
+		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		uint32_t pathLength = strlen(ramDiskTar->name);
+		bool hasDotSlash = false;
+
+		if (ramDiskTar->name[0] == '.')
+		{
+			pathLength -= 2;
+			hasDotSlash = true;
+		}
+
+		if (pathLength > 0)
+		{
+			strcpy(g_pRootNodes[i].m_name, ramDiskTar->name + (hasDotSlash ? 2 : 0));
+
+			g_pRootNodes[i].m_length = fileSize;
+			g_pRootNodes[i].m_inode  = i;
+			g_pRootNodes[i].m_type   = FILE_TYPE_FILE;
+			g_pRootNodes[i].m_implData  = fileSize;
+			g_pRootNodes[i].m_implData1 = (uint32_t) &ramDiskTar->buffer;
+			g_pRootNodes[i].Read     = FsRootFsRead;
+			g_pRootNodes[i].Write    = NULL;
+			g_pRootNodes[i].Open     = NULL;
+			g_pRootNodes[i].Close    = NULL;
+			g_pRootNodes[i].ReadDir  = NULL;
+			g_pRootNodes[i].FindDir  = NULL;
+			g_pRootNodes[i].OpenDir  = NULL;
+			g_pRootNodes[i].CloseDir = NULL;
+			g_pRootNodes[i].CreateFile = NULL;
+			g_pRootNodes[i].EmptyFile  = NULL;
+			g_pRootNodes[i].m_perms    = PERM_READ;
+			
+			//if it ends with .nse also make it executable
+			if (EndsWith(g_pRootNodes[i].m_name, ".nse"))
+			{
+				g_pRootNodes[i].m_perms |= PERM_EXEC;
+			}
+			i++;
+		}
+
+		// Advance to the next entry
+		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
 	}
 }
 #endif
