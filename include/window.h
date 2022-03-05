@@ -126,6 +126,7 @@ enum {
 	EVENT_UNMINIMIZE,
 	EVENT_UPDATE2,
 	EVENT_MENU_CLOSE,
+	EVENT_CLICK_CHAR,
 	EVENT_MAX
 };
 
@@ -268,6 +269,24 @@ typedef struct
 }
 MenuBarData;
 
+enum
+{
+	/*0x80*/TIST_BOLD = '\x80',
+	/*0x81*/TIST_UNDERLINE,
+	/*0x82*/TIST_ITALIC,
+	/*0x83*/TIST_RED,
+	/*0x84*/TIST_BLUE,
+	/*0x85*/TIST_GREEN,
+	/*0x86*/TIST_LINK,
+	/*0x87*/TIST_UNFORMAT,
+	/*0x88*/TIST_UNBOLD,
+	/*0x89*/TIST_UNITALIC,
+	/*0x8A*/TIST_UNUNDERLINE,
+	/*0x8B*/TIST_UNCOLOR,
+	/*0x8C*/TIST_UNLINK,
+	/*0x8D*/TIST_COUNT,
+};
+
 typedef struct
 {
 	bool  m_focused;
@@ -279,6 +298,7 @@ typedef struct
 	      m_scrollY;
 	char* m_pText;
 	bool  m_readOnly;
+	bool  m_enableStyling;
 }
 TextInputData;
 

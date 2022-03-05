@@ -97,6 +97,9 @@
 #include <icons/file_nano.h>
 // Icons V1.34
 #include <icons/clock_empty.h>
+// Icons V1.35
+#include <icons/run.h>
+#include <icons/run16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -182,6 +185,8 @@ Image * g_iconTable[] = {
 	&g_notes16_icon,
 	&g_file_nano_icon,
 	&g_clock_empty_icon,
+	&g_run_icon,
+	&g_run16_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -217,6 +222,7 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(FONTS)
 			CASE(RESMON)
 			CASE(NOTES)
+			CASE(RUN)
 			#undef CASE
 		}
 	}

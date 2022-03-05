@@ -1,4 +1,8 @@
 /* Linker script for the OS */
+
+OUTPUT_FORMAT(elf32-i386)
+OUTPUT_ARCH(i386)
+
 ENTRY (KeEntry)
 
 /* Here is where all of the sections of the kernel are defined. */

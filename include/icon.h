@@ -103,6 +103,9 @@ enum
 	ICON_FILE_NANO,
 	//icons V1.34
 	ICON_CLOCK_EMPTY,//Special case which draws more stuff
+	//icons V1.35
+	ICON_RUN,
+	ICON_RUN16,
 	ICON_COUNT
 };
 

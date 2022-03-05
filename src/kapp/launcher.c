@@ -112,6 +112,7 @@ void LaunchVersion()
 
 #define STREQ(str1,str2) (!strcmp(str1,str2))
 void LaunchLauncher();
+RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 {
 	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet();
@@ -123,6 +124,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	else if (STREQ(pResourceID, "notepad"))  return LaunchNotepad();
 	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
 	else if (STREQ(pResourceID, "launcher")) { LaunchLauncher(); return RESOURCE_LAUNCH_SUCCESS; }
+	else if (STREQ(pResourceID, "help"))     return HelpOpenResource("/Fat0/Help.md");//LaunchHelp();
 	else return RESOURCE_LAUNCH_NOT_FOUND;
 }
 
@@ -532,7 +534,7 @@ void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int par
 			Rectangle r;
 			
 			RECT(r, 10, 30, 32, 32);
-			AddControl(pWindow, CONTROL_ICON, r, NULL, 1, ICON_NANOSHELL, 0);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, 1, ICON_RUN, 0);
 			RECT(r, 64, 35, 300, 32);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "Type the name of a program, folder, document, or resource, and NanoShell will open it for you.", 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
 			RECT(r, 10, 70, 54, 22);
@@ -636,9 +638,9 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Old Launcher", 8, ICON_HOME);
 				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Settings", 9, ICON_FOLDER_SETTINGS);
 				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 3, ICON_NULL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Run...", 4, ICON_COMMAND);
+				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Run...", 4, ICON_RUN);
 				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 5, ICON_NULL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMMAND);
+				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
 			}
 			
 			Rectangle r;

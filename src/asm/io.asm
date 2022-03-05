@@ -85,8 +85,8 @@ WritePortL:
 	ret
 	
 	
-extern fast_memcpy
-extern not_fast_memcpy
+global fast_memcpy
+global not_fast_memcpy
 ; Not Fast
 not_fast_memcpy:
 	push ebp
@@ -108,7 +108,7 @@ not_fast_memcpy:
 	pop ebp
 	ret
 	
-extern fast_memset
+global fast_memset
 fast_memset:
 	push ebp
 	mov  ebp, esp

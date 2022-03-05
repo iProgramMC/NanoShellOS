@@ -69,37 +69,7 @@ void SetThemingParameter(int type, uint32_t parm)
 	if (type < 0 || type >= P_THEME_PARM_COUNT) return;
 	g_ThemingParms[type] = parm;
 }
-void SetDefaultTheme()
-{
-	SetThemingParameter(P_BACKGROUND_COLOR              , DEFAULT_BACKGROUND_COLOR              );
-	SetThemingParameter(P_BUTTON_MIDDLE_COLOR           , DEFAULT_BUTTON_MIDDLE_COLOR           );
-	SetThemingParameter(P_WINDOW_BACKGD_COLOR           , DEFAULT_WINDOW_BACKGD_COLOR           );
-	SetThemingParameter(P_WINDOW_EDGE_COLOR             , DEFAULT_WINDOW_EDGE_COLOR             );
-	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     , DEFAULT_WINDOW_TITLE_ACTIVE_COLOR     );
-	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   , DEFAULT_WINDOW_TITLE_INACTIVE_COLOR   );
-	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   , DEFAULT_WINDOW_TITLE_ACTIVE_COLOR_B   );
-	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B , DEFAULT_WINDOW_TITLE_INACTIVE_COLOR_B );
-	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW, DEFAULT_WINDOW_TITLE_TEXT_COLOR_SHADOW);
-	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       , DEFAULT_WINDOW_TITLE_TEXT_COLOR       );
-	SetThemingParameter(P_WINDOW_TEXT_COLOR             , DEFAULT_WINDOW_TEXT_COLOR             );
-	SetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       , DEFAULT_WINDOW_TEXT_COLOR_LIGHT       );
-}
-
-void SetDarkTheme()
-{
-	SetThemingParameter(P_BACKGROUND_COLOR              , 0x00003f);
-	SetThemingParameter(P_BUTTON_MIDDLE_COLOR           , 0x303030);
-	SetThemingParameter(P_WINDOW_BACKGD_COLOR           , 0x202020);
-	SetThemingParameter(P_WINDOW_EDGE_COLOR             , 0x000000);
-	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     , 0x000000);
-	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   , 0x0f0f0f);
-	SetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   , 0x000044);
-	SetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B , 0x3f3f3f);
-	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW, 0x000000);
-	SetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       , 0xffffff);
-	SetThemingParameter(P_WINDOW_TEXT_COLOR             , 0xffffff);
-	SetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       , 0x000000);
-}
+void SetDefaultTheme(void);
 void LoadDefaultThemingParms()
 {
 	SetThemingParameter(P_BLACK, 0x000000);
@@ -1624,6 +1594,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	{
 		//by default you have single line
 		pControl->m_textInputData.m_onlyOneLine     = true;
+		pControl->m_textInputData.m_enableStyling   = true;
 		pControl->m_textInputData.m_showLineNumbers = false;
 		pControl->m_textInputData.m_focused         = false;
 		if (pControl->m_parm1 & TEXTEDIT_MULTILINE)
@@ -1632,6 +1603,8 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 			pControl->m_textInputData.m_showLineNumbers = true;
 		if (pControl->m_parm1 & TEXTEDIT_READONLY)
 			pControl->m_textInputData.m_readOnly        = true;
+		if (pControl->m_parm1 & TEXTEDIT_STYLING)
+			pControl->m_textInputData.m_enableStyling   = true;
 	}
 	else if (type == CONTROL_CHECKBOX)
 	{

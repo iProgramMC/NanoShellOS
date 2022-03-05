@@ -33,6 +33,7 @@ void ListTestTask (int argument);
 void CabinetEntry (int argument);
 void BigTextEntry (int argument);
 void ControlEntry (int argument);
+void HelpEntry    (int argument);
 void LaunchVersion();//ShellAbout
 void SystemMonitorEntry(int argument);
 void LauncherEntry(int arg);

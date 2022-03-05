@@ -120,14 +120,14 @@ void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsig
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	//draw some lines
-	/*VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.top);
+	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.top);
 	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.bottom-1);
 	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.left);
 	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.right);
 	
-	rect.left++, rect.right--, rect.top++, rect.bottom--;*/
-	//RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
-	RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
+	rect.left++, rect.right--, rect.top++, rect.bottom--;
+	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
+	//RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
 }
 #endif
 
@@ -601,8 +601,11 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 }
 
 #define LINE_NUM_GAP 56
+#define RECT(rect,x,y,w,h) do {\
+	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
+} while (0)
 
-bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
 	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
 	switch (eventType)
@@ -625,6 +628,105 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					this->m_textInputData.m_scrollY  = pos;
 				}
 				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			if (this->m_textInputData.m_enableStyling && eventType == EVENT_RELEASECURSOR)
+			{
+				Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (this->m_textInputData.m_pText)
+				{
+					//HACK
+					//No need to change fonts.  m_enableStyling assumes FONT_BASIC.
+					
+					const char*text = this->m_textInputData.m_pText;
+					int lineHeight = GetLineHeight();
+					int xPos = this->m_rect.left + 4,
+						yPos = this->m_rect.top  + 4;// - lineHeight * this->m_textInputData.m_scrollY;
+					if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+					{
+						xPos += LINE_NUM_GAP;
+					}
+					
+					if (this->m_textInputData.m_onlyOneLine)
+					{
+						xPos = this->m_rect.left + 4 - 8 * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
+					}
+					
+					int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY;// linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
+					if (this->m_textInputData.m_onlyOneLine)
+					{
+						//linesPerScreen = 1;
+						scrollLine     = 0;
+					}
+					int offset  = 0;
+					
+					
+					bool bold = false, link = false;
+					while (*text)
+					{
+						//word wrap
+						if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
+						{
+							if (this->m_textInputData.m_onlyOneLine)
+								//Don't actually word-wrap if we hit the edge on a one-line textbox.
+								break;
+							xPos = this->m_rect.left + 4;
+							
+							if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+								xPos += LINE_NUM_GAP;
+							
+							if (curLine2 >= scrollLine)
+								yPos += lineHeight;
+							
+							if (*text == '\n')
+							{
+								if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in checking anymore.
+							}
+							curLine ++;
+						}
+						if (*text != '\n')
+						{
+							// If character should be rendered
+							if (!this->m_textInputData.m_enableStyling || !((unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT))
+							{
+								// render this character:
+								if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
+								if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
+								{
+									//VidPlotChar(*text, xPos, yPos, color, TRANSPARENT);
+									
+									
+									//If it's a link character, check if the mouse cursor intersects it; if it does, trigger the proper link.
+									
+									Rectangle rect;
+									RECT(rect, xPos, yPos, GetCharWidth(*text), GetLineHeight());
+									
+									if (link && RectangleContains(&rect, &mouseClickPos))
+									{
+										CallWindowCallbackAndControls(pWindow, EVENT_CLICK_CHAR, this->m_comboID, offset);
+										break;
+									}
+								}
+									
+								// Increment the X,Y positions
+								xPos += GetCharWidth (*text) + bold;
+							}
+							//TODO cleanup
+							else if (*text == TIST_LINK)
+								link = true;
+							else if (*text == TIST_UNLINK)
+								link = false;
+							else if (*text == TIST_BOLD)
+								bold = true;
+							else if (*text == TIST_UNBOLD)
+								bold = false;
+						}
+						
+						text++;
+						offset++;
+					}
+					
+					//Revert the font back if you decide to change stuff.
+				}
 			}
 			//RequestRepaint (pWindow);
 			break;
@@ -932,14 +1034,21 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				rk1.right = rk.left;
 			}
 			
-			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
+			uint32_t bg_color = WINDOW_TEXT_COLOR_LIGHT;
+			if (this->m_textInputData.m_enableStyling)
+			{
+				bg_color &= 0xFFFFFFAA;
+			}
+			VidFillRectangle(bg_color, rk);
 			if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
 				VidFillRectangle(0x3f3f3f, rk1);
+		
+			uint32_t color = WINDOW_TEXT_COLOR, color_default = WINDOW_TEXT_COLOR;
 			
 			if (this->m_textInputData.m_pText)
 			{
 				//HACK
-				VidSetFont(FONT_TAMSYN_MED_REGULAR);
+				VidSetFont(this->m_textInputData.m_showLineNumbers ? FONT_TAMSYN_MED_REGULAR : FONT_BASIC);
 				
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
@@ -965,7 +1074,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				
 				char line_string[10];
 				curLine2 ++;
-				if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
+				if (curLine2 >= scrollLine && xPos >= this->m_rect.left && this->m_textInputData.m_showLineNumbers)
 				{
 					sprintf   (line_string, "%5d", curLine2);
 					VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
@@ -973,7 +1082,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				while (*text)
 				{
 					if (!this->m_textInputData.m_readOnly)
-						if (offset == this->m_textInputData.m_textCursorIndex)
+						if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly)
 						{
 							VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
 						}
@@ -996,7 +1105,7 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 						{
 							curLine2 ++;
 							if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
-							if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
+							if (curLine2 >= scrollLine && xPos >= this->m_rect.left && this->m_textInputData.m_showLineNumbers)
 							{
 								sprintf   (line_string, "%5d", curLine2);
 								VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
@@ -1006,18 +1115,57 @@ bool WidgetTextEditView_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					}
 					if (*text != '\n')
 					{
-						// render this character:
-						if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
-						if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
-							VidPlotChar(*text, xPos, yPos, WINDOW_TEXT_COLOR, TRANSPARENT);
-						// Increment the X,Y positions
-						xPos += GetCharWidth (*text);
+						if (this->m_textInputData.m_enableStyling && (unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT)
+						{
+							//bool link = false;
+							switch (*text)
+							{
+								case TIST_BOLD:
+									color |= 0x01000000;
+									break;
+								case TIST_UNBOLD:
+									color &= ~0x01000000;
+									break;
+								case TIST_UNFORMAT:
+									color =  color_default;//Remove formatting
+									break;
+								case TIST_RED:
+									color =  (color & 0xFF000000) | 0xFF0000;
+									break;
+								case TIST_GREEN:
+									color =  (color & 0xFF000000) | 0x00FF00;
+									break;
+									
+							#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+								case TIST_LINK:
+									//link = true;
+								case TIST_BLUE:
+									color =  (color & 0xFF000000) | 0x0000FF;
+									break;
+									
+								case TIST_UNLINK:
+									//link = false;
+								case TIST_UNCOLOR:
+									color =  (color & 0xFF000000) | color_default;
+									break;
+							#pragma GCC diagnostic pop
+							}
+						}
+						else
+						{
+							// render this character:
+							if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
+							if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
+								VidPlotChar(*text, xPos, yPos, color, TRANSPARENT);
+							// Increment the X,Y positions
+							xPos += GetCharWidth (*text) + ((color & 0x01000000) != 0);
+						}
 					}
 					
 					text++;
 					offset++;
 				}
-				if (offset == this->m_textInputData.m_textCursorIndex)
+				if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly)
 				{
 					VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
 				}
@@ -1555,7 +1703,7 @@ void ResetList (Window* pWindow, int comboID)
 // Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
 // in parm1, and the menu item's comboID in parm2.
 
-#define MENU_BAR_HEIGHT 11
+#define MENU_BAR_HEIGHT 15
 
 void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comboID)
 {
@@ -1690,13 +1838,13 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						
 						VidFillRectangle (0x7F, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 						//render the child menu as well:
 						
 						/*WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);*/
 					}
 					else
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2, WINDOW_TEXT_COLOR, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR, TRANSPARENT);
 					
 					current_x += width;
 				}
@@ -2379,7 +2527,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	check_rect.bottom = check_rect.top  + CHECKBOX_SIZE;
 	
 	Rectangle text_rect = this->m_rect;
-	text_rect.left =  check_rect.right + 2;
+	text_rect.left =  check_rect.right + 6;
 	text_rect.top  += (check_rect.bottom - check_rect.top - GetLineHeight()) / 2 + 1;
 	
 	switch (eventType)

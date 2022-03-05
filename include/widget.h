@@ -12,6 +12,7 @@
 #define TEXTEDIT_MULTILINE 1
 #define TEXTEDIT_LINENUMS  2
 #define TEXTEDIT_READONLY  4
+#define TEXTEDIT_STYLING   8
 
 /**
  * Gets the OnEvent function corresponding to the widget type.

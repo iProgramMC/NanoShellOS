@@ -7,6 +7,7 @@
 
 #include <wbuiltin.h>
 #include <wterm.h>
+#include <wtheme.h>
 #include <vfs.h>
 #include <elf.h>
 #include <keyboard.h>
@@ -83,10 +84,10 @@ void RedrawEverything();
 		DESKTOP_CHOOSETHEMETEXT,
 		DESKTOP_ORMAKEYOUROWNTEXT,
 		
-		DESKTOP_THEME_DEFAULT,
-		DESKTOP_THEME_DARK,
-		
 		DESKTOP_CANCEL,
+		
+		DESKTOP_THEME_DEFAULT = 5000,
+		DESKTOP_THEME_DARK,
 	};
 	void SetDefaultTheme();
 	void SetDarkTheme   ();
@@ -102,27 +103,42 @@ void RedrawEverything();
 				
 				//add a button
 				Rectangle r;
-				RECT(r,10, 10 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 150, 15);
+				RECT(r,10, 15 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 150, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", DESKTOP_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
-				RECT(r,DESKTOP_POPUP_WIDTH-80, 5 + TITLE_BAR_HEIGHT, 70, 20);
+				RECT(r,DESKTOP_POPUP_WIDTH-80, 10 + TITLE_BAR_HEIGHT, 70, 20);
 				AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
-				RECT(r,10, 30 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r,10, 35 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
 				
-				RECT(r, 10, 50 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r, 10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
-				RECT(r, 10, 70 + TITLE_BAR_HEIGHT, (DESKTOP_POPUP_WIDTH - 30) / 2, 20);
-				AddControl(pWindow, CONTROL_BUTTON, r, "Default", DESKTOP_THEME_DEFAULT, 0, 0);
-				RECT(r, 10 + (DESKTOP_POPUP_WIDTH - 20) / 2, 70 + TITLE_BAR_HEIGHT, (DESKTOP_POPUP_WIDTH - 30) / 2, 20);
-				AddControl(pWindow, CONTROL_BUTTON, r, "Dark", DESKTOP_THEME_DARK, 0, 0);
+				#define THEMES_PER_ROW 4
 				
-				RECT(r, 10, 100 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				#define ADD_THEME(themenum) \
+					RECT(r, \
+					     10 + ((DESKTOP_POPUP_WIDTH - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
+						 75 + TITLE_BAR_HEIGHT + ((themenum) / THEMES_PER_ROW) * 25,\
+						 (DESKTOP_POPUP_WIDTH - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
+						 20);\
+					AddControl(pWindow, CONTROL_BUTTON, r, GetThemeName(themenum), DESKTOP_THEME_DEFAULT + (themenum), 0, 0);
+				
+				ADD_THEME(TH_DEFAULT);
+				ADD_THEME(TH_DARK);
+				ADD_THEME(TH_REDMOND);
+				ADD_THEME(TH_CALM);
+				ADD_THEME(TH_BLACK);
+				//ADD_THEME(TH_WHITE);
+				ADD_THEME(TH_ROSE);
+				ADD_THEME(TH_DESERT);
+				ADD_THEME(TH_RAINYDAY);
+				
+				RECT(r, 10, 155 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
-				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2, DESKTOP_POPUP_HEITE - 30 ,45,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
-				RECT(r,(DESKTOP_POPUP_WIDTH-100)/2+55, DESKTOP_POPUP_HEITE - 30 ,45,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH-200)/2+95, DESKTOP_POPUP_HEITE - 30 ,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "OK",  DESKTOP_APPLY_CHANGES, 0, 0);
 				
 				break;
@@ -138,15 +154,9 @@ void RedrawEverything();
 					}
 					break;
 				}
-				else if (parm1 == DESKTOP_THEME_DARK)
+				else if (parm1 >= DESKTOP_THEME_DEFAULT)
 				{
-					SetDarkTheme();
-					RedrawEverything();
-					break;
-				}
-				else if (parm1 == DESKTOP_THEME_DEFAULT)
-				{
-					SetDefaultTheme();
+					ApplyTheme(parm1 - DESKTOP_THEME_DEFAULT);
 					RedrawEverything();
 					break;
 				}
@@ -225,9 +235,9 @@ void RedrawEverything();
 						(1)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-g_oldTypematicRepeatDelay)
 					);
 				}
-				RECT(r,(KEYBD_POPUP_WIDTH-100)/2,8+TITLE_BAR_HEIGHT+80,45,20);
+				RECT(r,(KEYBD_POPUP_WIDTH-200)/2,8+TITLE_BAR_HEIGHT+80,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Revert", KEYBDP_CANCEL_BUTTON, 0, 0);
-				RECT(r,(KEYBD_POPUP_WIDTH-100)/2+55,8+TITLE_BAR_HEIGHT+80,45,20);
+				RECT(r,(KEYBD_POPUP_WIDTH-200)/2+95,8+TITLE_BAR_HEIGHT+80,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  KEYBDP_OK_BUTTON,     0, 0);
 				/*
 				RECT(r,8,8+TITLE_BAR_HEIGHT+80,KEYBD_POPUP_WIDTH-16,80);

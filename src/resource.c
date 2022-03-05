@@ -110,6 +110,7 @@ RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 }
 
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID);
+RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 
 #endif
 
@@ -124,6 +125,7 @@ const RESOURCE_INVOKE g_ResourceInvokes[] = {
 	CabinetExecuteScript,//RESOURCE_EXSCRIPT
 	NULL,//RESOURCE_EXCONSOLE
 	CabinetExecute,//RESOURCE_EXWINDOW
+	HelpOpenResource,//RESOURCE_HELP
 };
 
 RESOURCE_TYPE ResolveProtocolString(const char* protocol)
@@ -134,6 +136,7 @@ RESOURCE_TYPE ResolveProtocolString(const char* protocol)
 	if (STREQ(protocol, "exscript"))   return RESOURCE_EXSCRIPT;
 	if (STREQ(protocol, "exconsole"))  return RESOURCE_EXCONSOLE;
 	if (STREQ(protocol, "exwindow"))   return RESOURCE_EXWINDOW;
+	if (STREQ(protocol, "help"))       return RESOURCE_HELP;
 	return RESOURCE_NONE;
 }
 
