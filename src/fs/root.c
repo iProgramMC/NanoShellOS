@@ -17,14 +17,14 @@
 
 static uint32_t OctToBin(char *data, uint32_t size)
 {
-  uint32_t value = 0;
-  while (size > 0)
+	uint32_t value = 0;
+	while (size > 0)
 	{
-    size--;
-    value *= 8;
-    value += *data++ - '0';
-  }
-  return value;
+		size--;
+		value *= 8;
+		value += *data++ - '0';
+	}
+	return value;
 }
 
 static uint32_t FsNullRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
@@ -291,13 +291,21 @@ void FsInitializeInitRd(void* pRamDisk)
 	// Count the ramdisk entries
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
-    uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		bool hasDotSlash = false;
+		int pathLength = strlen (ramDiskTar->name);
+		if (ramDiskTar->name[0] == '.')
+		{
+			pathLength -= 2;
+			hasDotSlash = true;
+		}
 
 		// Advance to the next entry
-    ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
+		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
 
-		g_nRootNodes++;
-  }
+		if (pathLength > 0)
+			g_nRootNodes++;
+	}
 
 	// Add files to the ramdisk.
 	g_pRootNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * g_nRootNodes);
@@ -306,11 +314,11 @@ void FsInitializeInitRd(void* pRamDisk)
 	
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
-    uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
 		uint32_t pathLength = strlen(ramDiskTar->name);
 		bool hasDotSlash = false;
 
-		if (!memcmp(ramDiskTar->name, "./", 2))
+		if (ramDiskTar->name[0] == '.')
 		{
 			pathLength -= 2;
 			hasDotSlash = true;
@@ -342,11 +350,11 @@ void FsInitializeInitRd(void* pRamDisk)
 			{
 				g_pRootNodes[i].m_perms |= PERM_EXEC;
 			}
+			i++;
 		}
 
 		// Advance to the next entry
-    ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
-		i++;
-  }
+		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
+	}
 }
 #endif
