@@ -307,31 +307,42 @@ void FsInitializeInitRd(void* pRamDisk)
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
     uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
-		
-		strcpy(g_pRootNodes[i].m_name, ramDiskTar->name);
+		uint32_t pathLength = strlen(ramDiskTar->name);
+		bool hasDotSlash = false;
 
-	 	g_pRootNodes[i].m_length = fileSize;
-	 	g_pRootNodes[i].m_inode  = i;
-	 	g_pRootNodes[i].m_type   = FILE_TYPE_FILE;
-		g_pRootNodes[i].m_implData  = fileSize;
-		g_pRootNodes[i].m_implData1 = (uint32_t) &ramDiskTar->buffer;
-	 	g_pRootNodes[i].Read     = FsRootFsRead;
-	 	g_pRootNodes[i].Write    = NULL;
-	 	g_pRootNodes[i].Open     = NULL;
-	 	g_pRootNodes[i].Close    = NULL;
-	 	g_pRootNodes[i].ReadDir  = NULL;
-	 	g_pRootNodes[i].FindDir  = NULL;
-	 	g_pRootNodes[i].OpenDir  = NULL;
-	 	g_pRootNodes[i].CloseDir = NULL;
-	 	g_pRootNodes[i].CreateFile = NULL;
-	 	g_pRootNodes[i].EmptyFile  = NULL;
-	 	g_pRootNodes[i].m_perms    = PERM_READ;
-		
-	 	//if it ends with .nse also make it executable
-	 	if (EndsWith(g_pRootNodes[i].m_name, ".nse"))
-	 	{
-	 		g_pRootNodes[i].m_perms |= PERM_EXEC;
-	 	}
+		if (!memcmp(ramDiskTar->name, "./", 2))
+		{
+			pathLength -= 2;
+			hasDotSlash = true;
+		}
+
+		if (pathLength > 0)
+		{
+			strcpy(g_pRootNodes[i].m_name, ramDiskTar->name + (hasDotSlash ? 2 : 0));
+
+			g_pRootNodes[i].m_length = fileSize;
+			g_pRootNodes[i].m_inode  = i;
+			g_pRootNodes[i].m_type   = FILE_TYPE_FILE;
+			g_pRootNodes[i].m_implData  = fileSize;
+			g_pRootNodes[i].m_implData1 = (uint32_t) &ramDiskTar->buffer;
+			g_pRootNodes[i].Read     = FsRootFsRead;
+			g_pRootNodes[i].Write    = NULL;
+			g_pRootNodes[i].Open     = NULL;
+			g_pRootNodes[i].Close    = NULL;
+			g_pRootNodes[i].ReadDir  = NULL;
+			g_pRootNodes[i].FindDir  = NULL;
+			g_pRootNodes[i].OpenDir  = NULL;
+			g_pRootNodes[i].CloseDir = NULL;
+			g_pRootNodes[i].CreateFile = NULL;
+			g_pRootNodes[i].EmptyFile  = NULL;
+			g_pRootNodes[i].m_perms    = PERM_READ;
+			
+			//if it ends with .nse also make it executable
+			if (EndsWith(g_pRootNodes[i].m_name, ".nse"))
+			{
+				g_pRootNodes[i].m_perms |= PERM_EXEC;
+			}
+		}
 
 		// Advance to the next entry
     ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
