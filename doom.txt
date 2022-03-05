@@ -1,4 +1,0 @@
-DOOM TODOS:
-- Make exitting out of the app a thing.  Kind of (strangely) difficuly because ElfExecute calls the entry point directly.  Might want to split it away from main() and just save ebp/esp and jmp to an exit label when we're done.
-- Remove the excess amount of LogMsg calls. (Solved)
-- Add user input. (SOLVED)

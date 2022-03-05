@@ -1,2 +1,0 @@
-call build
-call run 
