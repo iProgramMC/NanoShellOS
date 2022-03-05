@@ -280,6 +280,7 @@ void RenderIcon(IconType type, int x, int y)
 	Image* p = g_iconTable[type];
 	VidBlitImage(p, x, y);
 }
+void RenderThumbClock(int x, int y, int size);
 void RenderIconForceSize(IconType type, int x, int y, int size)
 {
 	Image *p = GetIconImage(type, size);
@@ -292,4 +293,3 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 		}
 	}
 }
-

@@ -8,6 +8,7 @@
 #include <task.h>
 #include <keyboard.h>
 #include <print.h>
+#include <icon.h>
 
 void DumpRegisters (Registers* pRegs)
 {
@@ -88,9 +89,7 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 {
 	LogMsg("*** STOP: %x", reason);
 	
-	if (!pRegs)
-		LogMsg("No register information was provided. (perhaps some other stuff)");
-	else
+	if (pRegs)
 		DumpRegisters(pRegs);
 	
 	const char* pTag = KeTaskGetTag(KeGetRunningTask());
@@ -118,13 +117,12 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 		}
 	}
 	else
-		LogMsg("No register information was provided, so no stack trace available either.");
+		LogMsg("No stack trace is available.");
 }
 void ShellExecuteCommand(char* p);
 extern Console* g_focusedOnConsole, g_debugConsole;
 void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 {
-	//user friendliness :)
 	g_focusedOnConsole = &g_debugConsole;
 	
 	LogMsg("A problem has been detected and NanoShell has shut down to prevent damage to your computer.\n");
@@ -134,6 +132,17 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	LogMsg("Technical information:\n");
 	
 	KeLogExceptionDetails (reason, pRegs);
+	
+	//enough text, draw the icon:
+	
+	int x_mid = (GetScreenSizeX() - 96) / 2;
+	int y_mid = (GetScreenSizeY() - 32) / 2;
+	
+	VidFillRect(0x00FFFF, x_mid - 5, y_mid - 5, x_mid + 105, y_mid + 41);
+	
+	RenderIcon(ICON_COMPUTER_PANIC, x_mid, y_mid);
+	
+#ifdef ALLOW_POST_CRASH_DEBUG
 	LogMsg("NanoShell has been put into debug mode.");
 	LogMsg("Press 'M' to list memory allocations, or '?' for help.");
 	
@@ -185,8 +194,10 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 			LogMsg("Press '?' to list a list of commands.");
 		}
 	}
-	LogMsg("System halted.");
 	
 	cli;
+#endif
+	
+	LogMsg("System halted.");
 	while (1) hlt;
 }

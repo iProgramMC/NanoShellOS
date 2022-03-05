@@ -21,7 +21,7 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 			AddControl (pWindow, CONTROL_TEXTCENTER, r, "NanoShell Operating System " VersionString, 1, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
 			
 			RECT(r, 0, TITLE_BAR_HEIGHT+20, 320, 50);
-			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, ICON_NANOSHELL, 0);
+			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, ICON_EXPERIMENT, 0);
 			
 			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 10);
 			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);

@@ -497,9 +497,17 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 
 /**
- * TBA
+ * Allows the user to select a color.  Returns 0xffffffff if they did not pick.
  */
 uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaption);
+
+/**
+ * This works almost exactly the same as CreateWindow, but with a parent window which
+ * gets frozen until this window gets destroyed.
+ *
+ * All the interfacing between parent and child must be done manually.
+ */
+void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
 
 /**
  * Adds a control to the window.

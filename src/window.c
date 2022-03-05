@@ -530,7 +530,6 @@ void UpdateDepthBuffer (void)
 // Window event processor
 #if 1
 
-typedef Window* PWINDOW;
 #define OFFSET_FROM_WINDOW_POINTER(pWindow) (pWindow - g_windows)
 typedef struct
 {
@@ -1594,7 +1593,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	{
 		//by default you have single line
 		pControl->m_textInputData.m_onlyOneLine     = true;
-		pControl->m_textInputData.m_enableStyling   = true;
+		pControl->m_textInputData.m_enableStyling   = false;
 		pControl->m_textInputData.m_showLineNumbers = false;
 		pControl->m_textInputData.m_focused         = false;
 		if (pControl->m_parm1 & TEXTEDIT_MULTILINE)

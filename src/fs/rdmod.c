@@ -144,8 +144,6 @@ void FsMountTarRamDisk(void* pRamDisk)
 		pRamDiskTar = (Tar*)((uintptr_t)pRamDiskTar + ((file_size + 511) / 512 + 1) * 512);
 	}
 	
-	LogMsg("Mounting %d entries.", entries);
-	
 	g_rdsMountedFileHeaders   [pRootNode->m_implData2] = NULL;
 	g_rdsMountedRootNodeCounts[pRootNode->m_implData2] = entries;
 	g_rdsMountedRootNodes     [pRootNode->m_implData2] = (FileNode*)MmAllocateK(sizeof(FileNode) * g_rdsMountedRootNodeCounts[pRootNode->m_implData2]);
@@ -168,8 +166,6 @@ void FsMountTarRamDisk(void* pRamDisk)
 		{
 			FileNode* pNode = &g_rdsMountedRootNodes[pRootNode->m_implData2][i];
 			strcpy (pNode->m_name, pRamDiskTar->name + (hasDotSlash ? 2 : 0));
-			
-			LogMsg("Found entry: \"%s\"", pNode->m_name);
 			
 			pNode->m_length = fileSize;
 			pNode->m_inode  = i;

@@ -399,7 +399,7 @@ enum {
 int state=0;
 void KbSetLedStatus(uint8_t status);
 
-void Cpl$WindowPopup(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
 void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
@@ -489,7 +489,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 					#if KEYBD_POPUP_WINDOW
 					case 1:
 					{
-						Cpl$WindowPopup(
+						PopupWindow(
 							pWindow,
 							"Keyboard",
 							pWindow->m_rect.left + 50,
@@ -521,7 +521,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 					#if MOUSE_POPUP_WINDOW
 					case 2:
 					{
-						Cpl$WindowPopup(
+						PopupWindow(
 							pWindow,
 							"Mouse",
 							pWindow->m_rect.left + 50,
@@ -538,7 +538,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 					#if DESKT_POPUP_WINDOW
 					case 3:
 					{
-						Cpl$WindowPopup(
+						PopupWindow(
 							pWindow,
 							"Desktop",
 							pWindow->m_rect.left + 50,
@@ -555,7 +555,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 					#if NTERM_POPUP_WINDOW
 					case 4:
 					{
-						Cpl$WindowPopup(
+						PopupWindow(
 							pWindow,
 							"Terminal settings",
 							pWindow->m_rect.left + 50,

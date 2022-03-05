@@ -442,7 +442,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 
 //TODO FIXME: Why does this freeze the OS when clicking on the main controlpanel window
 //when I put this in kapp/cpanel.c??
-void Cpl$WindowPopup(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
 {
 	// Free the locks that have been acquired.
 	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;

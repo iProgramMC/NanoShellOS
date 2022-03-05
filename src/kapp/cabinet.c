@@ -41,6 +41,7 @@ enum
 	//  v                   v                   v
 	MENU$FILE$ROOT, MENU$VIEW$REFRESH,   MENU$HELP$ABOUT,
 	MENU$FILE$EXIT, MENU$VIEW$CHVWMOD,
+	MENU$FILE$MRD,
 	
 };
 
@@ -87,6 +88,14 @@ reset:
 			else if (EndsWith (pNode->m_name, ".txt"))
 			{
 				icon = ICON_TEXT_FILE;
+			}
+			else if (EndsWith (pNode->m_name, ".md"))
+			{
+				icon = ICON_FILE_MKDOWN;
+			}
+			else if (EndsWith (pNode->m_name, ".tar") || EndsWith (pNode->m_name, ".mrd"))
+			{
+				icon = ICON_CABINET_COMBINE;
 			}
 			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, icon);
 			i++;
@@ -148,6 +157,73 @@ void CdBack(Window* pWindow)
 			break;
 		}
 	}
+}
+
+void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	switch (messageType)
+	{
+		case EVENT_CREATE:
+		{
+			Rectangle r;
+			
+			RECT(r, 10, 10 + TITLE_BAR_HEIGHT, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, 1, ICON_CABINET_COMBINE, 0);
+			
+			RECT(r, 50, 15 + TITLE_BAR_HEIGHT, 150, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Type in the file name of a drive you want to mount.", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			RECT(r, 450 - 80, 10 + TITLE_BAR_HEIGHT, 70, 20);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Mount", 2, 0, 0);
+			RECT(r, 450 - 80, 40 + TITLE_BAR_HEIGHT, 70, 20);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", 5, 0, 0);
+			
+			RECT(r, 50, 30 + TITLE_BAR_HEIGHT,300, 20);
+			AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 0, 0);
+			
+			break;
+		}
+		case EVENT_COMMAND:
+		{
+			if (parm1 == 2)
+			{
+				//Mount something
+				
+				const char* s = TextInputGetRawText(pWindow, 4);
+				int fd = FiOpen (s, O_RDONLY);
+				if (fd < 0)
+				{
+					MessageBox(pWindow, "Could not open that file!  Try another.", "Mount error", MB_OK | ICON_ERROR << 16);
+				}
+				else
+				{
+					int length = FiTellSize(fd);
+					
+					char* pData = (char*)MmAllocate(length + 1);
+					pData[length] = 0;
+					
+					FiRead(fd, pData, length);
+					
+					FiClose(fd);
+					
+					cli;
+					FsMountRamDisk(pData);
+					sti;
+				}
+			}
+			if (parm1 == 2 || parm1 == 5)
+				DestroyWindow(pWindow);
+			break;
+		}
+		default:
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			break;
+	}
+}
+
+void PopupUserMountWindow(Window* pWindow)
+{
+	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
 }
 
 void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -277,6 +353,9 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					case MENU$VIEW$REFRESH:
 						UpdateDirectoryListing(pWindow);
 						break;
+					case MENU$FILE$MRD:
+						PopupUserMountWindow(pWindow);
+						break;
 					case MENU$VIEW$CHVWMOD:
 						//TODO
 						//MessageBox(pWindow, "Not Implemented!", "File Cabinet", MB_OK|ICON_HELP<<16);
@@ -313,6 +392,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			// File:
 			{
+				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$MRD,  "Mount a ram-drive");
 				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$ROOT, "Back to root");
 				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$FILE, MENU$FILE$EXIT, "Exit");
 			}
