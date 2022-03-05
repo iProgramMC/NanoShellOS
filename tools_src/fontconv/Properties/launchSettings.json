@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "fontconv": {
-      "commandName": "Project",
-      "commandLineArgs": "font.png fontlen.bin font"
-    }
-  }
-}
