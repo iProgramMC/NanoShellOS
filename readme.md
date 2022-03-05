@@ -20,14 +20,14 @@ along with this program.  If not, see [the GNU licenses](https://www.gnu.org/lic
 This software is licensed under the GNU General Public License V3 only.
 
 
-#### Be warned that building this is not for the average Linux user nor is it for the faint of heart.  Soon I'll work on a way to compile this in an easier way.
+#### Be warned that building this is not for the faint of heart.
 
 ## Goals
 
 Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
 I'm not particularly concerned with safety, any app is free to do anything.  The design is NOT the best, by ANY means, so do not inspire yours from this design.
 
-Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
+Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ).
 
 - [x] Hello World
 #### Primordial tasks
@@ -64,7 +64,9 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 ## Build instructions
 
 ### Linux build:
-Not supported.  Could be supported soon, but currently not supported.
+The following dependencies are required: `clang` `ld`.  Install them, then type `make`.
+
+Currently important details such as initrd and prebuilt icons are not available, if you wish to build the OS join the Discord server linked above to ask me for the files.  This is being worked on and will be resolved soon.
 
 ### Windows build:
 
@@ -84,7 +86,7 @@ Place `icontest.exe` inside `tools/icc/`. (create the directory, if necessary)
 
 #### The Moment of Truth
 
-Run `buildall.bat`.  It should start building.  Once it's done you should have a `kernel.bin` in the repo root.
+Run `build.bat`.  It should start building.  Once it's done you should have a `kernel.bin` in the repo root.
 
 ## Installation
 

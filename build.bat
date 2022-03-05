@@ -28,7 +28,7 @@ set NSPath=%path%
 set path=%backupPath%;%NSPath%\tools\i686-gcc\bin;%NSPath%\tools\nasm;%NSPath%\tools;%laptopshit%
 
 :make initramdisk
-make
+make -f MakefileWindows
 
 set path=%backupPath%
 
