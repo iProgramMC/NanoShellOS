@@ -42,6 +42,7 @@ enum {
 	BC_EX_VMM_COMM,
 	BC_EX_SECURITY,
 	BC_EX_RESERVED8,
+	BC_EX_INITRD_MISSING,
 };
 
 /* Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble. */
