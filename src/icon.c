@@ -100,10 +100,31 @@
 // Icons V1.35
 #include <icons/run.h>
 #include <icons/run16.h>
+// Icons V1.4
+#include <icons/cabinet_new.h>
+#include <icons/devtool.h>
+#include <icons/devtool_file.h>
+#include <icons/hex_edit.h>
+#include <icons/chain.h>
+#include <icons/chain16.h>
+#include <icons/devtool16.h>
+#include <icons/todo.h>
+#include <icons/folder_docu.h>
+#include <icons/dlgedit.h>
+#include <icons/desk_sett.h>
+#include <icons/shutdn.h>
+#include <icons/notepad.h>
+#include <icons/file_mkdown.h>
+#include <icons/file_mkdown16.h>
+#include <icons/computer_panic.h>//actually 96x32
+#include <icons/experiment.h>
+#include <icons/graph.h>
+#include <icons/cabinet_combine.h>//for the mount GUI
+#include <icons/remote.h>
 
 Image * g_iconTable[] = {
 	NULL,
-	&g_cabinet_icon,
+	&g_cabinet_new_icon,
 	&g_chip_icon,
 	&g_chip_sq_icon,
 	&g_computer_icon,
@@ -187,6 +208,26 @@ Image * g_iconTable[] = {
 	&g_clock_empty_icon,
 	&g_run_icon,
 	&g_run16_icon,
+	&g_devtool_icon,
+	&g_devtool_file_icon,
+	&g_hex_edit_icon,
+	&g_chain_icon,
+	&g_chain16_icon,
+	&g_devtool16_icon,
+	&g_todo_icon,
+	&g_folder_docu_icon,
+	&g_dlgedit_icon,
+	&g_desk_sett_icon,
+	&g_shutdn_icon,
+	&g_notepad_icon,
+	&g_file_mkdown_icon,
+	&g_file_mkdown16_icon,
+	&g_computer_panic_icon,//actually 96x32
+	&g_experiment_icon,
+	&g_graph_icon,
+	&g_cabinet_combine_icon,//for the mount GUI
+	&g_remote_icon,
+	&g_cabinet_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -223,6 +264,9 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(RESMON)
 			CASE(NOTES)
 			CASE(RUN)
+			CASE(CHAIN)
+			CASE(FILE_MKDOWN)
+			CASE(DEVTOOL)
 			#undef CASE
 		}
 	}
