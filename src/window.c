@@ -325,7 +325,7 @@ void RedrawBackground (Rectangle rect)
 			}
 			else
 				xa = xa % g_background->width;
-			//TODO: is a z-buffer check necessary?
+			
 			VidPlotPixel (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
 		}
 	}
@@ -635,6 +635,27 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 // Window utilitary functions:
 #if 1
 
+extern Cursor* g_currentCursor, g_defaultCursor, g_waitCursor;
+
+Cursor* const g_CursorLUT[] =
+{
+	&g_defaultCursor,
+	&g_waitCursor,
+	&g_defaultCursor,
+};
+
+Cursor* GetCursorBasedOnID(int m_cursorID)
+{
+	if (m_cursorID < CURSOR_DEFAULT || m_cursorID >= CURSOR_COUNT) return &g_defaultCursor;
+	
+	return g_CursorLUT[m_cursorID];
+}
+
+void ChangeCursor (Window* pWindow, int cursorID)
+{
+	pWindow->m_cursorID = cursorID;
+}
+
 void WindowManagerShutdown()
 {
 	g_shutdownRequest = true;
@@ -851,7 +872,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_pitch32       = xSize;
 	pWnd->m_vbeData.m_bitdepth      = 2;     // 32 bit :)
 	
-	pWnd->m_iconID = ICON_APPLICATION;
+	pWnd->m_iconID   = ICON_APPLICATION;
+	
+	pWnd->m_cursorID = CURSOR_DEFAULT;
 	
 	pWnd->m_eventQueueSize = 0;
 	
@@ -1279,6 +1302,7 @@ void HandleKeypressOnWindow(unsigned char key)
 	else if (key == KEY_TAB && g_heldAlt)
 		OnPressAltTabOnce();
 }
+
 int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
@@ -1312,7 +1336,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				updated = true;
 			}
 			
-			//TODO: This method is missing a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
+			//TODO: This method misses a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
 			//into a window's input buffer and read that instead of doing this hacky method right here?
 			if (pWindow->m_isSelected)
 			{
@@ -1390,6 +1414,18 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 		}
 		UpdateTimeout--;
+		
+		// Get the window we're over:
+		short windowOver = GetWindowIndexInDepthBuffer (g_mouseX, g_mouseY);
+		
+		if (windowOver >= 0)
+		{
+			Window* pWindow = &g_windows [windowOver];
+			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindow->m_cursorID))
+				SetCursor(GetCursorBasedOnID(pWindow->m_cursorID));
+		}
+		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != &g_defaultCursor)
+			SetCursor(&g_defaultCursor);
 		
 		if (!handled)
 		{
@@ -1495,6 +1531,19 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 
 // Control creation and management
 #if 1
+
+Control* GetControlByComboID(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (!pWindow->m_pControlArray[i].m_active)
+		{
+			if (pWindow->m_pControlArray[i].m_comboID == comboID)
+				return &pWindow->m_pControlArray[i];
+		}
+	}
+	return NULL;
+}
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
 int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
@@ -1831,6 +1880,7 @@ void RenderWindow (Window* pWindow)
 		//TODO FIXME: Crash when placing at the top right of the screen so that:
 		//1) The y top position < 0
 		//2) The x right position > ScreenWidth.
+		//The crappy fix I did "for the moment" is just to disallow placement of the window at y<0.
 		int ys = pWindow->m_rect.top;
 		int ye = ys + pWindow->m_vbeData.m_height;
 		int kys = 0, kzs = 0;
@@ -1941,7 +1991,6 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		rectb.right -= 2;
 		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 2;
 		
-		//todo: gradients?
 		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
 		VidFillRectHGradient(
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 

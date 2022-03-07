@@ -162,6 +162,9 @@ static bool StIdeWaitBusyDrq (uint16_t base)
 	return true;
 }
 */
+
+//TODO: Instead of using port I/O to read drives (which is slow), use DMA instead.
+
 static DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t nBlocks)
 {
 	if (g_ideDriveAvailable[driveID] == false)
@@ -400,29 +403,29 @@ static bool StIdeIsAvailable (uint8_t did)
 
 static DriveReadCallback g_ReadCallbacks[] = {
 	StNoDriveRead, //Unknown
-	StIdeDriveRead, //IDE -- TODO!
-	StNoDriveRead, //Floppy -- TODO!
+	StIdeDriveRead, //IDE
+	StNoDriveRead, //Floppy - Scrapped
 	StRamDiskRead, //RAM disk,
 	StNoDriveRead, //Count
 };
 static DriveWriteCallback g_WriteCallbacks[] = {
 	StNoDriveWrite, //Unknown
-	StIdeDriveWrite, //IDE -- TODO!
-	StNoDriveWrite, //Floppy -- TODO!
+	StIdeDriveWrite, //IDE
+	StNoDriveWrite, //Floppy
 	StRamDiskWrite, //RAM disk,
 	StNoDriveWrite, //Count
 };
 static DriveGetSubIDCallback g_GetSubIDCallbacks[] = {
 	StNoDriveGetSubID, //Unknown
-	StIdeGetSubID,     //IDE -- TODO!
-	StNoDriveGetSubID, //Floppy -- TODO!
+	StIdeGetSubID,     //IDE
+	StNoDriveGetSubID, //Floppy
 	StRamDiskGetSubID, //RAM disk,
 	StNoDriveGetSubID, //Count
 };
 static DriveIsAvailableCallback g_IsAvailableCallbacks[] = {
 	StNoDriveIsAvailable, //Unknown
-	StIdeIsAvailable,     //IDE -- TODO!
-	StNoDriveIsAvailable, //Floppy -- TODO!
+	StIdeIsAvailable,     //IDE
+	StNoDriveIsAvailable, //Floppy
 	StRamDiskIsAvailable, //RAM disk,
 	StNoDriveIsAvailable, //Count
 };

@@ -32,41 +32,41 @@ void DumpRegistersToString (char* pStr, Registers* pRegs)
 
 const char* g_pBugCheckReasonText[] = {
 	// first 32: x86 exceptions
-	"Divide by zero",
-	"Unknown debugging exception",
-	"Non maskable interrupt",
-	"Breakpoint",
-	"Overflow",
-	"Boundary Range Exceeded",
-	"Invalid opcode",
-	"Device not available",
-	"Double-fault",
-	"Not the case",//FPU segment overrun
-	"Not the case",//Invalid TSS
-	"Segment not present",
-	"Stack segment fault",
-	"General protection fault",
-	"Page fault",
-	"Reserved",
-	"x87 FPU exception",
-	"Alignment check",
-	"Machine check",
-	"Not the case",//SIMD FPU exception
-	"Not the case",//Virtualization exception
-	"Not the case",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Not the case",
-	"Not the case",
-	"Not the case",
-	"Reserved",
+	/*Fault*/"Division by zero",
+	/*Trap */"Unknown debugging exception",
+	/*Abort*/"Non maskable interrupt",
+	/*Trap */"Breakpoint",
+	/*Trap */"Overflow",
+	/*Fault*/"Not the case",//Bound range exceeded
+	/*Fault*/"INVALID_OPCODE",
+	/*Fault*/"FPU_NOT_AVAILABLE",
+	/*Abort*/"The kernel has triggered an irrepairable double-fault and now needs to restart.",
+	/*Abort*/"Not the case",//FPU segment overrun
+	/*Fault*/"INVALID_TSS",//Invalid TSS
+	/*Fault*/"SEGMENT_NOT_PRESENT",
+	/*Fault*/"STACK_SEGMENT_FAULT",
+	/*Fault*/"GENERAL_PROTECTION_FAULT",
+	/*Fault*/"PAGE_FAULT_IN_NONPAGED_AREA",
+	/*Abort*/"Reserved",
+	/*Fault*/"FLOATING_POINT_EXCEPTION",
+	/*Fault*/"ALIGNMENT_CHECK_EXCEPTION",
+	/*Abort*/"MACHINE_CHECK_EXCEPTION",
+	/*Fault*/"SIMD_FPU_EXCEPTION",//SIMD FPU exception
+	/*Abort*/"Not the case",//Virtualization exception
+	/*Abort*/"Not the case",
+	/*Abort*/"Reserved",
+	/*Abort*/"Reserved",
+	/*Abort*/"Reserved",
+	/*Abort*/"Reserved",
+	/*Abort*/"Reserved",
+	/*Abort*/"Reserved",
+	/*Abort*/"Not the case",
+	/*Abort*/"Not the case",
+	/*Abort*/"Not the case",
+	/*Abort*/"Reserved",
 	
 	// miscellaneous failures you may encounter
-	"Missing init ramdisk",
+	/*Abort*/"Missing init ramdisk",
 };
 
 const char* GetMemoryRangeString(uint32_t range)
@@ -125,11 +125,13 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 {
 	g_focusedOnConsole = &g_debugConsole;
 	
-	LogMsg("A problem has been detected and NanoShell has shut down to prevent damage to your computer.\n");
-	LogMsg("ERROR: %s\n", g_pBugCheckReasonText[reason]);
-	LogMsg("You may now restart your computer, or log the crash details somewhere to use later.\n");
-	
-	LogMsg("Technical information:\n");
+	LogMsg("A problem has been detected and NanoShell has shut down to prevent damage to your computer.\n\n");
+	LogMsg("%s\n", g_pBugCheckReasonText[reason]);
+	if (reason <= BC_EX_RESERVED8)
+	{
+		LogMsg("\nYou may now restart your computer, or log the crash details somewhere to use later.\n");
+	}
+	LogMsg("\nTechnical Information:");
 	
 	KeLogExceptionDetails (reason, pRegs);
 	

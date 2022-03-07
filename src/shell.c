@@ -403,7 +403,6 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			//TODO: open/close
 			char s[1024];
 			if (*fileName != '/')
 			{
@@ -823,6 +822,28 @@ void ShellExecuteCommand(char* p)
 		LogMsg("OK");
 		*((uint32_t*)0xFFFFFFFF) = 0;
 	}
+	/*else if (strcmp (token, "crashugly") == 0)
+	{
+		LogMsg("OK.  Crashing in a horrible, disgusting, and visceral way");
+		
+		//METHOD 1 doesn't work.  Just throws a page fault
+		//__asm__ volatile ("movl 0x53673689, %eax\n\tmovl %eax, %esp");
+		
+		//METHOD 2: Stack underflow.  Pop shouldn't write to the stack -- Still throws a pagefault
+		//while (1)
+		//	__asm__ volatile ("pop %eax\n");
+	
+		//METHOD 3: Stack overflow. -- Threw a DIFFERENT error this time, a stack overflow
+		//while (1)
+		//	__asm__ volatile ("push %eax");
+	
+		//METHOD 4: Combine them -- Threw a pagefault this time ??
+		//while (1)
+		//{
+		//	__asm__ volatile ("movl 0x28, %eax\n\tmovl %eax, %ss");
+		//	__asm__ volatile ("push %eax");
+		//}
+	}*/
 	else if (strcmp (token, "time") == 0)
 	{
 		int hi, lo;

@@ -19,6 +19,9 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			AddControl(pWindow, CONTROL_CHECKBOX, r, "Test?", 1000, 0, 0);
 			RECT(r, 10, TITLE_BAR_HEIGHT + 30, 500, 20);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Spawn menu", 1001, 0, 0);
+			
+			//ChangeCursor (pWindow, CURSOR_WAIT);
+			
 			break;
 		}
 		case EVENT_COMMAND:

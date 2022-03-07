@@ -360,6 +360,14 @@ typedef struct ControlStruct
 }
 Control;
 
+enum CURSORTYPE
+{
+	CURSOR_DEFAULT,
+	CURSOR_WAIT,
+	CURSOR_IBEAM,
+	CURSOR_COUNT,
+};
+
 #define WF_NOCLOSE  0x00000001//Disable close button
 #define WF_FROZEN   0x00000002//Freeze window
 #define WF_NOTITLE  0x00000004//Disable title
@@ -411,6 +419,8 @@ typedef struct WindowStruct
 	Console*   m_consoleToFocusKeyInputsTo;
 	
 	bool       m_bWindowManagerUpdated;
+	
+	int        m_cursorID;
 } Window;
 
 /**
@@ -535,5 +545,19 @@ int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
  * Requests an event for that window in the master queue.  The window will still get it at some point.
  */
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2);
+
+/**
+ * Changes the cursor of a window.
+ *
+ * cursorID can be any value inside the CURSORTYPE enum.
+ */
+void ChangeCursor (Window* pWindow, int cursorID);
+#define OnBusy(pWindow) ChangeCursor (pWindow, CURSOR_WAIT);
+#define OnNotBusy(pWindow) ChangeCursor (pWindow, CURSOR_DEFAULT);
+
+/**
+ * Internal usage.
+ */
+Control* GetControlByComboID(Window* pWindow, int comboID);
 
 #endif//_WINDOW_H

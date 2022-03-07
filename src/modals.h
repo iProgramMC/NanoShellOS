@@ -30,6 +30,11 @@ void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, i
 //It's also worth noting that once you switch to another window clicking the back window no longer freezes.
 //This does NOT happen when the code sits right here.
 
+//I think this is a deadlock, HOWEVER, I don't know why the position of the code matters there at all.
+
+//TODO: You can now safely move this out (I think), as I've totally revamped the way that mouse events send to
+//parent windows.
+
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
 {
 	// Free the locks that have been acquired.
@@ -442,6 +447,9 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 
 //TODO FIXME: Why does this freeze the OS when clicking on the main controlpanel window
 //when I put this in kapp/cpanel.c??
+
+//No matter, because you just advanced to a generic function!
+
 void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
 {
 	// Free the locks that have been acquired.

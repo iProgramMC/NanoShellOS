@@ -149,8 +149,6 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	memcpy (pWindow->m_title, pTitle, len);
 	pWindow->m_title[len] = 0;
 	
-	//TODO
-	
 	VBEData * backup = g_vbeData;
 	VidSetVBEData (&pWindow->m_vbeData);
 	RequestRepaintNew(pWindow);

@@ -234,6 +234,85 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	g_numPagesAvailable = GetNumFreePhysPages();
 }
 
+uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end)
+{
+	// Get the hint offset in the page tables we should start out at
+	int page_table_offset = (int)((hint >> 12) & 0xFFF);
+	int page_direc_offset = (int)((hint >> 22));
+	
+	uint32_t phys_page_start = (phys_start >> 12), phys_page_curr = phys_page_start;
+	uint32_t phys_page_end   = (phys_end   >> 12) + ((phys_end & 0xFFF) != 0);
+	
+	uint32_t num_pages_to_map = phys_page_end - phys_page_start;
+	
+	// Every 1024 pages (4096 kb) we require a page table.
+	PageEntry* pPageTable = NULL;
+	uint32_t num_pages_mapped_so_far = 0;
+	
+	while (num_pages_mapped_so_far != num_pages_to_map)
+	{
+		// On a 1024-page boundary?
+		if ((page_table_offset & 0x3FF) == 0 || !pPageTable)
+		{
+			if (page_table_offset > 0x3FF)
+			{
+				page_table_offset &= 0x3FF;
+				page_direc_offset++;
+			}
+			//Allocate a new page table using MmAllocateSinglePagePhyD, or use a pre-existing one
+			
+			uint32_t p_addr = 0;
+			
+			if (g_kernelPageDirectory[page_direc_offset])
+			{
+				p_addr = g_kernelPageDirectory[page_direc_offset] & 0xFFFFF000;
+				
+				//This may seem like a hack, and that's because it _is_ one.
+				//If the physical address > e_placement, assume it is allocated by the heap
+				//Otherwise, it's available in the kernel's tiny mem space already
+				if (p_addr >= e_placement)
+					pPageTable = (PageEntry*)(p_addr + 0x80000000);
+				else
+					pPageTable = (PageEntry*)(p_addr + 0xC0000000);
+			}
+			else
+			{
+				pPageTable = (PageEntry*)MmAllocateSinglePagePhyD (&p_addr, "src/memory.c -- phys-map", __LINE__);
+				
+				if (pPageTable)
+				{
+					memset_ints (pPageTable, 0x00000000, 1024);
+					
+					// Also register it inside the directory
+					g_kernelPageDirectory[page_direc_offset] = 1 | 2 | 4 | (p_addr & 0xFFFFF000);
+				}
+			}
+			
+			if (!pPageTable)
+			{
+				//panic
+				LogMsg("Error trying to MmMapPhysicalMemory(%x, %x, %x). Out of memory? Who knows what's going to happen now!", hint, phys_start, phys_end);
+				KeStopSystem();
+			}
+		}
+		
+		// Fill out an entry in the current page table
+		PageEntry *pEntry = &pPageTable[page_table_offset];
+		pEntry->m_bPresent   = 1;
+		pEntry->m_bReadWrite = 0;
+		pEntry->m_bUserSuper = 1;
+		pEntry->m_bAccessed  = 0;
+		pEntry->m_bDirty     = 0;
+		pEntry->m_pAddress   = phys_page_curr++;
+		
+		page_table_offset++;
+		
+		num_pages_mapped_so_far ++;
+	}
+	
+	return hint + (phys_start & 0xFFF);
+}
+
 #endif
 
 

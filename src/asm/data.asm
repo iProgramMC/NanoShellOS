@@ -33,6 +33,10 @@ g_kernelPageDirectory:
 	
 g_pageTableArray:
 	resd 8192
+
+global g_EmergencyStack
+g_EmergencyStack:
+	resd 2048 ;8192 bytes should be safe
 	
 e_temporary1 resd 1
 e_temporary2 resd 1

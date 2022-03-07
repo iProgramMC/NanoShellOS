@@ -36,7 +36,7 @@ extern bool g_RenderWindowContents;
 
 int g_mouseX = 0, g_mouseY = 0;
 
-#define SEMI_TRANSPARENT 0x7F7F7F7F
+#define SEMI_TRANSPARENT TRANSPARENT//0x7F7F7F7F
 
 #define X 0X00FFFFFF,
 //#define S 0X007F7F7F,
@@ -91,28 +91,33 @@ uint32_t g_cursorColors[] =
 };
 uint32_t g_waitCursorColors[] = 
 {
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
-	o B X X X X X X X X X B o o
-	o B X X X X X X X X X B o o
-	o B X X B X B X B X X B o o
-	o B X X X B X B X X X B o o
-	o B B X X X B X X X B B o o
-	o o B B X X X X X B B o o o
-	o o o B B X B X B B o o o o
-	o o o o B B X B B o o o o o
-	o o o o B B X B B o o o o o
-	o o o B B X X X B B o o o o
-	o o B B X X B X X B B o o o
-	o B B X X X X X X X B B o o
-	o B X X X X B X X X X B o o
-	o B X X X B X B X X X B o o
-	o B X X B X B X B X X B o o
-	o B X B X B X B X B X B o o
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
+	B B B B B B B B B B B B B B B
+	B B B B B B B B B B B B B B B
+	B B X X X X X X X X X X X B B
+	o B B B B B B B B B B B B B o
+	o B B X X X X X X X X X B B o
+	o B B X X X X X X X X X B B o
+	o B B X X X X X X B X X B B o
+	o B B X B X B X B X B X B B o
+	o B B X X B X B X B X X B B o
+	o o B B X X B X B X X B B o o
+	o o o B B X X B X X B B o o o
+	o o o o B B X B X B B o o o o
+	o o o o o B B X B B o o o o o
+	o o o o o B B X B B o o o o o
+	o o o o o B B X B B o o o o o
+	o o o o B B X X X B B o o o o
+	o o o B B X X X X X B B o o o
+	o o B B X X X B X X X B B o o
+	o B B X X X X X X X X X B B o
+	o B B X X X X B X X X X B B o
+	o B B X X X B X B X X X B B o
+	o B B X X B X B X B X X B B o
+	o B B X B X B X B X B X B B o
+	o B B B B B B B B B B B B B o
+	B B X X X X X X X X X X X B B
+	B B B B B B B B B B B B B B B
+	B B B B B B B B B B B B B B B
 };
 
 
@@ -129,7 +134,7 @@ Cursor g_defaultCursor = {
 	false, 12, 20
 };
 Cursor g_waitCursor = {
-	14, 22, 0, 0, 
+	15, 27, 7, 14, 
 	g_waitCursorColors,
 	true,
 	false, 14, 22
@@ -1637,8 +1642,8 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 		g_mainScreenVBEData.m_width     = xSize;
 		g_mainScreenVBEData.m_height    = ySize;
 		g_mainScreenVBEData.m_pitch     = xSize * 4;//TODO: Hack
-		g_mainScreenVBEData.m_pitch16   = xSize * 2;//TODO: Hack
-		g_mainScreenVBEData.m_pitch32   = xSize * 1;//TODO: Hack
+		g_mainScreenVBEData.m_pitch16   = xSize * 2;
+		g_mainScreenVBEData.m_pitch32   = xSize * 1;
 		g_mainScreenVBEData.m_bitdepth  = 2;
 		g_mainScreenVBEData.m_dirty     = 1;
 		//else, preserve the address

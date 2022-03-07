@@ -11,7 +11,6 @@
 #include <string.h>
 #include <icon.h>
 
-//! TODO: perhaps merge vga.c with this?
 #include "extra/fonts.h"
 
 //generate a font with, for example, AngelCode's BMFont,

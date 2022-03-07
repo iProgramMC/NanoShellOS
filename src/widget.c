@@ -527,7 +527,6 @@ const char* TextInputGetRawText(Window* pWindow, int comboID)
 	}
 	return NULL;
 }
-//TODO: other calls? Only add when necessary.
 
 void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 {

@@ -255,6 +255,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				{
 					if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
 					{
+						OnBusy(pWindow);
+						
 						// Is a directory.  Navigate to it.
 						char cwd_copy[sizeof(g_cabinetCWD)];
 						memcpy(cwd_copy, g_cabinetCWD, sizeof(g_cabinetCWD));
@@ -272,6 +274,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						}
 						else
 							UpdateDirectoryListing (pWindow);
+						
+						OnNotBusy(pWindow);
 					}
 					else if (EndsWith (pFileName, ".nse"))
 					{
@@ -280,6 +284,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
 						{
+							OnBusy(pWindow);
+							
 							// Get the file name.
 							char filename[1024];
 							strcpy (filename, "exwindow:");
@@ -290,6 +296,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							//CabinetExecute(pWindow, filename);
 							RESOURCE_STATUS status = LaunchResource(filename);
 							SLogMsg("Resource launch status: %x", status);
+							
+							OnNotBusy(pWindow);
 						}
 					}
 					else if (EndsWith (pFileName, ".c"))
@@ -299,6 +307,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_FILE_CSCRIPT << 16 | MB_YESNO) == MBID_YES)
 						{
+							OnBusy(pWindow);
+							
 							// Get the file name.
 							char filename[1024];
 							strcpy (filename, "exscript:");
@@ -309,10 +319,14 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							//CabinetExecute(pWindow, filename);
 							RESOURCE_STATUS status = LaunchResource(filename);
 							SLogMsg("Resource launch status: %x", status);
+							
+							OnNotBusy(pWindow);
 						}
 					}
 					else if (EndsWith (pFileName, ".txt"))
 					{
+						OnBusy(pWindow);
+						
 						// Get the file name.
 						char filename[1024];
 						strcpy (filename, "ted:");
@@ -323,6 +337,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						//CabinetExecute(pWindow, filename);
 						RESOURCE_STATUS status = LaunchResource(filename);
 						SLogMsg("Resource launch status: %x", status);
+						
+						OnNotBusy(pWindow);
 					}
 					else
 					{

@@ -325,7 +325,7 @@ uint8_t GetKeyboardProperty(int index)
 		case KBPROPERTY_REPEAT_FREQUENCY_MAX:
 			return 0b11111;
 		default:
-			LogMsg("GetKeyboardProperty: property number %d is not available");
+			SLogMsg("GetKeyboardProperty: property number %d is not available");
 			return 0;
 		case KBPROPERTY_DELAY_BEFORE_REPEAT:
 			return (g_typematicParms >> 5) & 0b11;
@@ -340,7 +340,7 @@ void SetKeyboardProperty(int index, uint8_t data)
 		case KBPROPERTY_DELAY_BEFORE_REPEAT_MAX:
 		case KBPROPERTY_REPEAT_FREQUENCY_MAX:
 		default:
-			LogMsg("GetKeyboardProperty: property number %d is read-only or not available");
+			SLogMsg("GetKeyboardProperty: property number %d is read-only or not available");
 			break;
 		case KBPROPERTY_DELAY_BEFORE_REPEAT:
 			g_newTypematicRepeatRate = data;
@@ -370,7 +370,7 @@ void KbInitialize()
 	KbEnableScanning();
 	
 	//KbSetUseScanCodeSet(2);//By default it's 1
-	//^^TODO this does not work as scancodes don't fuck up
+	//^^TODO this does not work as scancodes don't mess up
 	
 	KbSetTypematicParms(0x14, 0x1);//10.9 chars/sec, 500ms delay before repeat.
 	

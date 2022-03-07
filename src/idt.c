@@ -17,17 +17,24 @@
 #define KBDATA 0x60
 #define KBSTAT 0x64
 #define IDT_SIZE 256
-#define INTGATE 0x8e
+#define INTGATE 0x8e //present, DPL=0, gate type = 0xe (32-bit interrupt gate)
+#define TSSGATE 0x85 //present, DPL=0, gate type = 0x5 (task gate)
 #define KECODESEG 0x08
+#define KEFTSSSEG 0x28
 
 IdtEntry g_idt [IDT_SIZE];
 
 bool g_interruptsAvailable = false;
 
+void KeHandleSsFailureC()
+{
+	LogMsg("Unrecoverable stack error");
+}
+
 void SetupSoftInterrupt (int intNum, void *pIsrHandler)
 {
 	IdtEntry* pEntry = &g_idt[intNum];
-	pEntry->offset_lowerbits = ((int)(pIsrHandler) & 0xffff);
+	pEntry->offset_lowerbits  = ((int)(pIsrHandler) & 0xffff);
 	pEntry->offset_higherbits = ((int)(pIsrHandler) >> 16);
 	pEntry->zero = 0;
 	pEntry->type_attr = INTGATE;
@@ -36,7 +43,7 @@ void SetupSoftInterrupt (int intNum, void *pIsrHandler)
 void SetupInterrupt (uint8_t *mask1, uint8_t* mask2, int intNum, void* isrHandler)
 {
 	IdtEntry* pEntry = &g_idt[0x20 + intNum];
-	pEntry->offset_lowerbits = ((int)(isrHandler) & 0xffff);
+	pEntry->offset_lowerbits  = ((int)(isrHandler) & 0xffff);
 	pEntry->offset_higherbits = ((int)(isrHandler) >> 16);
 	pEntry->zero = 0;
 	pEntry->type_attr = INTGATE;
@@ -50,11 +57,20 @@ void SetupInterrupt (uint8_t *mask1, uint8_t* mask2, int intNum, void* isrHandle
 void SetupExceptionInterrupt (int intNum, void* isrHandler)
 {
 	IdtEntry* pEntry = &g_idt[intNum];
-	pEntry->offset_lowerbits = ((int)(isrHandler) & 0xffff);
+	pEntry->offset_lowerbits  = ((int)(isrHandler) & 0xffff);
 	pEntry->offset_higherbits = ((int)(isrHandler) >> 16);
 	pEntry->zero = 0;
 	pEntry->type_attr = INTGATE;
 	pEntry->selector = KECODESEG;
+}
+void SetupExcepTaskInterrupt (int intNum, void* isrHandler)
+{
+	IdtEntry* pEntry = &g_idt[intNum];
+	pEntry->offset_lowerbits  = 0;
+	pEntry->offset_higherbits = 0;
+	pEntry->zero = 0;
+	pEntry->type_attr = TSSGATE;
+	pEntry->selector = KEFTSSSEG;
 }
 
 void PlaySound (uint32_t frequency)
@@ -128,6 +144,11 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 	//TODO SEVERE FIXME: if a task fucks up the ESP you can easily triple fault the system.
 	//Don't let that happen to you.  Make the stack-segment-exception switch to an emergency
 	//stack to salvage what's left of the system.
+	
+	//TODO As it turns out a #SS is not easily obtainable, I tried fuzzing up the ESP by stack underflow, overflow and
+	//also just plain corruption.  Nothing.  The worst I got was a #GP.
+	//Perhaps add some stack guards?  Perhaps isolate the stack from the rest of memory (example to 0x30000000)
+	//so that any stack underflow /overflow would lead to a pagefault?
 	
 	g_currentConsole = &g_debugConsole;
 	VidSetVBEData(NULL);
@@ -309,7 +330,7 @@ void KiIdtInit()
 	SetupExceptionInterrupt (0x09, IsrStub9 );
 	SetupExceptionInterrupt (0x0A, IsrStub10);
 	SetupExceptionInterrupt (0x0B, IsrStub11);
-	SetupExceptionInterrupt (0x0C, IsrStub12);
+	SetupExcepTaskInterrupt (0x0C, IsrStub12);//<-- A task gate, because we don't want to push to an invalid esp
 	SetupExceptionInterrupt (0x0D, IsrStub13);
 	SetupExceptionInterrupt (0x0E, IsrStub14);
 	SetupExceptionInterrupt (0x0F, IsrStub15);

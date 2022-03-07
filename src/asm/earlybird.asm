@@ -111,6 +111,15 @@ GDTPostSetup:
 	hlt
 	jmp .mmmm
 
+extern KeHandleSsFailureC
+KeHandleSsFailure:
+	cli
+	call KeHandleSsFailureC
+.mht:
+	hlt
+	jmp .mht
+
+extern g_EmergencyStack
 
 GDTStart:
 GDTNull:
@@ -130,6 +139,49 @@ GDTData:
 	db 0x92
 	db 0xcf
 	db 0x00
+GDTUserCode:;planned?
+	dw 0xffff
+	dw 0x00
+	db 0x00
+	db 0x9a
+	db 0xcf
+	db 0x00
+GDTUserData:;planned?
+	dw 0xffff
+	dw 0x00
+	db 0x00
+	db 0x92
+	db 0xcf
+	db 0x00
+GDT_TSS_StackSegFault:
+	dd 0x00000000            ;Link
+	dd g_EmergencyStack      ;ESP0
+	dd 0x00000010            ; SS0
+	dd g_EmergencyStack      ;ESP1
+	dd 0x00000010            ; SS1
+	dd g_EmergencyStack      ;ESP2
+	dd 0x00000010            ; SS2
+	dd g_kernelPageDirectory ; CR3
+	dd KeHandleSsFailure     ; EIP
+	dd 0x00000000            ; EFLAGS.  To be filled in by system later
+	dd 0x12345678            ; EAX
+	dd 0x12345678            ; EBX
+	dd 0x12345678            ; ECX
+	dd 0x12345678            ; EDX
+	dd g_EmergencyStack      ; ESP
+	dd 0x00000000            ; EBP
+	dd 0x00000000            ; ESI
+	dd 0x00000000            ; EDI
+	dd 0x00000010            ; ES
+	dd 0x00000008            ; CS
+	dd 0x00000010            ; SS
+	dd 0x00000010            ; DS
+	dd 0x00000010            ; FS
+	dd 0x00000010            ; GS
+	dd 0x00000000            ; LDTR
+	dd 0x00000000            ; IOPB
+	dd g_EmergencyStack      ; SSP
+	
 GDTEnd:
 GDTDescription:
 	dw GDTEnd - GDTStart - 1

@@ -70,6 +70,15 @@ extern void ShellInit(void); // shell.c
 #define VerboseLogMsg
 #endif
 
+void OnInaccessibleInitrdModule(uint32_t mods_addr)
+{
+	LogMsg("The initrd module is located above 1M! (Specifically at %x)  This is currently not supported by NanoShell.  Tips to avoid this error:\n"
+	       "- Reduce the initrd size.  Some things may bloat it\n"
+		   "- Use a different bootloader.  This may or may not fix the issue\n"
+	       "- Change the kernel code so that the initrd is always mapped at, for example, 0x10000000", mods_addr);
+	KeStopSystem();
+}
+
 extern VBEData *g_vbeData;
 
 multiboot_info_t *g_pMultibootInfo;
@@ -84,7 +93,7 @@ __attribute__((noreturn))
 void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 {
 	bool textMode = true;
-	// TODO: Serial debugging?
+	// TODO: Use serial debugging, instead of the E9h port?
 
 	// Initially, both debug consoles are initialized as E9 hacks/serial.
 	CoInitAsE9Hack(&g_debugConsole);
@@ -165,24 +174,35 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	if (g_pMultibootInfo->mods_count != 1)
 		KeBugCheck(BC_EX_INITRD_MISSING, NULL);
 
-	if (g_pMultibootInfo->mods_addr >= 0x800000)
+	//Usually the mods table is below 1m.
+	if (g_pMultibootInfo->mods_addr >= 0x100000)
 	{
-		LogMsg("Multiboot module was located above 8M!");
-		KeStopSystem();
+		LogMsg("Module table starts at %x.  OS state not supported", g_pMultibootInfo->mods_addr);
 	}
 
-	// TODO: DO NOT add this offset to the multiboot pointers!!!
-	// We should properly map them instead in case the bootloader does
-	// not load them below 8M!
+	//The initrd module is here.
 	multiboot_module_t *initRdModule = (void*) (g_pMultibootInfo->mods_addr + 0xc0000000);
 
-	if (initRdModule->mod_end >= 0x800000)
+	//Precalculate an address we can use
+	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
+	
+	if (initRdModule->mod_start >= 0x100000 && initRdModule->mod_start <= 0x500000)
 	{
-		LogMsg("Multiboot module was located above 8M!");
+		LogMsg("OS State not supported.  Initrd module start: %x", initRdModule->mod_start);
 		KeStopSystem();
 	}
+	
+	LogMsg("Init Ramdisk module Start address: %x, End address: %x", initRdModule->mod_start, initRdModule->mod_end);
+	//If the end address went beyond 1 MB:
+	if (initRdModule->mod_end >= 0x100000)
+	{
+		//Actually go to the effort of mapping the initrd to be used.
+		pInitrdAddress = MmMapPhysicalMemory (0x10000000, initRdModule->mod_start, initRdModule->mod_end);
+	}
+	
+	LogMsg("Physical address that we should load from: %x", pInitrdAddress);
 
-	FsInitializeInitRd((void*) (initRdModule->mod_start + 0xc0000000));
+	FsInitializeInitRd((void*)pInitrdAddress);
 
 	// Initialize the IDE driver
 	StIdeInitialize();

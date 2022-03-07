@@ -60,7 +60,7 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 }
 int GetMenuHeight (UNUSED WindowMenu* pMenu)
 {
-	int haute = (MENU_ITEM_HEIGHT + pMenu->bHasIcons * 6);
+	int haute = (MENU_ITEM_HEIGHT + 6);//(pMenu->bHasIcons ? 6 : 0));
 	return 5 + 
 	       pMenu->nMenuEntries * haute - 
 		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
@@ -113,7 +113,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				
 				//Add some controls
 				Rectangle r;
-				int height = (MENU_ITEM_HEIGHT + pData->bHasIcons * 6), y = 2;
+				int height = (MENU_ITEM_HEIGHT + 6/*(pData->bHasIcons ? 6 : 0)*/), y = 2;
 				for (int i = 0; i < pData->nMenuEntries; i++)
 				{
 					if (pData->pMenuEntries[i].sText[0] == 0)
@@ -165,8 +165,13 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					//Open submenu
 					pData->bOpen = true;
 					
+					int y_pos = 0;
+					Control* p = GetControlByComboID(pWindow, parm1);
+					if (p)
+						y_pos = p->m_rect.top;
+					
 					int newXPos = pWindow->m_rect.left + GetMenuWidth (pData),
-					    newYPos = pWindow->m_rect.top + MENU_ITEM_HEIGHT * index;
+					    newYPos = pWindow->m_rect.top  + y_pos;
 					
 					if (newXPos < 0)
 						newXPos = 0;
@@ -178,6 +183,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					if (newYPos + GetMenuHeight(&pData->pMenuEntries[index]) >= GetScreenHeight())
 						newYPos = pWindow->m_rect.left - GetMenuHeight(&pData->pMenuEntries[index]);
 					
+					LogMsg("Spawn coords: %d %d", newXPos, newYPos);
 					pData->pOpenWindow = SpawnMenu (pWindow, &pData->pMenuEntries[index], newXPos, newYPos);
 				}
 				else
