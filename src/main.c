@@ -169,6 +169,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// KePrintMemoryMapInfo();
 	//	Initialize the task scheduler
 	KiTaskSystemInitialize();
+	
+	// Initialize the file system
+	FsSetup ();
 
 	// Initialize the ramdisk
 	if (g_pMultibootInfo->mods_count != 1)
@@ -179,7 +182,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	{
 		LogMsg("Module table starts at %x.  OS state not supported", g_pMultibootInfo->mods_addr);
 	}
-
+	
 	//The initrd module is here.
 	multiboot_module_t *initRdModule = (void*) (g_pMultibootInfo->mods_addr + 0xc0000000);
 
@@ -202,14 +205,15 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	
 	LogMsg("Physical address that we should load from: %x", pInitrdAddress);
 
-	FsInitializeInitRd((void*)pInitrdAddress);
-
 	// Initialize the IDE driver
 	StIdeInitialize();
 
 	// Initialize the FAT partitions.
 	FsMountFatPartitions();
-
+	
+	// Load the initrd last so its entries show up last when we type 'ls'.
+	FsInitializeInitRd((void*)pInitrdAddress);
+	
 	sti;
 
 	LogMsg("Waiting to get time...");

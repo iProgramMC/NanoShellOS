@@ -160,6 +160,7 @@ enum
 };
 #endif
 
+
 // Internal FAT code
 #if 1
 
@@ -225,16 +226,6 @@ __attribute__((always_inline))
 static inline uint32_t FatGetU32(uint8_t* buffer, int offset)
 {
 	return *((uint32_t*)(buffer + offset));
-}
-__attribute__((always_inline))
-static inline int16_t FatGetS16(uint8_t* buffer, int offset)
-{
-	return *((int16_t*)(buffer + offset));
-}
-__attribute__((always_inline))
-static inline int32_t FatGetS32(uint8_t* buffer, int offset)
-{
-	return *((int32_t*)(buffer + offset));
 }
 
 //FatReadBpb
@@ -852,11 +843,6 @@ void FatZeroFatChain (FatFileSystem *pFS, uint32_t startCluster)
 void FatFreeDirectory (UNUSED FatFileSystem *pFS, FatDirectory* pDir)
 {
 	//would free their name, but we don't need this
-	/*
-	for (uint32_t i = 0; i < pDir->m_nEntries; i++)
-	{
-		
-	}*/
 	pDir->m_nEntries = 0;
 	pDir->m_pEntries = NULL;
 }
@@ -1094,40 +1080,7 @@ void FsFatClose (FileNode* pFileNode)
 
 
 extern FileDescriptor g_FileNodeToDescriptor[FD_MAX];
-FileNode*             g_fatsMountedPointers     [32];
-static FileNode*      g_fatsMountedListFilesPtrs[32];
-static FatFileSystem* g_fatsMountedAsFileSystems[32];
-int                   g_fatsMountedListFilesCnt [32];
 int                   g_fatsMountedCount         = 0;
-
-// Directories
-typedef struct tagDirectoryCacheEntry
-{
-	bool      m_used;
-	
-	//The file system this directory is a part of.
-	FatFileSystem* pFileSystem;
-	
-	//If the parent entry is NULL, it means that this is the root.
-	struct tagDirectoryCacheEntry*  m_parent;
-	
-	//The filenode of this directory inside the parent directory.
-	FileNode *m_thisFileNode;
-	
-	//If any child entry is NULL, that means:
-	//1) It's not a directory
-	//2) It has not been opened yet.
-	struct tagDirectoryCacheEntry** m_children;
-	
-	//Cached files.
-	FileNode* m_pFileNodes;
-	int       m_nFileNodes;
-	
-	//Reference counting.  May be used later to clean up stuff, but for now, don't.
-	int       m_referenceCount;
-}
-DirectoryCacheEntry;
-DirectoryCacheEntry m_dceEntries [FD_MAX];
 
 void FatWriteCurrentTimeToEntry (uint8_t* pActualEntry, bool creationDateToo)
 {
@@ -1293,135 +1246,37 @@ FileNode* FatCreateFileWithData(FileNode *pDirNode, const char* pFileName, uint8
 	
 	FatFlushFat(pOpenedIn);
 	
-	// Is this root directory?
-	if (pDirNode->m_implData2 == 2)
-	{
-		// Do the next few steps atomically.
-		// TODO: A linked list would be easier to work with, and ideally, that's what I should have used...
-		cli;
-		
-		// yes.  First, create a new and expanded file node list.
-		FileNode* pFN    = g_fatsMountedListFilesPtrs[pDirNode->m_inode];
-		int       nFNOld = g_fatsMountedListFilesCnt [pDirNode->m_inode];
-		
-		int       nFNNew = nFNOld + 1;//We added a file.
-		FileNode* pFNNew = MmAllocateK(sizeof(FileNode) * nFNNew);
-		memcpy (pFNNew, pFN, sizeof (FileNode) * nFNOld);
-		
-		// Add the new file entry:
-		FileNode* pEntry = &pFNNew[nFNOld];
-		
-		memset (pEntry, 0, sizeof (*pEntry));
-			
-		strcpy(pEntry->m_name, pFileName);
-		
-		pEntry->m_type = FILE_TYPE_FILE;
-		
-		pEntry->m_perms = PERM_READ | PERM_WRITE;
-		
-		if (EndsWith (pFileName, ".nse"))
-			pEntry->m_perms |=  PERM_EXEC;
-		
-		pEntry->m_inode  = fileCluster;
-		pEntry->m_length = 0;
-		pEntry->m_implData = (int)pOpenedIn;
-		pEntry->m_implData1 = 2;//Root directory
-		pEntry->m_implData2 = fileCluster;
-		pEntry->m_flags    = 0;
-		
-		pEntry->Read  = FsFatRead;
-		pEntry->Write = FsFatWrite;
-		pEntry->Open  = FsFatOpen;
-		pEntry->Close = FsFatClose;
-		
-		// Look through all the open fds and convert the old filenodes to the new ones.
-		uintptr_t nodes_start = (uintptr_t)pFN;
-		uintptr_t nodes_end   = nodes_start + sizeof(FileNode) * nFNOld;
-		for (uint32_t i = 0; i < ARRAY_COUNT(g_FileNodeToDescriptor); i++)
-		{
-			uintptr_t node = (uintptr_t)g_FileNodeToDescriptor[i].m_pNode;
-			if (nodes_start <= node && node <= nodes_end)
-			{
-				int offset = g_FileNodeToDescriptor[i].m_pNode - pFN;
-				g_FileNodeToDescriptor[i].m_pNode = pFNNew + offset;
-			}
-		}
-		
-		g_fatsMountedListFilesPtrs[pDirNode->m_inode] = pFNNew;
-		g_fatsMountedListFilesCnt [pDirNode->m_inode] = nFNNew;
-		
-		sti;
-		
-		MmFree(pFN);
-		
-		return pFNNew + nFNOld;
-	}
-	else
-	{
-		DirectoryCacheEntry *pDCE = &m_dceEntries[pDirNode->m_implData3];
-		
-		// Do the next few steps atomically.
-		// TODO: A linked list would be easier to work with, and ideally, that's what I should have used...
-		cli;
-		
-		// yes.  First, create a new and expanded file node list.
-		FileNode* pFN    = pDCE->m_pFileNodes;
-		int       nFNOld = pDCE->m_nFileNodes;
-		
-		int       nFNNew = nFNOld + 1;//We added a file.
-		FileNode* pFNNew = MmAllocateK(sizeof(FileNode) * nFNNew);
-		memcpy (pFNNew, pFN, sizeof (FileNode) * nFNOld);
-		
-		// Add the new file entry:
-		FileNode* pEntry = &pFNNew[nFNOld];
-		
-		memset (pEntry, 0, sizeof (*pEntry));
-			
-		strcpy(pEntry->m_name, pFileName);
-		
-		pEntry->m_type = FILE_TYPE_FILE;
-		
-		pEntry->m_perms = PERM_READ | PERM_WRITE;
-		
-		if (EndsWith (pFileName, ".nse"))
-			pEntry->m_perms |=  PERM_EXEC;
-		
-		pEntry->m_inode  = fileCluster;
-		pEntry->m_length = 0;
-		pEntry->m_implData = (int)pOpenedIn;
-		pEntry->m_implData1 = pDirNode->m_implData2;//Root directory
-		pEntry->m_implData2 = fileCluster;
-		pEntry->m_flags    = 0;
-		
-		pEntry->Read  = FsFatRead;
-		pEntry->Write = FsFatWrite;
-		pEntry->Open  = FsFatOpen;
-		pEntry->Close = FsFatClose;
-		
-		// Look through all the open fds and convert the old filenodes to the new ones.
-		uintptr_t nodes_start = (uintptr_t)pFN;
-		uintptr_t nodes_end   = nodes_start + sizeof(FileNode) * nFNOld;
-		for (uint32_t i = 0; i < ARRAY_COUNT(g_FileNodeToDescriptor); i++)
-		{
-			uintptr_t node = (uintptr_t)g_FileNodeToDescriptor[i].m_pNode;
-			if (nodes_start <= node && node <= nodes_end)
-			{
-				int offset = g_FileNodeToDescriptor[i].m_pNode - pFN;
-				g_FileNodeToDescriptor[i].m_pNode = pFNNew + offset;
-			}
-		}
-		
-		pDCE->m_pFileNodes = pFNNew;
-		pDCE->m_nFileNodes = nFNNew;
-		
-		sti;
-		
-		MmFree(pFN);
-		
-		return pFNNew + nFNOld;
-	}
+	// Add the new file entry:
+	FileNode* pEntry =  CreateFileNode (pDirNode);
 	
-	return NULL;
+	memset (pEntry, 0, sizeof (*pEntry));
+		
+	strcpy(pEntry->m_name, pFileName);
+	
+	pEntry->m_type = FILE_TYPE_FILE;
+	
+	pEntry->m_perms = PERM_READ | PERM_WRITE;
+	
+	if (EndsWith (pFileName, ".nse"))
+		pEntry->m_perms |=  PERM_EXEC;
+	
+	pEntry->m_inode  = fileCluster;
+	pEntry->m_length = 0;
+	pEntry->m_implData = (int)pOpenedIn;
+	pEntry->m_implData1 = pDirNode->m_implData2;//Root directory
+	pEntry->m_implData2 = fileCluster;
+	pEntry->m_flags    = 0;
+	
+	pEntry->Read  = FsFatRead;
+	pEntry->Write = FsFatWrite;
+	pEntry->Open  = FsFatOpen;
+	pEntry->Close = FsFatClose;
+	
+	// Before I revamped the vfs, here would be the comment:
+    // "Look through all the open fds and convert the old filenodes to the new ones."
+	// But that's COMPLETELY redundant, because we use linked lists, so all filenodes should stay in place
+	
+	return pEntry;
 }
 
 FileNode* FatCreateEmptyFile(FileNode *pDirNode, const char* pFileName)
@@ -1763,66 +1618,16 @@ uint32_t FsFatWrite (FileNode *pFileNode, uint32_t offset, uint32_t size, void* 
 	return size;
 }
 
-void FsListOpenedDirs()
-{
-	LogMsg("Listing open dirs");
-	for (int i=0; i<FD_MAX; i++)
-	{
-		if (m_dceEntries[i].m_used)
-		{
-			LogMsg("- %4d: Opened in %x | Files: %5d | FileNodePtr: %x", i, m_dceEntries[i].pFileSystem, m_dceEntries[i].m_nFileNodes, m_dceEntries[i].m_thisFileNode);
-		}
-	}
-}
-
 bool FsFatOpenNonRootDir(FileNode *pFileNode);
 void FsFatCloseNonRootDir (FileNode* pFileNode);
 static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index);
 static FileNode* FsFatFindNonRootDir(FileNode* pNode, const char* pName);
 //generic purpose fillup directory entry thing
-static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereToStoreFileNodes, int* whereToStoreFileNodeCount, uint32_t startCluster)
+
+static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* pDirNode, uint32_t startCluster)
 {
 	// Read the directory and count the entries.
-	int entryCount = 0;
 	uint32_t cluster = startCluster;
-	
-	while (true)
-	{
-		uint8_t root_cluster[pSystem->m_clusSize * 2];
-		FatGetCluster(pSystem, root_cluster, cluster);
-		uint8_t* entry = root_cluster;
-		int dirEntsUntilReal = 0;
-		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
-		{
-			uint8_t firstByte = *entry;
-			if (firstByte == 0x00 || firstByte == 0xE5 || (firstByte == (uint8_t)'.' && dirEntsUntilReal++ < 2))
-			{
-				entry += 32;
-				continue;
-			}
-			
-			uint32_t secondCluster = 0;
-			uint8_t* nextEntry = NULL;
-			FatDirEntry targetDirEnt;
-			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
-			entry = nextEntry;
-			if (secondCluster)
-			{
-				cluster = secondCluster;
-			}
-			
-			entryCount++;
-		}
-		cluster = FatGetNextCluster(pSystem, cluster);
-		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
-	}
-	
-	// Allocate a FileNode* pointer.
-	FileNode* pFileNodes = (FileNode*)MmAllocateK (sizeof(FileNode) * entryCount);
-	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
-	
-	// Read the directory AGAIN and fill in the FileNodes
-	cluster = startCluster;
 	int index = 0;
 	
 	while (true)
@@ -1833,12 +1638,6 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 		int dirEntsUntilReal = 0;
 		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
 		{
-			if (index >= entryCount)
-			{
-				//LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE."); -- these entries tend to be garbage
-				break;
-			}
-			
 			uint8_t firstByte = *entry;
 			if (firstByte == 0x00 || firstByte == 0xE5 || (firstByte == (uint8_t)'.' && dirEntsUntilReal++ < 2))
 			{
@@ -1852,7 +1651,7 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
 			
 			// turn this entry into a FileNode entry.
-			FileNode *pCurrent = pFileNodes + index;
+			FileNode *pCurrent = CreateFileNode (pDirNode);
 			
 			strcpy(pCurrent->m_name, targetDirEnt.m_pName);
 			
@@ -1872,6 +1671,7 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 			pCurrent->m_implData = (int)pSystem;
 			pCurrent->m_implData1 = startCluster;
 			pCurrent->m_implData2 = targetDirEnt.m_firstCluster;
+			pCurrent->m_implData3 = -1;
 			pCurrent->m_flags    = 0;
 			
 			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
@@ -1902,10 +1702,6 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* *whereT
 		cluster = FatGetNextCluster(pSystem, cluster);
 		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
 	}
-	
-	//Done!
-	*whereToStoreFileNodes     = pFileNodes;
-	*whereToStoreFileNodeCount = entryCount;
 }
 
 bool FsFatOpenNonRootDir(FileNode *pFileNode)
@@ -1913,279 +1709,111 @@ bool FsFatOpenNonRootDir(FileNode *pFileNode)
 	FatFileSystem* pFS = (FatFileSystem*)pFileNode->m_implData;
 	uint32_t nFirstCluster = pFileNode->m_inode;
 	
-	// look for a free directory cache entry:
-	int freeDce = -1;
-	for (int i = 0; i < FD_MAX; i++)
+	if (pFileNode->m_implData3 == (uint32_t)-1)
 	{
-		if (!m_dceEntries[i].m_used)
-		{
-			freeDce = i; break;
-		}
+		// Read the directory entries.
+		FsFatReadDirectoryContents(
+			pFS,
+			pFileNode,
+			nFirstCluster
+		);
 	}
 	
-	if (freeDce == -1)
-	{
-		LogMsg("Could not open directory.  Might want to close some?");
-		return false;//Too many directories cached! Free some! (Or cancel like the lazy bitch that you are)
-	}
-	//^^ TODO
+	pFileNode->m_implData3 = 1;
 	
-	DirectoryCacheEntry* pDce = &m_dceEntries[freeDce];
-	pDce->m_used = true;
-	pDce->pFileSystem = pFS;
-	//pDce->m_parent = --TODO
-	pDce->m_thisFileNode = pFileNode;
-	pDce->m_referenceCount = 0;
-	
-	// Read the directory entries.
-	FsFatReadDirectoryContents(
-		pFS,
-		&pDce->m_pFileNodes,
-		&pDce->m_nFileNodes,
-		nFirstCluster
-	);
-	
-	// Allocate the same number of tagDirectoryCacheEntries
-	pDce->m_children = MmAllocateK (sizeof (DirectoryCacheEntry*) * pDce->m_nFileNodes);
-	memset (pDce->m_children, 0,   sizeof (DirectoryCacheEntry*) * pDce->m_nFileNodes);
-	
-	// This directory entry has been loaded already.  Mark it here.
-	pFileNode->m_implData3 = freeDce;
-	
-	// Finished.
+	// Finish!
 	return true;
 }
 
 void FsFatCloseNonRootDir (UNUSED FileNode* pFileNode)
 {
-	LogMsg("TODO");
 	//Does nothing. For now
 }
 
 static DirEnt  g_FatDirEnt;
-static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index)
+static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t index)
 {
-	int dceIndex = pNode->m_implData3;
-	if (dceIndex == -1)
+	int loaded = pDirNode->m_implData3;
+	if (loaded == -1)
 	{
 		LogMsg("[FATAL] Warning: did you mean to `FiOpenDir` first?  Opening for you, but do keep in mind that this isn't how you do things.");
-		if (!FsFatOpenNonRootDir(pNode))
+		if (!FsFatOpenNonRootDir(pDirNode))
 		{
-			LogMsg("[FATAL] Couldn't even open pNode.  What a shame.  What the fuck?");
+			LogMsg("[FATAL] Couldn't even open pNode.  What a shame.");
 			return NULL;
 		}
-		return FsFatReadNonRootDir(pNode, index);
+		return FsFatReadNonRootDir(pDirNode, index);
 	}
 	
-	if (dceIndex < 0 || dceIndex >= FD_MAX) return NULL;
-	
-	DirectoryCacheEntry* pDce = &m_dceEntries[dceIndex];
-	if (!pDce->m_used) 
+	FileNode *pNode = pDirNode->children;
+	//TODO: Optimize this, if you have consecutive indices
+	uint32_t id = 0;
+	while (pNode && id < index)
 	{
-		LogMsg("[FATAL] Huh?? Tried to read a directory entry that had a fake cache implData2? Try again.");
-		pNode->m_implData3 = -1;
-		return FsFatReadNonRootDir(pNode, index);
+		pNode = pNode->next;
+		id++;
 	}
-	
-	if (index >= (uint32_t)pDce->m_nFileNodes) return NULL;//Out of bounds?
-	
-	strcpy (g_FatDirEnt.m_name, pDce->m_pFileNodes[index].m_name);
-	g_FatDirEnt.m_inode = pDce->m_pFileNodes[index].m_inode;
-	
+	if (!pNode) return NULL;
+	strcpy(g_FatDirEnt.m_name, pNode->m_name);
+	g_FatDirEnt.m_inode      = pNode->m_inode;
 	return &g_FatDirEnt;
 }
-static FileNode* FsFatFindNonRootDir(FileNode* pNode, const char* pName)
+static FileNode* FsFatFindNonRootDir(FileNode* pDirNode, const char* pName)
 {
-	int dceIndex = pNode->m_implData3;
-	if (dceIndex == -1)
+	int loaded = pDirNode->m_implData3;
+	if (loaded == -1)
 	{
 		LogMsg("[FATAL] Warning: did you mean to `FiOpenDir` first?  Opening for you, but do keep in mind that this isn't how you do things.");
-		if (!FsFatOpenNonRootDir(pNode))
+		if (!FsFatOpenNonRootDir(pDirNode))
 		{
-			LogMsg("Couldn't even open pNode.  What a shame.  What the fuck?");
+			LogMsg("[FATAL] Couldn't even open pNode.  What a shame.");
 			return NULL;
 		}
+		return FsFatFindNonRootDir(pDirNode, pName);
 	}
 	
-	if (dceIndex < 0 || dceIndex >= FD_MAX) return NULL;
-	
-	DirectoryCacheEntry* pDce = &m_dceEntries[dceIndex];
-	if (!pDce->m_used) 
+	FileNode *pNode = pDirNode->children;
+	while (pNode)
 	{
-		LogMsg("[FATAL] Huh?? Tried to read a directory entry that had a fake cache implData2? Try again.");
-		pNode->m_implData3 = -1;
-		return FsFatFindNonRootDir(pNode, pName);
+		if (strcmp (pNode->m_name, pName) == 0)
+			return pNode;
+		pNode = pNode->next;
 	}
-	
-	for (int i = 0; i < pDce->m_nFileNodes; i++)
-	{
-		if (strcmp (pDce->m_pFileNodes[i].m_name, pName) == 0)
-			return &pDce->m_pFileNodes[i];
-	}
-	
-	//Not Found.
 	return NULL;
 }
 
 //Generic
 
-static DirEnt* FsFatReadRootDir(FileNode* pNode, uint32_t index)
+static DirEnt* FsFatReadRootDir(FileNode* pDirNode, uint32_t index)
 {
-	int findex = pNode->m_inode;
-	if (findex < 0 || findex >= 32) return NULL;
-	if (index >= (uint32_t)g_fatsMountedListFilesCnt[findex])
-		return NULL;
-	
-	strcpy(g_FatDirEnt.m_name, g_fatsMountedListFilesPtrs[findex][index].m_name);
-	g_FatDirEnt.m_inode = g_fatsMountedListFilesPtrs[findex][index].m_inode;
+	FileNode *pNode = pDirNode->children;
+	//TODO: Optimize this, if you have consecutive indices
+	uint32_t id = 0;
+	while (pNode && id < index)
+	{
+		pNode = pNode->next;
+		id++;
+	}
+	if (!pNode) return NULL;
+	strcpy(g_FatDirEnt.m_name, pNode->m_name);
+	g_FatDirEnt.m_inode      = pNode->m_inode;
 	return &g_FatDirEnt;
 }
-static FileNode* FsFatFindRootDir(FileNode *pNode, const char* pName)
+static FileNode* FsFatFindRootDir(FileNode *pDirNode, const char* pName)
 {
-	int findex = pNode->m_inode;
-	if (findex < 0 || findex >= 32) return NULL;
-	
-	for (int i = 0; i < g_fatsMountedListFilesCnt[findex]; i++)
+	FileNode *pNode = pDirNode->children;
+	while (pNode)
 	{
-		if (strcmp (g_fatsMountedListFilesPtrs[findex][i].m_name, pName) == 0)
-			return &g_fatsMountedListFilesPtrs[findex][i];
+		if (strcmp (pNode->m_name, pName) == 0)
+			return pNode;
+		pNode = pNode->next;
 	}
 	return NULL;
 }
 
 static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 {
-	// Read the directory and count the entries.
-	int entryCount = 0;
-	//uint32_t dirsPerClus = pSystem->m_clusSize / 32;
-	uint32_t cluster = 2;
-	
-	while (true)
-	{
-		uint8_t root_cluster[pSystem->m_clusSize * 2];
-		FatGetCluster(pSystem, root_cluster, cluster);
-		uint8_t* entry = root_cluster;
-		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
-		{
-			uint8_t firstByte = *entry;
-			if (firstByte == 0x00 || firstByte == 0xE5)
-			{
-				entry += 32;
-				continue;
-			}
-			
-			uint32_t secondCluster = 0;
-			uint8_t* nextEntry = NULL;
-			FatDirEntry targetDirEnt;
-			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
-			entry = nextEntry;
-			if (secondCluster)
-			{
-				cluster = secondCluster;
-			}
-			
-			entryCount++;
-		}
-		cluster = FatGetNextCluster(pSystem, cluster);
-		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
-	}
-	
-	// Allocate a FileNode* pointer.
-	FileNode* pFileNodes = (FileNode*)MmAllocateK (sizeof(FileNode) * entryCount);
-	memset (pFileNodes, 0, sizeof(FileNode) * entryCount);
-	
-	//LogMsg("Counted %d File entries.", entryCount);
-	
-	// Read the directory AGAIN and fill in the FileNodes
-	cluster = 2;
-	int index = 0;
-	
-	while (true)
-	{
-		uint8_t root_cluster[pSystem->m_clusSize * 2];
-		FatGetCluster(pSystem, root_cluster, cluster);
-		uint8_t* entry = root_cluster;
-		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
-		{
-			if (index >= entryCount)
-			{
-				LogMsg("WARNING: Still have entries?! STOPPING NOW! This is UNACCEPTABLE.");//--these entries tend to be garbage.
-				break;
-			}
-			
-			uint8_t firstByte = *entry;
-			if (firstByte == 0x00 || firstByte == 0xE5)
-			{
-				// This directory entry has never been written or it has been deleted.
-				entry += 32;
-				continue;
-			}
-			
-			uint32_t secondCluster = 0;
-			uint8_t* nextEntry = NULL;
-			FatDirEntry targetDirEnt;
-			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
-			
-			//LogMsg("> Loading file entry '%s' (index %d)", targetDirEnt.m_pName, index);
-			
-			// turn this entry into a FileNode entry.
-			FileNode *pCurrent = pFileNodes + index;
-			
-			strcpy(pCurrent->m_name, targetDirEnt.m_pName);
-			
-			pCurrent->m_type = FILE_TYPE_FILE;
-			if (targetDirEnt.m_dirFlags & FAT_DIRECTORY)
-				pCurrent->m_type = FILE_TYPE_DIRECTORY;
-			
-			pCurrent->m_perms = PERM_READ | PERM_WRITE;
-			if (targetDirEnt.m_dirFlags & FAT_READONLY)
-				pCurrent->m_perms &= ~PERM_WRITE;
-			
-			if (EndsWith (targetDirEnt.m_pName, ".nse"))
-				pCurrent->m_perms |=  PERM_EXEC;
-			
-			pCurrent->m_inode  = targetDirEnt.m_firstCluster;
-			pCurrent->m_length = targetDirEnt.m_fileSize;
-			pCurrent->m_implData = (int)pSystem;
-			pCurrent->m_implData1 = 2;//Root directory
-			pCurrent->m_implData2 = targetDirEnt.m_firstCluster;
-			pCurrent->m_flags    = 0;
-			
-			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
-			{
-				pCurrent->Read  = FsFatRead;
-				pCurrent->Write = FsFatWrite;
-				pCurrent->Open  = FsFatOpen;
-				pCurrent->Close = FsFatClose;
-				pCurrent->EmptyFile = FatEmptyExistingFile;
-			}
-			else
-			{
-				pCurrent->OpenDir  = FsFatOpenNonRootDir;
-				pCurrent->CloseDir = FsFatCloseNonRootDir;
-				pCurrent->ReadDir  = FsFatReadNonRootDir;
-				pCurrent->FindDir  = FsFatFindNonRootDir;
-				pCurrent->CreateFile = FatCreateEmptyFile;
-			}
-			
-			entry = nextEntry;
-			if (secondCluster)
-			{
-				cluster = secondCluster;
-			}
-			
-			index++;
-		}
-		cluster = FatGetNextCluster(pSystem, cluster);
-		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
-	}
-	
-	// Make a root file node and add it to the initrd node.
-	FileNode* pFatRoot = (FileNode*)MmAllocateK(sizeof(FileNode));
-	g_fatsMountedPointers     [g_fatsMountedCount] = pFatRoot;
-	g_fatsMountedAsFileSystems[g_fatsMountedCount] = pSystem;
-	g_fatsMountedListFilesPtrs[g_fatsMountedCount] = pFileNodes;
-	g_fatsMountedListFilesCnt [g_fatsMountedCount] = entryCount;
+	FileNode *pFatRoot = CreateFileNode (FsGetRootNode());
 	
 	sprintf(pFatRoot->m_name, "Fat%d", g_fatsMountedCount);
 	strcpy (pOutPath, pFatRoot->m_name);
@@ -2207,14 +1835,87 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	pFatRoot->ReadDir  = FsFatReadRootDir;
 	pFatRoot->FindDir  = FsFatFindRootDir;
 	
+	//uint32_t dirsPerClus = pSystem->m_clusSize / 32;
+	uint32_t cluster = 2;
+	
+	int index = 0;
+	
+	while (true)
+	{
+		uint8_t root_cluster[pSystem->m_clusSize * 2];
+		FatGetCluster(pSystem, root_cluster, cluster);
+		uint8_t* entry = root_cluster;
+		while ((uint32_t)(entry - root_cluster) < pSystem->m_clusSize)
+		{
+			uint8_t firstByte = *entry;
+			if (firstByte == 0x00 || firstByte == 0xE5)
+			{
+				// This directory entry has never been written or it has been deleted.
+				entry += 32;
+				continue;
+			}
+			
+			uint32_t secondCluster = 0;
+			uint8_t* nextEntry = NULL;
+			FatDirEntry targetDirEnt;
+			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
+			
+			// turn this entry into a FileNode entry.
+			FileNode *pCurrent = CreateFileNode (pFatRoot);//pFileNodes + index;
+			
+			strcpy(pCurrent->m_name, targetDirEnt.m_pName);
+			
+			pCurrent->m_type = FILE_TYPE_FILE;
+			if (targetDirEnt.m_dirFlags & FAT_DIRECTORY)
+				pCurrent->m_type = FILE_TYPE_DIRECTORY;
+			
+			pCurrent->m_perms = PERM_READ | PERM_WRITE;
+			if (targetDirEnt.m_dirFlags & FAT_READONLY)
+				pCurrent->m_perms &= ~PERM_WRITE;
+			
+			if (EndsWith (targetDirEnt.m_pName, ".nse"))
+				pCurrent->m_perms |=  PERM_EXEC;
+			
+			pCurrent->m_inode  = targetDirEnt.m_firstCluster;
+			pCurrent->m_length = targetDirEnt.m_fileSize;
+			pCurrent->m_implData = (int)pSystem;
+			pCurrent->m_implData1 = 2;//Root directory
+			pCurrent->m_implData2 = targetDirEnt.m_firstCluster;
+			pCurrent->m_implData3 = -1;
+			pCurrent->m_flags    = 0;
+			
+			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
+			{
+				pCurrent->Read  = FsFatRead;
+				pCurrent->Write = FsFatWrite;
+				pCurrent->Open  = FsFatOpen;
+				pCurrent->Close = FsFatClose;
+				pCurrent->EmptyFile = FatEmptyExistingFile;
+			}
+			else
+			{
+				pCurrent->OpenDir  = FsFatOpenNonRootDir;
+				pCurrent->CloseDir = FsFatCloseNonRootDir;
+				pCurrent->ReadDir  = FsFatReadNonRootDir;
+				pCurrent->FindDir  = FsFatFindNonRootDir;
+				pCurrent->CreateFile = FatCreateEmptyFile;
+			}
+			
+			entry = nextEntry;
+			if (secondCluster)
+			{
+				cluster = secondCluster;
+			}
+			
+			index++;
+		}
+		cluster = FatGetNextCluster(pSystem, cluster);
+		if (cluster >= FAT_END_OF_CHAIN || cluster < 2) break;
+	}
+	
 	g_fatsMountedCount++;
 }
-/*
-static void FatUnmountRootDir(FatFileSystem* pSystem)
-{
-	//TODO
-}
-*/
+
 #endif
 
 // Mounting code

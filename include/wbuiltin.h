@@ -39,5 +39,6 @@ void SystemMonitorEntry(int argument);
 void LauncherEntry(int arg);
 void TaskbarEntry(int arg);
 void CrashReporterCheck();
+void ShellAbout (const char *pText, int iconID);
 
 #endif//_WBUILTIN_H

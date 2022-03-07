@@ -11,9 +11,8 @@
 #include <print.h>
 #include <memory.h>
 #include <tar.h>
+#include <debug.h>
 
-// Misc device files
-#if 1
 
 static uint32_t OctToBin(char *data, uint32_t size)
 {
@@ -26,6 +25,9 @@ static uint32_t OctToBin(char *data, uint32_t size)
 	}
 	return value;
 }
+
+// Misc device files
+#if 1
 
 static uint32_t FsNullRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
 {
@@ -85,16 +87,8 @@ static uint32_t FsTeletypeWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_
 
 #endif
 
-// RAM disk/initrd
 #if 1
-FileNode* g_pInitRdRoot;
-FileNode* g_pInitRdDev;  //add a dirnode for /dev to mount stuff later
-FileNode* g_pRootNodes; //list of root nodes.
-uint32_t  g_nRootNodes; //number of root nodes.
-FileNode* g_pDevNodes; //list of dev nodes.
-uint32_t  g_nDevNodes; //number of dev nodes.
-
-static DirEnt g_DirEnt; // directory /dev
+static DirEnt g_DirEnt; 
 
 static uint32_t FsRootFsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
@@ -108,140 +102,88 @@ static uint32_t FsRootFsRead(FileNode* pNode, uint32_t offset, uint32_t size, vo
 	memcpy (pBuffer, (uint8_t*)pNode->m_implData1 + offset, size);
 	return size;
 }
-//TODO: open, close etc
-//TODO: make a different separate way to do this stuff?
-extern int       g_fatsMountedCount;
-extern FileNode* g_fatsMountedPointers[32];
-extern int       g_rdsMountedCount;
-extern FileNode* g_rdsMountedPointers[32];
-static DirEnt* FsRootFsReadDir(FileNode* pNode, uint32_t index)
+static DirEnt* FsRootFsReadDir (FileNode *pDirNode, uint32_t index)
 {
-	//uint32_t filesBeforeInitrd = 1 + g_fatsMountedCount + g_rdsMountedCount;
-	if (pNode == g_pInitRdRoot)
+	FileNode *pNode = pDirNode->children;
+	//TODO: Optimize this, if you have consecutive indices
+	uint32_t id = 0;
+	while (pNode && id < index)
 	{
-		if (index == 0)
-		{
-			strcpy (g_DirEnt.m_name, FS_DEVICE_NAME);
-			g_DirEnt.m_inode = 0;
-			return &g_DirEnt;
-		}
-		index--;
-		if (index < (uint32_t)g_rdsMountedCount)
-		{
-			strcpy (g_DirEnt.m_name, g_rdsMountedPointers[index]->m_name);
-			g_DirEnt.m_inode = g_rdsMountedPointers[index]->m_inode;
-			return &g_DirEnt;
-		}
-		index -= g_rdsMountedCount;
-		if (index < (uint32_t)g_fatsMountedCount)
-		{
-			strcpy (g_DirEnt.m_name, g_fatsMountedPointers[index]->m_name);
-			g_DirEnt.m_inode = g_fatsMountedPointers[index]->m_inode;
-			return &g_DirEnt;
-		}
-		index -= g_fatsMountedCount;
+		pNode = pNode->next;
+		id++;
 	}
-	if (index >= g_nRootNodes)
-		return NULL;
-	
-	strcpy(g_DirEnt.m_name, g_pRootNodes[index].m_name);
-	g_DirEnt.m_inode      = g_pRootNodes[index].m_inode;
+	if (!pNode) return NULL;
+	strcpy(g_DirEnt.m_name, pNode->m_name);
+	g_DirEnt.m_inode      = pNode->m_inode;
 	return &g_DirEnt;
 }
-
-static FileNode* FsRootFsFindDir(FileNode* pNode, const char* pName)
+static FileNode* FsRootFsFindDir(FileNode* pDirNode, const char* pName)
 {
-	if (pNode == g_pInitRdRoot)
+	FileNode *pNode = pDirNode->children;
+	while (pNode)
 	{
-		if (strcmp(pName, FS_DEVICE_NAME) == 0)
-			return g_pInitRdDev;
-		else
-		{
-			for (int i = 0; i < g_rdsMountedCount; i++)
-			{
-				if (strcmp (pName, g_rdsMountedPointers[i]->m_name) == 0)
-				{
-					return g_rdsMountedPointers[i];
-				}
-			}
-			for (int i = 0; i < g_fatsMountedCount; i++)
-			{
-				if (strcmp (pName, g_fatsMountedPointers[i]->m_name) == 0)
-				{
-					return g_fatsMountedPointers[i];
-				}
-			}
-		}
+		if (strcmp (pNode->m_name, pName) == 0)
+			return pNode;
+		pNode = pNode->next;
 	}
-	
-	for (uint32_t i = 0; i < g_nRootNodes; i++)
+	return NULL;
+}
+static DirEnt* FsDevFsReadDir (FileNode *pDirNode, uint32_t index)
+{
+	FileNode *pNode = pDirNode->children;
+	//TODO: Optimize this, if you have consecutive indices
+	uint32_t id = 0;
+	while (pNode && id < index)
 	{
-		if (strcmp(pName, g_pRootNodes[i].m_name) == 0)
-			return &g_pRootNodes[i];
+		pNode = pNode->next;
+		id++;
 	}
-	
+	if (!pNode) return NULL;
+	strcpy(g_DirEnt.m_name, pNode->m_name);
+	g_DirEnt.m_inode      = pNode->m_inode;
+	return &g_DirEnt;
+}
+static FileNode* FsDevFsFindDir(FileNode* pDirNode, const char* pName)
+{
+	FileNode *pNode = pDirNode->children;
+	while (pNode)
+	{
+		if (strcmp (pNode->m_name, pName) == 0)
+			return pNode;
+		pNode = pNode->next;
+	}
 	return NULL;
 }
 
-static DirEnt* FsDevReadDir(UNUSED FileNode* pNode, uint32_t index)
+void FsInitializeDevicesDir()
 {
-	if (index >= g_nDevNodes)
-		return NULL;
-	
-	strcpy(g_DirEnt.m_name, g_pDevNodes[index].m_name);
-	g_DirEnt.m_inode = g_pDevNodes[index].m_inode;
-	return &g_DirEnt;
-}
-
-static FileNode* FsDevFindDir(UNUSED FileNode* pNode, const char* pName)
-{
-	for (uint32_t i = 0; i < g_nDevNodes; i++)
-	{
-		if (strcmp(pName, g_pDevNodes[i].m_name) == 0)
-			return &g_pDevNodes[i];
-	}
-	
-	return NULL;
-}
-
-FileNode* FsGetRootNode ()
-{
-	//TODO: initialize it?
-	return g_pInitRdRoot;
-}
-
-void FsInitializeDevicesDir ()
-{
-	int devCount = 0, index = 0;
-	
-#define DEFINE_DEVICE(_1, _2, _3, _4) do\
-	devCount++;\
-while (0)
-	#include "vfs_dev_defs.h"
-	
-	g_pDevNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * devCount);
-	g_nDevNodes = devCount;
-	
-#undef DEFINE_DEVICE
+	// Add device directory
+	FileNode *pDevDir = CreateFileNode(FsGetRootNode());
+	pDevDir->m_length = 0;
+	pDevDir->m_inode  = 0;
+	pDevDir->m_type   = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
+	pDevDir->m_perms  = PERM_READ | PERM_WRITE;
+	pDevDir->ReadDir  = FsDevFsReadDir;
+	pDevDir->FindDir  = FsDevFsFindDir;
+	strcpy (pDevDir->m_name, "Device");
 	
 #define DEFINE_DEVICE(name, read, write, inode) do {\
-	g_pDevNodes[index].m_length = 0;\
-	g_pDevNodes[index].m_inode  = inode;\
-	g_pDevNodes[index].m_type   = FILE_TYPE_CHAR_DEVICE;\
-	g_pDevNodes[index].m_perms  = PERM_READ|PERM_WRITE;\
-	strcpy (g_pDevNodes[index].m_name, name);\
-	\
-	g_pDevNodes[index].Read  = read;\
-	g_pDevNodes[index].Write = write;\
-	g_pDevNodes[index].Open  = NULL;\
-	g_pDevNodes[index].Close = NULL;\
-	g_pDevNodes[index].ReadDir = NULL;\
-	g_pDevNodes[index].FindDir = NULL;\
-	g_pDevNodes[index].OpenDir = NULL;\
-	g_pDevNodes[index].CloseDir= NULL;\
-	g_pDevNodes[index].CreateFile = NULL;\
-	g_pDevNodes[index].EmptyFile  = NULL;\
-	index++;\
+	FileNode *pNode = CreateFileNode (pDevDir);\
+	pNode->m_length = 0;\
+	pNode->m_inode  = inode;\
+	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;\
+	pNode->m_perms  = PERM_READ|PERM_WRITE;\
+	strcpy (pNode->m_name, name);\
+	pNode->Read  = read;\
+	pNode->Write = write;\
+	pNode->Open  = NULL;\
+	pNode->Close = NULL;\
+	pNode->ReadDir = NULL;\
+	pNode->FindDir = NULL;\
+	pNode->OpenDir = NULL;\
+	pNode->CloseDir= NULL;\
+	pNode->CreateFile = NULL;\
+	pNode->EmptyFile  = NULL;\
 } while (0)
 	
 	#include "vfs_dev_defs.h"
@@ -250,67 +192,15 @@ while (0)
 }
 
 void FsInitializeInitRd(void* pRamDisk)
-{
-	//initialize the root directory
-	g_pInitRdRoot = (FileNode*)MmAllocateK(sizeof(FileNode));
-	strcpy(g_pInitRdRoot->m_name, FS_FSROOT_NAME);
-	g_pInitRdRoot->m_flags = g_pInitRdRoot->m_inode = g_pInitRdRoot->m_length = g_pInitRdRoot->m_implData = g_pInitRdRoot->m_perms = 0;
-	g_pInitRdRoot->m_type = FILE_TYPE_DIRECTORY;
-	g_pInitRdRoot->m_perms = PERM_READ;
-	g_pInitRdRoot->Read    = NULL;
-	g_pInitRdRoot->Write   = NULL;
-	g_pInitRdRoot->Open    = NULL;
-	g_pInitRdRoot->Close   = NULL;
-	g_pInitRdRoot->ReadDir = FsRootFsReadDir;
-	g_pInitRdRoot->FindDir = FsRootFsFindDir;
-	g_pInitRdRoot->OpenDir = NULL;
-	g_pInitRdRoot->CloseDir= NULL;
-	g_pInitRdRoot->CreateFile = NULL;
-	g_pInitRdRoot->EmptyFile  = NULL;
-	
-	// Initialize the /dev dir.
-	g_pInitRdDev = (FileNode*)MmAllocateK(sizeof(FileNode));
-	strcpy(g_pInitRdDev->m_name, FS_DEVICE_NAME);
-	g_pInitRdDev->m_flags = g_pInitRdDev->m_inode = g_pInitRdDev->m_length = g_pInitRdDev->m_implData = g_pInitRdDev->m_perms = 0;
-	g_pInitRdDev->m_type = FILE_TYPE_DIRECTORY;
-	g_pInitRdDev->m_perms = PERM_READ | PERM_WRITE;
-	g_pInitRdDev->Read    = NULL;
-	g_pInitRdDev->Write   = NULL;
-	g_pInitRdDev->Open    = NULL;
-	g_pInitRdDev->Close   = NULL;
-	g_pInitRdDev->ReadDir = FsDevReadDir;
-	g_pInitRdDev->FindDir = FsDevFindDir;
-	g_pInitRdDev->OpenDir = NULL;
-	g_pInitRdDev->CloseDir= NULL;
-	g_pInitRdDev->CreateFile = NULL;
-	g_pInitRdDev->EmptyFile  = NULL;
-	
-	// Initialize devices
-	FsInitializeDevicesDir();
-	
-	// Count the ramdisk entries
-	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
-	{
-		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
-		bool hasDotSlash = false;
-		int pathLength = strlen (ramDiskTar->name);
-		if (ramDiskTar->name[0] == '.')
-		{
-			pathLength -= 2;
-			hasDotSlash = true;
-		}
-
-		// Advance to the next entry
-		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
-
-		if (pathLength > 0)
-			g_nRootNodes++;
-	}
-
+{	
 	// Add files to the ramdisk.
-	g_pRootNodes = (FileNode*)MmAllocateK(sizeof(FileNode) * g_nRootNodes);
-
+	
 	int i = 0;
+	
+	FileNode *pRoot = FsGetRootNode();
+	
+	pRoot->ReadDir = FsRootFsReadDir;
+	pRoot->FindDir = FsRootFsFindDir;
 	
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
@@ -326,29 +216,35 @@ void FsInitializeInitRd(void* pRamDisk)
 
 		if (pathLength > 0)
 		{
-			strcpy(g_pRootNodes[i].m_name, ramDiskTar->name + (hasDotSlash ? 2 : 0));
+			FileNode *pNewNode = CreateFileNode (pRoot);
+			if (!pNewNode)
+			{
+				KeBugCheck (BC_EX_FILE_SYSTEM, NULL);
+			}
+			
+			strcpy(pNewNode->m_name, ramDiskTar->name + (hasDotSlash ? 2 : 0));
 
-			g_pRootNodes[i].m_length = fileSize;
-			g_pRootNodes[i].m_inode  = i;
-			g_pRootNodes[i].m_type   = FILE_TYPE_FILE;
-			g_pRootNodes[i].m_implData  = fileSize;
-			g_pRootNodes[i].m_implData1 = (uint32_t) &ramDiskTar->buffer;
-			g_pRootNodes[i].Read     = FsRootFsRead;
-			g_pRootNodes[i].Write    = NULL;
-			g_pRootNodes[i].Open     = NULL;
-			g_pRootNodes[i].Close    = NULL;
-			g_pRootNodes[i].ReadDir  = NULL;
-			g_pRootNodes[i].FindDir  = NULL;
-			g_pRootNodes[i].OpenDir  = NULL;
-			g_pRootNodes[i].CloseDir = NULL;
-			g_pRootNodes[i].CreateFile = NULL;
-			g_pRootNodes[i].EmptyFile  = NULL;
-			g_pRootNodes[i].m_perms    = PERM_READ;
+			pNewNode->m_length = fileSize;
+			pNewNode->m_inode  = i;
+			pNewNode->m_type   = FILE_TYPE_FILE;
+			pNewNode->m_implData  = fileSize;
+			pNewNode->m_implData1 = (uint32_t) &ramDiskTar->buffer;
+			pNewNode->Read     = FsRootFsRead;
+			pNewNode->Write    = NULL;
+			pNewNode->Open     = NULL;
+			pNewNode->Close    = NULL;
+			pNewNode->ReadDir  = NULL;
+			pNewNode->FindDir  = NULL;
+			pNewNode->OpenDir  = NULL;
+			pNewNode->CloseDir = NULL;
+			pNewNode->CreateFile = NULL;
+			pNewNode->EmptyFile  = NULL;
+			pNewNode->m_perms    = PERM_READ;
 			
 			//if it ends with .nse also make it executable
-			if (EndsWith(g_pRootNodes[i].m_name, ".nse"))
+			if (EndsWith(pNewNode->m_name, ".nse"))
 			{
-				g_pRootNodes[i].m_perms |= PERM_EXEC;
+				pNewNode->m_perms |= PERM_EXEC;
 			}
 			i++;
 		}

@@ -50,6 +50,12 @@ typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 
 typedef struct FSNodeS
 {
+	struct FSNodeS
+	*parent,
+	*children,
+	*next,
+	*prev;
+	
 	char 	           m_name[128]; //+nullterm, so 127 concrete chars
 	uint32_t           m_type;
 	uint32_t           m_perms;
@@ -109,6 +115,15 @@ void FiDebugDump();
 #if 1
 
 void FsMountRamDisk(void* pRamDisk);
+
+#endif
+
+//Internal functions.  Should only be used by FS drivers
+#if 1
+
+void FsSetup ();
+FileNode* CreateFileNode (FileNode* pParent);
+void EraseFileNode (FileNode* pFileNode);
 
 #endif
 

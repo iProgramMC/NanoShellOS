@@ -29,8 +29,8 @@ extern void KeTaskDone();
 #define cli __asm__ volatile("cli\n\t")//do{__asm__("cli\n\t");SLogMsg("CLI request at " __FILE__ ":%d",__LINE__);}while(0)
 #define sti __asm__ volatile("sti\n\t")//do{__asm__("sti\n\t");SLogMsg("STI request at " __FILE__ ":%d",__LINE__);}while(0)
 
-#define VersionNumber 45
-#define VersionString "V0.45"
+#define VersionNumber 50
+#define VersionString "V0.50"
 
 #define UNUSED __attribute__((unused))
 

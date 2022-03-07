@@ -12,6 +12,8 @@
 
 #define MAX_CONCURRENT_RAMDISKS 32
 
+int g_rdsMountedCount = 0;
+
 static uint32_t OctToBin(char *data, uint32_t size)
 {
 	uint32_t value = 0;
@@ -24,16 +26,9 @@ static uint32_t OctToBin(char *data, uint32_t size)
 	return value;
 }
 
-
-int                         g_rdsMountedCount;
-FileNode*                   g_rdsMountedPointers      [MAX_CONCURRENT_RAMDISKS];
-InitRdFileHeader*           g_rdsMountedFileHeaders   [MAX_CONCURRENT_RAMDISKS];//NULL in the case of TAR-originated ramdisks
-FileNode*                   g_rdsMountedRootNodes     [MAX_CONCURRENT_RAMDISKS];
-int                         g_rdsMountedRootNodeCounts[MAX_CONCURRENT_RAMDISKS];
-
 static uint32_t FsRamDiskRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
-	InitRdFileHeader* pHeader = &g_rdsMountedFileHeaders[pNode->m_implData2][pNode->m_inode];
+	InitRdFileHeader* pHeader = &((InitRdFileHeader*)pNode->m_implData)[pNode->m_inode];
 	
 	//check lengths
 	if (offset > pHeader->m_length)
@@ -57,98 +52,53 @@ static uint32_t FsRamDiskTarRead(FileNode* pNode, uint32_t offset, uint32_t size
 	memcpy (pBuffer, (uint8_t*)pNode->m_implData1 + offset, size);
 	return size;
 }
-
 static DirEnt g_ramDiskDirEnt;
-static DirEnt* FsRamDiskReadDir(FileNode* pNode, uint32_t index)
+static DirEnt* FsRamDiskReadDir (FileNode *pDirNode, uint32_t index)
 {
-	int idx = pNode->m_implData2;
-	
-	FileNode* pRootNodes = g_rdsMountedRootNodes     [idx];
-	int       nRootNodes = g_rdsMountedRootNodeCounts[idx];
-	
-	if (index >= (uint32_t)nRootNodes) return NULL;
-	
-	strcpy(g_ramDiskDirEnt.m_name, pRootNodes[index].m_name);
-	g_ramDiskDirEnt.m_inode      = pRootNodes[index].m_inode;
+	FileNode *pNode = pDirNode->children;
+	//TODO: Optimize this, if you have consecutive indices
+	uint32_t id = 0;
+	while (pNode && id < index)
+	{
+		pNode = pNode->next;
+		id++;
+	}
+	if (!pNode) return NULL;
+	strcpy(g_ramDiskDirEnt.m_name, pNode->m_name);
+	g_ramDiskDirEnt.m_inode      = pNode->m_inode;
 	return &g_ramDiskDirEnt;
 }
-
-static FileNode* FsRamDiskFindDir(FileNode* pNode, const char* pName)
+static FileNode* FsRamDiskFindDir(FileNode* pDirNode, const char* pName)
 {
-	int idx = pNode->m_implData2;
-	
-	FileNode* pRootNodes = g_rdsMountedRootNodes     [idx];
-	int       nRootNodes = g_rdsMountedRootNodeCounts[idx];
-	
-	for (int i = 0; i < nRootNodes; i++)
+	FileNode *pNode = pDirNode->children;
+	while (pNode)
 	{
-		if (strcmp(pName, pRootNodes[i].m_name) == 0)
-			return &pRootNodes[i];
+		if (strcmp (pNode->m_name, pName) == 0)
+			return pNode;
+		pNode = pNode->next;
 	}
-	
 	return NULL;
 }
 
-
 void FsMountTarRamDisk(void* pRamDisk)
 {
-	if (g_rdsMountedCount >= (int)ARRAY_COUNT (g_rdsMountedPointers))
-	{
-		LogMsg("Mounted too many ramdisks. Oh dear!");
-		return;
-	}
+	FileNode *pTarRoot = CreateFileNode (FsGetRootNode());
 	
-	//let's mount this thing :)
-	g_rdsMountedCount++;
-	FileNode *pRootNode = (FileNode*)MmAllocateK (sizeof (FileNode));
-	g_rdsMountedPointers[g_rdsMountedCount-1] = pRootNode;
-
-	//this is a directory
-	sprintf(pRootNode->m_name, "Tar%d", g_rdsMountedCount-1);
-	pRootNode->m_flags = pRootNode->m_inode = pRootNode->m_length = pRootNode->m_implData = pRootNode->m_perms = 0;
-	pRootNode->m_type  = FILE_TYPE_DIRECTORY;
-	pRootNode->m_perms = PERM_READ;
-	pRootNode->m_implData2 = g_rdsMountedCount-1;
-	pRootNode->Read    = NULL;
-	pRootNode->Write   = NULL;
-	pRootNode->Open    = NULL;
-	pRootNode->Close   = NULL;
-	pRootNode->ReadDir = FsRamDiskReadDir;
-	pRootNode->FindDir = FsRamDiskFindDir;
-	pRootNode->OpenDir = NULL;
-	pRootNode->CloseDir= NULL;
-	pRootNode->CreateFile = NULL;
-	pRootNode->EmptyFile  = NULL;
+	sprintf(pTarRoot->m_name, "Tar%d", g_rdsMountedCount);
+	pTarRoot->m_type  = FILE_TYPE_DIRECTORY;
+	pTarRoot->m_flags = 0;
+	pTarRoot->m_perms = PERM_READ;
+	pTarRoot->m_length = 0;
+	pTarRoot->m_implData2 = g_rdsMountedCount-1;
 	
-	//add files to the
-	//InitRdHeader* pFileHdr = (InitRdHeader*)pRamDisk;
-	//InitRdFileHeader* pHeaders = (InitRdFileHeader*)((uint8_t*)pRamDisk + sizeof (InitRdHeader));
-	
-	//Count the ramdisk entries
-	int entries = 0;
-	for (Tar* pRamDiskTar = (Tar*) pRamDisk; !memcmp (pRamDiskTar->ustar, "ustar", 5); )
-	{
-		uint32_t file_size = OctToBin (pRamDiskTar->size, 11);
-		uint32_t pathLen  = strlen (pRamDiskTar->name);
-		bool hasDotSlash = false;
-		
-		if (!memcmp(pRamDiskTar->name, "./", 2))
-		{
-			pathLen -= 2;
-			hasDotSlash = true;
-		}
-
-		if (pathLen > 0)
-			entries++;
-		
-		pRamDiskTar = (Tar*)((uintptr_t)pRamDiskTar + ((file_size + 511) / 512 + 1) * 512);
-	}
-	
-	g_rdsMountedFileHeaders   [pRootNode->m_implData2] = NULL;
-	g_rdsMountedRootNodeCounts[pRootNode->m_implData2] = entries;
-	g_rdsMountedRootNodes     [pRootNode->m_implData2] = (FileNode*)MmAllocateK(sizeof(FileNode) * g_rdsMountedRootNodeCounts[pRootNode->m_implData2]);
-	
-	int i = 0;
+	pTarRoot->Read     = NULL;
+	pTarRoot->Write    = NULL;
+	pTarRoot->Open     = NULL;
+	pTarRoot->Close    = NULL;
+	pTarRoot->OpenDir  = NULL;
+	pTarRoot->CloseDir = NULL;
+	pTarRoot->ReadDir  = FsRamDiskReadDir;
+	pTarRoot->FindDir  = FsRamDiskFindDir;
 	
 	for (Tar* pRamDiskTar = (Tar*) pRamDisk; !memcmp (pRamDiskTar->ustar, "ustar", 5); )
 	{
@@ -164,11 +114,11 @@ void FsMountTarRamDisk(void* pRamDisk)
 
 		if (pathLen > 0)
 		{
-			FileNode* pNode = &g_rdsMountedRootNodes[pRootNode->m_implData2][i];
+			FileNode* pNode = CreateFileNode(pTarRoot);
 			strcpy (pNode->m_name, pRamDiskTar->name + (hasDotSlash ? 2 : 0));
 			
 			pNode->m_length = fileSize;
-			pNode->m_inode  = i;
+			//pNode->m_inode  = i;
 			pNode->m_type   = FILE_TYPE_FILE;
 			pNode->m_perms  = PERM_READ;
 			pNode->m_implData  = fileSize;
@@ -189,7 +139,6 @@ void FsMountTarRamDisk(void* pRamDisk)
 				//also make it executable
 				pNode->m_perms |= PERM_EXEC;
 			}
-			i++;
 		}
 		
 		pRamDiskTar = (Tar*)((uintptr_t)pRamDiskTar + ((fileSize + 511) / 512 + 1) * 512);
@@ -209,53 +158,39 @@ void FsMountRamDisk(void* pRamDisk)
 		}
 	}
 	
-	if (g_rdsMountedCount >= (int)ARRAY_COUNT (g_rdsMountedPointers))
-	{
-		LogMsg("Mounted too many ramdisks. Oh dear!");
-		return;
-	}
+	FileNode *pRdRoot = CreateFileNode (FsGetRootNode());
 	
-	//let's mount this thing :)
-	g_rdsMountedCount++;
-	FileNode *pRootNode = (FileNode*)MmAllocateK (sizeof (FileNode));
-	g_rdsMountedPointers[g_rdsMountedCount-1] = pRootNode;
-
-	//this is a directory
-	sprintf(pRootNode->m_name, "Rd%d", g_rdsMountedCount-1);
-	pRootNode->m_flags = pRootNode->m_inode = pRootNode->m_length = pRootNode->m_implData = pRootNode->m_perms = 0;
-	pRootNode->m_type  = FILE_TYPE_DIRECTORY;
-	pRootNode->m_perms = PERM_READ;
-	pRootNode->m_implData2 = g_rdsMountedCount-1;
-	pRootNode->Read    = NULL;
-	pRootNode->Write   = NULL;
-	pRootNode->Open    = NULL;
-	pRootNode->Close   = NULL;
-	pRootNode->ReadDir = FsRamDiskReadDir;
-	pRootNode->FindDir = FsRamDiskFindDir;
-	pRootNode->OpenDir = NULL;
-	pRootNode->CloseDir= NULL;
-	pRootNode->CreateFile = NULL;
-	pRootNode->EmptyFile  = NULL;
+	sprintf(pRdRoot->m_name, "Rd%d", g_rdsMountedCount);
+	pRdRoot->m_type  = FILE_TYPE_DIRECTORY;
+	pRdRoot->m_flags = 0;
+	pRdRoot->m_perms = PERM_READ;
+	pRdRoot->m_length = 0;
+	pRdRoot->m_implData2 = g_rdsMountedCount-1;
 	
-	//add files to the
+	pRdRoot->Read     = NULL;
+	pRdRoot->Write    = NULL;
+	pRdRoot->Open     = NULL;
+	pRdRoot->Close    = NULL;
+	pRdRoot->OpenDir  = NULL;
+	pRdRoot->CloseDir = NULL;
+	pRdRoot->ReadDir  = FsRamDiskReadDir;
+	pRdRoot->FindDir  = FsRamDiskFindDir;
+	
 	InitRdHeader* pFileHdr = (InitRdHeader*)pRamDisk;
 	InitRdFileHeader* pHeaders = (InitRdFileHeader*)((uint8_t*)pRamDisk + sizeof (InitRdHeader));
-	
-	g_rdsMountedFileHeaders   [pRootNode->m_implData2] = pHeaders;
-	g_rdsMountedRootNodeCounts[pRootNode->m_implData2] = pFileHdr->m_nFiles;
-	g_rdsMountedRootNodes     [pRootNode->m_implData2] = (FileNode*)MmAllocateK(sizeof(FileNode) * g_rdsMountedRootNodeCounts[pRootNode->m_implData2]);
 	
 	for (int i = 0; i < pFileHdr->m_nFiles; i++)
 	{
 		pHeaders[i].m_offset += (uint32_t)pRamDisk;
 		
-		FileNode* pNode = &g_rdsMountedRootNodes[pRootNode->m_implData2][i];
+		FileNode* pNode = CreateFileNode(pRdRoot);
 		strcpy (pNode->m_name, pHeaders[i].m_name);
 		
 		pNode->m_length = pHeaders[i].m_length;
 		pNode->m_inode  = i;
 		pNode->m_type   = FILE_TYPE_FILE;
 		pNode->m_perms  = PERM_READ;
+		pNode->m_implData  = (int)(pHeaders + i);
 		pNode->m_implData2 = g_rdsMountedCount-1;
 		pNode->Read    = FsRamDiskRead;
 		pNode->Write   = NULL;
@@ -271,8 +206,6 @@ void FsMountRamDisk(void* pRamDisk)
 		{
 			//also make it executable
 			pNode->m_perms |= PERM_EXEC;
-		}
+		} 
 	}
 }
-
-

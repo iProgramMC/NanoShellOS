@@ -133,8 +133,6 @@ extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 
-bool FatCreateEmptyFile(FileNode *pDirNode, char* pFileName);//fs/fat.c
-void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName);//fs/fat.c
 void ShellExecuteCommand(char* p)
 {
 	TokenState state;
@@ -511,40 +509,6 @@ void ShellExecuteCommand(char* p)
 			
 			FiClose (fd);
 			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "fc") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			bool b = FatCreateEmptyFile(g_pCwdNode, fileName);
-			LogMsg("Done. Result=%d", (int)b);
-		}
-	}
-	else if (strcmp (token, "fz") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			FatZeroOutFile(g_pCwdNode, fileName);
-			LogMsg("Done. ");
 		}
 	}
 	else if (strcmp (token, "ffa") == 0)

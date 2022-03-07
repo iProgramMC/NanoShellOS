@@ -17,11 +17,36 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 			Rectangle r;
 			RECT(r, 0, TITLE_BAR_HEIGHT, 320, 20);
 			
+			char buffer [1024];
+			
+			int icon = ICON_EXPERIMENT;
+			if (pWindow->m_data)
+			{
+				const char* pText = (const char*)pWindow->m_data + 4;
+				if (*pText)
+				{
+					sprintf (buffer, "NanoShell %s", (const char*)pWindow->m_data + 4);
+				}
+				else
+				{
+					strcpy (buffer, "NanoShell Operating System " VersionString);
+				}
+				
+				icon = *((int*)pWindow->m_data);
+				
+				MmFree (pWindow->m_data);
+				pWindow->m_data = NULL;
+			}
+			else
+			{
+				strcpy (buffer, "NanoShell Operating System " VersionString);
+			}
+			
 			//parm1 is the button number that we're being fed in EVENT_COMMAND
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "NanoShell Operating System " VersionString, 1, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, buffer, 1, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
 			
 			RECT(r, 0, TITLE_BAR_HEIGHT+20, 320, 50);
-			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, ICON_EXPERIMENT, 0);
+			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, icon, 0);
 			
 			RECT(r, 0, TITLE_BAR_HEIGHT+70, 320, 10);
 			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2022, iProgramInCpp", 3, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
@@ -46,17 +71,19 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 	}
 }
 
-void VersionProgramTask (__attribute__((unused)) int argument)
+void VersionProgramTask (int argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 115 + TITLE_BAR_HEIGHT, VersionProgramProc, 0);
-	pWindow->m_iconID = ICON_NANOSHELL_LETTERS16;
 	
 	if (!pWindow)
 	{
 		DebugLogMsg("Hey, the window couldn't be created. Why?");
 		return;
 	}
+	
+	pWindow->m_iconID = ICON_NANOSHELL_LETTERS16;
+	pWindow->m_data   = (void*)argument;
 	
 	// event loop:
 #if THREADING_ENABLED

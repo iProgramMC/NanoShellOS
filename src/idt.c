@@ -63,7 +63,7 @@ void SetupExceptionInterrupt (int intNum, void* isrHandler)
 	pEntry->type_attr = INTGATE;
 	pEntry->selector = KECODESEG;
 }
-void SetupExcepTaskInterrupt (int intNum, void* isrHandler)
+void SetupExcepTaskInterrupt (int intNum)
 {
 	IdtEntry* pEntry = &g_idt[intNum];
 	pEntry->offset_lowerbits  = 0;
@@ -330,7 +330,7 @@ void KiIdtInit()
 	SetupExceptionInterrupt (0x09, IsrStub9 );
 	SetupExceptionInterrupt (0x0A, IsrStub10);
 	SetupExceptionInterrupt (0x0B, IsrStub11);
-	SetupExcepTaskInterrupt (0x0C, IsrStub12);//<-- A task gate, because we don't want to push to an invalid esp
+	SetupExcepTaskInterrupt (0x0C);//<-- A task gate, because we don't want to push to an invalid esp
 	SetupExceptionInterrupt (0x0D, IsrStub13);
 	SetupExceptionInterrupt (0x0E, IsrStub14);
 	SetupExceptionInterrupt (0x0F, IsrStub15);

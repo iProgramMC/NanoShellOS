@@ -166,18 +166,90 @@ FileNode* FsResolvePath (const char* pPath)
 	}
 }
 
-//Initrd Stuff:
+// Default
 #if 1
+FileNode g_root;
 
-extern InitRdHeader* g_pInitRdHeader;
-extern InitRdFileHeader* g_pInitRdFileHeaders;
-extern FileNode* g_pInitRdRoot;
-extern FileNode* g_pInitRdDev;  //add a dirnode for /dev to mount stuff later
-extern FileNode* g_pRootNodes; //list of root nodes.
-extern uint32_t  g_nRootNodes; //number of root nodes.
-extern FileNode* g_pDevNodes; //list of dev nodes.
-extern uint32_t  g_nDevNodes; //number of dev nodes.
+FileNode* FsGetRootNode ()
+{
+	return &g_root;
+}
+// Basic functions
 
+
+FileNode* CreateFileNode (FileNode* pParent)
+{
+	//Create the file node
+	FileNode* pNode = MmAllocate (sizeof (FileNode));
+	if (!pNode)
+		return pNode;
+	
+	memset (pNode, 0, sizeof *pNode);
+	
+	//Add it to the parent
+	pNode->parent = pParent;
+	if (pParent->children)
+	{
+		FileNode *pLastEnt = pParent->children;
+		while (pLastEnt->next)
+		{
+			pLastEnt = pLastEnt->next;
+		}
+		
+		pLastEnt->next = pNode;
+		pNode   ->prev = pLastEnt;
+	}
+	else
+	{
+		pParent->children = pNode;
+		pNode->next = pNode->prev = NULL;
+	}
+	return pNode;
+}
+// Also removes the underlying tree from the VFS, so you can easily do EraseFileNode(&g_root).  Don't do this.
+void EraseFileNode (FileNode* pFileNode)
+{
+	// First of all, recursively delete children
+	while (pFileNode->children)
+	{
+		EraseFileNode (pFileNode->children);
+	}
+	
+	//If there's a previous node (which may or may not have pFileNode->parent->children
+	//set to it), override that one's next value to be our next value.
+	if (pFileNode->prev)
+	{
+		pFileNode->prev->next = pFileNode->next;
+	}
+	//If we don't have a previous, it's guaranteed that the parent's children value
+	//points to us, so give it the next pointer on our list
+	else if (pFileNode->parent)
+	{
+		pFileNode->parent->children = pFileNode->next;
+	}
+	//If there's a next element on the list, give its previous-pointer our prev-pointer.
+	if (pFileNode->next)
+	{
+		pFileNode->next->prev = pFileNode->prev;
+	}
+	
+	MmFree (pFileNode);
+}
+
+void FsInitializeDevicesDir();
+//First time setup of the file manager
+void FsSetup ()
+{
+	memset(&g_root, 0, sizeof g_root);
+	
+	strcpy(g_root.m_name, "root");
+	g_root.m_perms = PERM_READ | PERM_WRITE | PERM_EXEC;
+	g_root.m_type  = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
+	
+	// Starts off empty, gets more files as it gets up and running.
+	
+	FsInitializeDevicesDir();
+}
 #endif
 
 // File Descriptor handlers:
@@ -185,7 +257,6 @@ extern uint32_t  g_nDevNodes; //number of dev nodes.
 
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
 
-void FsListOpenedDirs();//fat.c
 void FiDebugDump()
 {
 	LogMsg("Listing opened files.");
@@ -198,7 +269,6 @@ void FiDebugDump()
 					p->m_bIsFIFO, p->m_pNode, p->m_openFile, p->m_openLine, p->m_sPath);
 		}
 	}
-	FsListOpenedDirs();
 	LogMsg("Done");
 }
 

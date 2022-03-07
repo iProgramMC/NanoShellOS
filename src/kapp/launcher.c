@@ -17,10 +17,25 @@
 // Shell resource handlers
 #if 1
 
-RESOURCE_STATUS LaunchVersionApplet()
+RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 {
 	int errorCode = 0;
-	Task* pTask = KeStartTask(VersionProgramTask, 0, &errorCode);
+	
+	char* pText;
+	if (pTextIn)
+	{
+		pText = MmAllocate (strlen (pTextIn) + 5);
+		strcpy (pText + 4, pTextIn);
+		*((int*)pText) = iconID;
+	}
+	else
+	{
+		pText = MmAllocate (5);
+		pText[4] = 0;
+		*((int*)pText) = iconID;
+	}
+	
+	Task* pTask = KeStartTask(VersionProgramTask, (int) pText, &errorCode);
 	DebugLogMsg("Created version window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
@@ -107,7 +122,12 @@ RESOURCE_STATUS LaunchCabinet()
 
 void LaunchVersion()
 {
-	LaunchVersionApplet();
+	LaunchVersionApplet (NULL, ICON_EXPERIMENT);
+}
+
+void ShellAbout (const char *pText, int iconID)
+{
+	LaunchVersionApplet (pText, iconID);
 }
 
 #define STREQ(str1,str2) (!strcmp(str1,str2))
@@ -115,7 +135,7 @@ void LaunchLauncher();
 RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 {
-	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet();
+	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet(NULL, ICON_EXPERIMENT);
 	else if (STREQ(pResourceID, "sysmon"))   return LaunchSystem();
 	else if (STREQ(pResourceID, "icontest")) return LaunchIconTest();
 	else if (STREQ(pResourceID, "cmdshell")) return LaunchTextShell();

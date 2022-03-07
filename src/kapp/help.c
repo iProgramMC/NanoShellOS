@@ -280,6 +280,9 @@ void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			{
 				switch (parm2)
 				{
+					case HELP_BTNABOUT:
+						ShellAbout("Help", ICON_HELP);
+						break;
 				}
 			}
 			break;

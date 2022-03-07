@@ -210,6 +210,16 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			{
 				switch (parm2)
 				{
+					case NOTEP_BTNABOUT:
+					{
+						ShellAbout("Notepad", ICON_NOTEPAD);
+						break;
+					}
+					case NOTEP_BTNEXIT:
+					{
+						BigTextWndProc (pWindow, EVENT_CLOSE, 0, 1);
+						break;
+					}
 					case NOTEP_BTNNEW:
 					{
 						// Create a new document:
@@ -351,7 +361,7 @@ void BigTextEntry (int arg)
 		return;
 	}
 	
-	pWindow->m_iconID = ICON_NOTES;
+	pWindow->m_iconID = ICON_NOTEPAD;
 	pWindow->m_data   = (void*)arg;
 	
 	while (HandleMessages (pWindow));

@@ -124,7 +124,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					}
 					else
 					{
-						RECT(r, 2, y, GetMenuWidth(pData)-5, height);
+						RECT(r, 2, y, GetMenuWidth(pData)-5, height - 2);
 						char buffer[110];
 						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
 						

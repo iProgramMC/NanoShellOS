@@ -11,6 +11,8 @@
 #include <main.h>
 #include <multiboot.h>
 
+//TODO: Proper heap so we won't use 4kb per small allocation.
+
 typedef struct {
 	bool m_bPresent:1;
 	bool m_bReadWrite:1;
@@ -64,6 +66,13 @@ void MmFirstThingEver();
  * Initializes the memory manager and heap.
  */
 void MmInit(multiboot_info_t*);
+
+/**
+ * Maps a contiguous block of physical memory near the hint address.
+ *
+ * The result address will either be NULL, a kernel halt, or >= the hint address.
+ */
+uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end);
 
 /**
  * Allocates a single page (4096 bytes).

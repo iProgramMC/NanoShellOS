@@ -189,6 +189,7 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 			{
 				//Mount something
 				
+				OnBusy (pWindow);
 				const char* s = TextInputGetRawText(pWindow, 4);
 				int fd = FiOpen (s, O_RDONLY);
 				if (fd < 0)
@@ -210,6 +211,7 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 					FsMountRamDisk(pData);
 					sti;
 				}
+				OnNotBusy(pWindow);
 			}
 			if (parm1 == 2 || parm1 == 5)
 				DestroyWindow(pWindow);
@@ -330,6 +332,23 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						// Get the file name.
 						char filename[1024];
 						strcpy (filename, "ted:");
+						strcat (filename, g_cabinetCWD);
+						if (g_cabinetCWD[1] != 0)
+							strcat (filename, "/");
+						strcat (filename, pFileName);
+						//CabinetExecute(pWindow, filename);
+						RESOURCE_STATUS status = LaunchResource(filename);
+						SLogMsg("Resource launch status: %x", status);
+						
+						OnNotBusy(pWindow);
+					}
+					else if (EndsWith (pFileName, ".md"))
+					{
+						OnBusy(pWindow);
+						
+						// Get the file name.
+						char filename[1024];
+						strcpy (filename, "help:");
 						strcat (filename, g_cabinetCWD);
 						if (g_cabinetCWD[1] != 0)
 							strcat (filename, "/");
