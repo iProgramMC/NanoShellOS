@@ -386,7 +386,8 @@ void KillFont (int fontID)
 					uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;
 					uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;
 					uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;
-					VidPlotPixelInlineF (ox + xi, oy + yi, ro<<16|go<<8|bo<<0);
+					//VidPlotPixel (ox + xi, oy + yi, ro<<16|go<<8|bo<<0);
+					VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);
 				}
 			}
 			
@@ -405,11 +406,11 @@ void KillFont (int fontID)
 				{
 					if (test1 & bitmask)
 					{
-						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
+						VidPlotPixel(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+						VidPlotPixel(ox + x, oy + y, colorBg);
 				}
 			}
 		}
@@ -422,17 +423,17 @@ void KillFont (int fontID)
 				{
 					if (test[c * width + x] & bitmask)
 					{
-						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
+						VidPlotPixel(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+						VidPlotPixel(ox + x, oy + y, colorBg);
 				}
 			}
 			if (colorBg != TRANSPARENT)
 				for (int y = 0; y < height; y++)
 				{
-					VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+					VidPlotPixel(ox + x, oy + y, colorBg);
 				}
 		}
 		else
@@ -448,11 +449,11 @@ void KillFont (int fontID)
 				{
 					if (test[c * height + y] & bitmask)
 					{
-						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
+						VidPlotPixel(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+						VidPlotPixel(ox + x, oy + y, colorBg);
 				}
 			}
 		}

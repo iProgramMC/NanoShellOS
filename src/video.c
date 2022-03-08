@@ -189,6 +189,10 @@ void RefreshMouse()
 				g_currentCursor->boundsWidth  = 200;
 			if (g_currentCursor->boundsHeight < 20)
 				g_currentCursor->boundsHeight = 20;
+			if (g_currentCursor->boundsWidth  >= GetScreenSizeX())
+				g_currentCursor->boundsWidth   = GetScreenSizeX();
+			if (g_currentCursor->boundsHeight >= GetScreenSizeY())
+				g_currentCursor->boundsHeight  = GetScreenSizeY();
 			
 			RenderCursor();
 			
@@ -503,22 +507,24 @@ inline void VidPlotPixelToCopyInlineUnsafe(unsigned x, unsigned y, unsigned colo
 	if (g_vbeData == &g_mainScreenVBEData)
 		g_framebufferCopy[x + y * g_vbeData->m_width] = color;
 }
-void VidPlotPixel(unsigned x, unsigned y, unsigned color)
-{
-	if ((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()) return;
-	VidPlotPixelToCopyInlineUnsafe(x, y, color);
-	VidPlotPixelRaw32I (x, y, color);
-}
 __attribute__((always_inline))
 inline void VidPlotPixelInline(unsigned x, unsigned y, unsigned color)
 {
-	if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
-	{
-		VidPlotPixelToCopyInlineUnsafe(x, y, color);
-		VidPlotPixelRaw32I (x, y, color);
-	}
+	if (
+		(int)x <  g_vbeData->m_clipRect.left ||
+		(int)y <  g_vbeData->m_clipRect.top  ||
+		(int)x >= g_vbeData->m_clipRect.right ||
+		(int)y >= g_vbeData->m_clipRect.bottom
+	)
+		return;
+	VidPlotPixelToCopyInlineUnsafe(x, y, color);
+	VidPlotPixelRaw32I (x, y, color);
 }
-void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
+void VidPlotPixel(unsigned x, unsigned y, unsigned color)
+{
+	VidPlotPixelInline(x, y, color);
+}
+static void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 {
 	if ((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()) return;
 	VidPlotPixelToCopyInlineUnsafe(x, y, color);
@@ -562,24 +568,29 @@ void VidPrintTestingPattern()
 }
 void VidFillScreen(unsigned color)
 {
+	/*
 	g_vbeData->m_dirty = 1;
 	bool alsoToTheCopy = (g_vbeData == &g_mainScreenVBEData);
 	
 	memset_ints (g_vbeData->m_framebuffer32, color, g_vbeData->m_pitch32 * g_vbeData->m_height);
 	if (alsoToTheCopy)
 		memset_ints (g_framebufferCopy, color, g_vbeData->m_width * g_vbeData->m_height);
+	*/
+	VidFillRect (color, 0, 0, GetScreenSizeX() - 1, GetScreenSizeY() - 1);
 }
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 {
-	//basic clipping:
-	if (left >= GetScreenSizeX()) return;
-	if (top >= GetScreenSizeY()) return;
-	if (right < 0) return;
-	if (bottom < 0) return;
-	if (left < 0) left = 0;
-	if (top < 0) top = 0;
-	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
-	if (bottom >= GetScreenSizeY()) bottom = GetScreenSizeY() - 1;
+	// Is this rectangle fully outside of the clip rect ?
+	if (left >= g_vbeData->m_clipRect.right)  return;
+	if (top  >= g_vbeData->m_clipRect.bottom) return;
+	if (right  < g_vbeData->m_clipRect.left)  return;
+	if (bottom < g_vbeData->m_clipRect.top)   return;
+	
+	// Do other clipping stuff
+	if (left   < g_vbeData->m_clipRect.left  ) left   = g_vbeData->m_clipRect.left  ;
+	if (top    < g_vbeData->m_clipRect.top   ) top    = g_vbeData->m_clipRect.top   ;
+	if (right >= g_vbeData->m_clipRect.right ) right  = g_vbeData->m_clipRect.right-1;
+	if (bottom>= g_vbeData->m_clipRect.bottom) bottom = g_vbeData->m_clipRect.bottom-1;
 	
 	int yoffs = top * g_vbeData->m_pitch32;
 	int start = yoffs + left;
@@ -603,11 +614,17 @@ void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 }
 void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
 {
-	//basic clipping:
-	if (left < 0) left = 0;
-	if (top < 0) top = 0;
-	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
-	if (bottom >= GetScreenSizeY()) bottom = GetScreenSizeY() - 1;
+	// Is this rectangle fully outside of the clip rect ?
+	if (left >= g_vbeData->m_clipRect.right)  return;
+	if (top  >= g_vbeData->m_clipRect.bottom) return;
+	if (right  < g_vbeData->m_clipRect.left)  return;
+	if (bottom < g_vbeData->m_clipRect.top)   return;
+	
+	// Do other clipping stuff
+	if (left   < g_vbeData->m_clipRect.left  ) left   = g_vbeData->m_clipRect.left  ;
+	if (top    < g_vbeData->m_clipRect.top   ) top    = g_vbeData->m_clipRect.top   ;
+	if (right >= g_vbeData->m_clipRect.right ) right  = g_vbeData->m_clipRect.right-1;
+	if (bottom>= g_vbeData->m_clipRect.bottom) bottom = g_vbeData->m_clipRect.bottom-1;
 	
 	int rwidth = right - left;
 	if (rwidth <= 1) return;
@@ -631,11 +648,17 @@ void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, i
 }
 void VidFillRectVGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
 {
-	//basic clipping:
-	if (left < 0) left = 0;
-	if (top < 0) top = 0;
-	if (right >= GetScreenSizeX()) right = GetScreenSizeX() - 1;
-	if (bottom >= GetScreenSizeY()) bottom = GetScreenSizeY() - 1;
+	// Is this rectangle fully outside of the clip rect ?
+	if (left >= g_vbeData->m_clipRect.right)  return;
+	if (top  >= g_vbeData->m_clipRect.bottom) return;
+	if (right  < g_vbeData->m_clipRect.left)  return;
+	if (bottom < g_vbeData->m_clipRect.top)   return;
+	
+	// Do other clipping stuff
+	if (left   < g_vbeData->m_clipRect.left  ) left   = g_vbeData->m_clipRect.left  ;
+	if (top    < g_vbeData->m_clipRect.top   ) top    = g_vbeData->m_clipRect.top   ;
+	if (right >= g_vbeData->m_clipRect.right ) right  = g_vbeData->m_clipRect.right-1;
+	if (bottom>= g_vbeData->m_clipRect.bottom) bottom = g_vbeData->m_clipRect.bottom-1;
 	
 	int rheight = bottom - top;
 	if (rheight <= 1) return;
@@ -848,12 +871,30 @@ void VidDrawRectangle(unsigned color, Rectangle rect)
 	VidDrawRect (color, rect.left, rect.top, rect.right, rect.bottom);
 }
 
+void VidSetClipRect(Rectangle *pRect)
+{
+	if (pRect)
+	{
+		g_vbeData->m_clipRect = *pRect;
+	}
+	else
+	{
+		Rectangle clipRect;
+		clipRect.top    = clipRect.left = 0;
+		clipRect.right  = GetScreenSizeX();
+		clipRect.bottom = GetScreenSizeY();
+		g_vbeData->m_clipRect = clipRect;
+	}
+}
+
 void VidSetVBEData(VBEData* pData)
 {
 	if (pData)
 		g_vbeData = pData;
 	else
 		g_vbeData = &g_mainScreenVBEData;
+	
+	VidSetClipRect(NULL);
 }
 
 
@@ -1579,6 +1620,8 @@ void VidInitializeVBEData(multiboot_info_t* pInfo)
 	g_vbeData->m_framebuffer32 = (uint32_t*)FRAMEBUFFER_MAPPED_ADDR;
 	g_vbeData->m_framebuffer16 = (uint16_t*)FRAMEBUFFER_MAPPED_ADDR;
 	g_vbeData->m_framebuffer8  = (uint8_t *)FRAMEBUFFER_MAPPED_ADDR;
+	
+	VidSetClipRect (NULL);
 }
 
 bool     g_IsBGADevicePresent;

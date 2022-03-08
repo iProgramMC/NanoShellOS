@@ -663,6 +663,9 @@ void WindowManagerShutdown()
 
 void UndrawWindow (Window* pWindow)
 {
+	VBEData* backup = g_vbeData;
+	VidSetVBEData(NULL);
+	
 	UpdateDepthBuffer();
 	
 	//redraw the background and all the things underneath:
@@ -703,6 +706,7 @@ void UndrawWindow (Window* pWindow)
 	}
 	
 	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
+	g_vbeData = backup;
 }
 
 void HideWindow (Window* pWindow)
@@ -719,6 +723,76 @@ void ShowWindow (Window* pWindow)
 	pWindow->m_vbeData.m_dirty = true;
 	pWindow->m_renderFinished = true;
 }
+
+int g_TaskbarHeight = 0;
+
+void ResizeWindowInt (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
+{
+	if (newPosX != -1)
+	{
+		if (newPosX < 0) newPosX = 0;
+		if (newPosY < 0) newPosY = 0;
+		if (newPosX >= GetScreenWidth ()) newPosX = GetScreenWidth ();
+		if (newPosY >= GetScreenHeight()) newPosY = GetScreenHeight();
+	}
+	else
+	{
+		newPosX = pWindow->m_rect.left;
+		newPosY = pWindow->m_rect.top;
+	}
+	if (newWidth < WINDOW_MIN_WIDTH)
+		newWidth = WINDOW_MIN_WIDTH;
+	if (newHeight< WINDOW_MIN_HEIGHT)
+		newHeight= WINDOW_MIN_HEIGHT;
+	uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
+	
+	// Copy the entire framebuffer's contents from old to new.
+	int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
+	int minWidth = newWidth, minHeight = newHeight;
+	if (minWidth > oldWidth)
+		minWidth = oldWidth;
+	if (minHeight > oldHeight)
+		minHeight = oldHeight;
+	
+	for (int i = 0; i < minHeight; i++)
+	{
+		memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_vbeData.m_framebuffer32[i * oldWidth], minWidth);
+	}
+	
+	// Free the old framebuffer.  This action should be done atomically.
+	// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
+	cli;
+	MmFree(pWindow->m_vbeData.m_framebuffer32);
+	pWindow->m_vbeData.m_framebuffer32 = pNewFb;
+	pWindow->m_vbeData.m_width   = newWidth;
+	pWindow->m_vbeData.m_pitch32 = newWidth;
+	pWindow->m_vbeData.m_pitch16 = newWidth*2;
+	pWindow->m_vbeData.m_pitch   = newWidth*4;
+	pWindow->m_vbeData.m_height  = newHeight;
+	sti;
+	
+	pWindow->m_rect.left   = newPosX;
+	pWindow->m_rect.top    = newPosY;
+	pWindow->m_rect.right  = pWindow->m_rect.left + newWidth;
+	pWindow->m_rect.bottom = pWindow->m_rect.top  + newHeight;
+	
+	// Mark as dirty.
+	pWindow->m_vbeData.m_dirty = true;
+	
+	// Send window events: EVENT_SIZE, EVENT_PAINT.
+	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  MAKE_MOUSE_PARM(newWidth, newHeight), MAKE_MOUSE_PARM(oldWidth, oldHeight));
+	WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
+}
+
+void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
+{
+	HideWindow (pWindow);
+	
+	ResizeWindowInt (pWindow, newPosX, newPosY, newWidth, newHeight);
+	
+	ShowWindow (pWindow);
+}
+
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 extern Heap* g_pHeap;
 
@@ -820,10 +894,13 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		yPos = g_NewWindowY;
 	}
 	
-	if (xPos >= GetScreenWidth () - xSize)
-		xPos  = GetScreenWidth () - xSize-1;
-	if (yPos >= GetScreenHeight() - ySize)
-		yPos  = GetScreenHeight() - ySize-1;
+	if (!(flags & WF_EXACTPOS))
+	{
+		if (xPos >= GetScreenWidth () - xSize)
+			xPos  = GetScreenWidth () - xSize-1;
+		if (yPos >= GetScreenHeight() - ySize)
+			yPos  = GetScreenHeight() - ySize-1;
+	}
 	
 	int freeArea = -1;
 	for (int i = 0; i < WINDOWS_MAX; i++)
@@ -850,6 +927,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_hidden = true;//false;
 	pWnd->m_isBeingDragged = false;
 	pWnd->m_isSelected = false;
+	pWnd->m_minimized = false;
+	pWnd->m_maximized = false;
 	pWnd->m_eventQueueLock = false;
 	pWnd->m_flags = flags;
 	
@@ -976,7 +1055,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			int y = mouseY - window->m_rect.top;
 			Point mousePoint = {x, y};
 			
-			if (RectangleContains(&recta, &mousePoint) || window->m_minimized)
+			if (!window->m_maximized && (RectangleContains(&recta, &mousePoint) || window->m_minimized))
 			{
 				window->m_isBeingDragged = true;
 				
@@ -1035,6 +1114,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	
 	//FREE_LOCK(g_windowLock);
 }
+
 extern int g_mouseX, g_mouseY;//video.c
 void RenderWindow (Window* pWindow);
 void OnUILeftClickRelease (int mouseX, int mouseY)
@@ -1061,6 +1141,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		
 		if (GetCurrentCursor()->m_resizeMode)
 		{
+			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
+			ResizeWindowInt (pWindow, -1, -1, newWidth, newHeight);
 			//EVENT_SIZE parms: PARM1: MakeMouseParm(NewSizeX,NewSizeY), PARM2: MakeMouseParm(OldSizeX,OldSizeY)
 			
 			//bool bkp = pWindow->m_isSelected;
@@ -1069,47 +1151,6 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			//pWindow->m_isSelected = bkp;
 			
 			// Resize framebuffer and stuff
-			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
-			if (newWidth < WINDOW_MIN_WIDTH)
-				newWidth = WINDOW_MIN_WIDTH;
-			if (newHeight< WINDOW_MIN_HEIGHT)
-				newHeight= WINDOW_MIN_HEIGHT;
-			uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
-			
-			// Copy the entire framebuffer's contents from old to new.
-			int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
-			int minWidth = newWidth, minHeight = newHeight;
-			if (minWidth > oldWidth)
-				minWidth = oldWidth;
-			if (minHeight > oldHeight)
-				minHeight = oldHeight;
-			
-			for (int i = 0; i < minHeight; i++)
-			{
-				memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_vbeData.m_framebuffer32[i * oldWidth], minWidth);
-			}
-			
-			// Free the old framebuffer.  This action should be done atomically.
-			// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
-			cli;
-			MmFree(pWindow->m_vbeData.m_framebuffer32);
-			pWindow->m_vbeData.m_framebuffer32 = pNewFb;
-			pWindow->m_vbeData.m_width   = newWidth;
-			pWindow->m_vbeData.m_pitch32 = newWidth;
-			pWindow->m_vbeData.m_pitch16 = newWidth*2;
-			pWindow->m_vbeData.m_pitch   = newWidth*4;
-			pWindow->m_vbeData.m_height  = newHeight;
-			sti;
-			
-			pWindow->m_rect.right  = pWindow->m_rect.left + newWidth;
-			pWindow->m_rect.bottom = pWindow->m_rect.top  + newHeight;
-			
-			// Mark as dirty.
-			pWindow->m_vbeData.m_dirty = true;
-			
-			// Send window events: EVENT_SIZE, EVENT_PAINT.
-			WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  MAKE_MOUSE_PARM(newWidth, newHeight), MAKE_MOUSE_PARM(oldWidth, oldHeight));
-			WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
 		}
 		else
 		{
@@ -2007,10 +2048,14 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		int MinimizAndCloseGap = 0;
 		if (!(pWindow->m_flags & WF_NOCLOSE))
 		{
-			MinimizAndCloseGap += 16;
+			MinimizAndCloseGap += TITLE_BAR_HEIGHT;
 			if (!(pWindow->m_flags & WF_NOMINIMZ))
 			{
-				MinimizAndCloseGap += 16;
+				MinimizAndCloseGap += TITLE_BAR_HEIGHT;
+			}
+			if (!(pWindow->m_flags & WF_NOMAXIMZ))
+			{
+				MinimizAndCloseGap += TITLE_BAR_HEIGHT;
 			}
 		}
 		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
@@ -2176,6 +2221,25 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		// Update controls based on their anchoring modes.
 		UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
 	}
+	else if (eventType == EVENT_MAXIMIZE)
+	{
+		if (!pWindow->m_maximized)
+			pWindow->m_rectBackup = pWindow->m_rect;
+		pWindow->m_maximized  = true;
+		ResizeWindow(pWindow, 0, g_TaskbarHeight, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
+		
+		SetLabelText(pWindow, 0xFFFF0002, "\x1F");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
+		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
+	}
+	else if (eventType == EVENT_UNMAXIMIZE)
+	{
+		if (pWindow->m_maximized)
+			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
+		pWindow->m_maximized = false;
+		
+		SetLabelText(pWindow, 0xFFFF0002, "\x08");
+		SetIcon     (pWindow, 0xFFFF0002, EVENT_MAXIMIZE);
+	}
 	else if (eventType == EVENT_CREATE)
 	{
 		PaintWindowBackgroundAndBorder(pWindow);
@@ -2272,11 +2336,18 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
+				if (!(pWindow->m_flags & WF_NOMAXIMZ))
+				{
+					rect.left -= TITLE_BAR_HEIGHT;
+					rect.right -= TITLE_BAR_HEIGHT;
+					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x08", 0xFFFF0002, EVENT_MAXIMIZE, 0);
+				}
+				
 				if (!(pWindow->m_flags & WF_NOMINIMZ))
 				{
 					rect.left -= TITLE_BAR_HEIGHT;
 					rect.right -= TITLE_BAR_HEIGHT;
-					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0000, EVENT_MINIMIZE, 0);
+					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0001, EVENT_MINIMIZE, 0);
 				}
 			}
 			

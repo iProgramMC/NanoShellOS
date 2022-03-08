@@ -39,21 +39,21 @@ void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned co
 {
 	//draw some lines
 	VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
-	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right);
-	VidDrawHLine (colorDark,  rect.left,  rect.right,      rect.bottom - 1);
-	VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
+	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right  - 1);
+	VidDrawHLine (colorDark,  rect.left,  rect.right -1,   rect.bottom - 1);
+	VidDrawHLine (colorLight, rect.left,  rect.right -1,   rect.top);
 	
 	//shrink
 	rect.left++, rect.right--, rect.top++, rect.bottom--;
 	
 	//do the same
 	VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
-	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right);
-	VidDrawHLine (colorDark,  rect.left,  rect.right,      rect.bottom - 1);
-	VidDrawHLine (colorLight, rect.left,  rect.right,      rect.top);
+	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right  - 1);
+	VidDrawHLine (colorDark,  rect.left,  rect.right -1,   rect.bottom - 1);
+	VidDrawHLine (colorLight, rect.left,  rect.right -1,   rect.top);
 	
 	//shrink again
-	rect.left++, rect.right--, rect.top++, rect.bottom -= 2;
+	rect.left++, rect.right -= 2, rect.top++, rect.bottom -= 2;
 	
 	//fill the background:
 	if (colorMiddle != TRANSPARENT)
@@ -120,10 +120,10 @@ void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsig
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	//draw some lines
-	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.top);
-	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left+1,rect.right-1,  rect.bottom-1);
-	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.left);
-	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top+1, rect.bottom-2, rect.right);
+	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left,rect.right-1,  rect.top);
+	VidDrawHLine (WINDOW_TEXT_COLOR, rect.left,rect.right-1,  rect.bottom-1);
+	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top, rect.bottom-1, rect.left);
+	VidDrawVLine (WINDOW_TEXT_COLOR, rect.top, rect.bottom-1, rect.right-1);
 	
 	rect.left++, rect.right--, rect.top++, rect.bottom--;
 	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
@@ -1047,7 +1047,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			if (this->m_textInputData.m_pText)
 			{
 				//HACK
-				VidSetFont(this->m_textInputData.m_showLineNumbers ? FONT_TAMSYN_MED_REGULAR : FONT_BASIC);
+				VidSetFont(this->m_textInputData.m_enableStyling ? FONT_BASIC : FONT_TAMSYN_MED_REGULAR);
 				
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
@@ -2104,6 +2104,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 		}
 		case EVENT_PAINT:
 		{
+			VidSetClipRect (&this->m_rect);
 			if (this->m_buttonData.m_clicked)
 			{
 				Rectangle r = this->m_rect;
@@ -2117,6 +2118,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
+			VidSetClipRect (NULL);
 			
 			break;
 		}
@@ -2495,6 +2497,118 @@ bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
+bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_CREATE:
+		{
+			if (!this->m_imageCtlData.pImage)
+			{
+				Image* pImageToCopy = (Image*)this->m_parm1;
+				
+				size_t n_pixels = pImageToCopy->width * pImageToCopy->height;
+				size_t new_size = sizeof (Image) + n_pixels * sizeof (uint32_t);
+				
+				Image* pNewImage    = (Image*)MmAllocateK(new_size);
+				pNewImage->framebuffer = (uint32_t*)((uint8_t*)pNewImage + sizeof (Image));
+				
+				//yes I am aware that I break the const-ness rule, but it's ok because we're supposed to do initialization
+				memcpy_ints ((uint32_t*)pNewImage->framebuffer, pImageToCopy->framebuffer, n_pixels);
+				pNewImage->width  = pImageToCopy->width;
+				pNewImage->height = pImageToCopy->height;
+				
+				this->m_imageCtlData.pImage = pNewImage;
+			}
+			this->m_imageCtlData.nLastXGot = -1;
+			this->m_imageCtlData.nLastYGot = -1;
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			if (this->m_imageCtlData.pImage)
+			{
+				MmFree(this->m_imageCtlData.pImage);
+				this->m_imageCtlData.pImage = NULL;
+			}
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			// Draw a rectangle to surround the things we put inside
+			//VidDrawHLine(WINDOW_BACKGD_COLOR - 0x0F0F0F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
+			
+			VidSetClipRect(&this->m_rect);
+			VidFillRectangle(0x3f0000, this->m_rect);
+			
+			Image *pImage = (Image*)this->m_imageCtlData.pImage;
+			if (pImage)
+			{
+				int x = (GetWidth (&this->m_rect) - pImage->width)  / 2;
+				int y = (GetHeight(&this->m_rect) - pImage->height) / 2;
+				
+				if (this->m_parm2 & IMAGECTL_PAN)
+				{
+					x += this->m_imageCtlData.nCurPosX;
+					y += this->m_imageCtlData.nCurPosY;
+				}
+				
+				x += this->m_rect.left;
+				y += this->m_rect.top;
+				
+				if (x <= this->m_rect.right && y <= this->m_rect.bottom && x + pImage->width >= this->m_rect.left && y + pImage->height >= this->m_rect.top)
+				{
+					VidBlitImage (pImage, x, y);
+				}
+				else 
+					VidDrawText ("(Out of View)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
+			}
+			else
+				VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
+			
+			VidSetClipRect(NULL);
+			
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (this->m_parm2  & IMAGECTL_PAN)
+			{
+				if (RectangleContains(&this->m_rect, &p))
+				{
+					int deltaX = 0, deltaY = 0;
+					if (this->m_imageCtlData.nLastXGot != -1)
+					{
+						deltaX = p.x - this->m_imageCtlData.nLastXGot;
+						deltaY = p.y - this->m_imageCtlData.nLastYGot;
+					}
+					
+					this->m_imageCtlData.nLastXGot = p.x;
+					this->m_imageCtlData.nLastYGot = p.y;
+					
+					this->m_imageCtlData.nCurPosX += deltaX;
+					this->m_imageCtlData.nCurPosY += deltaY;
+					
+					WidgetImage_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+				}
+			}
+			else
+			{
+				this->m_imageCtlData.nCurPosX = 0;
+				this->m_imageCtlData.nCurPosY = 0;
+			}
+			
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			this->m_imageCtlData.nLastXGot = this->m_imageCtlData.nLastYGot = -1;
+			break;
+		}
+	}
+	return false;
+}
 #define CHECKBOX_SIZE 12
 bool CheckboxGetChecked(Window* pWindow, int comboID)
 {
@@ -2599,6 +2713,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetButtonIcon_OnEvent,
 	WidgetButtonIconBar_OnEvent,
 	WidgetSimpleLine_OnEvent,
+	WidgetImage_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

@@ -135,6 +135,7 @@ typedef struct
 		uint8_t * m_framebuffer8;
 	};
 	int m_pitch32, m_pitch16;      //uint32_t's and uint16_t's per row.
+	Rectangle m_clipRect;
 }
 VBEData;
 
@@ -145,8 +146,17 @@ VBEData;
 
 /**
  * Sets the current VBE data, or NULL for the mainscreen.
+ * Also resets the clip rectangle.
  */
 void VidSetVBEData(VBEData* pData);
+
+/**
+ * Sets the current clipping rectangle.  Useful if you want to have
+ * content outside of a control that you do not want to spill over.
+ *
+ * If this is NULL, the clipping rectangle is reset.
+ */
+void VidSetClipRect(Rectangle *pRect);
 
 /**
  * Gets the width of the current VBE context.

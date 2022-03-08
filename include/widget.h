@@ -9,10 +9,15 @@
 
 #include<window.h>
 
-#define TEXTEDIT_MULTILINE 1
-#define TEXTEDIT_LINENUMS  2
-#define TEXTEDIT_READONLY  4
-#define TEXTEDIT_STYLING   8
+#define TEXTEDIT_MULTILINE (1)
+#define TEXTEDIT_LINENUMS  (2)
+#define TEXTEDIT_READONLY  (4)
+#define TEXTEDIT_STYLING   (8)
+
+#define IMAGECTL_PAN  (1)
+#define IMAGECTL_ZOOM (2)
+#define IMAGECTL_PEN  (4)
+#define IMAGECTL_FILL (8)
 
 /**
  * Gets the OnEvent function corresponding to the widget type.

@@ -471,6 +471,8 @@ void LauncherEntry(__attribute__((unused)) int arg)
 
 WindowMenu g_taskbarMenu;
 
+extern int g_TaskbarHeight;
+
 enum {
 	TASKBAR_HELLO = 0x1,
 	TASKBAR_START_TEXT,
@@ -753,6 +755,8 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	// create ourself a window:
 	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT;//, sh = GetScreenHeight();
 	int wx = 0, wy = 0;//(sh - wh)+2;
+	
+	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
 	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
 	

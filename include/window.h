@@ -127,6 +127,8 @@ enum {
 	EVENT_UPDATE2,
 	EVENT_MENU_CLOSE,
 	EVENT_CLICK_CHAR,
+	EVENT_MAXIMIZE,
+	EVENT_UNMAXIMIZE,
 	EVENT_MAX
 };
 
@@ -181,6 +183,10 @@ enum {
 	CONTROL_BUTTON_ICON_BAR,
 	//A simple line control
 	CONTROL_SIMPLE_HLINE,
+	//Image control.  A _valid_ pointer to an Image structure must be passed into parm1.
+	//When creating the control, the image gets duplicated, so the caller may free/dispose of
+	//the old image.  The system will get rid of its own copy when the control gets destroyed.
+	CONTROL_IMAGE,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -269,6 +275,20 @@ typedef struct
 }
 MenuBarData;
 
+typedef struct
+{
+	Image    *pImage;
+	uint32_t  nCurrentColor;
+	//if parm2 flag IMAGECTL_PAN  is set, this has an effect.  By default it is 0
+	int       nCurPosX, nCurPosY;
+	//to track cursor movement delta
+	int       nLastXGot, nLastYGot;
+	//if parm2 flag IMAGECTL_ZOOM is set, this has an effect on the resulting image.  By default it is the same as nWidth.
+	//to get height, you do (int)(((long long)nHeight * nZoomedWidth) / nWidth)
+	int       nZoomedWidth;
+}
+ImageCtlData;
+
 enum
 {
 	/*0x80*/TIST_BOLD = '\x80',
@@ -345,6 +365,7 @@ typedef struct ControlStruct
 		MenuBarData   m_menuBarData;
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
+		ImageCtlData  m_imageCtlData;
 	};
 	
 	int m_anchorMode;
@@ -374,6 +395,8 @@ enum CURSORTYPE
 #define WF_NOBORDER 0x00000008//Disable border
 #define WF_NOMINIMZ 0x00000010//Disable minimize button
 #define WF_ALWRESIZ 0x00000020//Allow resize
+#define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
+#define WF_NOMAXIMZ 0x00000080//Disable maximize button
 
 typedef struct WindowStruct
 {
@@ -421,6 +444,8 @@ typedef struct WindowStruct
 	bool       m_bWindowManagerUpdated;
 	
 	int        m_cursorID;
+	
+	bool       m_maximized;
 } Window;
 
 /**
@@ -557,6 +582,9 @@ void ChangeCursor (Window* pWindow, int cursorID);
 
 /**
  * Internal usage.
+ *
+ * If you add other controls, the pointer to the control may or may not get invalidated,
+ * due to the internal control array resizing itself.
  */
 Control* GetControlByComboID(Window* pWindow, int comboID);
 
