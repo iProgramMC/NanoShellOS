@@ -486,8 +486,6 @@ MmStartupStuff:
 ; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
 	mov ecx, 0x600000
 	mov dword [e_placement], ecx
-	add ecx, 0xC0000000
-	mov dword [e_frameBitsetVirt], ecx
 	ret
 	
 global g_cpuidLastLeaf

@@ -8,6 +8,13 @@
 #include <string.h>
 #include <memory.h>
 
+//#define ELF_DEBUG
+#ifdef ELF_DEBUG
+#define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
+#else
+#define EDLogMsg(...)
+#endif
+
 typedef struct 
 {
 	uint32_t* m_pageDirectory;
@@ -136,6 +143,7 @@ extern int g_lastReturnCode;
 
 int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 {
+	EDLogMsg("Loading elf file");
 	size += 0; //to circumvent unused warning
 	ElfProcess proc;
 	memset(&proc, 0, sizeof(proc));
@@ -153,6 +161,7 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 	//ElfDumpInfo(pHeader);
 	// Allocate a new page directory for the elf:
 	
+	EDLogMsg("(allocating heap...)");
 	if (!AllocateHeap (&proc.m_heap, 4096))//2048))//256))
 		return ELF_CANT_MAKE_HEAP;
 	
@@ -162,6 +171,7 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 	proc.m_pageDirectory     = newPageDir;
 	proc.m_pageDirectoryPhys = newPageDirP;
 	
+	EDLogMsg("(loading prog hdrs into memory...)");
 	for (int i = 0; i < pHeader->m_phNum; i++)
 	{
 		ElfProgHeader* pProgHeader = (ElfProgHeader*)(pElfData + pHeader->m_phOffs + i * pHeader->m_phEntSize);
@@ -170,10 +180,19 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 		size_t size1 = pProgHeader->m_memSize, size2 = pProgHeader->m_fileSize;
 		int offs = pProgHeader->m_offset;
 		
+		EDLogMsg("Mapping address %x with size %d", addr, size1);
+		if (!addr) 
+		{
+			EDLogMsg("Found section that doesn't map to anything...  We won't map that.");
+			continue;
+		}
 		ElfMapAddress (&proc, addr, size1, &pElfData[offs], size2);
 	}
 	
+	EDLogMsg("(loaded and mapped everything, activating heap!)");
 	UseHeap (&proc.m_heap);
+	
+	EDLogMsg("(looking for NOBITS sections to zero out...)");
 	for (int i = 0; i < pHeader->m_shNum; i++)
 	{
 		ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
@@ -185,10 +204,13 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 		}
 	}
 	
+	EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
 	//now that we have switched, call the entry func:
 	ElfEntry entry = (ElfEntry)pHeader->m_entry;
 	
 	int e = entry(pArgs);
+	
+	EDLogMsg("The Elf Entry exited!!! Cleaning up and quitting...");
 	
 	g_lastReturnCode = e;
 	ResetToKernelHeap();

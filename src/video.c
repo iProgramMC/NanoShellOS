@@ -1539,19 +1539,19 @@ void RedrawOldPixels(int oldX, int oldY)
 	else
 		RedrawOldPixelsOpaque     (oldX, oldY);
 }
-void RedrawOldPixelsFull(int oldX, int oldY)
+void RefreshPixels(int oldX, int oldY, int oldWidth, int oldHeight)
 {
 	//NEW: Optimization
-	int ys =                         - g_currentCursor->topOffs + oldY;
-	int ye = g_currentCursor->height - g_currentCursor->topOffs + oldY;
+	int ys =           + oldY;
+	int ye = oldHeight + oldY;
 	if (ys < 0)
 	{
 		ys = 0;
 	}
 	if (ye >= GetScreenHeight())
 		ye =  GetScreenHeight();
-	int xs =                        - g_currentCursor->leftOffs+ oldX;
-	int xe = g_currentCursor->width - g_currentCursor->leftOffs+ oldX;
+	int xs =          + oldX;
+	int xe = oldWidth + oldX;
 	if (xs < 0)
 	{
 		xs = 0;
@@ -1566,6 +1566,10 @@ void RedrawOldPixelsFull(int oldX, int oldY)
 		align4_memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_framebufferCopy[ky], xd);
 	}
 	return;
+}
+void RedrawOldPixelsFull(int oldX, int oldY)
+{
+	RefreshPixels(oldX - g_currentCursor->leftOffs, oldY - g_currentCursor->topOffs, g_currentCursor->width, g_currentCursor->height);
 }
 
 void SetMousePos (unsigned newX, unsigned newY)

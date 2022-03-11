@@ -1047,7 +1047,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			if (this->m_textInputData.m_pText)
 			{
 				//HACK
-				VidSetFont(this->m_textInputData.m_enableStyling ? FONT_BASIC : FONT_TAMSYN_MED_REGULAR);
+				VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
 				
 				const char*text = this->m_textInputData.m_pText;
 				int lineHeight = GetLineHeight();
@@ -1168,7 +1168,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				{
 					VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
 				}
-				VidSetFont(FONT_BASIC);
+				VidSetFont(SYSTEM_FONT);
 			}
 			else
 				VidTextOut("NOTHING!", this->m_rect.left, this->m_rect.top, 0xFF0000, WINDOW_TEXT_COLOR);

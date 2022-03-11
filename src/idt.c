@@ -293,6 +293,8 @@ extern void IrqTaskA();
 extern void IrqClockA();
 extern void IrqMouseA();
 extern void IrqCascadeA();
+extern void IrqSerialCom1A();
+extern void IrqSerialCom2A();
 extern void OnSyscallReceivedA();
 void KeClockInit();
 
@@ -310,6 +312,8 @@ void KiIdtInit()
 	SetupInterrupt (&mask1, &mask2, 0x0, IrqTaskA);//IrqTimerA);
 	SetupInterrupt (&mask1, &mask2, 0x1, IrqKeyboardA);
 	SetupInterrupt (&mask1, &mask2, 0x2, IrqClockA); // IRQ2: Cascade. Never triggered
+	SetupInterrupt (&mask1, &mask2, 0x3, IrqSerialCom2A);
+	SetupInterrupt (&mask1, &mask2, 0x4, IrqSerialCom1A);
 	SetupInterrupt (&mask1, &mask2, 0x8, IrqClockA);
 	SetupInterrupt (&mask1, &mask2, 0xC, IrqMouseA);
 	//prim and sec IDE drives.  Enable IRQs to avoid spending all the

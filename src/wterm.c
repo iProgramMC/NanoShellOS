@@ -113,7 +113,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 						pConsole->m_cursorFlashState ^= 1;
 					}
 				}
-				VidSetFont(FONT_BASIC);//let the WM be happy
+				VidSetFont(SYSTEM_FONT);//let the WM be happy
 			}
 			else
 			{
@@ -149,7 +149,7 @@ void TerminalHostTask(int arg)
 	
 	VidSetFont(g_TerminalFont);//we like this font right here
 	int charWidth = GetCharWidth('W'), charHeite = GetLineHeight();
-	VidSetFont(FONT_BASIC);
+	VidSetFont(SYSTEM_FONT);
 	Window *pWindow = CreateWindow(
 		hookDebugConsole ? "NanoShell debug console" : "NanoShell Terminal", 
 		array[0], array[1], 

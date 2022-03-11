@@ -189,11 +189,13 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	//Precalculate an address we can use
 	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
 	
-	if (initRdModule->mod_start >= 0x100000 && initRdModule->mod_start <= 0x500000)
+	/*if (initRdModule->mod_start >= 0x100000 && initRdModule->mod_start <= 0x500000)
 	{
 		LogMsg("OS State not supported.  Initrd module start: %x", initRdModule->mod_start);
 		KeStopSystem();
-	}
+	}*/
+	
+	// We should no longer have the problem of it hitting our frame bitset.
 	
 	LogMsg("Init Ramdisk module Start address: %x, End address: %x", initRdModule->mod_start, initRdModule->mod_end);
 	//If the end address went beyond 1 MB:

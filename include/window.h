@@ -22,6 +22,9 @@
 
 #define TITLE_BAR_HEIGHT 18
 
+//TODO
+//#define ENABLE_MAXIMIZE
+
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
 
@@ -38,6 +41,7 @@
 #define DEFAULT_WINDOW_TITLE_TEXT_COLOR         0x00FFFFFF
 #define DEFAULT_WINDOW_TEXT_COLOR               0x00000000
 #define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
+#define DEFAULT_SYSTEM_FONT                     FONT_BASIC
 
 //#define HARDCODE_EVERYTHING
 
@@ -55,6 +59,7 @@
 #define WINDOW_TITLE_TEXT_COLOR         DEFAULT_WINDOW_TITLE_TEXT_COLOR       
 #define WINDOW_TEXT_COLOR               DEFAULT_WINDOW_TEXT_COLOR       
 #define WINDOW_TEXT_COLOR_LIGHT         DEFAULT_WINDOW_TEXT_COLOR_LIGHT
+#define SYSTEM_FONT                     FONT_BASIC
 
 #else
 
@@ -72,6 +77,7 @@ P_WINDOW_TITLE_TEXT_COLOR_SHADOW,
 P_WINDOW_TITLE_TEXT_COLOR,
 P_WINDOW_TEXT_COLOR,
 P_WINDOW_TEXT_COLOR_LIGHT,
+P_SYSTEM_FONT,
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
@@ -89,6 +95,7 @@ void     SetThemingParameter(int type, uint32_t);
 #define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
 #define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
 #define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
+#define SYSTEM_FONT                     (GetThemingParameter(P_SYSTEM_FONT                   ))
 
 #endif
 
@@ -398,6 +405,8 @@ enum CURSORTYPE
 #define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 
+
+#define WIN_KB_BUF_SIZE  512
 typedef struct WindowStruct
 {
 	bool       m_used;
@@ -446,6 +455,10 @@ typedef struct WindowStruct
 	int        m_cursorID;
 	
 	bool       m_maximized;
+	
+	// Raw input buffer.
+	char m_inputBuffer[WIN_KB_BUF_SIZE];
+	int  m_inputBufferBeg, m_inputBufferEnd;
 } Window;
 
 /**

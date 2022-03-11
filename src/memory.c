@@ -22,6 +22,8 @@ extern uint32_t* e_frameBitsetVirt;
 extern uint32_t e_frameBitsetSize;
 extern uint32_t e_placement;
 
+uint32_t g_frameBitset [32768];//Enough to wrap the entirety of the address space
+
 uint32_t* g_pageDirectory = NULL;
 uint32_t* g_curPageDir = NULL;
 uint32_t  g_curPageDirP = 0;
@@ -52,7 +54,8 @@ void MmFirstThingEver()
 {
 	MmStartupStuff();
 	e_frameBitsetSize = 131072;//(memorySizeKb >> 2); //nBytesRAM >> 12 = (nKbExtRam << 10) >> 12 = nKbExtRam >> 2
-	e_placement += e_frameBitsetSize;
+	//e_placement += e_frameBitsetSize;
+	e_frameBitsetVirt = g_frameBitset;
 }
 
 int g_numPagesAvailable = 0;
@@ -214,12 +217,12 @@ void MmInitializePMM(multiboot_info_t* mbi)
 		 (unsigned long) pMemoryMap < addr + mbi->mmap_length;
 		 pMemoryMap = (multiboot_memory_map_t*) ((unsigned long) pMemoryMap + pMemoryMap->size + sizeof(pMemoryMap->size)))
 	{
-		/*LogMsg("S:%x A:%x%x L:%x%x T:%x", pMemoryMap->size, 
+		LogMsg("S:%x A:%x%x L:%x%x T:%x", pMemoryMap->size, 
 			(unsigned)(pMemoryMap->addr >> 32), (unsigned)pMemoryMap->addr,
 			(unsigned)(pMemoryMap->len  >> 32), (unsigned)pMemoryMap->len,
 			pMemoryMap->type
 		);
-		*/
+		
 		// if this memory range is not reserved AND it doesn't bother our kernel space, free it
 		if (pMemoryMap->type == MULTIBOOT_MEMORY_AVAILABLE)
 			for (int i = 0; i < (int)pMemoryMap->len; i += 0x1000)
@@ -230,6 +233,12 @@ void MmInitializePMM(multiboot_info_t* mbi)
 			}
 	}
 	//LogMsg("Finished.");
+	
+	// Clear out the kernel, from 0x100000 to 0x600000
+	for (int i = 0x100; i < 0x600; i++)
+	{
+		MmSetFrame(i); // Set frame as not allocatable
+	}
 	
 	g_numPagesAvailable = GetNumFreePhysPages();
 }
@@ -308,6 +317,12 @@ uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_e
 		page_table_offset++;
 		
 		num_pages_mapped_so_far ++;
+	}
+	
+	// Mark the frames as occupied
+	for (uint32_t i = phys_start; i < phys_end; i += 4096)
+	{
+		MmSetFrame (i >> 12);
 	}
 	
 	return hint + (phys_start & 0xFFF);

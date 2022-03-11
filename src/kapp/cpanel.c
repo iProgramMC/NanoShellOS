@@ -377,7 +377,7 @@ void RedrawEverything();
 				);
 				
 				VidDrawText(buffer, r, TEXTSTYLE_WORDWRAPPED, 0xFFFFFF, 0x000000);
-				VidSetFont(FONT_BASIC);
+				VidSetFont(SYSTEM_FONT);
 				break;
 			}
 			case EVENT_CLOSE:

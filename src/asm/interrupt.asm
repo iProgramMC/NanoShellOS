@@ -14,16 +14,33 @@ extern IrqMouse
 extern IrqKeyboard
 extern OnSyscallReceived
 extern IsrSoftware
+extern UartOnInterrupt
 
 global IrqTimerA
 global IrqClockA
 global IrqMouseA
 global IrqKeyboardA
 global IrqCascadeA
+global IrqSerialCom1A
+global IrqSerialCom2A
 global OnSyscallReceivedA
 
 section .text
 
+IrqSerialCom1A:
+	pusha
+	push 0
+	call UartOnInterrupt
+	add  esp, 4
+	popa
+	iretd
+IrqSerialCom2A:
+	pusha
+	push 1
+	call UartOnInterrupt
+	add  esp, 4
+	popa
+	iretd
 IrqTimerA:
 	pusha
 	call IrqTimer

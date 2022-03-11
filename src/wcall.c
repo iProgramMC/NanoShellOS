@@ -39,6 +39,16 @@
  *    (call 0x7C00 as if it were a pointer to a 
  *     function of the same type as our user wrapper)
  *  (done)
+ *
+ * If (or when, rather) I switch away from this method
+ * (and use the int instruction), I'll leave 
+ * 0xc0007000 mapped for user programs, and I'll
+ * shove in a stub which calls that, for backwards
+ * compatibility.
+ *
+ * Of course this will be difficult since arguments
+ * are passed on the stack, so I just want to punch
+ * my old self for going this way. :^)
 *****************************************************/
 
 enum
@@ -128,6 +138,10 @@ enum
 		
 	// System Calls V1.23
 		NS_GET_VERSION,
+		
+	// System Calls V1.24
+		WIN_GET_THEME_PARM,
+		WIN_SET_THEME_PARM,
 };
 
 void LogString(const char* pText)
@@ -250,6 +264,10 @@ void *WindowCall[] = {
 	
 	// System Calls V1.23- 10/01/2022
 		GetVersionNumber,
+		
+	// System Calls V1.24- 11/03/2022
+		GetThemingParameter,
+		SetThemingParameter,
 };
 
 void UserCallStuffNotSupportedC(void)

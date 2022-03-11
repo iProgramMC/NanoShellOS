@@ -90,6 +90,111 @@ void SaveThemingParmsToFile(const char* pString)
 
 #endif
 
+// Window effects when you maximize/minimize a window
+bool g_EffectRunning;
+Rectangle g_EffectDest, g_EffectSrc;
+Rectangle g_EffectStep;
+int g_NextEffectUpdateIn = 0;
+extern VBEData* g_vbeData, g_mainScreenVBEData;
+char g_EffectText[1000];
+
+void RefreshPixels(int oldX, int oldY, int oldWidth, int oldHeight);
+void KillEffect()
+{
+	if (!g_EffectRunning) return;
+	RefreshPixels (g_EffectSrc.left, g_EffectSrc.top, g_EffectSrc.right - g_EffectSrc.left, g_EffectSrc.bottom - g_EffectSrc.top);
+	g_EffectRunning = false;
+}
+void RunOneEffectFrame()
+{
+	if (!g_EffectRunning) return;
+	if (g_NextEffectUpdateIn < GetTickCount())
+	{
+		VBEData data = g_mainScreenVBEData;
+		VidSetVBEData(&data); // Hack to avoid it also drawing on the clone
+		
+		g_NextEffectUpdateIn += 10;
+		
+		int l,t,w,h;
+		l = g_EffectSrc.left, t = g_EffectSrc.top, w = g_EffectSrc.right - g_EffectSrc.left, h = g_EffectSrc.bottom - g_EffectSrc.top;
+		
+		RefreshPixels (l,t,w,h);
+		
+		// Update
+		g_EffectSrc.left    += g_EffectStep.left;
+		g_EffectSrc.top     += g_EffectStep.top;
+		g_EffectSrc.right   += g_EffectStep.right;
+		g_EffectSrc.bottom  += g_EffectStep.bottom;
+		
+		// Do some boring checks if we've skipped the destrect
+		#define EFFSTEPCHECK(dir) \
+		if (g_EffectStep.dir < 0)\
+		{\
+			if (g_EffectSrc.dir < g_EffectDest.dir)\
+			{\
+				g_EffectSrc.dir = g_EffectDest.dir;\
+				g_EffectStep.dir = 0;\
+			}\
+		}\
+		else if (g_EffectStep.dir > 0)\
+		{\
+			if (g_EffectSrc.dir > g_EffectDest.dir)\
+			{\
+				g_EffectSrc.dir = g_EffectDest.dir;\
+				g_EffectStep.dir = 0;\
+			}\
+		}
+		
+		EFFSTEPCHECK(left)
+		EFFSTEPCHECK(top)
+		EFFSTEPCHECK(right)
+		EFFSTEPCHECK(bottom)
+		
+		// If all effect steps are zero, is there any point in continuing ?
+		if (g_EffectStep.left == 0 && g_EffectStep.top == 0 && g_EffectStep.right == 0 && g_EffectStep.bottom == 0)
+		{
+			KillEffect();
+			return;
+		}
+		
+		// Render the effect now
+		VidSetClipRect(&g_EffectSrc);
+		
+		VidFillRectHGradient(
+			WINDOW_TITLE_ACTIVE_COLOR,
+			WINDOW_TITLE_ACTIVE_COLOR_B,
+			g_EffectSrc.left,
+			g_EffectSrc.top,
+			g_EffectSrc.right,
+			g_EffectSrc.bottom
+		);
+		
+		VidDrawText(g_EffectText, g_EffectSrc, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR), TRANSPARENT);
+		
+		VidSetVBEData(NULL);
+	}
+}
+void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text)
+{
+	KillEffect();
+	g_EffectRunning = true;
+	g_EffectDest = dest;
+	g_EffectSrc  = src;
+	
+	// Decide on what stepping variables we should have
+	g_EffectStep.left   = (dest.left   - src.left  ) / 16;
+	g_EffectStep.top    = (dest.top    - src.top   ) / 16;
+	g_EffectStep.right  = (dest.right  - src.right ) / 16;
+	g_EffectStep.bottom = (dest.bottom - src.bottom) / 16;
+	
+	g_NextEffectUpdateIn = GetTickCount();
+	
+	int sl = strlen (text);
+	if (sl > 999) sl = 999;
+	memcpy(g_EffectText, text, sl + 1);
+	g_EffectText[sl] = 0;
+}
+
 //background code:
 #if 1
 
@@ -413,6 +518,7 @@ bool g_windowLock = false;
 bool g_screenLock = false;
 bool g_bufferLock = false;
 bool g_createLock = false;
+bool g_backgdLock = false;
 
 bool g_shutdownSentDestroySignals = false;
 bool g_shutdownWaiting 			  = false;
@@ -668,8 +774,12 @@ void UndrawWindow (Window* pWindow)
 	
 	UpdateDepthBuffer();
 	
+	ACQUIRE_LOCK(g_backgdLock);
+	
 	//redraw the background and all the things underneath:
 	RedrawBackground(pWindow->m_rect);
+	
+	FREE_LOCK(g_backgdLock);
 	
 	// draw the windows below it
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
@@ -701,7 +811,7 @@ void UndrawWindow (Window* pWindow)
 	for (int i=0; i<sz; i++) 
 	{
 		//WindowRegisterEvent (windowDrawList[i], EVENT_PAINT, 0, 0);
-		windowDrawList[i]->m_vbeData.m_dirty = true;
+		//windowDrawList[i]->m_vbeData.m_dirty = true;
 		windowDrawList[i]->m_renderFinished = true;
 	}
 	
@@ -793,7 +903,6 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 	ShowWindow (pWindow);
 }
 
-extern VBEData* g_vbeData, g_mainScreenVBEData;
 extern Heap* g_pHeap;
 
 void ReadyToDestroyWindow (Window* pWindow)
@@ -1050,6 +1159,11 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
 				recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
 			}
+			else
+			{
+				recta.right  -= recta.left; recta.left = 0;
+				recta.bottom -= recta.top;  recta.top  = 0;
+			}
 			
 			int x = mouseX - window->m_rect.left;
 			int y = mouseY - window->m_rect.top;
@@ -1105,7 +1219,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				
 				SetCursor (&g_windowDragCursor);
 			}
-			else if (!window->m_minimized)
+			if (!window->m_minimized)
 			{
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
@@ -1174,6 +1288,9 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		pWindow->m_isBeingDragged = false;
 		ShowWindow(pWindow);
 	}
+	
+	if (pWindow->m_minimized) return;
+	
 	int x = mouseX - pWindow->m_rect.left;
 	int y = mouseY - pWindow->m_rect.top;
 	WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
@@ -1429,7 +1546,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			if (!pWindow->m_hidden)
 			{
 				//cli;
-				if (pWindow->m_renderFinished)
+				if (pWindow->m_renderFinished && !g_backgdLock)
 				{
 					if (!hasRedrawnThem)
 					{
@@ -1437,7 +1554,16 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 						RedrawBackgdDetails();
 					}
 					pWindow->m_renderFinished = false;
+					
+					//ACQUIRE_LOCK(g_backgdLock);
+					cli;
+					
 					RenderWindow(pWindow);
+					
+					sti;
+					
+					//FREE_LOCK(g_backgdLock);
+					
 					Point p = { g_mouseX, g_mouseY };
 					if (RectangleContains (&pWindow->m_rect, &p))
 						RenderCursor ();
@@ -1455,6 +1581,15 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 		}
 		UpdateTimeout--;
+		
+		RunOneEffectFrame ();
+		/*if (!g_EffectRunning)
+		{
+			Rectangle dest = { 100, 100, 200, 200 };
+			Rectangle src  = { 600, 600, 800, 800 };
+			
+			CreateMovingRectangleEffect(src, dest, "Hello");
+		}*/
 		
 		// Get the window we're over:
 		short windowOver = GetWindowIndexInDepthBuffer (g_mouseX, g_mouseY);
@@ -2022,7 +2157,8 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		rectc.right--;
 		rectc.bottom--;
 		
-		int iconGap = 16 * (pWindow->m_iconID != ICON_NULL);
+		//Cut out the gap stuff so that the animation looks good
+		int iconGap = 0;//16 * (pWindow->m_iconID != ICON_NULL);
 		
 		//VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
 		
@@ -2046,7 +2182,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
 		
 		int MinimizAndCloseGap = 0;
-		if (!(pWindow->m_flags & WF_NOCLOSE))
+		/*if (!(pWindow->m_flags & WF_NOCLOSE))
 		{
 			MinimizAndCloseGap += TITLE_BAR_HEIGHT;
 			if (!(pWindow->m_flags & WF_NOMINIMZ))
@@ -2057,7 +2193,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 			{
 				MinimizAndCloseGap += TITLE_BAR_HEIGHT;
 			}
-		}
+		}*/
 		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
 	
 		/*const unsigned char* pBkp = g_pCurrentFont;
@@ -2172,15 +2308,44 @@ void UpdateControlsBasedOnAnchoringModes(UNUSED Window* pWindow, int oldSizeParm
 	}
 }
 
+void WinAddToInputQueue (Window* this, char input)
+{
+	if (!input) return;
+	
+	this->m_inputBuffer[this->m_inputBufferEnd++] = input;
+	while
+	   (this->m_inputBufferEnd >= KB_BUF_SIZE)
+		this->m_inputBufferEnd -= KB_BUF_SIZE;
+}
+bool WinAnythingOnInputQueue (Window* this)
+{
+	return this->m_inputBufferBeg != this->m_inputBufferEnd;
+}
+char WinReadFromInputQueue (Window* this)
+{
+	if (CoAnythingOnInputQueue(this))
+	{
+		char k = this->m_inputBuffer[this->m_inputBufferBeg++];
+		while
+		   (this->m_inputBufferBeg >= KB_BUF_SIZE)
+			this->m_inputBufferBeg -= KB_BUF_SIZE;
+		return k;
+	}
+	else return 0;
+}
+
 static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	//setup paint stuff so the window can only paint in their little box
 	VidSetVBEData (&pWindow->m_vbeData);
+	VidSetFont(SYSTEM_FONT);
 	pWindow->m_vbeData.m_dirty = 0;
-	pWindow->m_renderFinished = false;
+	//pWindow->m_renderFinished = false;
 	//todo: switch case much?
 	if (eventType == EVENT_MINIMIZE)
 	{
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
 		VidSetVBEData (NULL);
 		HideWindow(pWindow);
 		if (!pWindow->m_minimized)
@@ -2196,9 +2361,15 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pWindow->m_hidden = false;
 		UpdateDepthBuffer();
 		VidSetVBEData (&pWindow->m_vbeData);
+		
+		Rectangle new_title_rect = pWindow->m_rect;
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMINIMIZE)
 	{
+		Rectangle old_title_rect = pWindow->m_rect;
+		
 		VidSetVBEData (NULL);
 		HideWindow(pWindow);
 		pWindow->m_minimized   = false;
@@ -2213,6 +2384,10 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
 		
 		pWindow->m_renderFinished = true;
+		
+		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_SIZE)
 	{
@@ -2223,22 +2398,40 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_MAXIMIZE)
 	{
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
 		if (!pWindow->m_maximized)
 			pWindow->m_rectBackup = pWindow->m_rect;
 		pWindow->m_maximized  = true;
-		ResizeWindow(pWindow, 0, g_TaskbarHeight, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
+		pWindow->m_rect.left = -2;
+		pWindow->m_rect.top  = -2+g_TaskbarHeight;
+		ResizeWindow(pWindow, -1, -1, GetScreenWidth() + 2, GetScreenHeight() - g_TaskbarHeight + 2);
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x1F");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
+		
+		pWindow->m_renderFinished = true;
+		
+		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMAXIMIZE)
 	{
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
 		if (pWindow->m_maximized)
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
 		pWindow->m_maximized = false;
 		
+		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
 		SetLabelText(pWindow, 0xFFFF0002, "\x08");
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_MAXIMIZE);
+		
+		pWindow->m_renderFinished = true;
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_CREATE)
 	{
@@ -2336,12 +2529,14 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
+				#ifdef ENABLE_MAXIMIZE
 				if (!(pWindow->m_flags & WF_NOMAXIMZ))
 				{
 					rect.left -= TITLE_BAR_HEIGHT;
 					rect.right -= TITLE_BAR_HEIGHT;
 					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x08", 0xFFFF0002, EVENT_MAXIMIZE, 0);
 				}
+				#endif
 				
 				if (!(pWindow->m_flags & WF_NOMINIMZ))
 				{

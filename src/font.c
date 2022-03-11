@@ -289,7 +289,6 @@ void KillFont (int fontID)
 		return g_pCurrentFont[1];
 	}
 	
-	int bigfontthing = FONT_BASIC;
 	void VidSetFont(unsigned fontType)
 	{
 		if (fontType >= FONT_LAST)

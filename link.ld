@@ -49,6 +49,13 @@ SECTIONS
 		*(COMMON)
 		*(.bss)
 	}
+	
+	. = 7M;
+	
+	.section : 
+	{
+	
+	}
 
 	/* Add a symbol that indicates the end address of the kernel. */
 	_kernel_end = .;

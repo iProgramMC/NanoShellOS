@@ -48,8 +48,9 @@ extern void KeTaskDone();
 #ifdef MULTITASKED_WINDOW_MANAGER
 
 #define ACQUIRE_LOCK(lock_var) do {\
-	while (lock_var) \
+	while (lock_var) {\
 		KeTaskDone(); \
+	}\
 	lock_var = 1;\
 } while (0)
 
