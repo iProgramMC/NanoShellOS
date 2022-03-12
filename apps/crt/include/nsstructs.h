@@ -18,6 +18,8 @@ typedef uint8_t bool;
 // Defines
 #define TRANSPARENT 0xFFFFFFFF
 
+#define WIN_KB_BUF_SIZE  512
+
 #define FLAGS_TOO(flags, color) (flags | (color & 0XFFFFFF))
 
 #define TEXT_RENDER_TRANSPARENT 0xFFFFFFFF
@@ -39,6 +41,40 @@ typedef uint8_t bool;
 
 // Mark your system callbacks with this anyway!!!
 #define CALLBACK
+
+#define TEXTEDIT_MULTILINE (1)
+#define TEXTEDIT_LINENUMS  (2)
+#define TEXTEDIT_READONLY  (4)
+#define TEXTEDIT_STYLING   (8)
+
+#define IMAGECTL_PAN  (1)
+#define IMAGECTL_ZOOM (2)
+#define IMAGECTL_PEN  (4)
+#define IMAGECTL_FILL (8)
+
+// By default, the control's anchoring mode is:
+// ANCHOR_LEFT_TO_LEFT | ANCHOR_RIGHT_TO_LEFT | ANCHOR_TOP_TO_TOP | ANCHOR_BOTTOM_TO_TOP
+
+// If the control's left edge anchors to the window's right edge.
+// If this bit isn't set, the control's left edge anchors to the window's left edge.
+#define ANCHOR_LEFT_TO_RIGHT 1
+// If the control's right edge anchors to the window's right edge.
+// If this bit isn't set, the control's right edge anchors to the window's left edge.
+#define ANCHOR_RIGHT_TO_RIGHT 2
+// If the control's top edge anchors to the window's bottom edge.
+// If this bit isn't set, the control's top edge anchors to the window's top edge.
+#define ANCHOR_TOP_TO_BOTTOM 4
+// If the control's bottom edge anchors to the window's bottom edge.
+// If this bit isn't set, the control's bottom edge anchors to the window's top edge.
+#define ANCHOR_BOTTOM_TO_BOTTOM 8
+
+#define WF_NOCLOSE  0x00000001//Disable close button
+#define WF_FROZEN   0x00000002//Freeze window
+#define WF_NOTITLE  0x00000004//Disable title
+#define WF_NOBORDER 0x00000008//Disable border
+#define WF_NOMINIMZ 0x00000010//Disable minimize button
+#define WF_ALWRESIZ 0x00000020//Allow resize
+#define WF_NOMAXIMZ 0x00000080//Disable maximize button
 
 #define KEY_UNDEFINED_0 0
 #define KEY_ESC 1
@@ -157,6 +193,36 @@ typedef uint8_t bool;
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
+
+#define LIST_ITEM_HEIGHT 16
+#define ICON_ITEM_WIDTH  90
+#define ICON_ITEM_HEIGHT 60
+
+#define PATH_MAX (260)
+#define PATH_SEP ('/')
+#define PATH_THISDIR (".")
+#define PATH_PARENTDIR ("..")
+
+#define MB_OK                 0x00000000 //The message box contains one push button: OK.  This is the default.
+#define MB_OKCANCEL           0x00000001 //The message box contains two push buttons: OK and Cancel.
+#define MB_ABORTRETRYIGNORE   0x00000002 //The message box contains three push buttons: Abort, Retry and Ignore.
+#define MB_YESNOCANCEL        0x00000003 //The message box contains three push buttons: Yes, No, and Cancel.
+#define MB_YESNO              0x00000004 //The message box contains two push buttons: Yes, and No.
+#define MB_RETRYCANCEL        0x00000005 //The message box contains two push buttons: Retry and Cancel.
+#define MB_CANCELTRYCONTINUE  0x00000006 //The message box contains three push buttons: Cancel, Retry, and Continue.
+#define MB_RESTART            0x00000007 //The message box contains one push button: Restart.
+
+// This flag tells the operating system that it may choose where to place a window.
+// If the xPos and yPos are bigger than or equal to zero, the application tells the OS where it should place the window.
+// The OS will use this as a guideline, for example, if an application wants to go off the screen, the OS
+// will reposition its window to be fully inside the screen boundaries.
+#define CW_AUTOPOSITION   (-1)
+
+#define WINDOW_MIN_WIDTH  (32) //that's already very small.
+#define WINDOW_MIN_HEIGHT (3+TITLE_BAR_HEIGHT)
+
+#define WINDOW_MINIMIZED_WIDTH  (160)
+#define WINDOW_MINIMIZED_HEIGHT (3+TITLE_BAR_HEIGHT)
 
 // Structs and enums
 
@@ -292,7 +358,39 @@ enum
 	ICON_FILE_NANO,
 	//icons V1.34
 	ICON_CLOCK_EMPTY,//Special case which draws more stuff
+	//icons V1.35
+	ICON_RUN,
+	ICON_RUN16,
+	//icons V1.4
+	ICON_DEVTOOL,
+	ICON_DEVTOOL_FILE,
+	ICON_HEX_EDIT,
+	ICON_CHAIN,
+	ICON_CHAIN16,
+	ICON_DEVTOOL16,
+	ICON_TODO,
+	ICON_FOLDER_DOCU,
+	ICON_DLGEDIT,
+	ICON_DESK_SETTINGS,
+	ICON_SHUTDOWN,
+	ICON_NOTEPAD,
+	ICON_FILE_MKDOWN,
+	ICON_FILE_MKDOWN16,
+	ICON_COMPUTER_PANIC,
+	ICON_EXPERIMENT,
+	ICON_GRAPH,
+	ICON_CABINET_COMBINE,
+	ICON_REMOTE,
+	ICON_CABINET_OLD,
 	ICON_COUNT
+};
+
+enum CURSORTYPE
+{
+	CURSOR_DEFAULT,
+	CURSOR_WAIT,
+	CURSOR_IBEAM,
+	CURSOR_COUNT,
 };
 
 enum
@@ -428,6 +526,24 @@ enum {
 	P_THEME_PARM_COUNT
 };
 
+enum
+{
+	/*0x80*/TIST_BOLD = '\x80',
+	/*0x81*/TIST_UNDERLINE,
+	/*0x82*/TIST_ITALIC,
+	/*0x83*/TIST_RED,
+	/*0x84*/TIST_BLUE,
+	/*0x85*/TIST_GREEN,
+	/*0x86*/TIST_LINK,
+	/*0x87*/TIST_UNFORMAT,
+	/*0x88*/TIST_UNBOLD,
+	/*0x89*/TIST_UNITALIC,
+	/*0x8A*/TIST_UNUNDERLINE,
+	/*0x8B*/TIST_UNCOLOR,
+	/*0x8C*/TIST_UNLINK,
+	/*0x8D*/TIST_COUNT,
+};
+
 typedef struct
 {
 	int seconds,
@@ -554,6 +670,20 @@ MenuBarData;
 
 typedef struct
 {
+	Image    *pImage;
+	uint32_t  nCurrentColor;
+	//if parm2 flag IMAGECTL_PAN  is set, this has an effect.  By default it is 0
+	int       nCurPosX, nCurPosY;
+	//to track cursor movement delta
+	int       nLastXGot, nLastYGot;
+	//if parm2 flag IMAGECTL_ZOOM is set, this has an effect on the resulting image.  By default it is the same as nWidth.
+	//to get height, you do (int)(((long long)nHeight * nZoomedWidth) / nWidth)
+	int       nZoomedWidth;
+}
+ImageCtlData;
+
+typedef struct
+{
 	bool  m_focused;
 	bool  m_dirty;//Has it been changed since the dirty flag was set to false?
 	bool  m_onlyOneLine, m_showLineNumbers;//note that these are mutually exclusive, but both can be turned off
@@ -563,6 +693,7 @@ typedef struct
 	      m_scrollY;
 	char* m_pText;
 	bool  m_readOnly;
+	bool  m_enableStyling;
 }
 TextInputData;
 
@@ -593,6 +724,7 @@ typedef struct ControlStruct
 		MenuBarData   m_menuBarData;
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
+		ImageCtlData  m_imageCtlData;
 	};
 	
 	int m_anchorMode;
@@ -607,6 +739,7 @@ typedef struct ControlStruct
 	// The smallest rectangle a control can occupy is 10x10.
 }
 Control;
+
 
 typedef struct WindowStruct
 {
@@ -646,12 +779,21 @@ typedef struct WindowStruct
 	
 	void*      m_data; //user data
 	
+	// DO NOT TOUCH!
 	void      *m_pOwnerThread, 
-	          *m_pSubThread;//in case you ever want to use this
+	          *m_pSubThread;
 	
 	Console*   m_consoleToFocusKeyInputsTo;
 	
 	bool       m_bWindowManagerUpdated;
+	
+	int        m_cursorID;
+	
+	bool       m_maximized;
+	
+	// Raw input buffer.
+	char m_inputBuffer[WIN_KB_BUF_SIZE];
+	int  m_inputBufferBeg, m_inputBufferEnd;
 } Window;
 
 typedef Window* PWINDOW;

@@ -6,11 +6,13 @@
 ******************************************/
 
 #include <window.h>
+#include <wbuiltin.h>
 #include <widget.h>
 #include <video.h>
 #include <print.h>
 #include <console.h>
 #include <memory.h>
+#include <cinterp.h>
 #include <vfs.h>
 #include <misc.h>
 #include <idt.h>
@@ -142,6 +144,25 @@ enum
 	// System Calls V1.24
 		WIN_GET_THEME_PARM,
 		WIN_SET_THEME_PARM,
+	
+	// System Calls V1.3
+		WIN_ADD_CONTROL_EX,
+		WIN_TEXT_INPUT_QUERY_DIRTY_FLAG,
+		WIN_TEXT_INPUT_CLEAR_DIRTY_FLAG,
+		WIN_TEXT_INPUT_GET_RAW_TEXT,
+		WIN_CHECKBOX_GET_CHECKED,
+		WIN_CHECKBOX_SET_CHECKED,
+		
+		CC_RUN_C_CODE,
+		
+		FI_REMOVE_FILE,
+		
+		WIN_REQUEST_REPAINT_NEW,
+		WIN_SHELL_ABOUT,
+		WIN_INPUT_BOX,
+		WIN_COLOR_BOX,
+		WIN_FILE_CHOOSE_BOX,
+		WIN_POPUP_WINDOW,
 };
 
 void LogString(const char* pText)
@@ -177,6 +198,7 @@ Console* GetCurrentConsole()
 {
 	return g_currentConsole;
 }
+int FiRemoveFile(const char* pText);
 
 void *WindowCall[] = {
 	// System Calls V1.0 -- 14/01/2022
@@ -268,7 +290,29 @@ void *WindowCall[] = {
 	// System Calls V1.24- 11/03/2022
 		GetThemingParameter,
 		SetThemingParameter,
+		
+	// System Calls V1.3 - 11/03/2022
+		AddControlEx,
+		TextInputQueryDirtyFlag,
+		TextInputClearDirtyFlag,
+		TextInputGetRawText,
+		CheckboxGetChecked,
+		CheckboxSetChecked,
+		CcRunCCode,
+		FiRemoveFile,
+		RequestRepaintNew,
+		ShellAbout,
+		InputBox,
+		ColorInputBox,
+		NULL,//TODO
+		PopupWindow,
 };
+
+int FiRemoveFile(UNUSED const char* pText)
+{
+	// TODO
+	return  -ENXIO;
+}
 
 void UserCallStuffNotSupportedC(void)
 {

@@ -10,7 +10,7 @@
 #include <vfs.h>
 #include <elf.h>
 #include <task.h>
-#define SYSMON_WIDTH  600
+#define SYSMON_WIDTH  300
 #define SYSMON_HEIGHT 300
 
 enum
@@ -41,11 +41,12 @@ void UpdateSystemMonitorLists(Window* pWindow)
 		Task* pTask = g_runningTasks + i;
 		if (pTask->m_bExists)
 		{
-			sprintf (buffer, "THREAD '%s': %s:%d (%s) : F:0x%x",/* V:0x%x H:0x%x S:0x%x A:0x%x", */
+			sprintf (buffer, "%s / %s",
+				/*"THREAD '%s': %s:%d (%s) : F:0x%x",*/ /* V:0x%x H:0x%x S:0x%x A:0x%x", */
 				pTask->m_tag,
-				pTask->m_authorFile,
-				pTask->m_authorLine,
-				pTask->m_authorFunc,
+				//pTask->m_authorFile,
+				//pTask->m_authorLine,
+				//pTask->m_authorFunc,
 				pTask->m_pFunction
 			);
 			if (strlen(pTask->m_tag) == 0)
@@ -102,12 +103,12 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ listview_height
 			);
 			
-			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, PROCESS_LISTVIEW, 0, 0);
+			AddControlEx (pWindow, CONTROL_LISTVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 4, listview_width, 20);
-			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", MEMORY_LABEL, 0, WINDOW_BACKGD_COLOR);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", MEMORY_LABEL, 0, WINDOW_BACKGD_COLOR);
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 24, listview_width, 20);
-			AddControl (pWindow, CONTROL_TEXT, r, "placeholder", UPTIME_LABEL, 0, WINDOW_BACKGD_COLOR);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", UPTIME_LABEL, 0, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
@@ -122,7 +123,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	// create ourself a window:
 	int xPos = (GetScreenSizeX() - SYSMON_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - SYSMON_HEIGHT) / 2;
-	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, 0);
+	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_RESMON;
 	
 	if (!pWindow)

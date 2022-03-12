@@ -119,5 +119,19 @@ void SetIcon (Window* pWindow, int comboID, int icon);
 void SetWindowTitle(Window* pWindow, const char* pTitle);
 void RegisterEvent(Window* pWindow, short evType, int parm1, int parm2);
 void RegisterEventInsideWndProc(Window* pWindow, short evType, int parm1, int parm2);
+int AddControlEx(Window* pWindow, int type, int anchor_mode, Rectangle rect, const char* text, int comboID, int p1, int p2);
+bool TextInputQueryDirtyFlag(Window* pWindow, int comboID);
+void TextInputClearDirtyFlag(Window* pWindow, int comboID);
+const char* TextInputGetRawText(Window* pWindow, int comboID);
+bool CheckboxGetChecked(Window* pWindow, int comboID);
+void CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
+void SetTextInputText(Window* pWindow, int comboID, const char* pText);
+int CcRunCCode(const char* pCode, int length);
+int remove (const char* filename);
+void ShellAbout (const char* pText, int icon);
+void RequestRepaint (Window *pWindow);
+void PopupWindow (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+uint32_t ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCaption);
+char *InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 
 #endif//_NSSTANDARD_H

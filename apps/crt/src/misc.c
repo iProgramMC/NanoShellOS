@@ -4,7 +4,7 @@
 // Copyright (C) 2022 iProgramInCpp.
 //
 // The standard NanoShell library internal implementation
-// -- Video and Window API
+// -- Misc. API functions
 //
 
 #include "crtlib.h"
@@ -125,7 +125,7 @@ void VidDrawRectangle(unsigned color, Rectangle rect)
 	_I_VidDrawRect(color, rect.left, rect.top, rect.right, rect.bottom);
 }
 
-void SetMousePos (unsigned pX, unsigned pY)
+void SetMousePos (UNUSED unsigned pX, UNUSED unsigned pY)
 {
 	//TODO
 }
@@ -257,4 +257,65 @@ uint32_t GetThemingParameter(int type)
 void SetThemingParameter(int type, uint32_t parm)
 {
 	return _I_SetThemingParameter(type, parm);
+}
+
+int remove (const char* filename)
+{
+	return _I_FiRemoveFile(filename);
+}
+
+int CcRunCCode(const char* data, int length)
+{
+	return _I_CcRunCCode (data, length);
+}
+
+int AddControlEx(Window* pWindow, int type, int anchor_mode, Rectangle rect, const char* text, int comboID, int p1, int p2)
+{
+	return _I_AddControlEx (pWindow, type, anchor_mode, rect, text, comboID, p1, p2);
+}
+
+bool TextInputQueryDirtyFlag(Window* pWindow, int comboID)
+{
+	return _I_TextInputQueryDirtyFlag (pWindow, comboID);
+}
+
+void TextInputClearDirtyFlag(Window* pWindow, int comboID)
+{
+	_I_TextInputClearDirtyFlag(pWindow, comboID);
+}
+
+const char* TextInputGetRawText(Window* pWindow, int comboID)
+{
+	return _I_TextInputGetRawText (pWindow, comboID);
+}
+
+bool CheckboxGetChecked(Window* pWindow, int comboID)
+{
+	return _I_CheckboxGetChecked (pWindow, comboID);
+}
+
+void CheckboxSetChecked(Window* pWindow, int comboID, bool checked)
+{
+	_I_CheckboxSetChecked (pWindow, comboID, checked);
+}
+
+char *InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText)
+{
+	return _I_InputBox (pWindow, pPrompt, pCaption, pDefaultText);
+}
+uint32_t ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCaption)
+{
+	return _I_ColorInputBox (pWindow, pPrompt, pCaption);
+}
+void PopupWindow (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+{
+	return _I_PopupWindow (pWindow, newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags);
+}
+void RequestRepaint (Window *pWindow)
+{
+	_I_RequestRepaint(pWindow);
+}
+void ShellAbout (const char* pText, int icon)
+{
+	_I_ShellAbout (pText, icon);
 }

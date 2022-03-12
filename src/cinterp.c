@@ -455,20 +455,20 @@ CCSTATUS CcInitMachine(CMachine* pMachine)
     pMachine->g_pErrorExists = false;
 
     pMachine->main_poolSize = 256 * 1024; // arbitrary size
-    if (!(pMachine->pStartOfSymbols = pMachine->pCurrSymbol = (int*)MmAllocate(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocate(%d) symbol area", pMachine->main_poolSize); 
+    if (!(pMachine->pStartOfSymbols = pMachine->pCurrSymbol = (int*)MmAllocateK(pMachine->main_poolSize))) { 
+        LogMsg("could not MmAllocateK(%d) symbol area", pMachine->main_poolSize); 
         return CCSTATUS_NO_MALLOC_POOL_AREA; 
     }
-    if (!(pMachine->pTextStart = pMachine->pLastText = pMachine->pText = (int*)MmAllocate(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocate(%d) text area", pMachine->main_poolSize); 
+    if (!(pMachine->pTextStart = pMachine->pLastText = pMachine->pText = (int*)MmAllocateK(pMachine->main_poolSize))) { 
+        LogMsg("could not MmAllocateK(%d) text area", pMachine->main_poolSize); 
         return CCSTATUS_NO_MALLOC_TEXT_AREA;
     }
-    if (!(pMachine->pDataStart = pMachine->pData = (char*)MmAllocate(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocate(%d) data area", pMachine->main_poolSize); 
+    if (!(pMachine->pDataStart = pMachine->pData = (char*)MmAllocateK(pMachine->main_poolSize))) { 
+        LogMsg("could not MmAllocateK(%d) data area", pMachine->main_poolSize); 
         return CCSTATUS_NO_MALLOC_DATA_AREA;
     }
-    if (!(pMachine->main_stackStart = pMachine->main_stackPtr = (int*)MmAllocate(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocate(%d) stack area", pMachine->main_poolSize); 
+    if (!(pMachine->main_stackStart = pMachine->main_stackPtr = (int*)MmAllocateK(pMachine->main_poolSize))) { 
+        LogMsg("could not MmAllocateK(%d) stack area", pMachine->main_poolSize); 
         return CCSTATUS_NO_MALLOC_STACK_AREA;
     }
 
@@ -508,8 +508,8 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
 {
     pMachine->main_tempI = length;
 	if (!length) pMachine->main_tempI = strlen(pCode);
-    if (!(pMachine->pLastSource = pMachine->pSource = pMachine->pSourceStart = (char*)MmAllocate(pMachine->main_tempI+30))) {
-        LogMsg("could not MmAllocate(%d) source area", pMachine->main_poolSize);
+    if (!(pMachine->pLastSource = pMachine->pSource = pMachine->pSourceStart = (char*)MmAllocateK(pMachine->main_tempI+30))) {
+        LogMsg("could not MmAllocateK(%d) source area", pMachine->main_poolSize);
         return CCSTATUS_NO_MALLOC_SRC_AREA;
     }
     memcpy(pMachine->pSource, pCode, pMachine->main_tempI);
@@ -708,8 +708,10 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
         else if (pMachine->main_tempI == PRTN) { pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1]; LogMsgNoCr((char*)pMachine->main_tempT[-1], pMachine->main_tempT[-2], pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]); }
         else if (pMachine->main_tempI == MALC) {
             if (pMachine->g_memoryAllocCount < MAX_ALLOCS - 2) {
-                pMachine->main_theAReg = (int)MmAllocate(*pMachine->main_stackPtr);
-                CcOnAllocateSomething(pMachine, (void*)pMachine->main_theAReg);
+                pMachine->main_theAReg = (int)MmAllocateK(*pMachine->main_stackPtr);
+				
+				if (pMachine->main_theAReg)
+					CcOnAllocateSomething(pMachine, (void*)pMachine->main_theAReg);
             }
             else
             {
@@ -863,7 +865,7 @@ void CcKillMachine(CMachine* pMachine)
 CCSTATUS CcRunCCode(const char* pCode, int length)
 {
     CMachine* pMachine;
-    pMachine = (CMachine*)MmAllocate(sizeof(CMachine));
+    pMachine = (CMachine*)MmAllocateK(sizeof(CMachine));
     if (!pMachine) {
         LogMsg("Wtf?! (16)");
         return 1;

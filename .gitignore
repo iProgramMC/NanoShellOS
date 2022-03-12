@@ -12,3 +12,7 @@ apps/hellowindow/build/*
 apps/hellowindow/*.nse
 apps/crtdemo/build/*
 apps/crtdemo/*.nse
+apps/notepad/build/*
+apps/notepad/*.nse
+
+vdisk.vdi

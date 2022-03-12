@@ -216,3 +216,44 @@ CALL_END
 CALL (SetThemingParameter, WIN_SET_THEME_PARM, void, int type, uint32_t parm)
 	SARGS(type, parm)
 CALL_END
+
+// Calls V1.3
+CALL (CheckboxSetChecked, WIN_CHECKBOX_SET_CHECKED, void, Window* pWindow, int comboID, bool checked)
+	SARGS(pWindow, comboID, checked)
+CALL_END
+CALL (CheckboxGetChecked, WIN_CHECKBOX_GET_CHECKED, bool, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL (TextInputQueryDirtyFlag, WIN_TEXT_INPUT_QUERY_DIRTY_FLAG, bool, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL (TextInputClearDirtyFlag, WIN_TEXT_INPUT_CLEAR_DIRTY_FLAG, void, Window* pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+CALL (TextInputGetRawText, WIN_TEXT_INPUT_GET_RAW_TEXT, const char*, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL (CcRunCCode, CC_RUN_C_CODE, int, const char* pData, int length)
+	RARGS(pData, length)
+CALL_END
+CALL (FiRemoveFile, FI_REMOVE_FILE, int, const char* pName)
+	RARGS(pName)
+CALL_END
+CALL (AddControlEx, WIN_ADD_CONTROL_EX, int, Window* pWindow, int type, int amode, Rectangle rect, const char* text, int comboID, int p1, int p2)
+	RARGS(pWindow, type, amode, rect, text, comboID, p1, p2)
+CALL_END
+CALL (RequestRepaintNew, WIN_REQUEST_REPAINT_NEW, void, Window* pWindow)
+	SARGS(pWindow)
+CALL_END
+CALL (ShellAbout, WIN_SHELL_ABOUT, void, const char* text, int icon)
+	SARGS(text, icon)
+CALL_END
+CALL (InputBox, WIN_INPUT_BOX, char*, Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText)
+	RARGS(pWindow, pPrompt, pCaption, pDefaultText)
+CALL_END
+CALL (ColorInputBox, WIN_COLOR_BOX, uint32_t, Window* pWindow, const char* pPrompt, const char* pCaption)
+	RARGS(pWindow, pPrompt, pCaption)
+CALL_END
+CALL (PopupWindow, WIN_POPUP_WINDOW, void, Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+	SARGS(pWindow, newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags)
+CALL_END

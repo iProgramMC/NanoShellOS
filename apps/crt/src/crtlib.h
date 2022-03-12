@@ -3,7 +3,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 12
+#define WCALL_VERSION 13
 enum
 {
 	// System Calls V1.0
@@ -100,6 +100,27 @@ enum
 		WIN_GET_THEME_PARM,
 		WIN_SET_THEME_PARM,
 	#endif
+	
+	// System Calls V1.3
+	#if WCALL_VERSION >= 13
+		WIN_ADD_CONTROL_EX,
+		WIN_TEXT_INPUT_QUERY_DIRTY_FLAG,
+		WIN_TEXT_INPUT_CLEAR_DIRTY_FLAG,
+		WIN_TEXT_INPUT_GET_RAW_TEXT,
+		WIN_CHECKBOX_GET_CHECKED,
+		WIN_CHECKBOX_SET_CHECKED,
+		
+		CC_RUN_C_CODE,
+		
+		FI_REMOVE_FILE,
+		
+		WIN_REQUEST_REPAINT_NEW,
+		WIN_SHELL_ABOUT,
+		WIN_INPUT_BOX,
+		WIN_COLOR_BOX,
+		WIN_FILE_CHOOSE_BOX,//TODO
+		WIN_POPUP_WINDOW,
+	#endif
 };
 
 int    memcmp     (const void* ap, const void* bp, size_t size);
@@ -109,7 +130,7 @@ void*  memset     (void* bufptr, BYTE val, size_t size);
 size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
 int    strcmp     (const char* as, const char* bs);
-void   strcat     (char* dest, char* after);
+void   strcat     (char* dest, const char* after);
 void   strtolower (char* as);
 void   strtoupper (char* as);
 void   memtolower (char* as, int w);
@@ -117,5 +138,7 @@ void   memtoupper (char* as, int w);
 size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
 char*  Tokenize   (TokenState* pState, char* pString, char* separator);
+
+void LogMsg ( const char *pfmt, ... );
 
 #endif//_CRTLIB_H

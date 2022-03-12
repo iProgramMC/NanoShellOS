@@ -791,7 +791,7 @@ void FatPopulateDir (FatFileSystem* pFS, FatDirectory* pDir, uint32_t cluster)
 			//re-allocate:
 			FatDirEntry* pNewDir = (FatDirEntry*)MmAllocateK(maxDirs * sizeof(FatDirEntry));
 			memcpy (pNewDir, pDir->m_pEntries, (maxDirs - dirsPerClus) * sizeof(FatDirEntry));
-			MmFree (pDir->m_pEntries);
+			MmFreeK (pDir->m_pEntries);
 			pDir->m_pEntries = pNewDir;
 		}
 		else
@@ -1023,7 +1023,7 @@ void FsFatClose (FileNode* pFileNode)
 	// Free the pWorkCluster structure, if applicable.
 	if (pNode->pWorkCluster)
 	{
-		MmFree(pNode->pWorkCluster);
+		MmFreeK(pNode->pWorkCluster);
 		pNode->pWorkCluster = NULL;
 	}
 	
@@ -1065,7 +1065,7 @@ void FsFatClose (FileNode* pFileNode)
 			
 			pNode->nClusterFirst = nFirstCluster;
 		}
-		MmFree(pNode->pDataPointer);
+		MmFreeK(pNode->pDataPointer);
 		pNode->pDataPointer = NULL;
 	}
 	pNode->bIsStreamingFromDisk = false;
@@ -1247,10 +1247,11 @@ FileNode* FatCreateFileWithData(FileNode *pDirNode, const char* pFileName, uint8
 	FatFlushFat(pOpenedIn);
 	
 	// Add the new file entry:
+	SLogMsg("Creating file node ...");
 	FileNode* pEntry =  CreateFileNode (pDirNode);
 	
 	memset (pEntry, 0, sizeof (*pEntry));
-		
+	
 	strcpy(pEntry->m_name, pFileName);
 	
 	pEntry->m_type = FILE_TYPE_FILE;
@@ -1604,7 +1605,7 @@ uint32_t FsFatWrite (FileNode *pFileNode, uint32_t offset, uint32_t size, void* 
 			uint8_t* newDataPtr = MmAllocateK(pNode->nDataCapacity);
 			memcpy (newDataPtr, pNode->pDataPointer, oldCap);
 			
-			MmFree(pNode->pDataPointer);
+			MmFreeK(pNode->pDataPointer);
 			pNode->pDataPointer = newDataPtr;
 		}
 		
@@ -1795,6 +1796,7 @@ static DirEnt* FsFatReadRootDir(FileNode* pDirNode, uint32_t index)
 		id++;
 	}
 	if (!pNode) return NULL;
+	
 	strcpy(g_FatDirEnt.m_name, pNode->m_name);
 	g_FatDirEnt.m_inode      = pNode->m_inode;
 	return &g_FatDirEnt;
@@ -1988,8 +1990,8 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 void FatUnmountFileSystem(FatFileSystem* pFS)
 {
 	FatFlushFat (pFS);
-	MmFree (pFS->m_pFat);
-	MmFree (pFS->m_pbFatModified);
+	MmFreeK (pFS->m_pFat);
+	MmFreeK (pFS->m_pbFatModified);
 	pFS->m_pFat          = NULL;
 	pFS->m_pbFatModified = NULL;
 	pFS->m_bMounted      = false;

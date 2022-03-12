@@ -104,8 +104,6 @@ int open(const char* path, int oflag)
 	
 	strcat (abspath, path);
 	
-	LogMsg("NS:open():opening file %s with flags %d", abspath, oflag);
-	
 	int fd = _I_FiOpenDebug(abspath, oflag, "usertask", 1);
 	if (fd < 0) return fd;
 	
@@ -188,8 +186,6 @@ FILE* fopen (const char* file, const char* mode)
 		}
 		mode++;
 	}
-	
-	LogMsg("N:Opening file %s (flags:%d)",mode1,flags);
 	
 	return fdopen(open(file, flags), mode1);
 }

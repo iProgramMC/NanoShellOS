@@ -13,7 +13,13 @@ CC=clang
 LD=ld
 AS=nasm
 
-CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -g -O2 -Wall -Wextra -std=c99 -DRANDOMIZE_MALLOCED_MEMORY -mno-sse -mno-sse2
+# Turns out we don't actually need -g.  Consider 600kb saved.
+# Test results:
+# - Kernel -O0, with -g: 1393 Kb
+# - Kernel -O2, with -g: 1388 Kb
+# - Kernel -O0, no -g  : 764  Kb
+# - Kernel -O2, no -g  : 635  Kb
+CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -DRANDOMIZE_MALLOCED_MEMORY -mno-sse -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 

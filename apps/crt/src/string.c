@@ -183,7 +183,7 @@ int strcmp(const char* as, const char* bs)
 	}
 	return 0;
 }
-void strcat(char* dest, char* after)
+void strcat(char* dest, const char* after)
 {
 	char* end = strlen(dest) + dest;
 	memcpy(end, after, strlen(after) + 1);

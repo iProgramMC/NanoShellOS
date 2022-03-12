@@ -180,7 +180,7 @@ FileNode* FsGetRootNode ()
 FileNode* CreateFileNode (FileNode* pParent)
 {
 	//Create the file node
-	FileNode* pNode = MmAllocate (sizeof (FileNode));
+	FileNode* pNode = MmAllocateK (sizeof (FileNode));
 	if (!pNode)
 		return pNode;
 	
@@ -233,7 +233,7 @@ void EraseFileNode (FileNode* pFileNode)
 		pFileNode->next->prev = pFileNode->prev;
 	}
 	
-	MmFree (pFileNode);
+	MmFreeK (pFileNode);
 }
 
 void FsInitializeDevicesDir();
