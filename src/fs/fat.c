@@ -1819,7 +1819,7 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 	
 	sprintf(pFatRoot->m_name, "Fat%d", g_fatsMountedCount);
 	strcpy (pOutPath, pFatRoot->m_name);
-	pFatRoot->m_type  = FILE_TYPE_DIRECTORY;
+	pFatRoot->m_type  = FILE_TYPE_DIRECTORY | FILE_TYPE_MOUNTPOINT;
 	pFatRoot->m_flags = 0;
 	pFatRoot->m_perms = PERM_READ|PERM_WRITE|PERM_EXEC;
 	pFatRoot->m_inode = g_fatsMountedCount;

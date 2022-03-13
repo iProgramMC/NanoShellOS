@@ -319,3 +319,53 @@ void ShellAbout (const char* pText, int icon)
 {
 	_I_ShellAbout (pText, icon);
 }
+
+TimeStruct* GetTime ()
+{
+	return _I_GetTime();
+}
+
+const char* GetCpuType()
+{
+	return _I_GetCpuType();
+}
+
+const char* GetCpuName()
+{
+	return _I_GetCpuName();
+}
+
+Console* GetConsole()
+{
+	return _I_GetConsole();
+}
+
+int GetTickCount()
+{
+	return _I_GetTickCount();
+}
+
+void sprintf(char*a, const char*c, ...);
+//futureproofing here:
+char g_VersionString[10] = "VX.XX";
+int NsGetVersion ();
+const char* GetVersionString()
+{
+	if (g_VersionString[1] == 'X')
+	{
+		int ver = NsGetVersion();
+		//major version and minor version:
+		//NanoShell V1.00 (when that comes out) will have a version number of 100
+		//Current version as of Feb 10,2022 (NanoShell V0.30) has a version code of 30.
+		//Some software may naively just put a 0 in the major version number, but
+		//we should expect an eventual V1.00 or more.
+		sprintf(g_VersionString, "V%d.%02d", ver/100, ver%100);
+	}
+	return g_VersionString;
+}
+
+int NsGetVersion ()
+{
+	return _I_NsGetVersion();
+}
+

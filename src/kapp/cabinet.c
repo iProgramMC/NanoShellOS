@@ -73,9 +73,17 @@ reset:
 		else
 		{
 			IconType icon = ICON_FILE;
-			if (pNode->m_type & FILE_TYPE_DIRECTORY)
+			if (pNode->m_type & FILE_TYPE_MOUNTPOINT)
+			{
+				icon = ICON_CHAIN; //TODO
+			}
+			else if (pNode->m_type & FILE_TYPE_DIRECTORY)
 			{
 				icon = ICON_FOLDER;
+			}
+			else if (pNode->m_type == FILE_TYPE_CHAR_DEVICE)
+			{
+				icon = ICON_CHAIN; //TODO
 			}
 			else if (EndsWith (pNode->m_name, ".nse"))
 			{

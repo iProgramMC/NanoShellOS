@@ -2241,6 +2241,7 @@ bool IsEventDestinedForControlsToo(int type)
 	switch (type)
 	{
 		case EVENT_DESTROY:
+		case EVENT_IMAGE_REFRESH:
 		case EVENT_PAINT:
 		case EVENT_MOVECURSOR:
 		case EVENT_CLICKCURSOR:

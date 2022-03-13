@@ -367,8 +367,9 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 		return 1;
 	}
 	
-	pWindow->m_iconID = ICON_NOTEPAD;
-	pWindow->m_data   = NULL;//TODO
+	//pWindow->m_iconID = ICON_NOTEPAD;
+	SetWindowIcon (pWindow, ICON_NOTEPAD);
+	//pWindow->m_data   = NULL;//TODO
 	
 	while (HandleMessages (pWindow));
 	

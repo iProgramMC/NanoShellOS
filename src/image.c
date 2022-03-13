@@ -105,3 +105,34 @@ Image *LoadBitmap (void* pBmpData, int *error)
 	*error = BMPERR_SUCCESS;
 	return pImage;
 }
+
+Image *BitmapAllocate(int width, int height, uint32_t default_color)
+{
+	uint32_t fb_size = width * height * sizeof (uint32_t);
+	
+	uint32_t to_size = fb_size + sizeof (Image);
+	
+	Image *pImage = MmAllocate(to_size);
+	pImage->framebuffer = ((uint8_t*)pImage + sizeof *pImage);
+	pImage->width       = width;
+	pImage->height      = height;
+	
+	// Initialize to white
+	memset_ints ((uint32_t*)pImage->framebuffer, default_color, width * height);
+	
+	return pImage;
+}
+
+void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage)
+{
+	pData->m_available    = true;
+	pData->m_width        = pImage->width;
+	pData->m_height       = pImage->height;
+	pData->m_pitch        = pImage->width * 4;
+	pData->m_pitch16      = pImage->width * 2;
+	pData->m_pitch32      = pImage->width;
+	//pData->m_clipRect     = { 0, 0, pImage->width, pImage->height };
+	pData->m_framebuffer8 = (uint8_t*)pImage->framebuffer;
+	pData->m_bitdepth     = 2;
+	pData->m_dirty        = false;
+}

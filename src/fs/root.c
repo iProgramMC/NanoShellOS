@@ -191,6 +191,67 @@ void FsInitializeDevicesDir()
 #undef DEFINE_DEVICE
 }
 
+FileNode* FsResolvePathCreateDirs (const char* pPath)
+{
+	char path_copy[PATH_MAX]; //max path
+	if (strlen (pPath) >= PATH_MAX-1) return NULL;
+	strcpy (path_copy, pPath);
+	
+	TokenState state;
+	state.m_bInitted = 0;
+	char* initial_filename = Tokenize (&state, path_copy, "/");
+	if (!initial_filename) return NULL;
+	
+	//is it just an empty string? if yes, we're using
+	//an absolute path.  Otherwise we gotta append the CWD 
+	//and run this function again.
+	if (*initial_filename == 0)
+	{
+		FileNode *pNode = FsGetRootNode ();//TODO
+		while (true)
+		{
+			char* path = Tokenize (&state, NULL, "/");
+			
+			//are we done?
+			if (path && *path)
+			{
+				//nope, resolve pNode again.
+				FileNode *pOldNode = pNode;
+				pNode = FsFindDir (pOldNode, path);
+				if (!pNode)
+				{
+					// Try creating it.
+					pNode = CreateFileNode (pOldNode);
+					
+					if (!pNode) return NULL;
+					
+					// Initialize stuff
+					
+					strcpy (pNode->m_name, path);
+					pNode->m_inode = 0;
+					pNode->m_type  = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
+					pNode->m_implData  = 0;
+					pNode->m_implData1 = 0;
+					pNode->ReadDir = FsRootFsReadDir;
+					pNode->FindDir = FsRootFsFindDir;
+					pNode->m_perms = PERM_READ | PERM_EXEC;
+					
+				}
+			}
+			else
+			{
+				return pNode;
+			}
+		}
+	}
+	else
+	{
+		//TODO
+		//LogMsg("Not an absolute path");
+		return NULL;
+	}
+}
+
 void FsInitializeInitRd(void* pRamDisk)
 {	
 	// Add files to the ramdisk.
@@ -210,43 +271,96 @@ void FsInitializeInitRd(void* pRamDisk)
 
 		if (ramDiskTar->name[0] == '.')
 		{
-			pathLength -= 2;
+			pathLength -= 1;
 			hasDotSlash = true;
 		}
 
 		if (pathLength > 0)
 		{
-			FileNode *pNewNode = CreateFileNode (pRoot);
-			if (!pNewNode)
+			char directory_name[256], file_name[256], full_file_name[512];
+			
+			char *pname = ramDiskTar->name + hasDotSlash;
+			strcpy (full_file_name, pname);
+			pname = full_file_name;
+			
+			// While we have slashes, proceed
+			char *pname2 = pname; bool set = false;
+			do
 			{
-				KeBugCheck (BC_EX_FILE_SYSTEM, NULL);
+				char *ptr = strchr (pname2 + set, '/');
+				if (ptr)
+				{
+					pname2 = ptr; set = true;
+				}
+				else break;
+			}
+			while (true);
+			
+			if (set)
+				*(pname2++) = 0;
+			strcpy (directory_name, full_file_name);
+			strcpy (file_name,      pname2);
+			
+			SLogMsg("DirName:%s FileName:%s", directory_name, file_name);
+			
+			FileNode *pNewNode = NULL;
+			
+			if (directory_name[0] == 0)
+			{
+				if (file_name[0] != 0) // Non-empty file?
+				{
+					pNewNode = CreateFileNode (pRoot);
+				}
+			}
+			else
+			{
+				FileNode *pDir = FsResolvePathCreateDirs (directory_name);
+				if (!pDir)
+				{
+					LogMsg("Cannot find directory %s", directory_name);
+					KeBugCheck (BC_EX_FILE_SYSTEM, NULL);
+				}
+				
+				if (file_name[0] != 0) // Non-empty file?
+				{
+					pNewNode = CreateFileNode (pDir);
+				}
 			}
 			
-			strcpy(pNewNode->m_name, ramDiskTar->name + (hasDotSlash ? 2 : 0));
-
-			pNewNode->m_length = fileSize;
-			pNewNode->m_inode  = i;
-			pNewNode->m_type   = FILE_TYPE_FILE;
-			pNewNode->m_implData  = fileSize;
-			pNewNode->m_implData1 = (uint32_t) &ramDiskTar->buffer;
-			pNewNode->Read     = FsRootFsRead;
-			pNewNode->Write    = NULL;
-			pNewNode->Open     = NULL;
-			pNewNode->Close    = NULL;
-			pNewNode->ReadDir  = NULL;
-			pNewNode->FindDir  = NULL;
-			pNewNode->OpenDir  = NULL;
-			pNewNode->CloseDir = NULL;
-			pNewNode->CreateFile = NULL;
-			pNewNode->EmptyFile  = NULL;
-			pNewNode->m_perms    = PERM_READ;
-			
-			//if it ends with .nse also make it executable
-			if (EndsWith(pNewNode->m_name, ".nse"))
+			if (file_name[0] != 0) // Non-empty file?
 			{
-				pNewNode->m_perms |= PERM_EXEC;
+				if (!pNewNode)
+				{
+					LogMsg("Unable to create file entry %s", file_name);
+					KeBugCheck (BC_EX_FILE_SYSTEM, NULL);
+				}
+			
+				strcpy(pNewNode->m_name, file_name);
+	
+				pNewNode->m_length    = fileSize;
+				pNewNode->m_inode     = i;
+				pNewNode->m_type      = FILE_TYPE_FILE;
+				pNewNode->m_implData  = fileSize;
+				pNewNode->m_implData1 = (uint32_t) &ramDiskTar->buffer;
+				pNewNode->Read        = FsRootFsRead;
+				pNewNode->Write       = NULL;
+				pNewNode->Open        = NULL;
+				pNewNode->Close       = NULL;
+				pNewNode->ReadDir     = NULL;
+				pNewNode->FindDir     = NULL;
+				pNewNode->OpenDir     = NULL;
+				pNewNode->CloseDir    = NULL;
+				pNewNode->CreateFile  = NULL;
+				pNewNode->EmptyFile   = NULL;
+				pNewNode->m_perms     = PERM_READ;
+				
+				//if it ends with .nse also make it executable
+				if (EndsWith(pNewNode->m_name, ".nse"))
+				{
+					pNewNode->m_perms |= PERM_EXEC;
+				}
+				i++;
 			}
-			i++;
 		}
 
 		// Advance to the next entry

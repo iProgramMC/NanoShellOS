@@ -7,17 +7,37 @@
 
 #include <wbuiltin.h>
 #include <wmenu.h>
+#include <image.h>
 
 Image* GetIconImage(IconType type, int sz);
+
 void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
 		case EVENT_CREATE:
 		{
-			Rectangle r;
-			RECT (r, 10, 10 + TITLE_BAR_HEIGHT, 520, 60);
-			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) GetIconImage (ICON_COMPUTER_PANIC, 96), IMAGECTL_PAN);
+			//Rectangle r;
+			//RECT (r, 10, 10 + TITLE_BAR_HEIGHT, 520, 60);
+			
+			// a la C#'s  new Bitmap(320,200);
+			/*Image *pImage = BitmapAllocate(320, 200, 0x00FFFFFF);
+			
+			VBEData m_data;
+			// a la C#'s Graphics.FromBitmap
+			BuildGraphCtxBasedOnImage(&m_data, pImage);
+			
+			VidSetVBEData(&m_data);
+			
+			// Draw an example image.
+			VidBlitImage(GetIconImage (ICON_COMPUTER_PANIC, 96),2,2);
+			
+			VidSetVBEData(&pWindow->m_vbeData);
+			
+			
+			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_PAN | IMAGECTL_PEN);
+			
+			MmFree (pImage);//no leaks!!*/
 			
 			//ChangeCursor (pWindow, CURSOR_WAIT);
 			
@@ -39,7 +59,7 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			for (int i = ICON_NULL+1; i < ICON_COUNT; i++)
 			{
 				int x = i % icons_per_width, y = i / icons_per_width;
-				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82)), 32);
+				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
 			}
 			/*RenderIcon(ICON_CABINET, 10, 20);*/
 			break;

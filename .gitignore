@@ -14,5 +14,7 @@ apps/crtdemo/build/*
 apps/crtdemo/*.nse
 apps/notepad/build/*
 apps/notepad/*.nse
+apps/clock/build/*
+apps/clock/*.nse
 
 vdisk.vdi

@@ -62,6 +62,8 @@ enum
 	BMPERR_BAD_ALLOC,
 };
 
-Image *LoadBitmap (void* pBmpData, int *error);
+Image *LoadBitmap (void* pBmpData, int *pErrorOut);
+Image *BitmapAllocate(int width, int height, uint32_t default_color);
+void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage);
 
 #endif//_IMAGE_H

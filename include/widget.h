@@ -117,4 +117,36 @@ void CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
  */
 const char* TextInputGetRawText(Window* pWindow, int comboID);
 
+/**
+ * Sets the widget mode in an image control.
+ *
+ * The mode is a bit set.  You can use one or more of the following flags:
+ * IMAGECTL_PAN:  Allows user to pan around the image.
+ * IMAGECTL_ZOOM: Allows user to zoom into the image. (TODO)
+ * IMAGECTL_PEN:  Allows user to sketch onto the image using the color specified
+ *                using SetImageCtlColor.
+ * IMAGECTL_FILL: Allows user to fill in a portion of the image using
+ *                the color specified using SetImageCtlColor.
+ */
+void SetImageCtlMode (Window *pWindow, int comboID, int mode);
+
+/**
+ * Sets the pen color in an image control
+ */
+void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color);
+
+/**
+ * Sets the current image.  This works the same way as creating a new
+ * image control does (the pImage gets cloned for local use and the 
+ * user still owns the pointer).
+ */
+void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage);
+
+/**
+ * Gets the current image of an image control.  The caller may not later
+ * free the image, as it is owned by the widget.  However they may clone
+ * it for later use.
+ */
+Image* GetImageCtlCurrentImage (Window *pWindow, int comboID);
+
 #endif//_WIDGET_H

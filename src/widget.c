@@ -6,6 +6,7 @@
 ******************************************/
 #include <widget.h>
 #include <video.h>
+#include <image.h>
 #include <icon.h>
 #include <print.h>
 #include <misc.h>
@@ -1255,7 +1256,7 @@ static const char* CtlGetElementStringFromList (Control *pCtl, int index)
 	
 	return pData->m_pItems[index].m_contents;
 }
-//extern VBEData*g_vbeData,g_mainScreenVBEData;
+extern VBEData*g_vbeData,g_mainScreenVBEData;
 bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 go_back:
@@ -2497,11 +2498,68 @@ bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
+
+void SetImageCtlMode (Window *pWindow, int comboID, int mode)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_parm2 = mode;
+			return;
+		}
+	}
+}
+
+void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_imageCtlData.nCurrentColor = color;
+			return;
+		}
+	}
+}
+
+void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			// Force a refresh of the image.
+			pWindow->m_pControlArray[i].m_parm1 = (int)pImage;
+			if (pWindow->m_pControlArray[i].m_imageCtlData.pImage)
+				MmFree(pWindow->m_pControlArray[i].m_imageCtlData.pImage);
+			pWindow->m_pControlArray[i].m_imageCtlData.pImage = NULL;
+			
+			WindowRegisterEventUnsafe (pWindow, EVENT_IMAGE_REFRESH, 0, 0);
+			
+			return;
+		}
+	}
+}
+
+Image* GetImageCtlCurrentImage (Window *pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_imageCtlData.pImage;
+		}
+	}
+	return NULL;
+}
+
 bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
 		case EVENT_CREATE:
+		case EVENT_IMAGE_REFRESH:
 		{
 			if (!this->m_imageCtlData.pImage)
 			{
@@ -2539,7 +2597,9 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 			//VidDrawHLine(WINDOW_BACKGD_COLOR - 0x0F0F0F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
 			
 			VidSetClipRect(&this->m_rect);
-			VidFillRectangle(0x3f0000, this->m_rect);
+			
+			if (!parm2)
+				VidFillRectangle(0x3f0000, this->m_rect);
 			
 			Image *pImage = (Image*)this->m_imageCtlData.pImage;
 			if (pImage)
@@ -2573,7 +2633,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 		case EVENT_CLICKCURSOR:
 		{
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (this->m_parm2  & IMAGECTL_PAN)
+			if (this->m_parm2  & (IMAGECTL_PAN | IMAGECTL_PEN))
 			{
 				if (RectangleContains(&this->m_rect, &p))
 				{
@@ -2583,14 +2643,53 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 						deltaX = p.x - this->m_imageCtlData.nLastXGot;
 						deltaY = p.y - this->m_imageCtlData.nLastYGot;
 					}
+					else
+					{
+						this->m_imageCtlData.nLastXGot = p.x;
+						this->m_imageCtlData.nLastYGot = p.y;
+					}
+					
+					bool dragged = false;
+					if (this->m_parm2 & IMAGECTL_PAN)
+					{
+						if (!(this->m_parm2 & IMAGECTL_PEN) || KbGetKeyState(KEY_CONTROL) == KEY_PRESSED)
+						{
+							this->m_imageCtlData.nCurPosX += deltaX;
+							this->m_imageCtlData.nCurPosY += deltaY;
+							
+							dragged = true;
+						}
+					}
+					if ((this->m_parm2 & IMAGECTL_PEN) && !dragged)
+					{
+						int lx = (GetWidth (&this->m_rect) - this->m_imageCtlData.pImage->width)  / 2;
+						int ly = (GetHeight(&this->m_rect) - this->m_imageCtlData.pImage->height) / 2;
+						
+						if (this->m_parm2 & IMAGECTL_PAN)
+						{
+							lx += this->m_imageCtlData.nCurPosX;
+							ly += this->m_imageCtlData.nCurPosY;
+						}
+						
+						lx += this->m_rect.left;
+						ly += this->m_rect.top;
+						
+						VBEData *pBackup = g_vbeData, m_gdc;
+						
+						BuildGraphCtxBasedOnImage(&m_gdc, this->m_imageCtlData.pImage);
+						
+						VidSetVBEData(&m_gdc);
+						
+						//VidBlitImage(GetIconImage (ICON_COMPUTER_PANIC, 96),50, 50);
+						VidDrawLine(this->m_imageCtlData.nCurrentColor, this->m_imageCtlData.nLastXGot - lx, this->m_imageCtlData.nLastYGot - ly, p.x - lx, p.y - ly);
+						
+						VidSetVBEData(pBackup);
+					}
 					
 					this->m_imageCtlData.nLastXGot = p.x;
 					this->m_imageCtlData.nLastYGot = p.y;
 					
-					this->m_imageCtlData.nCurPosX += deltaX;
-					this->m_imageCtlData.nCurPosY += deltaY;
-					
-					WidgetImage_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+					WidgetImage_OnEvent(this, EVENT_PAINT, 0, !dragged, pWindow);
 				}
 			}
 			else

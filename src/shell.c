@@ -557,7 +557,7 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "ls") == 0)
 	{
 		FileNode* pNode = g_pCwdNode;
-		LogMsg("Directory of %s (%x)", pNode->m_name, pNode);
+		LogMsg("Directory of %s", pNode->m_name, pNode);
 		
 		if (!FsOpenDir(pNode))
 		{

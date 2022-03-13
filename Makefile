@@ -56,9 +56,11 @@ $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@$(LD) $(LDFLAGS) -o $@ $^
 
 $(INITRD_TARGET):
+	@echo "Building initrd..."
 	@tar -cf $@ -C fs .
 
 $(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)
+	@echo "Building ISO..."
 	@rm -rf $(ISO_DIR)
 	@mkdir -p $(ISO_DIR)
 	@cp $^ limine.cfg limine/limine.sys limine/limine-cd.bin $(ISO_DIR)
