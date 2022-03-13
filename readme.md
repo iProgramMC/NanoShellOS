@@ -19,6 +19,7 @@ along with this program.  If not, see [the GNU licenses](https://www.gnu.org/lic
 
 This software is licensed under the GNU General Public License V3 only.
 
+<img src="images/demoshot050.png"/>
 
 ## Goals
 
