@@ -25,6 +25,21 @@
 WidgetEventHandler GetWidgetOnEventFunction (int type);
 
 /**
+ * Sets the event handler of a control with a combo ID.
+ *
+ * This calls the EVENT_DESTROY of the old handler, and calls
+ * EVENT_CREATE of the new handler.
+ *
+ * While this function makes sure everything in the back end is safe, the
+ * caller shall also do their part by ensuring the handler keeps existing
+ * until the control is removed, or the window is destroyed.
+ *
+ * For information on how to define a widget event handler, check the
+ * definition of the `WidgetEventHandler`.
+ */
+void SetWidgetEventHandler (Window *pWindow, int comboID, WidgetEventHandler handler);
+
+/**
  * Sets the minimum value for a SCROLLBAR control with a certain comboID.
  */
 void SetScrollBarMin (Window *pWindow, int comboID, int min);

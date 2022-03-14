@@ -114,6 +114,16 @@ RESOURCE_STATUS LaunchCabinet()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	return RESOURCE_LAUNCH_SUCCESS;
 }
+RESOURCE_STATUS LaunchMineGame()
+{
+	int errorCode = 0;
+	Task* pTask = KeStartTask(PrgMineTask, 0, &errorCode);
+	DebugLogMsg("Created Minesweeper window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
+	
+	if (!pTask)
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	return RESOURCE_LAUNCH_SUCCESS;
+}
 
 #endif
 
@@ -143,6 +153,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	else if (STREQ(pResourceID, "cpanel"))   return LaunchControlPanel();
 	else if (STREQ(pResourceID, "notepad"))  return LaunchNotepad();
 	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
+	else if (STREQ(pResourceID, "mineswp"))  return LaunchMineGame();
 	else if (STREQ(pResourceID, "launcher")) { LaunchLauncher(); return RESOURCE_LAUNCH_SUCCESS; }
 	else if (STREQ(pResourceID, "help"))     return HelpOpenResource("/Fat0/Help.md");//LaunchHelp();
 	else return RESOURCE_LAUNCH_NOT_FOUND;

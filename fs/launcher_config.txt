@@ -5,7 +5,8 @@
 
 version|2
 
-add_item|8|1|Help|shell:help
+add_item|9|1|Minesweeper|shell:mineswp
+//add_item|8|1|Help|shell:help
 
 add_item|65|0|Clock|exwindow:/Clock.nse
 //add_item|70|0|Chart demo|exwindow:/chart.nse

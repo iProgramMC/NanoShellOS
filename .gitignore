@@ -18,3 +18,4 @@ apps/clock/build/*
 apps/clock/*.nse
 
 vdisk.vdi
+vdisk*.vdi

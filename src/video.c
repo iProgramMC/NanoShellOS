@@ -259,6 +259,22 @@ void OnRightClick()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+void OnRightClickDrag()
+{
+	ClickInfo info;
+	info.clickType = CLICK_RIGHTD;
+	info.clickedAtX = g_mouseX;
+	info.clickedAtY = g_mouseY;
+	AddClickInfoToQueue (&info);
+}
+void OnRightClickRelease()
+{
+	ClickInfo info;
+	info.clickType = CLICK_RIGHTR;
+	info.clickedAtX = g_mouseX;
+	info.clickedAtY = g_mouseY;
+	AddClickInfoToQueue (&info);
+}
 
 uint8_t g_previousFlags = 0;
 void ForceKernelTaskToRunNext();
@@ -273,23 +289,35 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 	g_queueMouseUpdateTo.newY += -dy;
 	g_queueMouseUpdateTo.updated = true;
 	
-	if (flags & MOUSE_FLAG_R_BUTTON)
-	{
-		if (!(g_previousFlags & MOUSE_FLAG_R_BUTTON))
-			OnRightClick();
-		ForceKernelTaskToRunNext (); //window manager likes this
-	}
+	// Left click
 	if (flags & MOUSE_FLAG_L_BUTTON)
 	{
 		if (!(g_previousFlags & MOUSE_FLAG_L_BUTTON))
 			OnLeftClick();
 		else
 			OnLeftClickDrag();
+		
 		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	else if (g_previousFlags & MOUSE_FLAG_L_BUTTON)
 	{
 		OnLeftClickRelease();
+		ForceKernelTaskToRunNext (); //window manager likes this
+	}
+	
+	// Right click
+	if (flags & MOUSE_FLAG_R_BUTTON)
+	{
+		if (!(g_previousFlags & MOUSE_FLAG_R_BUTTON))
+			OnRightClick();
+		else
+			OnRightClickDrag();
+		
+		ForceKernelTaskToRunNext (); //window manager likes this
+	}
+	else if (g_previousFlags & MOUSE_FLAG_R_BUTTON)
+	{
+		OnRightClickRelease();
 		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	

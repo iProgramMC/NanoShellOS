@@ -1311,15 +1311,44 @@ void OnUIRightClick (int mouseX, int mouseY)
 		Window* window = GetWindowFromIndex(idx);
 		
 		if (window)
-			if (window->m_minimized)
-				WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
-		
-		//hide this window:
-		//HideWindow(window);
-		
-		//TODO
+		{
+			if (!window->m_minimized)
+			{
+				int x = mouseX - window->m_rect.left;
+				int y = mouseY - window->m_rect.top;
+				WindowRegisterEvent (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
+			}
+		}
 	}
-	//FREE_LOCK(g_windowLock);
+}
+void OnUIRightClickRelease (int mouseX, int mouseY)
+{
+	if (!g_windowManagerRunning) return;
+	g_prevMouseX = (int)mouseX;
+	g_prevMouseY = (int)mouseY;
+	
+	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
+	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
+	
+	if (idx > -1)
+	{
+		Window* window = GetWindowFromIndex(idx);
+		
+		if (window)
+		{
+			if (window->m_minimized)
+			{
+				WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
+			}
+			else
+			{
+				int x = mouseX - window->m_rect.left;
+				int y = mouseY - window->m_rect.top;
+				
+				WindowRegisterEvent (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
+			}
+		}
+	}
 }
 
 #endif
@@ -1618,10 +1647,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		{
 			switch (g_clickQueue[i].clickType)
 			{
-				case CLICK_LEFT:   OnUILeftClick       (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
-				case CLICK_LEFTD:  OnUILeftClickDrag   (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
-				case CLICK_LEFTR:  OnUILeftClickRelease(g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
-				case CLICK_RIGHT:  OnUIRightClick      (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
+				case CLICK_LEFT:   OnUILeftClick        (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
+				case CLICK_LEFTD:  OnUILeftClickDrag    (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
+				case CLICK_LEFTR:  OnUILeftClickRelease (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
+				case CLICK_RIGHT:  OnUIRightClick       (g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
+				case CLICK_RIGHTR: OnUIRightClickRelease(g_clickQueue[i].clickedAtX, g_clickQueue[i].clickedAtY); break;
 			}
 		}
 		g_clickQueueSize = 0;
@@ -2246,6 +2276,8 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_MOVECURSOR:
 		case EVENT_CLICKCURSOR:
 		case EVENT_RELEASECURSOR:
+		case EVENT_RIGHTCLICK:
+		case EVENT_RIGHTCLICKRELEASE:
 		case EVENT_KEYPRESS:
 		case EVENT_KEYRAW:
 		case EVENT_SIZE:
@@ -2324,7 +2356,7 @@ bool WinAnythingOnInputQueue (Window* this)
 }
 char WinReadFromInputQueue (Window* this)
 {
-	if (CoAnythingOnInputQueue(this))
+	if (WinAnythingOnInputQueue(this))
 	{
 		char k = this->m_inputBuffer[this->m_inputBufferBeg++];
 		while

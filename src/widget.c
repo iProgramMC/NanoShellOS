@@ -130,6 +130,29 @@ void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, 
 	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
 	//RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
 }
+
+
+void SetWidgetEventHandler (Window *pWindow, int comboID, WidgetEventHandler handler)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control *pControl = &pWindow->m_pControlArray[i];
+		if (pControl->m_comboID == comboID)
+		{
+			// Set It
+			if (pControl->OnEvent)
+				pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
+			
+			pControl->OnEvent = handler;
+			
+			if (pControl->OnEvent)
+				pControl->OnEvent(pControl, EVENT_CREATE,  0, 0, pWindow);
+			
+			return;
+		}
+	}
+}
+
 #endif
 
 // Scroll bar

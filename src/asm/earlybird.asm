@@ -202,7 +202,7 @@ SetupGDT:
 	jmp GDTPostSetup
 	
 section .bss
-	resb 65536 ; 64KB for stack
+	resb 131072 ; 128KB for stack
 g_stackSpace:
 
 

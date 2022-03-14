@@ -11,6 +11,8 @@
 #include<stdarg.h>
 #include<stdint.h>
 
+#define EXPERIMENTAL
+
 typedef char bool;
 typedef char byte;
 typedef char BYTE;

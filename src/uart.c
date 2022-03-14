@@ -32,12 +32,12 @@ void UartInit(uint8_t com_num)
 	}
 }
 
-void UartWriteSingleChar(uint8_t com_num, char c)
+void UartWriteSingleChar(UNUSED uint8_t com_num, UNUSED char c)
 {
 	
 }
 
-char UartReadSingleChar(uint8_t com_num)
+char UartReadSingleChar(UNUSED uint8_t com_num)
 {
-	
+	return 0;
 }

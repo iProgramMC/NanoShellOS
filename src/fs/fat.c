@@ -8,158 +8,9 @@
 //NOTE: The driver is still at an experimental state
 //Notable issues include LFN support
 
-#include <vfs.h>
-#include <console.h>
-#include <string.h>
-#include <misc.h>
-#include <print.h>
-#include <memory.h>
-#include <storabs.h>
-
-#define FSDEBUG
-
-#ifdef FSDEBUGX
-#define DebugLogMsg LogMsg
-#elif defined(FSDEBUG)
-#define DebugLogMsg SLogMsg
-#else
-#define DebugLogMsg(...)
-#endif
-
-// Credits: https://github.com/knusbaum/kernel/blob/master/fat32.c
-
-#define ADD_TIMESTAMP_TO_FILES
-
 // Structure definitions.
-#if 1
-
-// should use this when generating NanoShell-specific permissions for this file
-#define FAT_READONLY (1<<0)
-
-// A non-pussy operating system doesn't need to use these flags.
-// TODO: Remove this comment when this goes public.
-#define FAT_HIDDEN    (1<<1)
-#define FAT_SYSTEM    (1<<2)
-
-// In the root of a FAT file system, there's a special file whose name matches the volume ID.
-// NanoShell should and does ignore any files with this bit set.
-#define FAT_VOLUME_ID (1<<3)
-
-// If this is a directory.  Pretty simple, really.
-#define FAT_DIRECTORY (1<<4)
-
-// Archive bit.  Usually it's used to determine whether a file has been backed up or not (this bit
-// will be reset when you write to the file later on).  Not used by NanoShell.
-#define FAT_ARCHIVE   (1<<5)
-
-// Long file name bits.  Useful when we need LFN support.
-#define FAT_LFN       (FAT_READONLY | FAT_HIDDEN | FAT_SYSTEM | FAT_VOLUME_ID)
-
-// FAT End of chain special magic number cluster.  Marks the end of a chain.
-// This is just like the NULL pointer in most singly linked list implementations.
-#define FAT_END_OF_CHAIN 0x0FFFFFF8
-
-// Extensions that Microsoft uses
-#define FAT_MSFLAGS_NAMELOWER (1 << 3) // 0x08
-#define FAT_MSFLAGS_EXTELOWER (1 << 4) // 0x10
-
-typedef struct
-{
-	uint16_t m_nBytesPerSector;     // usually 512
-	uint8_t  m_nSectorsPerCluster;  // must be 1 or over.
-	uint16_t m_nReservedSectors;    // before we reach the FAT
-	uint8_t  m_nFAT;                // number of FATs (NanoShell will only use the first one)
-	uint16_t m_nDirEntries;
-	uint16_t m_nTotalSectors;
-	uint8_t  m_mediaDescType;
-	uint16_t m_nSectorsPerFat12or16;
-	uint16_t m_nSectorsPerTrack;
-	uint16_t m_nHeadsOrSizesOnMedia;//?
-	uint32_t m_nHiddenSectors;
-	uint32_t m_nLargeSectorsOnMedia;
-	
-	// Extended Boot Record
-	uint32_t m_nSectorsPerFat32;
-	uint16_t m_nFlags;
-	uint16_t m_nFatVersion;
-	uint32_t m_nRootDirStartCluster;// where our root logic should start
-	uint16_t m_sectorNumberFsInfo;
-	uint16_t m_sectorNmbrBckpBtSctr;
-	uint8_t  m_driveNumber;
-	uint8_t  m_WindowsFlags;        //used only by Windows
-	uint8_t  m_Signature;
-	uint32_t m_nVolumeID;           //something like AABB-CCDD
-	char     m_sVolumeLabel[12];    //! NOT null terminated! Instead you have to `memcpy` it into a null termed string.
-	char     m_sSystemID   [9];     //Same as above.
-}
-__attribute__((packed))
-BiosParameterBlock;
-
-typedef struct
-{
-	char     m_pName[128];
-	uint8_t  m_dirFlags;
-	uint32_t m_firstCluster,
-	         m_fileSize;
-}
-FatDirEntry;
-
-typedef struct
-{
-	uint32_t     m_startCluster;
-	FatDirEntry* m_pEntries;
-	uint32_t     m_nEntries;
-}
-FatDirectory;
-
-typedef struct
-{
-	bool         m_bMounted;
-	uint32_t*    m_pFat;
-	bool*        m_pbFatModified;
-	FileNode*    m_pRoot;
-	BiosParameterBlock m_bpb;
-	uint32_t     m_fatBeginSector,
-	             m_clusBeginSector,
-				 m_clusSize,
-				 m_clusAllocHint, //! to avoid fragmentation
-				 m_partStartSec,
-				 m_partSizeSec,
-				 m_driveID;
-}
-FatFileSystem;
-
-typedef struct
-{
-	uint8_t  m_BootIndicator;
-	uint8_t  m_StartCHS[3]; //not used
-	uint8_t  m_PartTypeDesc;
-	uint8_t  m_EndCHS[3]; //not used
-	uint32_t m_StartLBA; //used
-	uint32_t m_PartSizeSectors;
-}
-__attribute__((packed))
-Partition;
-
-typedef struct
-{
-	uint8_t   m_BootLoaderCode[446];
-	Partition m_Partitions[4];
-	uint16_t  m_BootSignature; //most of the time this is 0x55AA
-}
-__attribute__((packed))
-MasterBootRecord;
-
-static FatFileSystem s_Fat32Structures[32];
-
-enum
-{
-	MOUNT_SUCCESS,
-	MOUNT_ERR_TOO_MANY_PARTS_MOUNTED = 0x7000,
-	MOUNT_ERR_NOT_FAT32,
-};
-#endif
-
+#include <fat.h>
+FatFileSystem s_Fat32Structures[32];
 
 // Internal FAT code
 #if 1
@@ -633,6 +484,11 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
 	{
         // NOT A VALID ENTRY!
 		LogMsg("FatReadDirEntry: Not valid entry");
+		if (pFS->m_bReportErrors)
+		{
+			pFS->m_nReportedErrors++;
+			LogMsg("Invalid file entry was found.");
+		}
         return NULL;
     }
 
@@ -659,7 +515,11 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
     }
 	if (entry[0] == 0xe5)
 	{
-		SLogMsg("Orphaned longfilename entry detected.  Skipping.");
+		if (pFS->m_bReportErrors)
+		{
+			pFS->m_nReportedErrors++;
+			LogMsg("An orphaned long file name entry was detected.");
+		}
 	}
     if (LFNCount > 0)
 	{
@@ -748,6 +608,13 @@ void FatNextDirEntry (
 			SLogMsg ("TD:%x %x (target dirent ptr, deref pointer)", pTargetDirEnt, *pTargetDirEnt);
 			SLogMsg ("SC:%x %x (second cluster ptr, deref pointer)", pSecondCluster, *pSecondCluster);
 			SLogMsg ("AC:%x    (actual cluster number)", cluster);
+			
+			if (pFS->m_bReportErrors)
+			{
+				pFS->m_nReportedErrors++;
+				LogMsg("A file directory is corrupted.");
+			}
+			
 			return;
 		}
 		
@@ -769,6 +636,13 @@ void FatNextDirEntry (
 			SLogMsg ("TD:%x %x (target dirent ptr, deref pointer)", pTargetDirEnt, *pTargetDirEnt);
 			SLogMsg ("SC:%x %x (second cluster ptr, deref pointer)", pSecondCluster, *pSecondCluster);
 			SLogMsg ("AC:%x    (actual cluster number)", cluster);
+			
+			if (pFS->m_bReportErrors)
+			{
+				pFS->m_nReportedErrors++;
+				LogMsg("A file directory is corrupted.");
+			}
+			
 			return;
 		}
 	}
@@ -1862,45 +1736,48 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 			FatDirEntry targetDirEnt;
 			FatNextDirEntry (pSystem, root_cluster, entry, &nextEntry, &targetDirEnt, cluster, &secondCluster);
 			
-			// turn this entry into a FileNode entry.
-			FileNode *pCurrent = CreateFileNode (pFatRoot);//pFileNodes + index;
-			
-			strcpy(pCurrent->m_name, targetDirEnt.m_pName);
-			
-			pCurrent->m_type = FILE_TYPE_FILE;
-			if (targetDirEnt.m_dirFlags & FAT_DIRECTORY)
-				pCurrent->m_type = FILE_TYPE_DIRECTORY;
-			
-			pCurrent->m_perms = PERM_READ | PERM_WRITE;
-			if (targetDirEnt.m_dirFlags & FAT_READONLY)
-				pCurrent->m_perms &= ~PERM_WRITE;
-			
-			if (EndsWith (targetDirEnt.m_pName, ".nse"))
-				pCurrent->m_perms |=  PERM_EXEC;
-			
-			pCurrent->m_inode  = targetDirEnt.m_firstCluster;
-			pCurrent->m_length = targetDirEnt.m_fileSize;
-			pCurrent->m_implData = (int)pSystem;
-			pCurrent->m_implData1 = 2;//Root directory
-			pCurrent->m_implData2 = targetDirEnt.m_firstCluster;
-			pCurrent->m_implData3 = -1;
-			pCurrent->m_flags    = 0;
-			
-			if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
+			if (!(targetDirEnt.m_dirFlags & FAT_VOLUME_ID))
 			{
-				pCurrent->Read  = FsFatRead;
-				pCurrent->Write = FsFatWrite;
-				pCurrent->Open  = FsFatOpen;
-				pCurrent->Close = FsFatClose;
-				pCurrent->EmptyFile = FatEmptyExistingFile;
-			}
-			else
-			{
-				pCurrent->OpenDir  = FsFatOpenNonRootDir;
-				pCurrent->CloseDir = FsFatCloseNonRootDir;
-				pCurrent->ReadDir  = FsFatReadNonRootDir;
-				pCurrent->FindDir  = FsFatFindNonRootDir;
-				pCurrent->CreateFile = FatCreateEmptyFile;
+				// turn this entry into a FileNode entry.
+				FileNode *pCurrent = CreateFileNode (pFatRoot);//pFileNodes + index;
+				
+				strcpy(pCurrent->m_name, targetDirEnt.m_pName);
+				
+				pCurrent->m_type = FILE_TYPE_FILE;
+				if (targetDirEnt.m_dirFlags & FAT_DIRECTORY)
+					pCurrent->m_type = FILE_TYPE_DIRECTORY;
+				
+				pCurrent->m_perms = PERM_READ | PERM_WRITE;
+				if (targetDirEnt.m_dirFlags & FAT_READONLY)
+					pCurrent->m_perms &= ~PERM_WRITE;
+				
+				if (EndsWith (targetDirEnt.m_pName, ".nse"))
+					pCurrent->m_perms |=  PERM_EXEC;
+				
+				pCurrent->m_inode  = targetDirEnt.m_firstCluster;
+				pCurrent->m_length = targetDirEnt.m_fileSize;
+				pCurrent->m_implData = (int)pSystem;
+				pCurrent->m_implData1 = 2;//Root directory
+				pCurrent->m_implData2 = targetDirEnt.m_firstCluster;
+				pCurrent->m_implData3 = -1;
+				pCurrent->m_flags    = 0;
+				
+				if (!(targetDirEnt.m_dirFlags & FAT_DIRECTORY))
+				{
+					pCurrent->Read  = FsFatRead;
+					pCurrent->Write = FsFatWrite;
+					pCurrent->Open  = FsFatOpen;
+					pCurrent->Close = FsFatClose;
+					pCurrent->EmptyFile = FatEmptyExistingFile;
+				}
+				else
+				{
+					pCurrent->OpenDir  = FsFatOpenNonRootDir;
+					pCurrent->CloseDir = FsFatCloseNonRootDir;
+					pCurrent->ReadDir  = FsFatReadNonRootDir;
+					pCurrent->FindDir  = FsFatFindNonRootDir;
+					pCurrent->CreateFile = FatCreateEmptyFile;
+				}
 			}
 			
 			entry = nextEntry;

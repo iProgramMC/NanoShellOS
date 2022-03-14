@@ -96,6 +96,8 @@ enum
 	CLICK_RIGHT,
 	CLICK_LEFTD,
 	CLICK_LEFTR,
+	CLICK_RIGHTD,
+	CLICK_RIGHTR,
 };
 
 typedef struct

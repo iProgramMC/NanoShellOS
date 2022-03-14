@@ -21,6 +21,7 @@
 #include <vfs.h>
 #include <elf.h>
 #include <cinterp.h>
+#include <fat.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -645,6 +646,28 @@ void ShellExecuteCommand(char* p)
 			
 			//Do not free as the file system now owns this pointer.
 		}
+	}
+	else if (strcmp (token, "check") == 0)
+	{
+		char* fatNum = Tokenize (&state, NULL, " ");
+		if (!fatNum)
+		{
+			goto print_usage1;
+		}
+		if (*fatNum == 0)
+		{
+			goto print_usage1;
+		}
+		
+		int nFat = atoi (fatNum);
+		
+		CheckDiskFatMain (nFat);
+		
+		goto dont_print_usage1;
+	print_usage1:
+		LogMsg("Check Disk");
+		LogMsg("Usage: check <FAT file system number>");
+	dont_print_usage1:;
 	}
 	else if (strcmp (token, "mspy") == 0)
 	{
