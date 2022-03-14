@@ -7,16 +7,23 @@
 
 #include <wbuiltin.h>
 
-#define BOARD_WIDTH  9
-#define BOARD_HEIGHT 9
+//#define BOARD_WIDTH  9
+//#define BOARD_HEIGHT 9
+#define BOARD_WIDTH  20
+#define BOARD_HEIGHT 15
+
 #define MINE_NUMBER  15
 
 #define MINESW_WIDTH  ((BOARD_WIDTH  * 16) + 26)
 #define MINESW_HEIGHT ((BOARD_HEIGHT * 16) + 78 + 11 + TITLE_BAR_HEIGHT)
 
+#define HUD_TOP  50
+#define HUD_LEFT 12
+
 typedef struct
 {
-	bool m_gameOver, m_firstClickDone;
+	bool m_gameOver, m_firstClickDone, m_gameWon;
+	bool m_leftClickHeld;
 	bool m_mine[BOARD_WIDTH][BOARD_HEIGHT];
 	bool m_unco[BOARD_WIDTH][BOARD_HEIGHT];
 	bool m_flag[BOARD_WIDTH][BOARD_HEIGHT];
@@ -31,6 +38,12 @@ bool IsMine (Minesweeper* pGame, int x, int y)
 	if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
 	
 	return pGame->m_mine[x][y];
+}
+bool IsFlag (Minesweeper* pGame, int x, int y)
+{
+	if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return false;
+	
+	return pGame->m_flag[x][y];
 }
 
 const uint32_t g_MinesweeperColors[] = {
@@ -52,7 +65,7 @@ void MineDrawTile(Minesweeper* pGame, int tileX, int tileY, int drawX, int drawY
 	
 	if (!pGame->m_unco[tileX][tileY])
 	{
-		if (pGame->m_clck[tileX][tileY])
+		if (pGame->m_clck[tileX][tileY] && !pGame->m_flag[tileX][tileY])
 		{
 			RECT(rect, drawX, drawY, 15, 15);
 			VidFillRectangle (0xC0C0C0, rect);
@@ -100,6 +113,8 @@ void MineDrawTile(Minesweeper* pGame, int tileX, int tileY, int drawX, int drawY
 			
 			if (mines_around)
 			{
+				//rect.left ++, rect.top ++;
+				rect.left ++, rect.top ++;
 				char text[2];
 				text[0] = '0' + mines_around;
 				text[1] = 0;
@@ -114,7 +129,7 @@ void GenerateMines(Minesweeper *pGame, int nMines, int avoidX, int avoidY);
 
 void MineFlagTile(Minesweeper* pGame, int x, int y)
 {
-	if (pGame->m_gameOver) return;
+	if (pGame->m_gameOver || pGame->m_gameWon) return;
 	
 	if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return;
 	
@@ -129,7 +144,7 @@ void MineFlagTile(Minesweeper* pGame, int x, int y)
 	
 void MineUncoverTile(Minesweeper* pGame, int x, int y)
 {
-	if (pGame->m_gameOver) return;
+	if (pGame->m_gameOver || pGame->m_gameWon) return;
 	
 	if (x < 0 || y < 0 || x >= BOARD_WIDTH || y >= BOARD_HEIGHT) return;
 	
@@ -210,10 +225,41 @@ void GenerateMines(Minesweeper *pGame, int nMines, int avoidX, int avoidY)
 	}
 }
 
+void MineCheckWin(Minesweeper *pGame)
+{
+	bool game_win = true;
+	for (int my = 0; my < BOARD_HEIGHT; my++)
+	{
+		for (int mx = 0; mx < BOARD_WIDTH; mx++)
+		{
+			if (pGame->m_unco[mx][my] == pGame->m_mine[mx][my])
+			{
+				SLogMsg("Tile at %d %d different (%b %b)", mx,my,pGame->m_unco[mx][my] , pGame->m_mine[mx][my]);
+				game_win = false;
+				break;
+			}
+		}
+	}
+	
+	if (!game_win) return;
+	
+	pGame->m_gameWon = true;
+	
+	for (int my = 0; my < BOARD_HEIGHT; my++)
+	{
+		for (int mx = 0; mx < BOARD_WIDTH; mx++)
+		{
+			pGame->m_flag[mx][my] = pGame->m_mine[mx][my];
+		}
+	}
+}
+
 void InstantiateNewGame(Minesweeper *pGame)
 {
 	memset (pGame, 0, sizeof *pGame);
 }
+
+// TODO: Improve the "cool move" thing :^)
 
 bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -247,12 +293,13 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					MineDrawTile(pGame, x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
 				}
 			}
+			
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
 			Minesweeper *pGame = (Minesweeper*)this->m_dataPtr;
-			if (pGame->m_gameOver) break;
+			if (pGame->m_gameOver || pGame->m_gameWon) break;
 			
 			for (int y = 0; y < BOARD_HEIGHT; y++)
 			{
@@ -275,7 +322,50 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			pGame->m_clck[xcl][ycl] = true;
 			
-			WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			pGame->m_leftClickHeld  = true;
+			
+			
+			SetLabelText(pWindow, 2001, ":-O");
+			
+			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+			
+			break;
+		}
+		case EVENT_RIGHTCLICK:
+		{
+			Minesweeper *pGame = (Minesweeper*)this->m_dataPtr;
+			if (pGame->m_gameOver || pGame->m_gameWon) break;
+			
+			for (int y = 0; y < BOARD_HEIGHT; y++)
+			{
+				for (int x = 0; x < BOARD_WIDTH; x++)
+				{
+					pGame->m_clck[x][y] = false;
+				}
+			}
+			
+			int xcl = GET_X_PARM(parm1);
+			int ycl = GET_Y_PARM(parm1);
+			
+			xcl -= this->m_rect.left;
+			ycl -= this->m_rect.top;
+			
+			xcl /= 16;
+			ycl /= 16;
+			
+			if (xcl < 0 || ycl < 0 || xcl >= BOARD_WIDTH || ycl >= BOARD_HEIGHT) return false;
+			
+			if (pGame->m_leftClickHeld)
+			{
+				for (int x1 = xcl-1; x1 <= xcl+1; x1++)
+					for (int y1 = ycl-1; y1 <= ycl+1; y1++)
+						if (x1 >= 0 && y1 >= 0 && x1 < BOARD_WIDTH && y1 < BOARD_HEIGHT)
+							pGame->m_clck[x1][y1] = true;
+			
+				//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+				CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+			}
 			
 			break;
 		}
@@ -300,9 +390,55 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			xcl /= 16;
 			ycl /= 16;
 			
-			MineFlagTile (pGame, xcl, ycl);
+			if (xcl < 0 || ycl < 0 || xcl >= BOARD_WIDTH || ycl >= BOARD_HEIGHT) return false;
 			
-			WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			if (pGame->m_leftClickHeld)
+			{
+				// Check mines that're around this tile
+				int mines_around = 0, flags_around = 0;
+				
+				for (int x1 = xcl-1; x1 <= xcl+1; x1++)
+					for (int y1 = ycl-1; y1 <= ycl+1; y1++)
+					{
+						if (IsMine (pGame, x1, y1)) {
+							mines_around++;
+						}
+						if (IsFlag (pGame, x1, y1)) {
+							flags_around++;
+						}
+					}
+				
+				if (mines_around == flags_around)
+				{
+					// We "know" all the mine tiles that are around this empty tile; uncover all the unflagged tiles
+					for (int x1 = xcl-1; x1 <= xcl+1; x1++)
+						for (int y1 = ycl-1; y1 <= ycl+1; y1++)
+						{
+							if (!IsFlag (pGame, x1, y1))
+								MineUncoverTile(pGame, x1, y1);
+						}
+				}
+			}
+			else
+				MineFlagTile (pGame, xcl, ycl);
+			
+			MineCheckWin (pGame);
+			
+			if (pGame->m_gameOver)
+			{
+				SetLabelText(pWindow, 2001, "X-(");
+			}
+			else if (pGame->m_gameWon)
+			{
+				SetLabelText(pWindow, 2001, "B-)");
+			}
+			else
+			{
+				SetLabelText(pWindow, 2001, ":-)");
+			}
+			
+			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
 			
 			break;
 		}
@@ -319,9 +455,30 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			xcl /= 16;
 			ycl /= 16;
 			
+			if (xcl < 0 || ycl < 0 || xcl >= BOARD_WIDTH || ycl >= BOARD_HEIGHT) return false;
+			
 			MineUncoverTile (pGame, xcl, ycl);
 			
-			WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			pGame->m_leftClickHeld  = false;
+			
+			
+			MineCheckWin (pGame);
+			
+			if (pGame->m_gameOver)
+			{
+				SetLabelText(pWindow, 2001, "X-(");
+			}
+			else if (pGame->m_gameWon)
+			{
+				SetLabelText(pWindow, 2001, "B-)");
+			}
+			else
+			{
+				SetLabelText(pWindow, 2001, ":-)");
+			}
+			
+			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
 			
 			break;
 		}
@@ -343,7 +500,53 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 			
 			SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
 			
+			// Add a menu bar
+			RECT(rect, 0, 0, 0, 0);
+			AddControl (pWindow, CONTROL_MENUBAR, rect, NULL, 2000, 0, 0);
+			
+			AddMenuBarItem (pWindow, 2000, 0, 1, "Game");
+			AddMenuBarItem (pWindow, 2000, 1, 2, "New");
+			AddMenuBarItem (pWindow, 2000, 1, 3, "");
+			AddMenuBarItem (pWindow, 2000, 1, 4, "Exit");
+			
+			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - 24) - 26) / 2/*74*/, 56, 26, 26);
+			AddControl (pWindow, CONTROL_BUTTON, rect, ":-)", 2001, 0, 0);
+			
 			break;
+		}
+		case EVENT_COMMAND:
+		{
+			if (parm1 == 2000) switch (parm2)
+			{
+				case 2:
+					// New Game
+					
+					// A side effect of SetWidgetEventHandler is that it actually calls EVENT_DESTROY
+					// with the old handler, and EVENT_CREATE with the new one.  Nifty if you want
+					// to reset a control's defaults
+					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
+					
+					SetLabelText(pWindow, 2001, ":-)");
+					
+					CallWindowCallbackAndControls (pWindow, EVENT_PAINT, 0, 0);
+					break;
+				case 4:
+					// Exit
+					PrgMineProc (pWindow, EVENT_CLOSE, 0, 0);
+					break;
+			}
+			else switch (parm1)
+			{
+				case 2001:
+				{
+					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
+					
+					SetLabelText(pWindow, 2001, ":-)");
+					
+					CallWindowCallbackAndControls (pWindow, EVENT_PAINT, 0, 0);
+					break;
+				}
+			}
 		}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
