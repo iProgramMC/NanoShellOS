@@ -102,6 +102,7 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText);
 /**
  * Works on the control with the comboID of 'menuBarControlId'.
  * To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
+ * Adding to comboIdTo=0 adds to the main list of items.
  */
 void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
 

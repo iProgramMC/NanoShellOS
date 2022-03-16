@@ -22,6 +22,7 @@
 #include <elf.h>
 #include <cinterp.h>
 #include <fat.h>
+#include <pci.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -755,6 +756,10 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "lm") == 0)
 	{
 		MmDebugDump();
+	}
+	else if (strcmp (token, "lp") == 0)
+	{
+		PciDump();
 	}
 	else if (strcmp (token, "lt") == 0)
 	{

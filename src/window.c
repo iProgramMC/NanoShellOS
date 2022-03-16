@@ -1035,9 +1035,10 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_renderFinished = false;
 	pWnd->m_hidden = true;//false;
 	pWnd->m_isBeingDragged = false;
-	pWnd->m_isSelected = false;
-	pWnd->m_minimized = false;
-	pWnd->m_maximized = false;
+	pWnd->m_isSelected     = false;
+	pWnd->m_minimized      = false;
+	pWnd->m_maximized      = false;
+	pWnd->m_clickedInside  = false;
 	pWnd->m_eventQueueLock = false;
 	pWnd->m_flags = flags;
 	
@@ -1116,10 +1117,41 @@ void OnUILeftClick (int mouseX, int mouseY)
 			//bool wasSelectedBefore = g_currentlyClickedWindow == idx;
 			g_currentlyClickedWindow = idx;
 			
+			//are we in the title bar region? TODO
+			Rectangle recta = window->m_rect;
 			if (!window->m_minimized)
+			{
+				recta.right  -= recta.left; recta.left = 0;
+				recta.bottom -= recta.top;  recta.top  = 0;
+				recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS;
+				recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
+				recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
+			}
+			else
+			{
+				recta.right  -= recta.left; recta.left = 0;
+				recta.bottom -= recta.top;  recta.top  = 0;
+			}
+			
+			int x = mouseX - window->m_rect.left;
+			int y = mouseY - window->m_rect.top;
+			Point mousePoint = {x, y};
+			
+			bool t = RectangleContains(&recta, &mousePoint);
+			if (window->m_flags & WF_NOTITLE)
+				t = false;
+			
+			if (!window->m_maximized && (t || window->m_minimized))
+			{
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 1);
+			}
+			else if (!window->m_minimized)
 			{
 				int x = mouseX - window->m_rect.left;
 				int y = mouseY - window->m_rect.top;
+				
+				window->m_clickedInside = true;
+				
 				//WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
@@ -1219,8 +1251,10 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				
 				SetCursor (&g_windowDragCursor);
 			}
-			if (!window->m_minimized)
+			if (!window->m_minimized && !window->m_isBeingDragged)
 			{
+				window->m_clickedInside = true;
+				
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 			}
 		}
@@ -1293,8 +1327,16 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	
 	int x = mouseX - pWindow->m_rect.left;
 	int y = mouseY - pWindow->m_rect.top;
-	WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
 	
+	if (pWindow->m_clickedInside)
+	{
+		pWindow->m_clickedInside = false;
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
+	}
+	else
+	{
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 1);
+	}
 	//FREE_LOCK(g_windowLock);
 }
 void OnUIRightClick (int mouseX, int mouseY)
@@ -2296,7 +2338,10 @@ int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, int eq
 }
 int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2)
 {
-	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
+	if ((eq != EVENT_CLICKCURSOR && eq != EVENT_RELEASECURSOR) || eqp2 != 1)
+	{
+		pWindow->m_callback(pWindow, eq, eqp1, eqp2);
+	}
 	
 	if (IsEventDestinedForControlsToo(eq))
 	{

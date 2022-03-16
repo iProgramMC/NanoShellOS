@@ -460,8 +460,10 @@ typedef struct WindowStruct
 	bool       m_maximized;
 	
 	// Raw input buffer.
-	char m_inputBuffer[WIN_KB_BUF_SIZE];
-	int  m_inputBufferBeg, m_inputBufferEnd;
+	char       m_inputBuffer[WIN_KB_BUF_SIZE];
+	int        m_inputBufferBeg, m_inputBufferEnd;
+	
+	bool       m_clickedInside;
 } Window;
 
 /**
@@ -479,7 +481,7 @@ typedef Window* PWINDOW;
 /**
  * Check if a rectangle contains a point.
  */
-bool RectangleContains(Rectangle*r, Point*p) ;
+bool RectangleContains(Rectangle*r, Point*p);
 
 /**
  * Register an event to a certain window.
@@ -559,6 +561,7 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
  * All the interfacing between parent and child must be done manually.
  */
 void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* newData);
 
 /**
  * Adds a control to the window.

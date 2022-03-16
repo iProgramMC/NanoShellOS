@@ -1,10 +1,11 @@
 /*****************************************
 		NanoShell Operating System
-	   (C) 2021-2022 iProgramInCpp
+	      (C) 2022 iProgramInCpp
 
-            Image loader module
+         PCI Device Handlermodule
 ******************************************/
 #include <main.h>
+#include <string.h>
 #include <pci.h>
 
 //NOTE: The PCI driver will only use access mechanism #1 (ports 0xcf8 and 0xcfc)
@@ -84,6 +85,9 @@ uint32_t PciGetBar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_id)
 }
 extern bool     g_IsBGADevicePresent;
 extern uint32_t g_BGADeviceBAR0;
+
+PciDevice g_RegisteredDevices[256]; int g_nRegisteredDevices = 0;
+
 void PciProbe ()
 {
 	for (uint32_t bus = 0; bus < 256; bus++)
@@ -96,15 +100,65 @@ void PciProbe ()
 				uint16_t DeviceID = PciGetDeviceID  (bus,slot,func);
 				LogMsg("Vendor: %x  Device: %x", VendorID, DeviceID);
 
-				if ((VendorID == VENDORID_QEMU && DeviceID == VENDORID_BXGFX) || 
-					(VendorID == VENDORID_VIRTUALBOX && DeviceID == VENDORID_BXGFXVBOX))
+				if ((VendorID == VENDORID_QEMU       && DeviceID == DEVICEID_BXGFX    ) || 
+					(VendorID == VENDORID_VIRTUALBOX && DeviceID == DEVICEID_BXGFXVBOX)
+				)
 				{
 					g_IsBGADevicePresent = true;
 					g_BGADeviceBAR0      = PciGetBar(bus, slot, func, 0);
 				}
+				
+				if (g_nRegisteredDevices >= (int)ARRAY_COUNT(g_RegisteredDevices)) continue;
+				
+				PciDevice* pDevice = &g_RegisteredDevices[g_nRegisteredDevices++];
+				pDevice->bus  = bus;
+				pDevice->slot = slot;
+				pDevice->func = func;
+				pDevice->vendor = VendorID;
+				pDevice->device = DeviceID;
 			}
 }
 
+static char text[100];
+
+const char* PciGetVendorIDText(uint16_t venid)
+{
+	switch (venid)
+	{
+		//hardcoded PCI IDs - includes the big boys
+		case 0x8086: return "Intel Corporation";
+		case 0x1234: return "QEMU internal";
+		case 0x80EE: return "VirtualBox internal";
+		case 0x1043: return "Asustek Computer, Inc.";
+		case 0x1414: return "Microsoft Corporation";
+		case 0x2646: return "Kingston Technology Company";
+		case 0x10DE: return "NVIDIA Corporation";
+		case 0x1022: return "Advanced Micro Devices, Inc.";
+		case 0x106B: return "Apple, Inc.";
+		//TODO
+		
+		//default
+		default:
+			sprintf(text, "VEN%x", venid);
+			return text;
+	}
+}
+
+void PciDump ()
+{
+	for (int i = 0; i < g_nRegisteredDevices; i++)
+	{
+		PciDevice* pDevice = &g_RegisteredDevices[i];
+		LogMsg("- Ven %x Dev %x Bus %b Slot %b Dev %b (%s)", 
+			pDevice->vendor,
+			pDevice->device,
+			pDevice->bus,
+			pDevice->slot,
+			pDevice->func,
+			PciGetVendorIDText(pDevice->vendor)
+		);
+	}
+}
 
 void PciInit()
 {

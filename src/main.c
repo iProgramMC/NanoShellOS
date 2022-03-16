@@ -81,6 +81,8 @@ void OnInaccessibleInitrdModule(uint32_t mods_addr)
 
 extern VBEData *g_vbeData;
 
+extern bool g_IsBGADevicePresent; // pci.c
+
 multiboot_info_t *g_pMultibootInfo;
 
 extern bool g_gotTime; // idt.c

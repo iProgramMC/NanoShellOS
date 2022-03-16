@@ -450,7 +450,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 
 //No matter, because you just advanced to a generic function!
 
-void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* data)
 {
 	// Free the locks that have been acquired.
 	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
@@ -488,6 +488,7 @@ void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, in
 	Window* pSubWindow = CreateWindow(newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags);
 	if (pSubWindow)
 	{
+		pSubWindow->m_data = data;
 		while (HandleMessages(pSubWindow))
 		{
 			KeTaskDone();
@@ -515,6 +516,11 @@ void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, in
 	}
 	if (wnLock) ACQUIRE_LOCK (g_windowLock);
 	if (scLock) ACQUIRE_LOCK (g_screenLock);
+}
+
+void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
+{
+	PopupWindowEx(pWindow, newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags, NULL);
 }
 
 const uint32_t g_DefaultPickColors[] = {

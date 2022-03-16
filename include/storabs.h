@@ -73,5 +73,14 @@ DriveID StMountTestRamDisk (void);
  */
 void StIdeInitialize(void);
 
+// Internal
+#if 1
+
+DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t nBlocks);
+DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, uint8_t nBlocks);
+bool StIdeIsAvailable (uint8_t did);
+
+#endif
+
 
 #endif//_STORABS_H

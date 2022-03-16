@@ -29,6 +29,7 @@ void KillAltTab();
 void VersionProgramTask (int argument);
 void PrgMineTask  (int argument);
 void PrgPaintTask (int argument);
+void PrgVBldTask  (int argument);
 void IconTestTask (int argument);
 void ListTestTask (int argument);
 void CabinetEntry (int argument);
