@@ -50,8 +50,6 @@ SECTIONS
 		*(.bss)
 	}
 	
-	. = 7M;
-	
 	.section : 
 	{
 	
