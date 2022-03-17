@@ -774,21 +774,20 @@ void UndrawWindow (Window* pWindow)
 	
 	UpdateDepthBuffer();
 	
-	ACQUIRE_LOCK(g_backgdLock);
+	bool shouldRedrawBackground = false;
 	
-	//redraw the background and all the things underneath:
-	RedrawBackground(pWindow->m_rect);
+	//redraw the background (If Needed) and all the things underneath:
 	
-	FREE_LOCK(g_backgdLock);
-	
-	// draw the windows below it
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
 	
 	//higher = faster, but may miss some smaller windows
 	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += 1) {
 		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += 1) {
 			short h = GetWindowIndexInDepthBuffer(x,y);
-			if (h == -1) continue;
+			if (h == -1) {
+				shouldRedrawBackground = true;
+				continue;
+			}
 			//check if it's present in the windowDrawList
 			Window* pWindowToCheck = GetWindowFromIndex(h);
 			bool exists = false;
@@ -804,14 +803,18 @@ void UndrawWindow (Window* pWindow)
 		}
 	}
 	
+	if (shouldRedrawBackground)
+		RedrawBackground(pWindow->m_rect);
+	
 	// We've added the windows to the list, so draw them. We don't need to worry
 	// about windows above them, as the way we're drawing them makes it so pixels
 	// over the window aren't overwritten.
 	//DebugLogMsg("Drawing %d windows below this one", sz);
 	for (int i=0; i<sz; i++) 
 	{
+		WindowAddEventToMasterQueue(windowDrawList[i], EVENT_PAINT, 0, 0);
 		//WindowRegisterEvent (windowDrawList[i], EVENT_PAINT, 0, 0);
-		//windowDrawList[i]->m_vbeData.m_dirty = true;
+		windowDrawList[i]->m_vbeData.m_dirty = true;
 		windowDrawList[i]->m_renderFinished = true;
 	}
 	
@@ -821,17 +824,22 @@ void UndrawWindow (Window* pWindow)
 
 void HideWindow (Window* pWindow)
 {
-	pWindow->m_hidden = true;
-	UndrawWindow(pWindow);
+	pWindow->m_hidden   = true;
+	//UndrawWindow(pWindow);
+	pWindow->m_needHide = true;
+}
+
+void ActuallyShowWindow(Window *pWindow)
+{
+	WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
+	pWindow->m_vbeData.m_dirty = true;
+	pWindow->m_renderFinished = true;
 }
 
 void ShowWindow (Window* pWindow)
 {
 	pWindow->m_hidden = false;
-	UpdateDepthBuffer();
-	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
-	pWindow->m_vbeData.m_dirty = true;
-	pWindow->m_renderFinished = true;
+	pWindow->m_needShow = true;
 }
 
 int g_TaskbarHeight = 0;
@@ -905,7 +913,7 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 
 extern Heap* g_pHeap;
 
-void ReadyToDestroyWindow (Window* pWindow)
+void ActuallyDestroyWindow(Window* pWindow)
 {
 	HideWindow (pWindow);
 	
@@ -925,6 +933,12 @@ void ReadyToDestroyWindow (Window* pWindow)
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
 	UseHeap (pHeapBackup);
+}
+
+void ReadyToDestroyWindow (Window* pWindow)
+{
+	pWindow->m_needHide    = true;
+	pWindow->m_needDestroy = true;
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
@@ -972,7 +986,7 @@ void SelectThisWindowAndUnselectOthers(Window* pWindow)
 		
 		MovePreExistingWindowToFront (pWindow - g_windows);
 		pWindow->m_isSelected = true;
-		UpdateDepthBuffer();
+		//UpdateDepthBuffer();
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
 		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
@@ -1040,6 +1054,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_eventQueueLock = false;
+	pWnd->m_needHide       = false;
+	pWnd->m_needShow       = false;
+	pWnd->m_needDestroy    = false;
 	pWnd->m_flags = flags;
 	
 	pWnd->m_rect.left = xPos;
@@ -1265,6 +1282,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 
 extern int g_mouseX, g_mouseY;//video.c
 void RenderWindow (Window* pWindow);
+void MinimizeWindow(Window* pWindow);
+void UnminimizeWindow(Window* pWindow);
 void OnUILeftClickRelease (int mouseX, int mouseY)
 {
 	if (!g_windowManagerRunning) return;
@@ -1285,6 +1304,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		if (!g_RenderWindowContents)
 		{
 			HideWindow(pWindow);
+			UndrawWindow (pWindow);
+			pWindow->m_needHide = false;
 		}
 		
 		if (GetCurrentCursor()->m_resizeMode)
@@ -1321,6 +1342,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		pWindow->m_renderFinished = true;
 		pWindow->m_isBeingDragged = false;
 		ShowWindow(pWindow);
+		pWindow->m_needShow = true;
 	}
 	
 	if (pWindow->m_minimized) return;
@@ -1547,16 +1569,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		UpdateFPSCounter();
 		CrashReporterCheck();
 		bool updated = false;
+		
+		// Hide and destroy all the windows that are queued to do so.
+		
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
 			Window* pWindow = &g_windows [p];
 			if (!pWindow->m_used) continue;
-			
-			/*if (UpdateTimeout == 0)
-			{
-				WindowRegisterEvent (pWindow, EVENT_UPDATE, 0, 0);
-				UpdateTimeout = 100;
-			}*/
 			
 			if (UpdateTimeout == 0 || updated)
 			{
@@ -1564,6 +1583,55 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				UpdateTimeout = UPDATE_TIMEOUT;
 				updated = true;
 			}
+			
+			if (pWindow->m_needMinimize)
+			{
+				MinimizeWindow(pWindow);
+				pWindow->m_needMinimize = false;
+			}
+			if (pWindow->m_needHide)
+			{
+				pWindow->m_hidden = true;
+				UndrawWindow (pWindow);
+				pWindow->m_needHide = false;
+			}
+			if (pWindow->m_needDestroy)
+			{
+				ActuallyDestroyWindow (pWindow);
+				continue;
+			}
+		}
+		
+		// Show all the windows that have been queued to do so
+		
+		for (int p = 0; p < WINDOWS_MAX; p++)
+		{
+			Window* pWindow = &g_windows [p];
+			if (!pWindow->m_used) continue;
+			
+			if (pWindow->m_needUnminimize)
+			{
+				UnminimizeWindow(pWindow);
+				pWindow->m_needUnminimize = false;
+			}
+			if (pWindow->m_needShow)
+			{
+				pWindow->m_needShow = false;
+				ActuallyShowWindow(pWindow);
+				
+				pWindow->m_renderFinished = true;
+				//bUpdateDepth = true;
+				UpdateDepthBuffer();
+			}
+		}
+		
+		// Other bullshit
+		
+		for (int p = 0; p < WINDOWS_MAX; p++)
+		{
+			Window* pWindow = &g_windows [p];
+			if (!pWindow->m_used) continue;
+			
 			
 			//TODO: This method misses a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
 			//into a window's input buffer and read that instead of doing this hacky method right here?
@@ -1616,9 +1684,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		#endif
 			if (!pWindow->m_hidden)
 			{
-				//cli;
-				if (pWindow->m_renderFinished && !g_backgdLock)
+				if (pWindow->m_renderFinished)
 				{
+					if (pWindow != (Window*)0xc03b3c3c)
 					if (!hasRedrawnThem)
 					{
 						hasRedrawnThem = true;
@@ -1626,20 +1694,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					}
 					pWindow->m_renderFinished = false;
 					
-					//ACQUIRE_LOCK(g_backgdLock);
-					cli;
-					
+						//SLogMsg("Rendering Window With Address %x", pWindow);
 					RenderWindow(pWindow);
-					
-					sti;
-					
-					//FREE_LOCK(g_backgdLock);
 					
 					Point p = { g_mouseX, g_mouseY };
 					if (RectangleContains (&pWindow->m_rect, &p))
 						RenderCursor ();
 				}
-				//sti;
 			}
 			
 			if (pWindow->m_markedForDeletion)
@@ -1651,6 +1712,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				DestroyWindow (pWindow);
 			}
 		}
+		
 		UpdateTimeout--;
 		
 		RunOneEffectFrame ();
@@ -2412,7 +2474,17 @@ char WinReadFromInputQueue (Window* this)
 	else return 0;
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
+bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2);
+
+void MinimizeWindow(Window* pWindow)
+{
+}
+
+void UnminimizeWindow(Window* pWindow)
+{
+}
+
+bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	//setup paint stuff so the window can only paint in their little box
 	VidSetVBEData (&pWindow->m_vbeData);
@@ -2422,50 +2494,13 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	//todo: switch case much?
 	if (eventType == EVENT_MINIMIZE)
 	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-		
-		VidSetVBEData (NULL);
-		HideWindow(pWindow);
-		if (!pWindow->m_minimized)
-		{
-			pWindow->m_minimized   = true;
-			pWindow->m_rectBackup  = pWindow->m_rect;
-			
-			pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
-			pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
-			pWindow->m_rect.right  = pWindow->m_rect.left + 32;
-			pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
-		}
-		pWindow->m_hidden = false;
-		UpdateDepthBuffer();
-		VidSetVBEData (&pWindow->m_vbeData);
-		
-		Rectangle new_title_rect = pWindow->m_rect;
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+		pWindow->m_needMinimize = true;
+		//MinimzeWindow(pWindow);
 	}
 	else if (eventType == EVENT_UNMINIMIZE)
 	{
-		Rectangle old_title_rect = pWindow->m_rect;
-		
-		VidSetVBEData (NULL);
-		HideWindow(pWindow);
-		pWindow->m_minimized   = false;
-		pWindow->m_rect = pWindow->m_rectBackup;
-		pWindow->m_hidden = false;
-		//pWindow->m_rect.right  = pWindow->m_rect.left + pWindow->m_vbeData.m_width;
-		//pWindow->m_rect.bottom = pWindow->m_rect.top  + pWindow->m_vbeData.m_height;
-		UpdateDepthBuffer();
-		VidSetVBEData (&pWindow->m_vbeData);
-		PaintWindowBackgroundAndBorder(pWindow);
-		/*pWindow->m_eventQueue[pWindow->m_eventQueueSize++] = EVENT_PAINT;*/
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
-		
-		pWindow->m_renderFinished = true;
-		
-		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+		pWindow->m_needUnminimize = true;
+		//UnminimzeWindow(pWindow);
 	}
 	else if (eventType == EVENT_SIZE)
 	{
@@ -2476,7 +2511,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_MAXIMIZE)
 	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		/*Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (!pWindow->m_maximized)
 			pWindow->m_rectBackup = pWindow->m_rect;
@@ -2492,11 +2527,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);*/
 	}
 	else if (eventType == EVENT_UNMAXIMIZE)
 	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		/*Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (pWindow->m_maximized)
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
@@ -2509,7 +2544,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		pWindow->m_renderFinished = true;
 		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);*/
 	}
 	else if (eventType == EVENT_CREATE)
 	{

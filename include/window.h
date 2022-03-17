@@ -464,6 +464,12 @@ typedef struct WindowStruct
 	int        m_inputBufferBeg, m_inputBufferEnd;
 	
 	bool       m_clickedInside;
+	
+	bool       m_needHide;
+	bool       m_needShow;
+	bool       m_needDestroy;
+	bool       m_needMinimize;
+	bool       m_needUnminimize;
 } Window;
 
 /**

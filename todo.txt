@@ -1,6 +1,6 @@
 TODO:
 
-- Make DestroyWindow queue a window destruction instead of doing the dirty work. really the only thing doing the drawing should be the main window manager task
+- [X] Make DestroyWindow queue a window destruction instead of doing the dirty work. really the only thing doing the drawing should be the main window manager task
 - Disallow typing into two textinput controls at the same time
 
 VBuilder:
