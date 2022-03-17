@@ -14,7 +14,7 @@
 
 //EXTERN FUNCTIONS//
 void NukeWindow (Window* pWindow);
-void SelectThisWindowAndUnselectOthers (Window* pWindow);
+void SelectWindow (Window* pWindow);
 void PaintWindowBackgroundAndBorder (Window* pWindow);
 
 //EXTERNS//
@@ -142,7 +142,7 @@ void KillAltTab()
 		if (g_windowIndexOrder[g_windowDrawOrderIndex] != -1)
 		{
 			if (g_windows[g_windowIndexOrder[g_windowDrawOrderIndex]].m_used)
-				SelectThisWindowAndUnselectOthers(g_windows + g_windowIndexOrder[g_windowDrawOrderIndex]);
+				SelectWindow(g_windows + g_windowIndexOrder[g_windowDrawOrderIndex]);
 		}
 	}
 	

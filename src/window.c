@@ -1093,7 +1093,7 @@ void RequestRepaint (Window* pWindow)
 }
 
 extern void SetFocusedConsole(Console* console);
-void SelectThisWindowAndUnselectOthers(Window* pWindow)
+void SelectWindowUnsafe(Window* pWindow)
 {
 	bool wasSelectedBefore = pWindow->m_isSelected;
 	if (!wasSelectedBefore) {
@@ -1120,6 +1120,25 @@ void SelectThisWindowAndUnselectOthers(Window* pWindow)
 		pWindow->m_renderFinished = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 	}
+}
+void SelectWindow(Window* pWindow)
+{
+	if (!KeGetRunningTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		SelectWindowUnsafe(pWindow);
+		return;
+	}
+	
+	WindowAction action;
+	action.bInProgress = true;
+	action.pWindow     = pWindow;
+	action.nActionType = WACT_SELECT;
+	
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 #endif
 
@@ -1243,7 +1262,7 @@ void OnUILeftClick (int mouseX, int mouseY)
 		Window* window = GetWindowFromIndex(idx);
 		if (!(window->m_flags & WF_FROZEN))
 		{
-			SelectThisWindowAndUnselectOthers (window);
+			SelectWindow (window);
 			
 			//bool wasSelectedBefore = g_currentlyClickedWindow == idx;
 			g_currentlyClickedWindow = idx;
@@ -1689,6 +1708,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					break;
 				case WACT_SHOW:
 					ShowWindowUnsafe (pFront->pWindow);
+					break;
+				case WACT_SELECT:
+					SelectWindowUnsafe (pFront->pWindow);
 					break;
 				case WACT_RESIZE:
 					ResizeWindowUnsafe (pFront->pWindow, pFront->rect.left, pFront->rect.top, GetWidth(&pFront->rect), GetHeight(&pFront->rect));
@@ -2699,7 +2721,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		AddWindowToDrawOrder (pWindow - g_windows);
 		ShowWindow(pWindow);
-		SelectThisWindowAndUnselectOthers(pWindow);
+		SelectWindow(pWindow);
 	}
 	else if (eventType == EVENT_DESTROY)
 	{

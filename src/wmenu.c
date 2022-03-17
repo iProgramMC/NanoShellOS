@@ -96,7 +96,7 @@ void DestroyOpenChildWindowIfAvailable(Window* pMenuWnd)
 	}
 }
 
-void SelectThisWindowAndUnselectOthers(Window* pWindow);
+void SelectWindow(Window* pWindow);
 void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	switch (eventType)
@@ -227,7 +227,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			DefaultWindowProc(pWindow, eventType, parm1, parm2);
 			
 			if (pParentWindow)
-				SelectThisWindowAndUnselectOthers(pParentWindow);
+				SelectWindow(pParentWindow);
 			if (pWindow->m_data)
 			{
 				WindowMenu* pData = (WindowMenu*)pWindow->m_data;

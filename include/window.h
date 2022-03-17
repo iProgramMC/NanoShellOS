@@ -484,7 +484,8 @@ enum {
 	WACT_RESIZE,
 	WACT_HIDE,
 	WACT_SHOW,
-	WACT_DESTROY
+	WACT_DESTROY,
+	WACT_SELECT,
 };
 
 typedef struct
