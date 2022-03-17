@@ -13,7 +13,7 @@
 #define ALT_TAB_HEITE  70
 
 //EXTERN FUNCTIONS//
-void ReadyToDestroyWindow (Window* pWindow);
+void NukeWindow (Window* pWindow);
 void SelectThisWindowAndUnselectOthers (Window* pWindow);
 void PaintWindowBackgroundAndBorder (Window* pWindow);
 
@@ -136,7 +136,7 @@ void KillAltTab()
 {
 	if (g_pAltTab)
 	{
-		ReadyToDestroyWindow(g_pAltTab);
+		NukeWindow(g_pAltTab);
 		
 		//select the window user requested.
 		if (g_windowIndexOrder[g_windowDrawOrderIndex] != -1)

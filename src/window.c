@@ -5,6 +5,13 @@
            Window Manager module
 ******************************************/
 
+// NOTE ABOUT PROCESSES:
+// This _should_ run in the kernel task!!!!
+// Why?
+
+// The action queues shall resort to using the unsafe versions if the caller running
+// Hide/Show/Nuke/ResizeWindow if it's called by window manager itself (i.e. menus)
+
 #define THREADING_ENABLED 1 //0
 #if THREADING_ENABLED
 #define MULTITASKED_WINDOW_MANAGER
@@ -30,6 +37,56 @@ void KeTaskDone(void);
 #undef sti
 #define cli
 #define sti
+
+// Window Internal Action Queue
+#if 1
+
+static WindowAction s_internal_action_queue[4096];
+static int          s_internal_action_queue_head,
+                    s_internal_action_queue_tail;
+//
+
+bool ActionQueueIsOneMoreFromOverflowingQueue()
+{
+	if (s_internal_action_queue_tail == 0)
+		return s_internal_action_queue_head == 4095;
+	return s_internal_action_queue_tail == s_internal_action_queue_head - 1;
+}
+
+WindowAction* ActionQueueAdd(WindowAction action)
+{
+	while (ActionQueueIsOneMoreFromOverflowingQueue())
+		KeTaskDone();
+	
+	WindowAction *pAct = &s_internal_action_queue[s_internal_action_queue_head];
+	*pAct = action;
+	
+	s_internal_action_queue_head = (s_internal_action_queue_head + 1) % 4096;
+	
+	return pAct;
+}
+
+WindowAction* ActionQueueGetFront()
+{
+	return &s_internal_action_queue[s_internal_action_queue_tail];
+}
+
+void ActionQueuePop()
+{
+	s_internal_action_queue_tail = (s_internal_action_queue_tail + 1) % 4096;
+}
+
+void ActionQueueWaitForFrontToFinish()
+{
+	while (ActionQueueGetFront()->bInProgress);
+}
+
+bool ActionQueueEmpty()
+{
+	return s_internal_action_queue_tail == s_internal_action_queue_head;
+}
+
+#endif
 
 //fps counter:
 #if 1
@@ -774,20 +831,21 @@ void UndrawWindow (Window* pWindow)
 	
 	UpdateDepthBuffer();
 	
-	bool shouldRedrawBackground = false;
+	ACQUIRE_LOCK(g_backgdLock);
 	
-	//redraw the background (If Needed) and all the things underneath:
+	//redraw the background and all the things underneath:
+	RedrawBackground(pWindow->m_rect);
 	
+	FREE_LOCK(g_backgdLock);
+	
+	// draw the windows below it
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
 	
 	//higher = faster, but may miss some smaller windows
 	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += 1) {
 		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += 1) {
 			short h = GetWindowIndexInDepthBuffer(x,y);
-			if (h == -1) {
-				shouldRedrawBackground = true;
-				continue;
-			}
+			if (h == -1) continue;
 			//check if it's present in the windowDrawList
 			Window* pWindowToCheck = GetWindowFromIndex(h);
 			bool exists = false;
@@ -803,18 +861,14 @@ void UndrawWindow (Window* pWindow)
 		}
 	}
 	
-	if (shouldRedrawBackground)
-		RedrawBackground(pWindow->m_rect);
-	
 	// We've added the windows to the list, so draw them. We don't need to worry
 	// about windows above them, as the way we're drawing them makes it so pixels
 	// over the window aren't overwritten.
 	//DebugLogMsg("Drawing %d windows below this one", sz);
 	for (int i=0; i<sz; i++) 
 	{
-		WindowAddEventToMasterQueue(windowDrawList[i], EVENT_PAINT, 0, 0);
 		//WindowRegisterEvent (windowDrawList[i], EVENT_PAINT, 0, 0);
-		windowDrawList[i]->m_vbeData.m_dirty = true;
+		//windowDrawList[i]->m_vbeData.m_dirty = true;
 		windowDrawList[i]->m_renderFinished = true;
 	}
 	
@@ -822,29 +876,64 @@ void UndrawWindow (Window* pWindow)
 	g_vbeData = backup;
 }
 
-void HideWindow (Window* pWindow)
+static void HideWindowUnsafe (Window* pWindow)
 {
-	pWindow->m_hidden   = true;
-	//UndrawWindow(pWindow);
-	pWindow->m_needHide = true;
+	pWindow->m_hidden = true;
+	UndrawWindow(pWindow);
 }
 
-void ActuallyShowWindow(Window *pWindow)
+static void ShowWindowUnsafe (Window* pWindow)
 {
-	WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
+	pWindow->m_hidden = false;
+	UpdateDepthBuffer();
+	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 	pWindow->m_vbeData.m_dirty = true;
 	pWindow->m_renderFinished = true;
 }
 
+void HideWindow (Window* pWindow)
+{
+	if (!KeGetRunningTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		HideWindowUnsafe(pWindow);
+		return;
+	}
+	
+	WindowAction action;
+	action.bInProgress = true;
+	action.pWindow     = pWindow;
+	action.nActionType = WACT_HIDE;
+	
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+}
+
 void ShowWindow (Window* pWindow)
 {
-	pWindow->m_hidden = false;
-	pWindow->m_needShow = true;
+	if (!KeGetRunningTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		ShowWindowUnsafe(pWindow);
+		return;
+	}
+	
+	WindowAction action;
+	action.bInProgress = true;
+	action.pWindow     = pWindow;
+	action.nActionType = WACT_SHOW;
+	
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
 int g_TaskbarHeight = 0;
 
-void ResizeWindowInt (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
+static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
 	if (newPosX != -1)
 	{
@@ -902,20 +991,44 @@ void ResizeWindowInt (Window* pWindow, int newPosX, int newPosY, int newWidth, i
 	WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
 }
 
+static void ResizeWindowUnsafe(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
+{
+	HideWindowUnsafe (pWindow);
+	
+	ResizeWindowInternal (pWindow, newPosX, newPosY, newWidth, newHeight);
+	
+	ShowWindowUnsafe (pWindow);
+}
+
 void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
-	HideWindow (pWindow);
+	if (!KeGetRunningTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		ResizeWindowUnsafe(pWindow, newPosX, newPosY, newWidth, newHeight);
+		return;
+	}
 	
-	ResizeWindowInt (pWindow, newPosX, newPosY, newWidth, newHeight);
+	WindowAction action;
+	action.bInProgress = true;
+	action.pWindow     = pWindow;
+	action.nActionType = WACT_RESIZE;
+	action.rect.left   = newPosX;
+	action.rect.top    = newPosY;
+	action.rect.right  = newPosX + newWidth;
+	action.rect.bottom = newPosY + newHeight;
 	
-	ShowWindow (pWindow);
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
 extern Heap* g_pHeap;
 
-void ActuallyDestroyWindow(Window* pWindow)
+void NukeWindowUnsafe (Window* pWindow)
 {
-	HideWindow (pWindow);
+	HideWindowUnsafe (pWindow);
 	
 	Heap *pHeapBackup = g_pHeap;
 	ResetToKernelHeap ();
@@ -933,15 +1046,29 @@ void ActuallyDestroyWindow(Window* pWindow)
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
 	UseHeap (pHeapBackup);
-}
-
-void ReadyToDestroyWindow (Window* pWindow)
-{
-	pWindow->m_needHide    = true;
-	pWindow->m_needDestroy = true;
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
+}
+
+void NukeWindow (Window* pWindow)
+{
+	if (!KeGetRunningTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		NukeWindowUnsafe(pWindow);
+		return;
+	}
+	
+	WindowAction action;
+	action.bInProgress = true;
+	action.pWindow     = pWindow;
+	action.nActionType = WACT_DESTROY;
+	
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
 void DestroyWindow (Window* pWindow)
@@ -986,7 +1113,7 @@ void SelectThisWindowAndUnselectOthers(Window* pWindow)
 		
 		MovePreExistingWindowToFront (pWindow - g_windows);
 		pWindow->m_isSelected = true;
-		//UpdateDepthBuffer();
+		UpdateDepthBuffer();
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
 		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
@@ -1047,16 +1174,13 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	ResetToKernelHeap ();
 	
 	pWnd->m_renderFinished = false;
-	pWnd->m_hidden = true;//false;
+	pWnd->m_hidden         = true;//false;
 	pWnd->m_isBeingDragged = false;
 	pWnd->m_isSelected     = false;
 	pWnd->m_minimized      = false;
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_eventQueueLock = false;
-	pWnd->m_needHide       = false;
-	pWnd->m_needShow       = false;
-	pWnd->m_needDestroy    = false;
 	pWnd->m_flags = flags;
 	
 	pWnd->m_rect.left = xPos;
@@ -1091,17 +1215,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
-	/*UpdateDepthBuffer();
 	
-	
-	AddWindowToDrawOrder (pWnd - g_windows);
-	
-	SelectThisWindowAndUnselectOthers(pWnd);
-	
-	cli;
-	UpdateDepthBuffer();
-	sti;
-	*/
 	UseHeap (pHeapBackup);
 	
 	FREE_LOCK(g_createLock);
@@ -1282,8 +1396,6 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 
 extern int g_mouseX, g_mouseY;//video.c
 void RenderWindow (Window* pWindow);
-void MinimizeWindow(Window* pWindow);
-void UnminimizeWindow(Window* pWindow);
 void OnUILeftClickRelease (int mouseX, int mouseY)
 {
 	if (!g_windowManagerRunning) return;
@@ -1303,23 +1415,15 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	{
 		if (!g_RenderWindowContents)
 		{
-			HideWindow(pWindow);
-			UndrawWindow (pWindow);
-			pWindow->m_needHide = false;
+			HideWindowUnsafe(pWindow);
 		}
 		
 		if (GetCurrentCursor()->m_resizeMode)
 		{
 			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
-			ResizeWindowInt (pWindow, -1, -1, newWidth, newHeight);
-			//EVENT_SIZE parms: PARM1: MakeMouseParm(NewSizeX,NewSizeY), PARM2: MakeMouseParm(OldSizeX,OldSizeY)
 			
-			//bool bkp = pWindow->m_isSelected;
-			//pWindow->m_isSelected = true;
-			//RenderWindow(pWindow);
-			//pWindow->m_isSelected = bkp;
-			
-			// Resize framebuffer and stuff
+			//note that we resize the window this way here because we're running inside the wm task
+			ResizeWindowInternal (pWindow, -1, -1, newWidth, newHeight);
 		}
 		else
 		{
@@ -1341,8 +1445,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		pWindow->m_isBeingDragged = false;
-		ShowWindow(pWindow);
-		pWindow->m_needShow = true;
+		ShowWindowUnsafe(pWindow);
 	}
 	
 	if (pWindow->m_minimized) return;
@@ -1570,7 +1673,31 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		CrashReporterCheck();
 		bool updated = false;
 		
-		// Hide and destroy all the windows that are queued to do so.
+		while (!ActionQueueEmpty())
+		{
+			WindowAction *pFront = ActionQueueGetFront();
+			
+			SLogMsg("Executing action %d on window %x", pFront->nActionType, pFront->pWindow);
+			
+			switch (pFront->nActionType)
+			{
+				case WACT_DESTROY:
+					NukeWindowUnsafe (pFront->pWindow);
+					break;
+				case WACT_HIDE:
+					HideWindowUnsafe (pFront->pWindow);
+					break;
+				case WACT_SHOW:
+					ShowWindowUnsafe (pFront->pWindow);
+					break;
+				case WACT_RESIZE:
+					ResizeWindowUnsafe (pFront->pWindow, pFront->rect.left, pFront->rect.top, GetWidth(&pFront->rect), GetHeight(&pFront->rect));
+					break;
+			}
+			
+			pFront->bInProgress = false;
+			ActionQueuePop();
+		}
 		
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
@@ -1583,55 +1710,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				UpdateTimeout = UPDATE_TIMEOUT;
 				updated = true;
 			}
-			
-			if (pWindow->m_needMinimize)
-			{
-				MinimizeWindow(pWindow);
-				pWindow->m_needMinimize = false;
-			}
-			if (pWindow->m_needHide)
-			{
-				pWindow->m_hidden = true;
-				UndrawWindow (pWindow);
-				pWindow->m_needHide = false;
-			}
-			if (pWindow->m_needDestroy)
-			{
-				ActuallyDestroyWindow (pWindow);
-				continue;
-			}
-		}
-		
-		// Show all the windows that have been queued to do so
-		
-		for (int p = 0; p < WINDOWS_MAX; p++)
-		{
-			Window* pWindow = &g_windows [p];
-			if (!pWindow->m_used) continue;
-			
-			if (pWindow->m_needUnminimize)
-			{
-				UnminimizeWindow(pWindow);
-				pWindow->m_needUnminimize = false;
-			}
-			if (pWindow->m_needShow)
-			{
-				pWindow->m_needShow = false;
-				ActuallyShowWindow(pWindow);
-				
-				pWindow->m_renderFinished = true;
-				//bUpdateDepth = true;
-				UpdateDepthBuffer();
-			}
-		}
-		
-		// Other bullshit
-		
-		for (int p = 0; p < WINDOWS_MAX; p++)
-		{
-			Window* pWindow = &g_windows [p];
-			if (!pWindow->m_used) continue;
-			
 			
 			//TODO: This method misses a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
 			//into a window's input buffer and read that instead of doing this hacky method right here?
@@ -1684,9 +1762,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		#endif
 			if (!pWindow->m_hidden)
 			{
-				if (pWindow->m_renderFinished)
+				//cli;
+				if (pWindow->m_renderFinished && !g_backgdLock)
 				{
-					if (pWindow != (Window*)0xc03b3c3c)
 					if (!hasRedrawnThem)
 					{
 						hasRedrawnThem = true;
@@ -1694,13 +1772,20 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					}
 					pWindow->m_renderFinished = false;
 					
-						//SLogMsg("Rendering Window With Address %x", pWindow);
+					//ACQUIRE_LOCK(g_backgdLock);
+					cli;
+					
 					RenderWindow(pWindow);
+					
+					sti;
+					
+					//FREE_LOCK(g_backgdLock);
 					
 					Point p = { g_mouseX, g_mouseY };
 					if (RectangleContains (&pWindow->m_rect, &p))
 						RenderCursor ();
 				}
+				//sti;
 			}
 			
 			if (pWindow->m_markedForDeletion)
@@ -1712,7 +1797,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				DestroyWindow (pWindow);
 			}
 		}
-		
 		UpdateTimeout--;
 		
 		RunOneEffectFrame ();
@@ -1817,7 +1901,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 						if (g_windows[i].m_pSubThread)
 							KeKillTask (g_windows[i].m_pSubThread);
 						
-						ReadyToDestroyWindow (&g_windows[i]);
+						NukeWindow (&g_windows[i]);
 					}
 				}
 				
@@ -2474,17 +2558,7 @@ char WinReadFromInputQueue (Window* this)
 	else return 0;
 }
 
-bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2);
-
-void MinimizeWindow(Window* pWindow)
-{
-}
-
-void UnminimizeWindow(Window* pWindow)
-{
-}
-
-bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	//setup paint stuff so the window can only paint in their little box
 	VidSetVBEData (&pWindow->m_vbeData);
@@ -2494,13 +2568,54 @@ bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 	//todo: switch case much?
 	if (eventType == EVENT_MINIMIZE)
 	{
-		pWindow->m_needMinimize = true;
-		//MinimzeWindow(pWindow);
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
+		VidSetVBEData (NULL);
+		HideWindow (pWindow);
+		if (!pWindow->m_minimized)
+		{
+			pWindow->m_minimized   = true;
+			pWindow->m_rectBackup  = pWindow->m_rect;
+			
+			pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
+			pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
+			pWindow->m_rect.right  = pWindow->m_rect.left + 32;
+			pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
+		}
+		//pWindow->m_hidden = false;
+		//UpdateDepthBuffer();
+		
+		ShowWindow (pWindow);
+		
+		VidSetVBEData (&pWindow->m_vbeData);
+		
+		Rectangle new_title_rect = pWindow->m_rect;
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMINIMIZE)
 	{
-		pWindow->m_needUnminimize = true;
-		//UnminimzeWindow(pWindow);
+		Rectangle old_title_rect = pWindow->m_rect;
+		
+		VidSetVBEData (NULL);
+		HideWindow (pWindow);
+		
+		pWindow->m_minimized   = false;
+		pWindow->m_rect = pWindow->m_rectBackup;
+		
+		ShowWindow (pWindow);
+		
+		UpdateDepthBuffer();
+		VidSetVBEData (&pWindow->m_vbeData);
+		PaintWindowBackgroundAndBorder(pWindow);
+		
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		
+		pWindow->m_renderFinished = true;
+		
+		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_SIZE)
 	{
@@ -2511,7 +2626,7 @@ bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 	}
 	else if (eventType == EVENT_MAXIMIZE)
 	{
-		/*Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (!pWindow->m_maximized)
 			pWindow->m_rectBackup = pWindow->m_rect;
@@ -2527,11 +2642,11 @@ bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 		
 		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);*/
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMAXIMIZE)
 	{
-		/*Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (pWindow->m_maximized)
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
@@ -2544,7 +2659,7 @@ bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 		
 		pWindow->m_renderFinished = true;
 		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);*/
+		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_CREATE)
 	{
@@ -2593,7 +2708,7 @@ bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 		FREE_LOCK (pWindow->m_eventQueueLock);
 		KeTaskDone();
 		
-		ReadyToDestroyWindow(pWindow);
+		NukeWindow(pWindow);
 		
 		return false;
 	}
@@ -2675,7 +2790,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			DestroyWindow(pWindow);
 			break;
 		case EVENT_DESTROY:
-			//ReadyToDestroyWindow(pWindow);//exits
+			//NukeWindow(pWindow);//exits
 			break;
 		default:
 			break;

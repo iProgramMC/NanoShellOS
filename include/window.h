@@ -464,12 +464,6 @@ typedef struct WindowStruct
 	int        m_inputBufferBeg, m_inputBufferEnd;
 	
 	bool       m_clickedInside;
-	
-	bool       m_needHide;
-	bool       m_needShow;
-	bool       m_needDestroy;
-	bool       m_needMinimize;
-	bool       m_needUnminimize;
 } Window;
 
 /**
@@ -483,6 +477,34 @@ typedef struct WindowStruct
 #define GET_Y_PARM(parm1)  (parm1&0xFFFF)
 
 typedef Window* PWINDOW;
+
+//For internal use only - actions that may not be safe to perform outside the main window manager task
+enum {
+	WACT_NONE,
+	WACT_RESIZE,
+	WACT_HIDE,
+	WACT_SHOW,
+	WACT_DESTROY
+};
+
+typedef struct
+{
+	bool bInProgress;
+	
+	Window *pWindow;
+	
+	int  nActionType;
+	
+	union {
+		int vars[16];
+		int var;
+		
+		Rectangle rects[4];
+		Rectangle rect;
+	};
+}
+WindowAction;
+
 
 /**
  * Check if a rectangle contains a point.
