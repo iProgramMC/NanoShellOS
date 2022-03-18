@@ -31,9 +31,10 @@ typedef uint8_t bool;
 #define TEXTSTYLE_RJUSTIFY    (8)
 #define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
 
-#define TITLE_BAR_HEIGHT 18
+//#define TITLE_BAR_HEIGHT 18
 
-#define WINDOW_BACKGD_COLOR (GetThemingParameter(P_WINDOW_BACKGD_COLOR)) //TODO
+#define WINDOW_BACKGD_COLOR (GetThemingParameter(P_WINDOW_BACKGD_COLOR))
+#define TITLE_BAR_HEIGHT    (GetThemingParameter(P_TITLE_BAR_HEIGHT))
 
 #define RECT(rect,x,y,w,h) do {\
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
@@ -523,6 +524,8 @@ enum {
 	P_WINDOW_TEXT_COLOR,
 	P_WINDOW_TEXT_COLOR_LIGHT,
 	P_SYSTEM_FONT,
+	P_TITLE_BAR_HEIGHT,
+	P_TITLE_BAR_FONT,
 	P_THEME_PARM_COUNT
 };
 

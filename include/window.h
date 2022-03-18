@@ -20,8 +20,6 @@
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
-#define TITLE_BAR_HEIGHT 18
-
 //TODO
 //#define ENABLE_MAXIMIZE
 
@@ -42,6 +40,8 @@
 #define DEFAULT_WINDOW_TEXT_COLOR               0x00000000
 #define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
 #define DEFAULT_SYSTEM_FONT                     FONT_BASIC
+#define DEFAULT_TITLE_BAR_HEIGHT                18
+#define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
 
 //#define HARDCODE_EVERYTHING
 
@@ -60,6 +60,8 @@
 #define WINDOW_TEXT_COLOR               DEFAULT_WINDOW_TEXT_COLOR       
 #define WINDOW_TEXT_COLOR_LIGHT         DEFAULT_WINDOW_TEXT_COLOR_LIGHT
 #define SYSTEM_FONT                     FONT_BASIC
+#define TITLE_BAR_HEIGHT 18
+#define TITLE_BAR_FONT   FONT_BASIC
 
 #else
 
@@ -78,6 +80,8 @@ P_WINDOW_TITLE_TEXT_COLOR,
 P_WINDOW_TEXT_COLOR,
 P_WINDOW_TEXT_COLOR_LIGHT,
 P_SYSTEM_FONT,
+P_TITLE_BAR_HEIGHT,
+P_TITLE_BAR_FONT,
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
@@ -95,7 +99,9 @@ void     SetThemingParameter(int type, uint32_t);
 #define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
 #define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
 #define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
-#define SYSTEM_FONT                     (GetThemingParameter(P_SYSTEM_FONT                   ))
+#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT              ))
+#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT         ))
+#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
 
 #endif
 

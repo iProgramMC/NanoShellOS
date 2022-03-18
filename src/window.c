@@ -226,7 +226,9 @@ void RunOneEffectFrame()
 			g_EffectSrc.bottom
 		);
 		
+		VidSetFont(TITLE_BAR_FONT);
 		VidDrawText(g_EffectText, g_EffectSrc, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR), TRANSPARENT);
+		VidSetFont(SYSTEM_FONT);
 		
 		VidSetVBEData(NULL);
 	}
@@ -787,7 +789,25 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 //This is what you should use in most cases.
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
 {
-	ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+	//ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+	
+	int queue_timeout = 100000;
+	while (pWindow->m_eventQueueLock)
+	{
+		queue_timeout--;
+		KeTaskDone();
+		
+		if (queue_timeout == 0)
+		{
+			SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!", pWindow, pWindow->m_title);
+			
+			//pWindow->m_flags |= WF_FROZEN;
+			
+			return;
+		}
+	}
+	
+	pWindow->m_eventQueueLock = true;
 	
 	WindowRegisterEventUnsafe (pWindow, eventType, parm1, parm2);
 	
@@ -1502,7 +1522,7 @@ void OnUIRightClick (int mouseX, int mouseY)
 			{
 				int x = mouseX - window->m_rect.left;
 				int y = mouseY - window->m_rect.top;
-				WindowRegisterEvent (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
+				WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
 			}
 		}
 	}
@@ -1531,7 +1551,7 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 				int x = mouseX - window->m_rect.left;
 				int y = mouseY - window->m_rect.top;
 				
-				WindowRegisterEvent (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
+				WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
 			}
 		}
 	}
@@ -2439,8 +2459,14 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		/*const unsigned char* pBkp = g_pCurrentFont;
 		VidSetFont(FONT_BIGTEST2);*/
 		
-		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		uint32_t flags = TEXT_RENDER_BOLD;
+		if (TITLE_BAR_FONT != SYSTEM_FONT)
+			flags = 0;
+		
+		VidSetFont(TITLE_BAR_FONT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidSetFont(SYSTEM_FONT);
 		
 		//g_pCurrentFont = pBkp;
 		
@@ -2772,9 +2798,11 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			if (!(pWindow->m_flags & WF_NOCLOSE))
 			{
+				#define ACTION_BUTTON_WIDTH 18
+				
 				Rectangle rect;
 				rect.right = pWindow->m_vbeData.m_width - 5 - WINDOW_RIGHT_SIDE_THICKNESS;
-				rect.left  = rect.right - TITLE_BAR_HEIGHT+2;
+				rect.left  = rect.right - ACTION_BUTTON_WIDTH+2;
 				rect.top   = 4;
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
@@ -2782,16 +2810,16 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				#ifdef ENABLE_MAXIMIZE
 				if (!(pWindow->m_flags & WF_NOMAXIMZ))
 				{
-					rect.left -= TITLE_BAR_HEIGHT;
-					rect.right -= TITLE_BAR_HEIGHT;
+					rect.left -= ACTION_BUTTON_WIDTH;
+					rect.right -= ACTION_BUTTON_WIDTH;
 					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x08", 0xFFFF0002, EVENT_MAXIMIZE, 0);
 				}
 				#endif
 				
 				if (!(pWindow->m_flags & WF_NOMINIMZ))
 				{
-					rect.left -= TITLE_BAR_HEIGHT;
-					rect.right -= TITLE_BAR_HEIGHT;
+					rect.left -= ACTION_BUTTON_WIDTH;
+					rect.right -= ACTION_BUTTON_WIDTH;
 					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0001, EVENT_MINIMIZE, 0);
 				}
 			}
