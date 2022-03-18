@@ -147,6 +147,11 @@ VBEData;
 #define TEXT_RENDER_BOLD        0x01000000
 
 /**
+ * Gets the current mouse position.
+ */
+Point GetMousePos();
+
+/**
  * Sets the current VBE data, or NULL for the mainscreen.
  * Also resets the clip rectangle.
  */

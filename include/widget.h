@@ -165,4 +165,10 @@ void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage);
  */
 Image* GetImageCtlCurrentImage (Window *pWindow, int comboID);
 
+/**
+ * Zooms an image to fill the entire screen width.
+ * Only works if IMAGECTL_ZOOM is enabled
+ */
+void ImageCtlZoomToFill (Window *pWindow, int comboID);
+
 #endif//_WIDGET_H

@@ -596,14 +596,6 @@ void VidPrintTestingPattern()
 }
 void VidFillScreen(unsigned color)
 {
-	/*
-	g_vbeData->m_dirty = 1;
-	bool alsoToTheCopy = (g_vbeData == &g_mainScreenVBEData);
-	
-	memset_ints (g_vbeData->m_framebuffer32, color, g_vbeData->m_pitch32 * g_vbeData->m_height);
-	if (alsoToTheCopy)
-		memset_ints (g_framebufferCopy, color, g_vbeData->m_width * g_vbeData->m_height);
-	*/
 	VidFillRect (color, 0, 0, GetScreenSizeX() - 1, GetScreenSizeY() - 1);
 }
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
@@ -904,6 +896,11 @@ void VidSetClipRect(Rectangle *pRect)
 	if (pRect)
 	{
 		g_vbeData->m_clipRect = *pRect;
+		
+		if (g_vbeData->m_clipRect.left   < 0) g_vbeData->m_clipRect.left   = 0;
+		if (g_vbeData->m_clipRect.top    < 0) g_vbeData->m_clipRect.top    = 0;
+		if (g_vbeData->m_clipRect.right  >= g_vbeData->m_width)  g_vbeData->m_clipRect.right  = g_vbeData->m_width;
+		if (g_vbeData->m_clipRect.bottom >= g_vbeData->m_height) g_vbeData->m_clipRect.bottom = g_vbeData->m_height;
 	}
 	else
 	{
@@ -935,6 +932,14 @@ unsigned VidReadPixel (unsigned x, unsigned y)
 	if (y >= (unsigned)GetScreenSizeY()) return 0;
 	return g_framebufferCopy[x + y * GetScreenSizeX()];
 }
+unsigned VidReadPixelU (unsigned x, unsigned y)
+{
+	if (x >= (unsigned)GetScreenSizeX()) return 0;
+	if (y >= (unsigned)GetScreenSizeY()) return 0;
+	if (g_vbeData == &g_mainScreenVBEData)
+		return VidReadPixel (x, y);
+	return g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + x];
+}
 __attribute__((always_inline))
 inline unsigned VidReadPixelInline (unsigned x, unsigned y)
 {
@@ -946,11 +951,6 @@ void VidShiftScreen (int howMuch)
 {
 	if (howMuch >= GetScreenSizeY())
 		return;
-	/*for (int i = howMuch; i < GetScreenSizeY(); i++) {
-		for (int k = 0; k < GetScreenSizeX(); k++) {
-			VidPlotPixelInline (k, i-howMuch, VidReadPixel (k, i));
-		}
-	}*/
 	
 	if (g_vbeData->m_bitdepth == 2)
 	{
@@ -1600,6 +1600,11 @@ void RedrawOldPixelsFull(int oldX, int oldY)
 	RefreshPixels(oldX - g_currentCursor->leftOffs, oldY - g_currentCursor->topOffs, g_currentCursor->width, g_currentCursor->height);
 }
 
+Point GetMousePos ()
+{
+	Point p = { g_mouseX, g_mouseY };
+	return p;
+}
 void SetMousePos (unsigned newX, unsigned newY)
 {
 	//NOTE: As this is called in an interrupt too, a call here might end up coming right

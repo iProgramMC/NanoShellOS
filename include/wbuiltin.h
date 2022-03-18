@@ -27,6 +27,7 @@ void KillAltTab();
 
 // MISC WINDOWS
 void VersionProgramTask (int argument);
+void PrgMagnifyTask(int argument);
 void PrgMineTask  (int argument);
 void PrgPaintTask (int argument);
 void PrgVBldTask  (int argument);

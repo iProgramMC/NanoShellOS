@@ -2577,6 +2577,17 @@ Image* GetImageCtlCurrentImage (Window *pWindow, int comboID)
 	return NULL;
 }
 
+void ImageCtlZoomToFill (Window *pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_imageCtlData.nZoomedWidth = GetWidth (&pWindow->m_pControlArray[i].m_rect);
+		}
+	}
+}
+
 bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
 	switch (eventType)
@@ -2600,6 +2611,8 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 				pNewImage->height = pImageToCopy->height;
 				
 				this->m_imageCtlData.pImage = pNewImage;
+				
+				this->m_imageCtlData.nZoomedWidth  = pNewImage->width;
 			}
 			this->m_imageCtlData.nLastXGot = -1;
 			this->m_imageCtlData.nLastYGot = -1;
@@ -2627,8 +2640,24 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 			Image *pImage = (Image*)this->m_imageCtlData.pImage;
 			if (pImage)
 			{
-				int x = (GetWidth (&this->m_rect) - pImage->width)  / 2;
-				int y = (GetHeight(&this->m_rect) - pImage->height) / 2;
+				bool ogSize = false;
+				int  width  = pImage->width;
+				int  height = pImage->height;
+				
+				if (this->m_imageCtlData.nZoomedWidth != this->m_imageCtlData.pImage->width)
+				{
+					ogSize = false;
+					width  = this->m_imageCtlData.nZoomedWidth;
+					
+					uint32_t  tmp = height;
+					tmp *= this->m_imageCtlData.nZoomedWidth;
+					tmp /= this->m_imageCtlData.pImage->width;
+					
+					height = (int)tmp;
+				}
+				
+				int x = (GetWidth (&this->m_rect) - width)  / 2;
+				int y = (GetHeight(&this->m_rect) - height) / 2;
 				
 				if (this->m_parm2 & IMAGECTL_PAN)
 				{
@@ -2639,9 +2668,12 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 				x += this->m_rect.left;
 				y += this->m_rect.top;
 				
-				if (x <= this->m_rect.right && y <= this->m_rect.bottom && x + pImage->width >= this->m_rect.left && y + pImage->height >= this->m_rect.top)
+				if (x <= this->m_rect.right && y <= this->m_rect.bottom && x + width >= this->m_rect.left && y + height >= this->m_rect.top)
 				{
-					VidBlitImage (pImage, x, y);
+					if (ogSize)
+						VidBlitImage (pImage, x, y);
+					else
+						VidBlitImageResize(pImage, x, y, width, height);
 				}
 				else 
 					VidDrawText ("(Out of View)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
