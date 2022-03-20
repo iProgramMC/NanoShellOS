@@ -222,6 +222,8 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			V->m_selCtlType = CONTROL_NONE;
 			
+			ChangeCursor (pWindow, CURSOR_CROSS);
+			
 			break;
 		}
 		case EVENT_PAINT:

@@ -300,7 +300,8 @@ uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_e
 			if (!pPageTable)
 			{
 				//panic
-				LogMsg("Error trying to MmMapPhysicalMemory(%x, %x, %x). Out of memory? Who knows what's going to happen now!", hint, phys_start, phys_end);
+				 LogMsg("Error trying to MmMapPhysicalMemory(%x, %x, %x). Out of memory? Who knows what's going to happen now!", hint, phys_start, phys_end);
+				SLogMsg("Error trying to MmMapPhysicalMemory(%x, %x, %x). Out of memory? Who knows what's going to happen now!", hint, phys_start, phys_end);
 				KeStopSystem();
 			}
 		}
@@ -568,6 +569,7 @@ void* MmSetupPage(int i, uint32_t* pPhysOut, const char* callFile, int callLine)
 }
 void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int callLine)
 {
+	cli;
 	// find a free pageframe.
 	// For 4096 bytes we can use ANY hole in the pageframes list, and we
 	// really do not care.
@@ -579,6 +581,7 @@ void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int cal
 	{
 		if (!g_pageEntries[i].m_bPresent) // A non-allocated pageframe?
 		{
+			sti;
 			return MmSetupPage(i, pPhysOut, callFile, callLine);
 		}
 	}
@@ -586,6 +589,8 @@ void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int cal
 	LogMsg("WARNING: No more page entries");
 	
 	//ACQUIRE_LOCK (g_memoryPriLock);
+	
+	sti;
 	
 	return NULL;
 }
@@ -640,6 +645,7 @@ void *MmAllocatePhyD (size_t size, const char* callFile, int callLine, uint32_t*
 	if (size <= 0x1000) //worth one page:
 		return MmAllocateSinglePagePhyD(physAddresses, callFile, callLine);
 	else {
+		cli;
 		//ACQUIRE_LOCK (g_memoryPriLock);
 		//more than one page, take matters into our own hands:
 		int numPagesNeeded = ((size - 1) >> 12) + 1;
@@ -686,11 +692,13 @@ void *MmAllocatePhyD (size_t size, const char* callFile, int callLine, uint32_t*
 						pPhysOut++;
 				}
 				//FREE_LOCK (g_memoryPriLock);
+				sti;
 				return pointer;
 			}
 		_label_continue:;
 		}
 		//FREE_LOCK (g_memoryPriLock);
+		sti;
 		return NULL; //no continuous addressed pages are left.
 	}
 }

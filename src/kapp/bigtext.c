@@ -25,6 +25,9 @@ enum
 	NOTEP_BTNSAVEAS,
 	NOTEP_BTNEXIT,
 	NOTEP_BTNABOUT,
+	NOTEP_BTNSYNHL,
+	NOTEP_BTNLNNUM,
+	NOTEP_BTNFONTP,
 };
 
 typedef struct NotepadData
@@ -32,6 +35,8 @@ typedef struct NotepadData
 	bool m_untitled;
 	bool m_ackChanges;
 	char m_filename[PATH_MAX + 2];
+	int  m_editor_mode;
+	int  m_current_font;
 }
 NotepadData;
 
@@ -157,29 +162,35 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			void *pOldData = pWindow->m_data;
 			Rectangle r;
 			// Add a list view control.
+			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			
-			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             36
+			#define PADDING_AROUND_TEXTVIEW 4
+			#define TOP_PADDING             TITLE_BAR_HEIGHT
 			RECT(r, 
-				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
-				/*X Size */ NOTEP_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
-				/*Y Size */ NOTEP_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+				/*X Coord*/ PADDING_AROUND_TEXTVIEW, 
+				/*Y Coord*/ PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+				/*X Size */ NOTEP_WIDTH - PADDING_AROUND_TEXTVIEW * 2, 
+				/*Y Size */ NOTEP_HEIGHT- PADDING_AROUND_TEXTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControlEx (pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, NOTEP_TEXTVIEW, 1 | 2, 0);
+			NOTEPDATA(pWindow)->m_editor_mode  = TEXTEDIT_MULTILINE;
+			NOTEPDATA(pWindow)->m_current_font = FONT_TAMSYN_MED_REGULAR;
 			
-			// Add some basic controls
-			/*RECT(r, PADDING_AROUND_LISTVIEW, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "New", NOTEP_BTNNEW, 0, 0);
-			RECT(r, PADDING_AROUND_LISTVIEW + 55, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Open", NOTEP_BTNOPEN, 0, 0);
-			RECT(r, PADDING_AROUND_LISTVIEW +110, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING - 30, 50, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Save", NOTEP_BTNSAVE, 0, 0);*/
+			AddControlEx (
+				pWindow,
+				CONTROL_TEXTINPUT,
+				ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM,
+				r,
+				NULL,
+				NOTEP_TEXTVIEW,
+				NOTEPDATA(pWindow)->m_editor_mode,
+				NOTEPDATA(pWindow)->m_current_font
+			);
 			
 			RECT(r, 0, 0, 0, 0);
 			AddControl(pWindow, CONTROL_MENUBAR, r, NULL, NOTEP_MENUBAR, 0, 0);
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_ROOT, NOTEP_MENUBAR_FILE, "File");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_ROOT, NOTEP_MENUBAR_VIEW, "View");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_ROOT, NOTEP_MENUBAR_HELP, "Help");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNNEW,       "New file");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNOPEN,      "Open...");
@@ -187,12 +198,12 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSAVEAS,    "Save as...");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNEXIT,      "Exit");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_HELP, NOTEP_BTNABOUT,     "About Notepad");
-			
-			//NotepadOpenFile (pWindow, "/hello2.txt");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_VIEW, NOTEP_BTNSYNHL,     "Syntax Highlighting");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_VIEW, NOTEP_BTNLNNUM,     "Line numbers");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_VIEW, NOTEP_BTNFONTP,     "Font...");
 			
 			SetTextInputText (pWindow, NOTEP_TEXTVIEW, "");
 			
-			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			NOTEPDATA(pWindow)->m_untitled = true;
 			NOTEPDATA(pWindow)->m_filename[0] = 0;
 			
@@ -211,6 +222,20 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			{
 				switch (parm2)
 				{
+					case NOTEP_BTNSYNHL:
+					{
+						NOTEPDATA(pWindow)->m_editor_mode ^= TEXTEDIT_SYNTHILT;
+						TextInputSetMode (pWindow, NOTEP_TEXTVIEW, NOTEPDATA(pWindow)->m_editor_mode);
+						RequestRepaintNew (pWindow);
+						break;
+					}
+					case NOTEP_BTNLNNUM:
+					{
+						NOTEPDATA(pWindow)->m_editor_mode ^= TEXTEDIT_LINENUMS;
+						TextInputSetMode (pWindow, NOTEP_TEXTVIEW, NOTEPDATA(pWindow)->m_editor_mode);
+						RequestRepaintNew (pWindow);
+						break;
+					}
 					case NOTEP_BTNABOUT:
 					{
 						ShellAbout("Notepad", ICON_NOTEPAD);

@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: icons/scrap_file16.png
- * Converted Date: 24/02/2022
+ * Converted File: scrap_file16.png
+ * Converted Date: 20/03/2022
  * Icon Last Mod:  29/01/2022
 *****************************************/
 

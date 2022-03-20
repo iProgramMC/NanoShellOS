@@ -197,6 +197,7 @@ fast_memcpy:
 	ret
 	
 global memset_ints
+global memset_shorts
 global memcpy_ints
 global align4_memcpy
 global align8_memcpy
@@ -216,6 +217,33 @@ memset_ints:
 	.some_loop:
 		mov [edi], esi
 		add edi, 4
+		dec ecx
+		jnz .some_loop
+	
+	pop edi
+	pop esi
+	pop ebx
+	
+	mov esp, ebp
+	pop ebp
+	ret
+; it may be worth slowing down there (bucko) if you are filling
+; out an array of shorts instead of 32bit ints for whatever reason
+memset_shorts:
+	push ebp
+	mov  ebp, esp
+	
+	push ebx
+	push esi
+	push edi
+	
+	mov esi, [ebp + 0Ch]
+	mov edi, [ebp + 08h]
+	mov ecx, [ebp + 10h]
+	
+	.some_loop:
+		mov [edi], si
+		add edi, 2
 		dec ecx
 		jnz .some_loop
 	

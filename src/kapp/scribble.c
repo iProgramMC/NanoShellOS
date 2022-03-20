@@ -57,6 +57,8 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 				AddControlEx(pWindow, CONTROL_BUTTON, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, text[i], 2000 + i, 0, 0);
 			}
 			
+			ChangeCursor (pWindow, CURSOR_PENCIL);
+			
 			break;
 		}
 		case EVENT_PAINT:

@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: icons/paint.png
- * Converted Date: 24/02/2022
+ * Converted File: paint.png
+ * Converted Date: 20/03/2022
  * Icon Last Mod:  03/01/2022
 *****************************************/
 

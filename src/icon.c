@@ -121,6 +121,31 @@
 #include <icons/graph.h>
 #include <icons/cabinet_combine.h>//for the mount GUI
 #include <icons/remote.h>
+// Icons V1.5
+#include <icons/device_char.h>
+#include <icons/device_block.h>
+#include <icons/hard_drive.h>
+#include <icons/hard_drive_mount.h>
+#include <icons/window.h>
+#include <icons/window_snap.h>
+#include <icons/windows_overlapped.h>
+#include <icons/sweep_smiley.h>
+#include <icons/sweep_smiley_click.h>
+#include <icons/sweep_smiley_dead.h>
+#include <icons/sweep_smiley_caret.h>
+#include <icons/dlgedit16.h>
+#include <icons/bomb16.h>
+#include <icons/magnify.h>
+#include <icons/magnify16.h>
+#include <icons/tar_archive.h>
+#include <icons/sysmon.h>
+#include <icons/sysmon16.h>
+#include <icons/computer_shutdown16.h>
+#include <icons/exit.h>
+#include <icons/key.h>
+#include <icons/keybrepspeed.h>
+#include <icons/keybrepdelay.h>
+#include <icons/monitor.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -228,6 +253,30 @@ Image * g_iconTable[] = {
 	&g_cabinet_combine_icon,//for the mount GUI
 	&g_remote_icon,
 	&g_cabinet_icon,
+	&g_device_char_icon,
+	&g_device_block_icon,
+	&g_hard_drive_icon,
+	&g_hard_drive_mount_icon,
+	&g_window_icon,
+	&g_window_snap_icon,
+	&g_windows_overlapped_icon,
+	&g_sweep_smiley_icon,        // all the sweep-smiley icons are 17x17
+	&g_sweep_smiley_click_icon,
+	&g_sweep_smiley_dead_icon,
+	&g_sweep_smiley_caret_icon,
+	&g_dlgedit16_icon,
+	&g_bomb16_icon,
+	&g_magnify_icon,
+	&g_magnify16_icon,
+	&g_tar_archive_icon,
+	&g_sysmon_icon,
+	&g_sysmon16_icon,
+	&g_computer_shutdown16_icon,
+	&g_exit_icon,
+	&g_key_icon,
+	&g_keybrepspeed_icon,
+	&g_keybrepdelay_icon,
+	&g_monitor_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -267,6 +316,10 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(CHAIN)
 			CASE(FILE_MKDOWN)
 			CASE(DEVTOOL)
+			CASE(DLGEDIT)
+			CASE(MAGNIFY)
+			CASE(BOMB_SPIKEY)
+			CASE(COMPUTER_SHUTDOWN)
 			#undef CASE
 		}
 	}

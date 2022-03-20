@@ -38,107 +38,12 @@ int g_mouseX = 0, g_mouseY = 0;
 
 #define SEMI_TRANSPARENT TRANSPARENT//0x7F7F7F7F
 
-#define X 0X00FFFFFF,
-//#define S 0X007F7F7F,
-#define S SEMI_TRANSPARENT,
-#define B 0XFF000000,
-#define o TRANSPARENT,
-
-/*uint32_t g_cursorColorsNoShadow[] = 
-{
-	B o o o o o o o o o o
-	B B o o o o o o o o o
-	B X B o o o o o o o o
-	B X X B o o o o o o o
-	B X X X B o o o o o o
-	B X X X X B o o o o o
-	B X X X X X B o o o o
-	B X X X X X X B o o o
-	B X X X X X X X B o o
-	B X X X X X X X X B o
-	B X X X X X B B B B B
-	B X X B X X B S S S S
-	B X B S B X X B o o o
-	B B S o B X X B o o o
-	B S o o S B X X B o o
-	S o o o o B X X B o o
-	o o o o o S B X X B o
-	o o o o o o B X X B o
-	o o o o o o S B B S o
-};*/
-uint32_t g_cursorColors[] = 
-{
-	B o o o o o o o o o o o
-	B B o o o o o o o o o o
-	B X B o o o o o o o o o
-	B X X B o o o o o o o o
-	B X X X B o o o o o o o
-	B X X X X B o o o o o o
-	B X X X X X B o o o o o
-	B X X X X X X B o o o o
-	B X X X X X X X B o o o
-	B X X X X X X X X B o o
-	B X X X X X B B B B B o
-	B X X B X X B S S S S S
-	B X B S B X X B o o o o
-	B B S S B X X B S o o o
-	B S S o o B X X B o o o
-	o S o o o B X X B S o o
-	o o o o o o B X X B o o
-	o o o o o o B X X B S o
-	o o o o o o o B B S S o
-	o o o o o o o o S S o o
-};
-uint32_t g_waitCursorColors[] = 
-{
-	B B B B B B B B B B B B B B B
-	B B B B B B B B B B B B B B B
-	B B X X X X X X X X X X X B B
-	o B B B B B B B B B B B B B o
-	o B B X X X X X X X X X B B o
-	o B B X X X X X X X X X B B o
-	o B B X X X X X X B X X B B o
-	o B B X B X B X B X B X B B o
-	o B B X X B X B X B X X B B o
-	o o B B X X B X B X X B B o o
-	o o o B B X X B X X B B o o o
-	o o o o B B X B X B B o o o o
-	o o o o o B B X B B o o o o o
-	o o o o o B B X B B o o o o o
-	o o o o o B B X B B o o o o o
-	o o o o B B X X X B B o o o o
-	o o o B B X X X X X B B o o o
-	o o B B X X X B X X X B B o o
-	o B B X X X X X X X X X B B o
-	o B B X X X X B X X X X B B o
-	o B B X X X B X B X X X B B o
-	o B B X X B X B X B X X B B o
-	o B B X B X B X B X B X B B o
-	o B B B B B B B B B B B B B o
-	B B X X X X X X X X X X X B B
-	B B B B B B B B B B B B B B B
-	B B B B B B B B B B B B B B B
-};
-
+#include "extra/cursors.h"
 
 //const for now, TODO
 //bool g_disableShadows = true;
 #define g_disableShadows 0
 
-Cursor g_defaultCursor = {
-	//11, 19, 0, 0, 
-	//g_cursorColorsNoShadow,
-	12, 20, 0, 0, 
-	g_cursorColors,
-	true,
-	false, 12, 20
-};
-Cursor g_waitCursor = {
-	15, 27, 7, 14, 
-	g_waitCursorColors,
-	true,
-	false, 14, 22
-};
 #undef X
 #undef B
 #undef o

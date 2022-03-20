@@ -38,6 +38,8 @@ void KeTaskDone(void);
 #define cli
 #define sti
 
+extern Window*  g_focusedOnWindow;
+
 // Window Internal Action Queue
 #if 1
 
@@ -432,7 +434,7 @@ void RedrawBackground (Rectangle rect)
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
-	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight()-1;
+	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight();
 	// if the rectangle is FULLY inside the 0,0 tile:
 	// (TODO: Make this work on any tile)
 	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
@@ -444,8 +446,8 @@ void RedrawBackground (Rectangle rect)
 		//just draw the clipped portion
 		for (int y = rect.top; y < rect.bottom; y++)
 		{
-			memcpy_ints (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
-			memcpy_ints (&g_framebufferCopy         [y * g_vbeData->m_width   + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left);
+			memcpy_ints (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left+1);
+			memcpy_ints (&g_framebufferCopy         [y * g_vbeData->m_width   + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left+1);
 		}
 		
 		return;
@@ -662,13 +664,14 @@ void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int
 	if (idxr >= hx) idxr = hx;
 	int gap = idxr - idxl;
 	if (gap <= 0) return;//it will never be bigger than zero if it is now
-	int gapdiv2 = gap / 2;
+	//int gapdiv2 = gap / 2;
 	idxl += hx * r.top;
 	for (int y = r.top; y < r.bottom; y++)
 	{
 		if (y >= hy) break;//no point.
 		if (y < 0) continue;
-		memset_ints(&g_windowDepthBuffer[idxl], index<<16|index, gapdiv2);
+		//memset_ints(&g_windowDepthBuffer[idxl], index<<16|index, gapdiv2);
+		memset_shorts(&g_windowDepthBuffer[idxl], index, gap);
 		g_windowDepthBuffer[idxr-1] = index;
 		
 		idxl += hx;
@@ -710,6 +713,9 @@ int g_windowEventQueueTails[WINDOWS_MAX];
 
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
 {
+	if (pWindow->m_flags & WF_FROZEN)
+		return ; // Can't send events to frozen objects!
+	
     WindowEventQueueItem item;
     item.m_destWindow = pWindow;
     item.m_eventType = eventType;
@@ -818,13 +824,15 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 // Window utilitary functions:
 #if 1
 
-extern Cursor* g_currentCursor, g_defaultCursor, g_waitCursor;
+extern Cursor* g_currentCursor, g_defaultCursor, g_waitCursor, g_iBeamCursor, g_crossCursor, g_pencilCursor;
 
 Cursor* const g_CursorLUT[] =
 {
 	&g_defaultCursor,
 	&g_waitCursor,
-	&g_defaultCursor,
+	&g_iBeamCursor,
+	&g_crossCursor,
+	&g_pencilCursor,
 };
 
 Cursor* GetCursorBasedOnID(int m_cursorID)
@@ -1118,6 +1126,7 @@ void SelectWindowUnsafe(Window* pWindow)
 	bool wasSelectedBefore = pWindow->m_isSelected;
 	if (!wasSelectedBefore) {
 		SetFocusedConsole (NULL);
+		g_focusedOnWindow = NULL;
 		for (int i = 0; i < WINDOWS_MAX; i++) {
 			if (g_windows[i].m_used) {
 				if (g_windows[i].m_isSelected)
@@ -1139,6 +1148,7 @@ void SelectWindowUnsafe(Window* pWindow)
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
+		g_focusedOnWindow = pWindow;
 	}
 }
 void SelectWindow(Window* pWindow)
@@ -1220,7 +1230,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_eventQueueLock = false;
-	pWnd->m_flags = flags;
+	pWnd->m_flags          = flags;// | WF_FLATBORD;
 	
 	pWnd->m_rect.left = xPos;
 	pWnd->m_rect.top  = yPos;
@@ -1595,7 +1605,7 @@ static Window* g_pShutdownMessage = NULL;
 
 void WindowManagerOnShutdownTask (__attribute__((unused)) int useless)
 {
-	if (MessageBox (NULL, "It is now safe to shut down your computer.", "Shutdown Computer", MB_RESTART | ICON_NULL << 16) == MBID_OK)
+	if (MessageBox (NULL, "It is now safe to shut down your computer.", "Shutdown Computer", MB_RESTART | ICON_SHUTDOWN << 16) == MBID_OK)
 	{
 		KeRestartSystem();
 	}
@@ -1757,20 +1767,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			//into a window's input buffer and read that instead of doing this hacky method right here?
 			if (pWindow->m_isSelected)
 			{
-				while (!KbIsBufferEmpty())
-					//WindowAddEventToMasterQueue(pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
-					WindowRegisterEvent (pWindow, EVENT_KEYPRESS, KbGetKeyFromBuffer(), 0);
-				
-				while (!KbIsRawBufferEmpty())
-				{
-					unsigned char key = KbGetKeyFromRawBuffer();
-					//WindowAddEventToMasterQueue(pWindow, EVENT_KEYRAW, key, 0);
-					WindowRegisterEvent(pWindow, EVENT_KEYRAW, key, 0);
-					
-					HandleKeypressOnWindow(key);
-					handled = true;
-				}
-				
 				if (updated)
 				{
 					//Also send an EVENT_MOVECURSOR
@@ -2077,18 +2073,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	else if (type == CONTROL_TEXTINPUT)
 	{
 		//by default you have single line
-		pControl->m_textInputData.m_onlyOneLine     = true;
-		pControl->m_textInputData.m_enableStyling   = false;
-		pControl->m_textInputData.m_showLineNumbers = false;
-		pControl->m_textInputData.m_focused         = false;
-		if (pControl->m_parm1 & TEXTEDIT_MULTILINE)
-			pControl->m_textInputData.m_onlyOneLine     = false;
-		if (pControl->m_parm1 & TEXTEDIT_LINENUMS)
-			pControl->m_textInputData.m_showLineNumbers = true;
-		if (pControl->m_parm1 & TEXTEDIT_READONLY)
-			pControl->m_textInputData.m_readOnly        = true;
-		if (pControl->m_parm1 & TEXTEDIT_STYLING)
-			pControl->m_textInputData.m_enableStyling   = true;
+		CtlTextInputUpdateMode (pControl);
 	}
 	else if (type == CONTROL_CHECKBOX)
 	{
@@ -2390,24 +2375,35 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	
 	if (!(pWindow->m_flags & WF_NOBORDER))
 	{
-		VidDrawHLine(0x000000, 0, rectb.right,  rectb.bottom-1);
-		VidDrawVLine(0x000000, 0, rectb.bottom, rectb.right-1);
-		
-		rectb.left++;
-		rectb.top++;
-		rectb.right--;
-		rectb.bottom--;
-		
-		VidDrawHLine(0x808080, 0, rectb.right-1,  rectb.bottom-1);
-		VidDrawVLine(0x808080, 0, rectb.bottom-1, rectb.right-1);
-		
-		VidDrawHLine(0xFFFFFF, 1, rectb.right-2,  1);
-		VidDrawVLine(0xFFFFFF, 1, rectb.bottom-2, 1);
-		
-		rectb.left++;
-		rectb.top++;
-		rectb.right--;
-		rectb.bottom--;
+		if (pWindow->m_flags & WF_FLATBORD)
+		{
+			VidDrawRect(WINDOW_TEXT_COLOR, rectb.left, rectb.top, rectb.right - 1, rectb.bottom - 1);
+			/*rectb.left++;
+			rectb.top++;
+			rectb.right--;
+			rectb.bottom--;*/
+		}
+		else
+		{
+			VidDrawHLine(0x000000, 0, rectb.right,  rectb.bottom-1);
+			VidDrawVLine(0x000000, 0, rectb.bottom, rectb.right-1);
+			
+			rectb.left++;
+			rectb.top++;
+			rectb.right--;
+			rectb.bottom--;
+			
+			VidDrawHLine(0x808080, 0, rectb.right-1,  rectb.bottom-1);
+			VidDrawVLine(0x808080, 0, rectb.bottom-1, rectb.right-1);
+			
+			VidDrawHLine(0xFFFFFF, 1, rectb.right-2,  1);
+			VidDrawVLine(0xFFFFFF, 1, rectb.bottom-2, 1);
+			
+			rectb.left++;
+			rectb.top++;
+			rectb.right--;
+			rectb.bottom--;
+		}
 	}
 	if (!(pWindow->m_flags & WF_NOTITLE))
 	{
@@ -2784,6 +2780,25 @@ bool HandleMessages(Window* pWindow)
 	}
 	pWindow->m_eventQueueSize = 0;
 	
+	// Keyboard events are handled separately, in games you may miss input otherwise...
+
+	while (WinAnythingOnInputQueue(pWindow))
+	{
+		unsigned char out = WinReadFromInputQueue(pWindow);
+		
+		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0);
+		
+		// if the key was just pressed:
+		if ((out & 0x80) == 0)
+		{
+			// convert it to a standard char
+			char sensible = KbMapAtCodeToChar (out & 0x7F);
+			
+			if (sensible)
+				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
+		}
+	}
+	
 	FREE_LOCK (pWindow->m_eventQueueLock);
 	KeTaskDone();//hlt; //give it a good halt
 	return true;
@@ -2796,14 +2811,18 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		{
 			// Add a default QUIT button control.
 			
+			if (pWindow->m_flags & WI_INITGOOD) break;
+			
 			if (!(pWindow->m_flags & WF_NOCLOSE))
 			{
+				bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
+				
 				#define ACTION_BUTTON_WIDTH 18
 				
 				Rectangle rect;
-				rect.right = pWindow->m_vbeData.m_width - 5 - WINDOW_RIGHT_SIDE_THICKNESS;
+				rect.right = pWindow->m_vbeData.m_width - 3 - WINDOW_RIGHT_SIDE_THICKNESS - has3dBorder * 2;
 				rect.left  = rect.right - ACTION_BUTTON_WIDTH+2;
-				rect.top   = 4;
+				rect.top   = 2 + has3dBorder * 2;
 				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
@@ -2823,6 +2842,8 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0001, EVENT_MINIMIZE, 0);
 				}
 			}
+			
+			pWindow->m_flags |= WI_INITGOOD;
 			
 			break;
 		}

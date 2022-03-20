@@ -13,6 +13,7 @@
 #define TEXTEDIT_LINENUMS  (2)
 #define TEXTEDIT_READONLY  (4)
 #define TEXTEDIT_STYLING   (8)
+#define TEXTEDIT_SYNTHILT  (16)
 
 #define IMAGECTL_PAN  (1)
 #define IMAGECTL_ZOOM (2)
@@ -132,6 +133,19 @@ void CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
  * Gets the raw text of a TextInput control.
  */
 const char* TextInputGetRawText(Window* pWindow, int comboID);
+
+/**
+ * Sets the widget mode in an image control.
+ *
+ * The mode is a bit set.  You can use one or more of the following flags:
+ * TEXTEDIT_LINENUMS:  Enables line numbers
+ * TEXTEDIT_MULTILINE: Allows user to edit multiple lines at once
+ * TEXTEDIT_READONLY:  Prevents the user from editing the content.  Good for crash reporting
+ * TEXTEDIT_STYLING:   Enables NanoShell styling of the text.  It uses non-typable characters to format text.
+ * TEXTEDIT_SYNTHILT:  Enables syntax highlighting for C.
+ */
+void CtlTextInputUpdateMode (Control *pControl); //internal
+void TextInputSetMode (Window *pWindow, int comboID, int mode);
 
 /**
  * Sets the widget mode in an image control.

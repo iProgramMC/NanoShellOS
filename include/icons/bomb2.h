@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: icons/bomb2.png
- * Converted Date: 24/02/2022
+ * Converted File: bomb2.png
+ * Converted Date: 20/03/2022
  * Icon Last Mod:  08/01/2022
 *****************************************/
 

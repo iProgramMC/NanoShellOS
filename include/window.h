@@ -334,7 +334,7 @@ typedef struct
 	      m_scrollY;
 	char* m_pText;
 	bool  m_readOnly;
-	bool  m_enableStyling;
+	bool  m_enableStyling, m_enableSyntaxHilite;
 }
 TextInputData;
 
@@ -402,6 +402,8 @@ enum CURSORTYPE
 	CURSOR_DEFAULT,
 	CURSOR_WAIT,
 	CURSOR_IBEAM,
+	CURSOR_CROSS,
+	CURSOR_PENCIL,
 	CURSOR_COUNT,
 };
 
@@ -413,7 +415,10 @@ enum CURSORTYPE
 #define WF_ALWRESIZ 0x00000020//Allow resize
 #define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
+#define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 
+
+#define WI_INITGOOD 0x40000000//If the initialization process succeeded
 
 #define WIN_KB_BUF_SIZE  512
 typedef struct WindowStruct

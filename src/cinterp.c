@@ -71,14 +71,19 @@ void CcAdvanceImm(CMachine* pMachine) { ++pMachine->pText; }
 void CcSetOpCodeHere(CMachine* pMachine, int opc) { *pMachine->pText = opc; }
 void CcSetImmHere   (CMachine* pMachine, int imm) { *pMachine->pText = imm; }
 
+bool CcOpcodeRequiresOptional (int opc)
+{
+	return opc <= ADJ;
+}
+
 void CcPrintOpCode(int opc, int optional/*opc <= ADJ*/) {
     LogMsgNoCr("%s",
         &"LEA \0IMM \0JMP \0JSR \0BZ  \0BNZ \0ENT \0ADJ \0LEV \0LI  \0LC  \0SI  \0SC  \0PSH \0"
         "OR  \0XOR \0AND \0EQ  \0NE  \0LT  \0GT  \0LE  \0GE  \0SHL \0SHR \0ADD \0SUB \0MUL \0DIV \0MOD \0"
         "OPEN\0READ\0CLOS\0PRTF\0PRTN\0MALC\0FREE\0MSET\0MCMP\0RAND\0DRPX\0EXSC\0RDCH\0RDIN\0CLSC\0"
         "FLSC\0FLRC\0DRRC\0SSCY\0DRST\0SPTF\0MVCR\0SLEP\0EXIT\0"[opc * 5]);
-    if (opc <= ADJ && optional != (int)0xDDEEAAFF/*hack!!!*/) {
-        LogMsg(" %d (%#x)", optional, optional);
+    if (CcOpcodeRequiresOptional (opc) && optional != (int)0xDDEEAAFF/*hack!!!*/) {
+        LogMsg(" %d (%x)", optional, optional);
     }
     else LogMsg("");
 }
@@ -105,31 +110,52 @@ void CcNextToken(CMachine* pMachine)
 {
     char* pp;
 
-    while ((pMachine->currentToken = *pMachine->pSource) != 0) {
+	// While the current token is not blank:
+    while ((pMachine->currentToken = *pMachine->pSource) != 0)
+    {
         ++pMachine->pSource;
-        if (pMachine->currentToken == '\n') {
-            if (pMachine->printAssembly) {
-                LogMsg("%d: %.*s", pMachine->lineNum, pMachine->pSource - pMachine->pLastSource, pMachine->pLastSource);
+		// Hit new-line ?
+        if (pMachine->currentToken == '\n')
+        {
+			// If there's a need to print asm-output
+            if (pMachine->printAssembly)
+            {
+				char buffer[4096]; int size = pMachine->pSource - pMachine->pLastSource;
+				memcpy (buffer, pMachine->pLastSource, size);
+				buffer[size] = 0;
+                LogMsg("%d: %s", pMachine->lineNum, buffer);
+				
                 pMachine->pLastSource = pMachine->pSource;
-                while (pMachine->pLastText < pMachine->pText) {
+                while (pMachine->pLastText < pMachine->pText)
+                {
                     int optional = 0, opcode = *++pMachine->pLastText;
-                    if (opcode <= ADJ) optional = *++pMachine->pLastText;
+					
+                    if (CcOpcodeRequiresOptional (opcode))
+						optional = *++pMachine->pLastText;
+					
                     CcPrintOpCode(opcode, optional);
                 }
             }
             ++pMachine->lineNum;
         }
-        else if (pMachine->currentToken == '#') {
+        else if (pMachine->currentToken == '#')
+        {
             while (*pMachine->pSource != 0 && *pMachine->pSource != '\n') ++pMachine->pSource;
         }
-        else if ((pMachine->currentToken >= 'a' && pMachine->currentToken <= 'z') || (pMachine->currentToken >= 'A' && pMachine->currentToken <= 'Z') || pMachine->currentToken == '_') {
+        else if ((pMachine->currentToken >= 'a' && pMachine->currentToken <= 'z') || (pMachine->currentToken >= 'A' && pMachine->currentToken <= 'Z') || pMachine->currentToken == '_')
+        {
             pp = pMachine->pSource - 1;
             while ((*pMachine->pSource >= 'a' && *pMachine->pSource <= 'z') || (*pMachine->pSource >= 'A' && *pMachine->pSource <= 'Z') || (*pMachine->pSource >= '0' && *pMachine->pSource <= '9') || *pMachine->pSource == '_')
                 pMachine->currentToken = pMachine->currentToken * 147 + *pMachine->pSource++;
             pMachine->currentToken = (pMachine->currentToken << 6) + (pMachine->pSource - pp);
             pMachine->pCurrIdentifier = pMachine->pCurrSymbol;
-            while (pMachine->pCurrIdentifier[Tk]) {
-                if (pMachine->currentToken == pMachine->pCurrIdentifier[Hash] && !memcmp((char*)pMachine->pCurrIdentifier[Name], pp, pMachine->pSource - pp)) { pMachine->currentToken = pMachine->pCurrIdentifier[Tk]; return; }
+            while (pMachine->pCurrIdentifier[Tk])
+            {
+                if (pMachine->currentToken == pMachine->pCurrIdentifier[Hash] && !memcmp((char*)pMachine->pCurrIdentifier[Name], pp, pMachine->pSource - pp))
+                {
+                    pMachine->currentToken = pMachine->pCurrIdentifier[Tk];
+                    return;
+                }
                 pMachine->pCurrIdentifier = pMachine->pCurrIdentifier + Idsz;
             }
             pMachine->pCurrIdentifier[Name] = (int)pp;
@@ -137,51 +163,167 @@ void CcNextToken(CMachine* pMachine)
             pMachine->currentToken = pMachine->pCurrIdentifier[Tk] = Id;
             return;
         }
-        else if (pMachine->currentToken >= '0' && pMachine->currentToken <= '9') {
-            if ((pMachine->currentTokenValue = pMachine->currentToken - '0')) { while (*pMachine->pSource >= '0' && *pMachine->pSource <= '9') pMachine->currentTokenValue = pMachine->currentTokenValue * 10 + *pMachine->pSource++ - '0'; }
-            else if (*pMachine->pSource == 'x' || *pMachine->pSource == 'X') {
+        else if (pMachine->currentToken >= '0' && pMachine->currentToken <= '9')
+        {
+            if ((pMachine->currentTokenValue = pMachine->currentToken - '0'))
+            {
+                while (*pMachine->pSource >= '0' && *pMachine->pSource <= '9') pMachine->currentTokenValue = pMachine->currentTokenValue * 10 + *pMachine->pSource++ - '0';
+            }
+            else if (*pMachine->pSource == 'x' || *pMachine->pSource == 'X')
+            {
                 while ((pMachine->currentToken = *++pMachine->pSource) && ((pMachine->currentToken >= '0' && pMachine->currentToken <= '9') || (pMachine->currentToken >= 'a' && pMachine->currentToken <= 'f') || (pMachine->currentToken >= 'A' && pMachine->currentToken <= 'F')))
                     pMachine->currentTokenValue = pMachine->currentTokenValue * 16 + (pMachine->currentToken & 15) + (pMachine->currentToken >= 'A' ? 9 : 0);
             }
-            else { while (*pMachine->pSource >= '0' && *pMachine->pSource <= '7') pMachine->currentTokenValue = pMachine->currentTokenValue * 8 + *pMachine->pSource++ - '0'; }
+            else
+            {
+                while (*pMachine->pSource >= '0' && *pMachine->pSource <= '7') pMachine->currentTokenValue = pMachine->currentTokenValue * 8 + *pMachine->pSource++ - '0';
+            }
             pMachine->currentToken = Num;
             return;
         }
-        else if (pMachine->currentToken == '/') {
-            if (*pMachine->pSource == '/') {
+        else if (pMachine->currentToken == '/')
+        {
+            if (*pMachine->pSource == '/')
+            {
                 ++pMachine->pSource;
                 while (*pMachine->pSource != 0 && *pMachine->pSource != '\n') ++pMachine->pSource;
             }
-            else {
+            else
+            {
                 pMachine->currentToken = Div;
                 return;
             }
         }
-        else if (pMachine->currentToken == '\'' || pMachine->currentToken == '"') {
+        else if (pMachine->currentToken == '\'' || pMachine->currentToken == '"')
+        {
             pp = pMachine->pData;
-            while (*pMachine->pSource != 0 && *pMachine->pSource != pMachine->currentToken) {
-                if ((pMachine->currentTokenValue = *pMachine->pSource++) == '\\') {
+            while (*pMachine->pSource != 0 && *pMachine->pSource != pMachine->currentToken)
+            {
+                if ((pMachine->currentTokenValue = *pMachine->pSource++) == '\\')
+                {
                     if ((pMachine->currentTokenValue = *pMachine->pSource++) == 'n') pMachine->currentTokenValue = '\n';
                 }
                 if (pMachine->currentToken == '"') *pMachine->pData++ = pMachine->currentTokenValue;
             }
             ++pMachine->pSource;
-            if (pMachine->currentToken == '"') pMachine->currentTokenValue = (int)pp; else pMachine->currentToken = Num;
+            if (pMachine->currentToken == '"') pMachine->currentTokenValue = (int)pp;
+            else pMachine->currentToken = Num;
             return;
         }
-        else if (pMachine->currentToken == '=') { if (*pMachine->pSource == '=') { ++pMachine->pSource; pMachine->currentToken = Eq; } else pMachine->currentToken = Assign; return; }
-        else if (pMachine->currentToken == '+') { if (*pMachine->pSource == '+') { ++pMachine->pSource; pMachine->currentToken = Inc; } else pMachine->currentToken = Add; return; }
-        else if (pMachine->currentToken == '-') { if (*pMachine->pSource == '-') { ++pMachine->pSource; pMachine->currentToken = Dec; } else pMachine->currentToken = Sub; return; }
-        else if (pMachine->currentToken == '!') { if (*pMachine->pSource == '=') { ++pMachine->pSource; pMachine->currentToken = Ne; } return; }
-        else if (pMachine->currentToken == '<') { if (*pMachine->pSource == '=') { ++pMachine->pSource; pMachine->currentToken = Le; } else if (*pMachine->pSource == '<') { ++pMachine->pSource; pMachine->currentToken = Shl; } else pMachine->currentToken = Lt; return; }
-        else if (pMachine->currentToken == '>') { if (*pMachine->pSource == '=') { ++pMachine->pSource; pMachine->currentToken = Ge; } else if (*pMachine->pSource == '>') { ++pMachine->pSource; pMachine->currentToken = Shr; } else pMachine->currentToken = Gt; return; }
-        else if (pMachine->currentToken == '|') { if (*pMachine->pSource == '|') { ++pMachine->pSource; pMachine->currentToken = Lor; } else pMachine->currentToken = Or; return; }
-        else if (pMachine->currentToken == '&') { if (*pMachine->pSource == '&') { ++pMachine->pSource; pMachine->currentToken = Lan; } else pMachine->currentToken = And; return; }
-        else if (pMachine->currentToken == '^') { pMachine->currentToken = Xor; return; }
-        else if (pMachine->currentToken == '%') { pMachine->currentToken = Mod; return; }
-        else if (pMachine->currentToken == '*') { pMachine->currentToken = Mul; return; }
-        else if (pMachine->currentToken == '[') { pMachine->currentToken = Brak; return; }
-        else if (pMachine->currentToken == '?') { pMachine->currentToken = Cond; return; }
+        else if (pMachine->currentToken == '=')
+        {
+            if (*pMachine->pSource == '=')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Eq;
+            }
+            else pMachine->currentToken = Assign;
+            return;
+        }
+        else if (pMachine->currentToken == '+')
+        {
+            if (*pMachine->pSource == '+')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Inc;
+            }
+            else pMachine->currentToken = Add;
+            return;
+        }
+        else if (pMachine->currentToken == '-')
+        {
+            if (*pMachine->pSource == '-')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Dec;
+            }
+            else pMachine->currentToken = Sub;
+            return;
+        }
+        else if (pMachine->currentToken == '!')
+        {
+            if (*pMachine->pSource == '=')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Ne;
+            }
+            return;
+        }
+        else if (pMachine->currentToken == '<')
+        {
+            if (*pMachine->pSource == '=')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Le;
+            }
+            else if (*pMachine->pSource == '<')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Shl;
+            }
+            else pMachine->currentToken = Lt;
+            return;
+        }
+        else if (pMachine->currentToken == '>')
+        {
+            if (*pMachine->pSource == '=')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Ge;
+            }
+            else if (*pMachine->pSource == '>')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Shr;
+            }
+            else pMachine->currentToken = Gt;
+            return;
+        }
+        else if (pMachine->currentToken == '|')
+        {
+            if (*pMachine->pSource == '|')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Lor;
+            }
+            else pMachine->currentToken = Or;
+            return;
+        }
+        else if (pMachine->currentToken == '&')
+        {
+            if (*pMachine->pSource == '&')
+            {
+                ++pMachine->pSource;
+                pMachine->currentToken = Lan;
+            }
+            else pMachine->currentToken = And;
+            return;
+        }
+        else if (pMachine->currentToken == '^')
+        {
+            pMachine->currentToken = Xor;
+            return;
+        }
+        else if (pMachine->currentToken == '%')
+        {
+            pMachine->currentToken = Mod;
+            return;
+        }
+        else if (pMachine->currentToken == '*')
+        {
+            pMachine->currentToken = Mul;
+            return;
+        }
+        else if (pMachine->currentToken == '[')
+        {
+            pMachine->currentToken = Brak;
+            return;
+        }
+        else if (pMachine->currentToken == '?')
+        {
+            pMachine->currentToken = Cond;
+            return;
+        }
         else if (pMachine->currentToken == '~' || pMachine->currentToken == ';' || pMachine->currentToken == '{' || pMachine->currentToken == '}' || pMachine->currentToken == '(' || pMachine->currentToken == ')' || pMachine->currentToken == ']' || pMachine->currentToken == ',' || pMachine->currentToken == ':') return;
     }
 }
@@ -189,28 +331,69 @@ void CcOnExpression(CMachine* pMachine, int lev)
 {
     int t, * d;
 
-    if (!pMachine->currentToken) { LogMsg("%d: unexpected eof in expression", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-    else if (pMachine->currentToken == Num) { CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, pMachine->currentTokenValue); CcNextToken(pMachine); pMachine->currentExprType = INT; }
-    else if (pMachine->currentToken == '"') {
-        CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, pMachine->currentTokenValue); CcNextToken(pMachine);
-        while (pMachine->currentToken == '"') CcNextToken(pMachine);
-		//FIXME
-        pMachine->pData = (char*)((int)pMachine->pData + sizeof(int) & (unsigned int)(-(int)(sizeof(int)))); pMachine->currentExprType = PTR;
+    if (!pMachine->currentToken)
+    {
+        LogMsg("%d: unexpected eof in expression", pMachine->lineNum);
+        Except(pMachine, "Error in CcOnExpression");
     }
-    else if (pMachine->currentToken == Sizeof) {
-        CcNextToken(pMachine); if (pMachine->currentToken == '(') CcNextToken(pMachine); else { LogMsg("%d: open paren expected in sizeof", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-        pMachine->currentExprType = INT; if (pMachine->currentToken == Int) CcNextToken(pMachine); else if (pMachine->currentToken == Char) { CcNextToken(pMachine); pMachine->currentExprType = CHAR; }
-        while (pMachine->currentToken == Mul) { CcNextToken(pMachine); pMachine->currentExprType = pMachine->currentExprType + PTR; }
-        if (pMachine->currentToken == ')') CcNextToken(pMachine); else { LogMsg("%d: close paren expected in sizeof", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-        CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, (pMachine->currentExprType == CHAR) ? sizeof(char) : sizeof(int));
+    else if (pMachine->currentToken == Num)
+    {
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, pMachine->currentTokenValue);
+        CcNextToken(pMachine);
         pMachine->currentExprType = INT;
     }
-    else if (pMachine->currentToken == Id) {
-        d = pMachine->pCurrIdentifier; CcNextToken(pMachine);
-        if (pMachine->currentToken == '(') {
+    else if (pMachine->currentToken == '"')
+    {
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, pMachine->currentTokenValue);
+        CcNextToken(pMachine);
+        while (pMachine->currentToken == '"') CcNextToken(pMachine);
+        //FIXME
+        pMachine->pData = (char*)((int)pMachine->pData + sizeof(int) & (unsigned int)(-(int)(sizeof(int))));
+        pMachine->currentExprType = PTR;
+    }
+    else if (pMachine->currentToken == Sizeof)
+    {
+        CcNextToken(pMachine);
+        if (pMachine->currentToken == '(') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: open paren expected in sizeof", pMachine->lineNum);
+            Except(pMachine, "Error in CcOnExpression");
+        }
+        pMachine->currentExprType = INT;
+        if (pMachine->currentToken == Int) CcNextToken(pMachine);
+        else if (pMachine->currentToken == Char)
+        {
+            CcNextToken(pMachine);
+            pMachine->currentExprType = CHAR;
+        }
+        while (pMachine->currentToken == Mul)
+        {
+            CcNextToken(pMachine);
+            pMachine->currentExprType = pMachine->currentExprType + PTR;
+        }
+        if (pMachine->currentToken == ')') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: close paren expected in sizeof", pMachine->lineNum);
+            Except(pMachine, "Error in CcOnExpression");
+        }
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, (pMachine->currentExprType == CHAR) ? sizeof(char) : sizeof(int));
+        pMachine->currentExprType = INT;
+    }
+    else if (pMachine->currentToken == Id)
+    {
+        d = pMachine->pCurrIdentifier;
+        CcNextToken(pMachine);
+        if (pMachine->currentToken == '(')
+        {
             CcNextToken(pMachine);
             t = 0;
-            while (pMachine->currentToken != ')') {
+            while (pMachine->currentToken != ')')
+            {
                 CcOnExpression(pMachine, Assign);
                 ExitIfAnythingWrong(pMachine);
                 CcPushOpCode(pMachine, PSH);
@@ -220,195 +403,576 @@ void CcOnExpression(CMachine* pMachine, int lev)
             }
             CcNextToken(pMachine);
             if (d[Class] == Sys) CcPushImm(pMachine, d[Val]);
-            else if (d[Class] == Fun) { CcPushImm(pMachine, JSR); CcPushImm(pMachine, d[Val]); }
-            else {
+            else if (d[Class] == Fun)
+            {
+                CcPushImm(pMachine, JSR);
+                CcPushImm(pMachine, d[Val]);
+            }
+            else
+            {
                 LogMsg("%d: bad function call", pMachine->lineNum);
                 Except(pMachine, "Error in CcOnExpression");
             }
-            if (t) { CcPushOpCode(pMachine, ADJ); CcPushImm(pMachine, t); }
+            if (t)
+            {
+                CcPushOpCode(pMachine, ADJ);
+                CcPushImm(pMachine, t);
+            }
             pMachine->currentExprType = d[Type];
         }
-        else if (d[Class] == Num) { CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, d[Val]); pMachine->currentExprType = INT; }
-        else {
-            if (d[Class] == Loc) { CcPushOpCode(pMachine, LEA); CcPushImm(pMachine, pMachine->localVariableOffset - d[Val]); }
-            else if (d[Class] == Glo) { CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, d[Val]); }
-            else { LogMsg("%d: undefined variable", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+        else if (d[Class] == Num)
+        {
+            CcPushOpCode(pMachine, IMM);
+            CcPushImm(pMachine, d[Val]);
+            pMachine->currentExprType = INT;
+        }
+        else
+        {
+            if (d[Class] == Loc)
+            {
+                CcPushOpCode(pMachine, LEA);
+                CcPushImm(pMachine, pMachine->localVariableOffset - d[Val]);
+            }
+            else if (d[Class] == Glo)
+            {
+                CcPushOpCode(pMachine, IMM);
+                CcPushImm(pMachine, d[Val]);
+            }
+            else
+            {
+                LogMsg("%d: undefined variable", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
             CcPushImm(pMachine, ((pMachine->currentExprType = d[Type]) == CHAR) ? LC : LI);
         }
     }
-    else if (pMachine->currentToken == '(') {
+    else if (pMachine->currentToken == '(')
+    {
         CcNextToken(pMachine);
-        if (pMachine->currentToken == Int || pMachine->currentToken == Char) {
-            t = (pMachine->currentToken == Int) ? INT : CHAR; CcNextToken(pMachine);
-            while (pMachine->currentToken == Mul) { CcNextToken(pMachine); t = t + PTR; }
-            if (pMachine->currentToken == ')') CcNextToken(pMachine); else { LogMsg("%d: bad cast", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+        if (pMachine->currentToken == Int || pMachine->currentToken == Char)
+        {
+            t = (pMachine->currentToken == Int) ? INT : CHAR;
+            CcNextToken(pMachine);
+            while (pMachine->currentToken == Mul)
+            {
+                CcNextToken(pMachine);
+                t = t + PTR;
+            }
+            if (pMachine->currentToken == ')') CcNextToken(pMachine);
+            else
+            {
+                LogMsg("%d: bad cast", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
             CcOnExpression(pMachine, Inc);
             ExitIfAnythingWrong(pMachine);
             pMachine->currentExprType = t;
         }
-        else {
+        else
+        {
             CcOnExpression(pMachine, Assign);
             ExitIfAnythingWrong(pMachine);
-            if (pMachine->currentToken == ')') CcNextToken(pMachine); else { LogMsg("%d: close paren expected", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+            if (pMachine->currentToken == ')') CcNextToken(pMachine);
+            else
+            {
+                LogMsg("%d: close paren expected", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
         }
     }
-    else if (pMachine->currentToken == Mul) {
-        CcNextToken(pMachine); CcOnExpression(pMachine, Inc);
+    else if (pMachine->currentToken == Mul)
+    {
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
         ExitIfAnythingWrong(pMachine);
-        if (pMachine->currentExprType > INT) pMachine->currentExprType = pMachine->currentExprType - PTR; else { LogMsg("%d: bad dereference", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+        if (pMachine->currentExprType > INT) pMachine->currentExprType = pMachine->currentExprType - PTR;
+        else
+        {
+            LogMsg("%d: bad dereference", pMachine->lineNum);
+            Except(pMachine, "Error in CcOnExpression");
+        }
         CcPushOpCode(pMachine, (pMachine->currentExprType == CHAR) ? LC : LI);
     }
-    else if (pMachine->currentToken == And) {
-        CcNextToken(pMachine); CcOnExpression(pMachine, Inc);
+    else if (pMachine->currentToken == And)
+    {
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
         ExitIfAnythingWrong(pMachine);
         if (CcGetOpCodeHere(pMachine) == LC || CcGetOpCodeHere(pMachine) == LI)
             CcGoBackOpc(pMachine);
-        else { LogMsg("%d: bad address-of", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+        else
+        {
+            LogMsg("%d: bad address-of", pMachine->lineNum);
+            Except(pMachine, "Error in CcOnExpression");
+        }
         pMachine->currentExprType = pMachine->currentExprType + PTR;
     }
-    else if (pMachine->currentToken == '!') { CcNextToken(pMachine); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, 0); CcPushOpCode(pMachine, EQ);  pMachine->currentExprType = INT; }
-    else if (pMachine->currentToken == '~') { CcNextToken(pMachine); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, -1); CcPushOpCode(pMachine, XOR); pMachine->currentExprType = INT; }
-    else if (pMachine->currentToken == Add) { CcNextToken(pMachine); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); pMachine->currentExprType = INT; }
-    else if (pMachine->currentToken == Sub) {
-        CcNextToken(pMachine); CcPushOpCode(pMachine, IMM);
-        if (pMachine->currentToken == Num) { CcPushImm(pMachine, -pMachine->currentTokenValue); CcNextToken(pMachine); }
-        else { CcPushImm(pMachine, -1); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, MUL); }
+    else if (pMachine->currentToken == '!')
+    {
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
+        ExitIfAnythingWrong(pMachine);
+        CcPushOpCode(pMachine, PSH);
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, 0);
+        CcPushOpCode(pMachine, EQ);
         pMachine->currentExprType = INT;
     }
-    else if (pMachine->currentToken == Inc || pMachine->currentToken == Dec) {
-        t = pMachine->currentToken; CcNextToken(pMachine); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine);
-        if (CcGetOpCodeHere(pMachine) == LC) { CcSetOpCodeHere(pMachine, PSH); CcPushOpCode(pMachine, LC); }
-        else if (CcGetOpCodeHere(pMachine) == LI) { CcSetOpCodeHere(pMachine, PSH); CcPushOpCode(pMachine, LI); }
-        else { LogMsg("%d: bad lvalue in pre-increment", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+    else if (pMachine->currentToken == '~')
+    {
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
+        ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, PSH);
-        CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, -1);
+        CcPushOpCode(pMachine, XOR);
+        pMachine->currentExprType = INT;
+    }
+    else if (pMachine->currentToken == Add)
+    {
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
+        ExitIfAnythingWrong(pMachine);
+        pMachine->currentExprType = INT;
+    }
+    else if (pMachine->currentToken == Sub)
+    {
+        CcNextToken(pMachine);
+        CcPushOpCode(pMachine, IMM);
+        if (pMachine->currentToken == Num)
+        {
+            CcPushImm(pMachine, -pMachine->currentTokenValue);
+            CcNextToken(pMachine);
+        }
+        else
+        {
+            CcPushImm(pMachine, -1);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Inc);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, MUL);
+        }
+        pMachine->currentExprType = INT;
+    }
+    else if (pMachine->currentToken == Inc || pMachine->currentToken == Dec)
+    {
+        t = pMachine->currentToken;
+        CcNextToken(pMachine);
+        CcOnExpression(pMachine, Inc);
+        ExitIfAnythingWrong(pMachine);
+        if (CcGetOpCodeHere(pMachine) == LC)
+        {
+            CcSetOpCodeHere(pMachine, PSH);
+            CcPushOpCode(pMachine, LC);
+        }
+        else if (CcGetOpCodeHere(pMachine) == LI)
+        {
+            CcSetOpCodeHere(pMachine, PSH);
+            CcPushOpCode(pMachine, LI);
+        }
+        else
+        {
+            LogMsg("%d: bad lvalue in pre-increment", pMachine->lineNum);
+            Except(pMachine, "Error in CcOnExpression");
+        }
+        CcPushOpCode(pMachine, PSH);
+        CcPushOpCode(pMachine, IMM);
+        CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
         CcPushOpCode(pMachine, (t == Inc) ? ADD : SUB);
         CcPushOpCode(pMachine, (pMachine->currentExprType == CHAR) ? SC : SI);
     }
-    else { LogMsg("%d: bad expression", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+    else
+    {
+        LogMsg("%d: bad expression", pMachine->lineNum);
+        Except(pMachine, "Error in CcOnExpression");
+    }
 
-    while (pMachine->currentToken >= lev) { // "precedence climbing" or "Top Down Operator Precedence" method
+    while (pMachine->currentToken >= lev)   // "precedence climbing" or "Top Down Operator Precedence" method
+    {
         t = pMachine->currentExprType;
-        if (pMachine->currentToken == Assign) {
+        if (pMachine->currentToken == Assign)
+        {
             CcNextToken(pMachine);
-            if (CcGetOpCodeHere(pMachine) == LC || CcGetOpCodeHere(pMachine) == LI) CcSetOpCodeHere(pMachine, PSH); else { LogMsg("%d: bad lvalue in assignment", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-            CcOnExpression(pMachine, Assign); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, ((pMachine->currentExprType = t) == CHAR) ? SC : SI);
+            if (CcGetOpCodeHere(pMachine) == LC || CcGetOpCodeHere(pMachine) == LI) CcSetOpCodeHere(pMachine, PSH);
+            else
+            {
+                LogMsg("%d: bad lvalue in assignment", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
+            CcOnExpression(pMachine, Assign);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, ((pMachine->currentExprType = t) == CHAR) ? SC : SI);
         }
-        else if (pMachine->currentToken == Cond) {
+        else if (pMachine->currentToken == Cond)
+        {
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, BZ);
             d = ++pMachine->pText;
-            CcOnExpression(pMachine, Assign); ExitIfAnythingWrong(pMachine);
-            if (pMachine->currentToken == ':') CcNextToken(pMachine); else { LogMsg("%d: conditional missing colon", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-            *d = (int)(pMachine->pText + 3); CcPushOpCode(pMachine, JMP); d = ++pMachine->pText;
-            CcOnExpression(pMachine, Cond); ExitIfAnythingWrong(pMachine);
+            CcOnExpression(pMachine, Assign);
+            ExitIfAnythingWrong(pMachine);
+            if (pMachine->currentToken == ':') CcNextToken(pMachine);
+            else
+            {
+                LogMsg("%d: conditional missing colon", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
+            *d = (int)(pMachine->pText + 3);
+            CcPushOpCode(pMachine, JMP);
+            d = ++pMachine->pText;
+            CcOnExpression(pMachine, Cond);
+            ExitIfAnythingWrong(pMachine);
             *d = (int)(pMachine->pText + 1);
         }
-        else if (pMachine->currentToken == Lor) { CcNextToken(pMachine); CcPushOpCode(pMachine, BNZ); CcAdvanceOpc(pMachine); d = pMachine->pText; CcOnExpression(pMachine, Lan); ExitIfAnythingWrong(pMachine); *d = (int)(pMachine->pText + 1); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Lan) { CcNextToken(pMachine); CcPushOpCode(pMachine, BZ);  CcAdvanceOpc(pMachine); d = pMachine->pText; CcOnExpression(pMachine, Or);  ExitIfAnythingWrong(pMachine); *d = (int)(pMachine->pText + 1); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Or) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Xor); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, OR);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Xor) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, And); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, XOR); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == And) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Eq);  ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, AND); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Eq) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Lt);  ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, EQ);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Ne) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Lt);  ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, NE);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Lt) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Shl); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, LT);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Gt) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Shl); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, GT);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Le) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Shl); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, LE);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Ge) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH);  CcOnExpression(pMachine, Shl); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, GE);  pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Shl) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Add); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, SHL); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Shr) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Add); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, SHR); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Add) {
-            CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Mul); ExitIfAnythingWrong(pMachine);
-            if ((pMachine->currentExprType = t) > PTR) { CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, sizeof(int)); CcPushOpCode(pMachine, MUL); }
+        else if (pMachine->currentToken == Lor)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, BNZ);
+            CcAdvanceOpc(pMachine);
+            d = pMachine->pText;
+            CcOnExpression(pMachine, Lan);
+            ExitIfAnythingWrong(pMachine);
+            *d = (int)(pMachine->pText + 1);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Lan)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, BZ);
+            CcAdvanceOpc(pMachine);
+            d = pMachine->pText;
+            CcOnExpression(pMachine, Or);
+            ExitIfAnythingWrong(pMachine);
+            *d = (int)(pMachine->pText + 1);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Or)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Xor);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, OR);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Xor)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, And);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, XOR);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == And)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Eq);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, AND);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Eq)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Lt);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, EQ);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Ne)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Lt);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, NE);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Lt)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Shl);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, LT);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Gt)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Shl);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, GT);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Le)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Shl);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, LE);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Ge)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Shl);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, GE);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Shl)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Add);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, SHL);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Shr)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Add);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, SHR);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Add)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Mul);
+            ExitIfAnythingWrong(pMachine);
+            if ((pMachine->currentExprType = t) > PTR)
+            {
+                CcPushOpCode(pMachine, PSH);
+                CcPushOpCode(pMachine, IMM);
+                CcPushImm(pMachine, sizeof(int));
+                CcPushOpCode(pMachine, MUL);
+            }
             CcPushOpCode(pMachine, ADD);
         }
-        else if (pMachine->currentToken == Sub) {
-            CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Mul); ExitIfAnythingWrong(pMachine);
-            if (t > PTR && t == pMachine->currentExprType) { CcPushOpCode(pMachine, SUB); CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, sizeof(int)); CcPushOpCode(pMachine, DIV); pMachine->currentExprType = INT; }
-            else if ((pMachine->currentExprType = t) > PTR) { CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, sizeof(int)); CcPushOpCode(pMachine, MUL); CcPushOpCode(pMachine, SUB); }
+        else if (pMachine->currentToken == Sub)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Mul);
+            ExitIfAnythingWrong(pMachine);
+            if (t > PTR && t == pMachine->currentExprType)
+            {
+                CcPushOpCode(pMachine, SUB);
+                CcPushOpCode(pMachine, PSH);
+                CcPushOpCode(pMachine, IMM);
+                CcPushImm(pMachine, sizeof(int));
+                CcPushOpCode(pMachine, DIV);
+                pMachine->currentExprType = INT;
+            }
+            else if ((pMachine->currentExprType = t) > PTR)
+            {
+                CcPushOpCode(pMachine, PSH);
+                CcPushOpCode(pMachine, IMM);
+                CcPushImm(pMachine, sizeof(int));
+                CcPushOpCode(pMachine, MUL);
+                CcPushOpCode(pMachine, SUB);
+            }
             else CcPushOpCode(pMachine, SUB);
         }
-        else if (pMachine->currentToken == Mul) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, MUL); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Div) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, DIV); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Mod) { CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Inc); ExitIfAnythingWrong(pMachine); CcPushOpCode(pMachine, MOD); pMachine->currentExprType = INT; }
-        else if (pMachine->currentToken == Inc || pMachine->currentToken == Dec) {
-            if (CcGetOpCodeHere(pMachine) == LC) { CcSetOpCodeHere(pMachine, PSH); CcPushOpCode(pMachine, LC); }
-            else if (CcGetOpCodeHere(pMachine) == LI) { CcSetOpCodeHere(pMachine, PSH); CcPushOpCode(pMachine, LI); }
-            else { LogMsg("%d: bad lvalue in post-increment", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-            CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
+        else if (pMachine->currentToken == Mul)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Inc);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, MUL);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Div)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Inc);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, DIV);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Mod)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Inc);
+            ExitIfAnythingWrong(pMachine);
+            CcPushOpCode(pMachine, MOD);
+            pMachine->currentExprType = INT;
+        }
+        else if (pMachine->currentToken == Inc || pMachine->currentToken == Dec)
+        {
+            if (CcGetOpCodeHere(pMachine) == LC)
+            {
+                CcSetOpCodeHere(pMachine, PSH);
+                CcPushOpCode(pMachine, LC);
+            }
+            else if (CcGetOpCodeHere(pMachine) == LI)
+            {
+                CcSetOpCodeHere(pMachine, PSH);
+                CcPushOpCode(pMachine, LI);
+            }
+            else
+            {
+                LogMsg("%d: bad lvalue in post-increment", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
+            CcPushOpCode(pMachine, PSH);
+            CcPushOpCode(pMachine, IMM);
+            CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
             CcPushOpCode(pMachine, (pMachine->currentToken == Inc) ? ADD : SUB);
             CcPushOpCode(pMachine, (pMachine->currentExprType == CHAR) ? SC : SI);
-            CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
+            CcPushOpCode(pMachine, PSH);
+            CcPushOpCode(pMachine, IMM);
+            CcPushImm(pMachine, (pMachine->currentExprType > PTR) ? sizeof(int) : sizeof(char));
             CcPushOpCode(pMachine, (pMachine->currentToken == Inc) ? SUB : ADD);
             CcNextToken(pMachine);
         }
-        else if (pMachine->currentToken == Brak) {
-            CcNextToken(pMachine); CcPushOpCode(pMachine, PSH); CcOnExpression(pMachine, Assign); ExitIfAnythingWrong(pMachine);
-            if (pMachine->currentToken == ']') CcNextToken(pMachine); else { LogMsg("%d: close bracket expected", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
-            if (t > PTR) { CcPushOpCode(pMachine, PSH); CcPushOpCode(pMachine, IMM); CcPushImm(pMachine, sizeof(int)); CcPushOpCode(pMachine, MUL); }
-            else if (t < PTR) { LogMsg("%d: pointer type expected", pMachine->lineNum); Except(pMachine, "Error in CcOnExpression"); }
+        else if (pMachine->currentToken == Brak)
+        {
+            CcNextToken(pMachine);
+            CcPushOpCode(pMachine, PSH);
+            CcOnExpression(pMachine, Assign);
+            ExitIfAnythingWrong(pMachine);
+            if (pMachine->currentToken == ']') CcNextToken(pMachine);
+            else
+            {
+                LogMsg("%d: close bracket expected", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
+            if (t > PTR)
+            {
+                CcPushOpCode(pMachine, PSH);
+                CcPushOpCode(pMachine, IMM);
+                CcPushImm(pMachine, sizeof(int));
+                CcPushOpCode(pMachine, MUL);
+            }
+            else if (t < PTR)
+            {
+                LogMsg("%d: pointer type expected", pMachine->lineNum);
+                Except(pMachine, "Error in CcOnExpression");
+            }
             CcPushOpCode(pMachine, ADD);
             CcPushImm(pMachine, ((pMachine->currentExprType = t - PTR) == CHAR) ? LC : LI);
         }
-        else { LogMsg("%d: compiler error pMachine->currentToken=%d", pMachine->lineNum, pMachine->currentToken); Except(pMachine, "Error in CcOnExpression"); }
+        else
+        {
+            LogMsg("%d: compiler error pMachine->currentToken=%d", pMachine->lineNum, pMachine->currentToken);
+            Except(pMachine, "Error in CcOnExpression");
+        }
     }
 }
 void CcStatement(CMachine *pMachine)
 {
     int* a, * b;
 
-    if (pMachine->currentToken == If) {
+    if (pMachine->currentToken == If)
+    {
         CcNextToken(pMachine);
-        if (pMachine->currentToken == '(') CcNextToken(pMachine); else { LogMsg("%d: open paren expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
+        if (pMachine->currentToken == '(') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: open paren expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
         CcOnExpression(pMachine, Assign);
         ExitIfAnythingWrong(pMachine);
-        if (pMachine->currentToken == ')') CcNextToken(pMachine); else { LogMsg("%d: close paren expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
+        if (pMachine->currentToken == ')') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: close paren expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
         CcPushOpCode(pMachine, BZ);
         CcAdvanceOpc(pMachine);
         b = pMachine->pText;
         CcStatement(pMachine);
         ExitIfAnythingWrong(pMachine);
-        if (pMachine->currentToken == Else) {
-            *b = (int)(pMachine->pText + 3); CcPushOpCode(pMachine, JMP);  CcAdvanceOpc(pMachine);  b = pMachine->pText;
+        if (pMachine->currentToken == Else)
+        {
+            *b = (int)(pMachine->pText + 3);
+            CcPushOpCode(pMachine, JMP);
+            CcAdvanceOpc(pMachine);
+            b = pMachine->pText;
             CcNextToken(pMachine);
             CcStatement(pMachine);
             ExitIfAnythingWrong(pMachine);
         }
         *b = (int)(pMachine->pText + 1);
     }
-    else if (pMachine->currentToken == While) {
+    else if (pMachine->currentToken == While)
+    {
         CcNextToken(pMachine);
         a = pMachine->pText + 1;
-        if (pMachine->currentToken == '(') CcNextToken(pMachine); else { LogMsg("%d: open paren expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
+        if (pMachine->currentToken == '(') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: open paren expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
         CcOnExpression(pMachine, Assign);
         ExitIfAnythingWrong(pMachine);
-        if (pMachine->currentToken == ')') CcNextToken(pMachine); else { LogMsg("%d: close paren expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
-        CcPushOpCode(pMachine, BZ); CcAdvanceOpc(pMachine);  b = pMachine->pText;
+        if (pMachine->currentToken == ')') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: close paren expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
+        CcPushOpCode(pMachine, BZ);
+        CcAdvanceOpc(pMachine);
+        b = pMachine->pText;
         CcStatement(pMachine);
         ExitIfAnythingWrong(pMachine);
-        CcPushOpCode(pMachine, JMP); CcPushImm(pMachine, (int)a);
+        CcPushOpCode(pMachine, JMP);
+        CcPushImm(pMachine, (int)a);
         *b = (int)(pMachine->pText + 1);
     }
-    else if (pMachine->currentToken == Return) {
+    else if (pMachine->currentToken == Return)
+    {
         CcNextToken(pMachine);
         if (pMachine->currentToken != ';') CcOnExpression(pMachine, Assign);
         ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, LEV);
-        if (pMachine->currentToken == ';') CcNextToken(pMachine); else { LogMsg("%d: semicolon expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
+        if (pMachine->currentToken == ';') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: semicolon expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
     }
-    else if (pMachine->currentToken == '{') {
+    else if (pMachine->currentToken == '{')
+    {
         CcNextToken(pMachine);
         while (pMachine->currentToken != '}') CcStatement(pMachine);
         ExitIfAnythingWrong(pMachine);
         CcNextToken(pMachine);
     }
-    else if (pMachine->currentToken == ';') {
+    else if (pMachine->currentToken == ';')
+    {
         CcNextToken(pMachine);
     }
-    else {
+    else
+    {
         CcOnExpression(pMachine, Assign);
         ExitIfAnythingWrong(pMachine);
-        if (pMachine->currentToken == ';') CcNextToken(pMachine); else { LogMsg("%d: semicolon expected", pMachine->lineNum); Except(pMachine, "Error in CcStatement"); }
+        if (pMachine->currentToken == ';') CcNextToken(pMachine);
+        else
+        {
+            LogMsg("%d: semicolon expected", pMachine->lineNum);
+            Except(pMachine, "Error in CcStatement");
+        }
     }
 }
 
@@ -822,7 +1386,9 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
             LogMsg("Not supported yet!");
         }
         else if (pMachine->main_tempI == EXIT) {
-            if (pMachine->printCycles) LogMsg("exit(%d) cycle = %d", *pMachine->main_stackPtr, pMachine->main_cycle);
+            if (pMachine->printCycles)
+				LogMsg("exit(%d) cycle = %d", *pMachine->main_stackPtr, pMachine->main_cycle);
+			
             pMachine->retnVal = *pMachine->main_stackPtr;
             pMachine->m_halted = 1;
             return;

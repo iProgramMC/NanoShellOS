@@ -45,6 +45,30 @@ enum
 	
 };
 
+void CabinetMountRamDisk(Window *pwnd, const char *pfn)
+{
+	int fd = FiOpen (pfn, O_RDONLY);
+	if (fd < 0)
+	{
+		MessageBox(pwnd, "Could not open that file!  Try another.", "Mount error", MB_OK | ICON_ERROR << 16);
+	}
+	else
+	{
+		int length = FiTellSize(fd);
+		
+		char* pData = (char*)MmAllocate(length + 1);
+		pData[length] = 0;
+		
+		FiRead(fd, pData, length);
+		
+		FiClose(fd);
+		
+		cli;
+		FsMountRamDisk(pData);
+		sti;
+	}
+}
+
 void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
@@ -103,7 +127,7 @@ reset:
 			}
 			else if (EndsWith (pNode->m_name, ".tar") || EndsWith (pNode->m_name, ".mrd"))
 			{
-				icon = ICON_CABINET_COMBINE;
+				icon = ICON_TAR_ARCHIVE;//ICON_CABINET_COMBINE;
 			}
 			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, icon);
 			i++;
@@ -197,29 +221,15 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 			{
 				//Mount something
 				
-				OnBusy (pWindow);
 				const char* s = TextInputGetRawText(pWindow, 4);
-				int fd = FiOpen (s, O_RDONLY);
-				if (fd < 0)
+				char buffer[2048];
+				sprintf(buffer, "Would you like to mount the file '%s' as a read-only file system?", s);
+				if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_CABINET_COMBINE << 16 | MB_YESNO) == MBID_YES)
 				{
-					MessageBox(pWindow, "Could not open that file!  Try another.", "Mount error", MB_OK | ICON_ERROR << 16);
+					OnBusy (pWindow);
+					CabinetMountRamDisk(pWindow, s);
+					OnNotBusy(pWindow);
 				}
-				else
-				{
-					int length = FiTellSize(fd);
-					
-					char* pData = (char*)MmAllocate(length + 1);
-					pData[length] = 0;
-					
-					FiRead(fd, pData, length);
-					
-					FiClose(fd);
-					
-					cli;
-					FsMountRamDisk(pData);
-					sti;
-				}
-				OnNotBusy(pWindow);
 			}
 			if (parm1 == 2 || parm1 == 5)
 				DestroyWindow(pWindow);
@@ -349,6 +359,31 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						SLogMsg("Resource launch status: %x", status);
 						
 						OnNotBusy(pWindow);
+					}
+					else if (EndsWith (pFileName, ".tar") || EndsWith (pFileName, ".mrd"))
+					{
+						// Executing file.  Might want to MessageBox the user about it?
+						char buffer[512];
+						sprintf(buffer, "Would you like to mount the file '%s' as a read-only file system?", pFileName);
+						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_CABINET_COMBINE << 16 | MB_YESNO) == MBID_YES)
+						{
+							OnBusy(pWindow);
+							OnBusy(pWindow);
+						
+						char filename[1024];
+						strcpy (filename, g_cabinetCWD);
+						if (g_cabinetCWD[1] != 0)
+							strcat (filename, "/");
+						strcat (filename, pFileName);
+						
+						CabinetMountRamDisk(pWindow, filename);
+						OnNotBusy(pWindow);
+						
+						OnNotBusy(pWindow);
+							
+							
+							OnNotBusy(pWindow);
+						}
 					}
 					else if (EndsWith (pFileName, ".md"))
 					{

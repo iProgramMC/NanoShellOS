@@ -12,6 +12,7 @@
 #include <misc.h>
 #include <keyboard.h>
 #include <wmenu.h>
+#include <string.h>
 
 // Utilitary functions
 #if 1
@@ -552,6 +553,39 @@ const char* TextInputGetRawText(Window* pWindow, int comboID)
 	return NULL;
 }
 
+void CtlTextInputUpdateMode (Control *pControl)
+{
+	pControl->m_textInputData.m_onlyOneLine        = true;
+	pControl->m_textInputData.m_enableStyling      = false;
+	pControl->m_textInputData.m_enableSyntaxHilite = false;
+	pControl->m_textInputData.m_showLineNumbers    = false;
+	pControl->m_textInputData.m_focused            = false;
+	if (pControl->m_parm1 & TEXTEDIT_MULTILINE)
+		pControl->m_textInputData.m_onlyOneLine        = false;
+	if (pControl->m_parm1 & TEXTEDIT_LINENUMS)
+		pControl->m_textInputData.m_showLineNumbers    = true;
+	if (pControl->m_parm1 & TEXTEDIT_READONLY)
+		pControl->m_textInputData.m_readOnly           = true;
+	if (pControl->m_parm1 & TEXTEDIT_STYLING)
+		pControl->m_textInputData.m_enableStyling      = true;
+	if (pControl->m_parm1 & TEXTEDIT_SYNTHILT)
+		pControl->m_textInputData.m_enableSyntaxHilite = true;
+}
+
+void TextInputSetMode (Window *pWindow, int comboID, int mode)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			Control *p = &pWindow->m_pControlArray[i];
+			
+			p->m_parm1 = mode;
+			CtlTextInputUpdateMode(p);
+		}
+	}
+}
+
 void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 {
 	if (this->m_textInputData.m_textLength >= this->m_textInputData.m_textCapacity-1)
@@ -627,6 +661,215 @@ void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemove
 #define RECT(rect,x,y,w,h) do {\
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
+
+enum {
+	C_SYNTAX_HILITE_NONE     = 0x000000, //black
+	C_SYNTAX_HILITE_DEFTYPE  = 0x00007F, //dark blue
+	C_SYNTAX_HILITE_KEYWORD  = 0x0000FF, //blue
+	C_SYNTAX_HILITE_IDENT    = 0x007F7F, //cyan
+	C_SYNTAX_HILITE_OPERATOR = 0x00FF00, //green
+	C_SYNTAX_HILITE_COMMENT  = 0x808080, //gray
+	C_SYNTAX_HILITE_STRLITER = 0x7F0000, //red
+	C_SYNTAX_HILITE_NUMBER   = 0xFF7F00, //orange
+};
+
+__attribute__((always_inline))
+static inline bool IsAlphaNumeric (char c)
+{
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+__attribute__((always_inline))
+static inline bool StrCompMulti (const char * _text, int num, ...)
+{
+	va_list list;
+	va_start(list, num);
+	
+	for (int i = 0; i < num; i++)
+	{
+		const char * word = va_arg (list, const char *);
+		
+		const char * text = _text;
+		
+		/*while (true)
+		{
+			// If there's a different character
+			if (*text != *word)
+				break;//Skip  to the next word
+			
+			// If the words ended at the same time and they're zero
+			if (*text == *word && *word == '\0')
+				return true;
+			
+			// Proceed
+			text++, word++;
+		}*/
+		
+		if (strcmp (text, word) == 0)
+			return true;
+	}
+	
+	va_end(list);
+	return false;
+}
+
+void CtlTextInputDoSyntaxHighlight (Control *this, uint32_t* color, int *chars_consumed, int text_pos)
+{
+	const char * text = this->m_textInputData.m_pText;
+	
+	// For starters, what is this character?
+	
+	const char * curtext = text + text_pos;
+	
+	if ((*curtext >= 'a' && *curtext <= 'z') || (*curtext >= 'A' && *curtext <= 'Z'))
+	{
+		// This is an identifier or a keyword
+		const char *next_space = curtext;//strchr (curtext, ' ');
+		
+		while (IsAlphaNumeric(*next_space))
+			next_space++;
+		
+		if (*next_space == 0)
+			next_space = NULL;
+		
+		int id_length = 0;
+		
+		if (next_space == NULL)
+		{
+			// This is the end.
+			id_length = strlen (curtext);
+		}
+		else
+		{
+			// This is not the end, the length of the keyword follows the text until you hit a space
+			id_length = next_space - curtext;
+		}
+		
+		// if the identifier is unusually long (like over 31 characters), it surely ain't a keyword :^)
+		if (id_length > 31)
+		{
+			*chars_consumed = id_length;
+			*color = C_SYNTAX_HILITE_IDENT;
+			return;
+		}
+		
+		char id[32];
+		memcpy (id, curtext, id_length);
+		id[id_length] = 0;
+		//SLogMsg("Found Identifier: %s", id);
+		
+		if (StrCompMulti(id, 28, 
+				"void", "int", "char", "short", "long", "signed",
+				"unsigned", "double", "float", "const", "static", "extern",
+				"auto", "register", "volatile", "bool", "uint8_t", "uint16_t",
+				"uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t",
+				"size_t", "FILE", "Window", "VBEData"))
+		{
+			*chars_consumed = id_length;
+			*color = C_SYNTAX_HILITE_DEFTYPE;
+			return;
+		}
+		if (StrCompMulti(id, 18, 
+				"if", "else", "switch", "case", "default", "break",
+				"goto", "return", "for", "while", "do", "continue",
+				"typedef", "sizeof", "NULL", "LogMsg", "LogMsgNoCr", "printf"))
+		{
+			*chars_consumed = id_length;
+			*color = C_SYNTAX_HILITE_KEYWORD;
+			return;
+		}
+		
+		*chars_consumed = id_length;
+		*color = C_SYNTAX_HILITE_IDENT;
+		return;
+	}
+	else if (*curtext == '"' || *curtext == '\'')
+	{
+		char to_escape = *curtext;
+		const char *next_quote = curtext + 1;
+		while (*next_quote)
+		{
+			if (*next_quote == '\\') //Allow escaping of " or '
+			{
+				next_quote++;
+				if (*next_quote == 0) break;
+			}
+			
+			if (*next_quote == to_escape)
+				break;
+			
+			next_quote++;
+		}
+		
+		*chars_consumed = next_quote - curtext + 1;
+		*color          = C_SYNTAX_HILITE_STRLITER;
+		
+		return;
+	}
+	else if (*curtext >= '0' && *curtext <= '9')
+	{
+		const char *next_space = curtext;
+		
+		while (IsAlphaNumeric(*next_space))
+			next_space++;
+		
+		*chars_consumed = next_space - curtext;
+		*color          = C_SYNTAX_HILITE_NUMBER;
+		
+		return;
+	}
+	else if (*curtext == '/')
+	{
+		if (*(curtext+1) == '/')
+		{
+			//C++ style comment
+			const char *next_char = curtext + 2;
+			while (true)
+			{
+				if (*next_char == '\n' || !*next_char)
+					break;
+				
+				next_char++;
+			}
+			
+			*chars_consumed = next_char - curtext;
+			*color          = C_SYNTAX_HILITE_COMMENT;
+		}
+		else if (*(curtext+1) == '*')
+		{
+			//C style old comment
+			const char *next_char = curtext + 2;
+			while (true)
+			{
+				if (*next_char == '*')
+				{
+					next_char++;
+					if (*next_char == '/')
+						break;
+				}
+				
+				if (*next_char == '\0') break;
+				
+				next_char++;
+			}
+			
+			*chars_consumed = next_char - curtext;
+			*color          = C_SYNTAX_HILITE_COMMENT;
+		}
+	}
+	else if (strchr ("(){}[]+-*%^|&=<>", *curtext) != NULL)
+	{
+		*chars_consumed = 1;
+		*color = C_SYNTAX_HILITE_OPERATOR;
+		return;
+	}
+	else
+	{
+		*chars_consumed = 1;
+		*color = C_SYNTAX_HILITE_NONE;
+		return;
+	}
+}
 
 bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
@@ -1102,6 +1345,8 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					sprintf   (line_string, "%5d", curLine2);
 					VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 				}
+				int chars_consumed = 0;
+				
 				while (*text)
 				{
 					if (!this->m_textInputData.m_readOnly)
@@ -1138,6 +1383,15 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					}
 					if (*text != '\n')
 					{
+						if (this->m_textInputData.m_enableSyntaxHilite)
+						{
+							if (chars_consumed == 0)
+							{
+								chars_consumed = 1;
+								CtlTextInputDoSyntaxHighlight (this, &color, &chars_consumed, text - this->m_textInputData.m_pText);
+							}
+							chars_consumed--;
+						}
 						if (this->m_textInputData.m_enableStyling && (unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT)
 						{
 							//bool link = false;
@@ -1159,7 +1413,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 									color =  (color & 0xFF000000) | 0x00FF00;
 									break;
 									
-							#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+							//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 								case TIST_LINK:
 									//link = true;
 								case TIST_BLUE:
@@ -1171,7 +1425,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 								case TIST_UNCOLOR:
 									color =  (color & 0xFF000000) | color_default;
 									break;
-							#pragma GCC diagnostic pop
+							//#pragma GCC diagnostic pop
 							}
 						}
 						else
@@ -1290,7 +1544,7 @@ go_back:
 			CtlUpdateScrollBarSize (this, pWindow);
 			break;
 		}
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
@@ -1335,7 +1589,7 @@ go_back:
 			}
 			else break;
 		}
-	#pragma GCC diagnostic pop
+	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
 		{
 			//draw a green rectangle:
@@ -1495,7 +1749,7 @@ go_back:
 			CtlIconUpdateScrollBarSize (this, pWindow);
 			break;
 		}
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
@@ -1545,7 +1799,7 @@ go_back:
 			}
 			else break;
 		}
-	#pragma GCC diagnostic pop
+	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
 		{
 			//draw a green rectangle:
@@ -1814,10 +2068,12 @@ void WidgetMenuBar_DeInitializeRoot(Control* this)
 
 bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
+	bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
+	
 	Rectangle menu_bar_rect;
-	menu_bar_rect.left   = 4;
-	menu_bar_rect.top    = 2 + TITLE_BAR_HEIGHT;
-	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 4;
+	menu_bar_rect.left   = 1 + 3 * has3dBorder;
+	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
+	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
 	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 3;
 	
 	switch (eventType)
@@ -2451,7 +2707,7 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 {
 	switch (eventType)
 	{
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
 			Rectangle r = this->m_rect;
@@ -2465,7 +2721,7 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		}
 		//! fallthrough intentional - need the button to redraw itself as pushing back up
 		case EVENT_PAINT:
-	#pragma GCC diagnostic pop
+	//#pragma GCC diagnostic pop
 		{
 			//then fill in the text:
 			VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_VCENTERED, 0x1111FF, TRANSPARENT);

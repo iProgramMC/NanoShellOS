@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: icons/experiment.png
- * Converted Date: 05/03/2022
+ * Converted File: experiment.png
+ * Converted Date: 20/03/2022
  * Icon Last Mod:  05/03/2022
 *****************************************/
 

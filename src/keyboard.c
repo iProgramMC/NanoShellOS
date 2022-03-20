@@ -167,8 +167,6 @@ void KbAddKeyToBuffer(char key)
 		KeyboardBufferEnd -= KB_BUF_SIZE;
 	
 	CoAddToInputQueue (g_focusedOnConsole, key);
-	if (g_focusedOnWindow)
-		WinAddToInputQueue(g_focusedOnWindow, key);
 }
 bool KbIsBufferEmpty()
 {
@@ -195,6 +193,8 @@ void KbAddRawKeyToBuffer(char key)
 	RawKeyboardBuffer[RawKeyboardBufferEnd++] = key;
 	while (RawKeyboardBufferEnd >= KB_RAW_SIZE)
 		RawKeyboardBufferEnd -= KB_RAW_SIZE;
+	if (g_focusedOnWindow)
+		WinAddToInputQueue(g_focusedOnWindow, key);
 }
 bool KbIsRawBufferEmpty()
 {
@@ -424,6 +424,11 @@ void UpdateFakeMouse()
 	}
 }
 
+char KbMapAtCodeToChar(char kc)
+{
+	return KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)];
+}
+
 void IrqKeyboard(UNUSED int e[50])
 {
 	// acknowledge interrupt:
@@ -453,7 +458,7 @@ void IrqKeyboard(UNUSED int e[50])
 			int kc = keycode & SCANCODE_NOTREL;
 			
 			keyboardState[kc] = KEY_PRESSED;
-			KbAddKeyToBuffer(KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)]);
+			KbAddKeyToBuffer(KbMapAtCodeToChar(kc));
 		}
 		
 		if (g_virtualMouseEnabled && VidIsAvailable() && !g_ps2MouseAvail)

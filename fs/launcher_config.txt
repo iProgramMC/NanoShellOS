@@ -5,7 +5,7 @@
 
 version|2
 
-add_item|50|1|Magnifier|shell:magnify
+add_item|118|1|Magnifier|shell:magnify
 add_item|93|1|Codename V-Builder|shell:vbuild
 add_item|38|1|Minesweeper|shell:mineswp
 //add_item|8|1|Help|shell:help

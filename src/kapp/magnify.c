@@ -2,15 +2,15 @@
 		NanoShell Operating System
 	      (C) 2022 iProgramInCpp
 
-       MAGNIFYble Application module
+          Magnifier Applet module
 ******************************************/
 
 #include <wbuiltin.h>
 
-#define MAGSCALE 3
+#define MAGSCALE 2
 
-#define MAGWID   240
-#define MAGHEI   120
+#define MAGWID   160
+#define MAGHEI   128
 
 #define DEF_MAGNIFY_WID (MAGWID*MAGSCALE+6)
 #define DEF_MAGNIFY_HEI (MAGHEI*MAGSCALE+6 + TITLE_BAR_HEIGHT)
@@ -109,8 +109,8 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 void PrgMagnifyTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("Magnifier", CW_AUTOPOSITION, CW_AUTOPOSITION, DEF_MAGNIFY_WID, DEF_MAGNIFY_HEI, PrgMagnifyProc, WF_ALWRESIZ);
-	pWindow->m_iconID = ICON_FOLDER;
+	Window* pWindow = CreateWindow ("Magnifier", CW_AUTOPOSITION, CW_AUTOPOSITION, DEF_MAGNIFY_WID, DEF_MAGNIFY_HEI, PrgMagnifyProc, WF_NOMINIMZ);
+	pWindow->m_iconID = ICON_MAGNIFY;
 	
 	if (!pWindow)
 	{

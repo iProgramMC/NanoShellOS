@@ -185,7 +185,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 void WindowManagerShutdown();
 void ConfirmShutdown(Window* pWindow)
 {
-	if (MessageBox (pWindow, "This will end your NanoShell session.", "Shut Down", MB_OKCANCEL | ICON_COMPUTER_SHUTDOWN << 16) == MBID_OK)
+	if (MessageBox (pWindow, "This will end your NanoShell session.", "Shut Down", MB_OKCANCEL | ICON_WARNING << 16) == MBID_OK)
 	{
 		WindowManagerShutdown ();
 	}

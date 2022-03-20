@@ -121,6 +121,9 @@ typedef uint8_t KeyState;
 #define SCANCODE_RELEASE 0x80
 #define SCANCODE_NOTREL 0x7f
 
+// Maps an AT or PS/2 key code to ASCII
+char KbMapAtCodeToChar(char c);
+
 void KbInitialize();
 void IrqKeyboard();
 void KbAddKeyToBuffer(char key);
