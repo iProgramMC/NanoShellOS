@@ -147,42 +147,43 @@ void ShellExecuteCommand(char* p)
 	if (strcmp (token, "help") == 0)
 	{
 		LogMsg("NanoShell Shell Help");
-		LogMsg("cat        - prints the contents of a file");
-		LogMsg("cls        - clear screen");
-		LogMsg("cm         - character map");
-		LogMsg("cd         - change directory");
-		LogMsg("crash      - attempt to crash the kernel");
-		LogMsg("color XX   - change the screen color");
-		LogMsg("fd         - attempts to resolve a path, prints non-zero if found");
-		LogMsg("ft         - attempts to write 'Hello, world\\n' to a file");
-		LogMsg("e          - executes an ELF from the initrd");
-		LogMsg("el         - prints the last returned value from an executed ELF");
-		LogMsg("help       - shows this list");
-		LogMsg("gt         - run a graphical test");
-		LogMsg("lm         - list memory allocations");
-		LogMsg("lr         - list the memory ranges provided by the bootloader");
-		LogMsg("ls         - list the current working directory (right now just /)");
-		LogMsg("lt         - list currently running threads (pauses them during the print)");
-		LogMsg("mode X     - change the screen mode");
-		LogMsg("mspy       - Memory Spy! (TM)");
-		LogMsg("mrd        - mounts a RAM Disk from a file");
+		LogMsg("cat <file>   - prints the contents of a file");
+		LogMsg("cls          - clear screen");
+		LogMsg("cm           - character map");
+		LogMsg("cd <dir>     - change directory");
+		LogMsg("crash        - attempt to crash the kernel");
+		LogMsg("color <hex>  - change the screen color");
+		LogMsg("fd           - attempts to resolve a path, prints non-zero if found");
+		LogMsg("ft           - attempts to write 'Hello, world\\n' to a file");
+		LogMsg("e <elf>      - executes an ELF from the initrd");
+		LogMsg("el           - prints the last returned value from an executed ELF");
+		LogMsg("help         - shows this list");
+		LogMsg("gt           - run a graphical test");
+		LogMsg("kill <pid>   - list memory allocations");
+		LogMsg("lm           - list memory allocations");
+		LogMsg("lr           - list the memory ranges provided by the bootloader");
+		LogMsg("ls           - list the current working directory (right now just /)");
+		LogMsg("lt           - list currently running threads (pauses them during the print)");
+		LogMsg("mode X       - change the screen mode");
+		LogMsg("mspy         - Memory Spy! (TM)");
 		
 		//wait for new key
 		LogMsg("Strike a key to print more.");
 		CoGetChar();
 		
-		LogMsg("ph         - prints current heap's address in kernel address space (or NULL for the default heap)");
-		LogMsg("rb         - reboots the system");
-		LogMsg("sysinfo    - dump system information");
-		LogMsg("sysinfoa   - dump advanced system information");
-		LogMsg("time       - get timing information");
-		LogMsg("stt        - spawns a single thread that doesn't last forever");
-		LogMsg("st         - spawns a single thread that makes a random line forever");
-		LogMsg("tt         - spawns 64 threads that makes random lines forever");
-		LogMsg("tte        - spawns 1024 threads that makes random lines forever");
-		LogMsg("ttte       - spawns 1024 threads that prints stuff");
-		LogMsg("ver        - print system version");
-		LogMsg("w          - start desktop manager");
+		LogMsg("mrd <file>   - mounts a RAM Disk from a file");
+		LogMsg("ph           - prints current heap's address in kernel address space (or NULL for the default heap)");
+		LogMsg("rb <--force> - reboots the system");
+		LogMsg("sysinfo      - dump system information");
+		LogMsg("sysinfoa     - dump advanced system information");
+		LogMsg("time         - get timing information");
+		LogMsg("stt          - spawns a single thread that doesn't last forever");
+		LogMsg("st           - spawns a single thread that makes a random line forever");
+		LogMsg("tt           - spawns 64 threads that makes random lines forever");
+		LogMsg("tte          - spawns 1024 threads that makes random lines forever");
+		LogMsg("ttte         - spawns 1024 threads that prints stuff");
+		LogMsg("ver          - print system version");
+		LogMsg("w            - start desktop manager");
 	}
 	else if (strcmp (token, "rb") == 0)
 	{
@@ -647,6 +648,22 @@ void ShellExecuteCommand(char* p)
 			
 			//Do not free as the file system now owns this pointer.
 		}
+	}
+	else if (strcmp (token, "kill") == 0)
+	{
+		char* procNum = Tokenize (&state, NULL, " ");
+		if (!procNum)
+		{
+			LogMsg( "No pid provided" );
+		}
+		if (*procNum == 0)
+		{
+			LogMsg( "No pid provided" );
+		}
+		
+		int proc = atoi (procNum);
+		
+		KeKillThreadByPID (proc);
 	}
 	else if (strcmp (token, "check") == 0)
 	{

@@ -1,6 +1,6 @@
 /*****************************************
-								NanoShell Operating System
-					 (C)	2021-2022 iProgramInCpp
+        NanoShell Operating System
+        (C)2021-2022 iProgramInCpp
 
  Kernel initialization and startup module
 ******************************************/
@@ -28,6 +28,8 @@
 // TODO FIXME: Add a global VFS lock.
 
 extern void FsMountFatPartitions(void);
+
+char g_cmdline [1024];
 
 __attribute__((noreturn)) void KeStopSystem()
 {
@@ -116,6 +118,20 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Read the multiboot data:
 	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + BASE_ADDRESS);
 	g_pMultibootInfo = mbi;
+	
+	uint32_t cmdlineaddr = mbi->cmdline;
+	if (!(mbi->flags & MULTIBOOT_INFO_CMDLINE))
+	{
+		strcpy (g_cmdline, "No!");
+	}
+	else if (cmdlineaddr < 0x100000)
+	{
+		strcpy (g_cmdline, ((char*)0xC0000000 + cmdlineaddr));
+	}
+	else
+	{
+		strcpy (g_cmdline, "No!");
+	}
 
 	g_nKbExtRam = mbi->mem_upper;
 	KiPerformRamCheck();
@@ -162,7 +178,17 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 		// and re-attempt init:
 		VidInitialize(mbi);
 	}
+	
+	if (strcmp (g_cmdline, "No!") == 0 || g_cmdline[0] == 0)
+	{
+		LogMsg("NanoShell cannot boot, because either:");
+		LogMsg("- no cmdline was passed");
+		LogMsg("- cmdline's address was %x%s", cmdlineaddr, cmdlineaddr >= 0x100000 ? " (was bigger than 1 MB)" : "");
+		KeStopSystem();
+	}
 
+	//LogMsg("CmdLine: %s", g_cmdline);
+	
 	// Initialize the keyboard.
 	KbInitialize();
 

@@ -38,6 +38,19 @@ void ForceKernelTaskToRunNext(void)
 	g_forceKernelTaskToRunNext = true;
 }
 
+void KeKillThreadByPID (int proc)
+{
+	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return;
+	
+	if (!g_runningTasks[proc].m_bExists) return;
+	
+	if (!KeKillTask(&g_runningTasks[proc]))
+	{
+		LogMsg("Can't kill task!");
+	}
+	else LogMsg("Killed task with pid %d", proc);
+}
+
 void KeFindLastRunningTaskIndex(void)
 {
 	for (int i = C_MAX_TASKS - 1; i > 0; i--)

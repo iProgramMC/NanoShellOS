@@ -161,5 +161,9 @@ void KiTaskSystemInitialize();
 ***********************************************************/
 void KeTaskDebugDump();
 
+/***********************************************************
+    Kills a task by process index.
+***********************************************************/
+void KeKillThreadByPID (int proc);
 
 #endif//_TASK_H

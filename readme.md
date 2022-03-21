@@ -90,18 +90,41 @@ It may or may not come back soon.
 
 ## Installation
 
+#### GRUB
+
 If you don't have grub2, install it.  It's relatively easy.
 
 Once you have a grub installed on your favorite USB drive, create a `grub.cfg` inside the `grub` directory.
 Add the following lines:
 ```
 menuentry "NanoShell" {
-	multiboot /boot/kernel.bin
+	multiboot /boot/kernel.bin root=/
+	module    /boot/initrd.tar
 	set gfxpayload=1024x768x32
 	boot
 }
 ```
 
+**Side note**: if you've installed NanoShell on a FAT32-formatted IDE hard disk you can use `root=/Fat0` (where Fat0 can be swapped out for any FatX device). Also
+you may change the gfxpayload to any resolution that GRUB supports.
+
 Note that you can place your kernel image anywhere, but I prefer `/boot/kernel.bin`.  Place your kernel image so that grub can find it, and then restart.
+
+#### Limine
+To boot NanoShell using Limine, you can take a look at the example [limine.cfg](limine.cfg).
+
+```
+TIMEOUT=3
+
+:NanoShell OS
+
+PROTOCOL=multiboot1
+
+CMDLINE=root=/
+KERNEL_PATH=boot:///kernel.bin
+MODULE_PATH=boot:///initrd.tar
+```
+
+Just like in the grub install example, you can change the root to anywhere.
 
 And you're done! You should be in NanoShell now.  Type `w` to go to the GUI mode.
