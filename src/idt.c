@@ -150,6 +150,7 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 	//Perhaps add some stack guards?  Perhaps isolate the stack from the rest of memory (example to 0x30000000)
 	//so that any stack underflow /overflow would lead to a pagefault?
 	
+	//g_currentConsole = &g_debugConsole;
 	g_currentConsole = &g_debugConsole;
 	VidSetVBEData(NULL);
 	VidSetFont (FONT_TAMSYN_BOLD);
@@ -425,6 +426,9 @@ void KeClockInit()
 	WritePort(0x70, 0x8A);
 	WritePort(0x71, (flags & 0xF0) | divisionRate);
 	
+	// hack: https://forum.osdev.org/viewtopic.php?f=1&t=30091
+	WritePort(0x70, 0x0C);
+	ReadPort(0x71);
 	//sti;
 }
 
@@ -458,7 +462,7 @@ void IrqClock()
 	g_nRtcTicks++;
 	// if 4 seconds have passed and we STILL didn't get a update finished interrupt
 	// don't hesitate to update the time every 250 ms (just to be sure)
-	if (!g_trustRtcUpdateFinishFlag && GetTickCount() > 4000)
+	if (!g_trustRtcUpdateFinishFlag && GetTickCount() > 2000)
 	{
 		if (oldTicks / (RTC_TICKS_PER_SECOND/4) != g_nRtcTicks / (RTC_TICKS_PER_SECOND/4))//second changed?
 		{

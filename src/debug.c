@@ -68,6 +68,7 @@ const char* g_pBugCheckReasonText[] = {
 	// miscellaneous failures you may encounter
 	/*Abort*/"INACCESSIBLE_INIT_DEVICE",
 	/*Abort*/"FILE_SYSTEM",
+	/*Abort*/"INACCESSIBLE_BOOT_DEVICE",
 };
 
 const char* GetMemoryRangeString(uint32_t range)

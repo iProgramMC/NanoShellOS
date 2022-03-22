@@ -109,7 +109,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		wPosY = (GetScreenSizeY() - wSzY) / 2;
 	
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ | WF_FLATBORD);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
 	
 	// Add the basic controls required.
 	Rectangle rect;

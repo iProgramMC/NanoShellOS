@@ -1905,7 +1905,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		if (g_shutdownWaiting)
 		{
 			shutdownTimeout--;
-			LogMsgNoCr("\r(Waiting for all windows to shut down... -- %d ticks left.)", shutdownTimeout);
+			//LogMsgNoCr("\r(Waiting for all windows to shut down... -- %d ticks left.)", shutdownTimeout);
 			bool noMoreWindows = true;
 			for (int i = 0; i < WINDOWS_MAX; i++)
 			{
@@ -1917,8 +1917,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 			if (noMoreWindows)
 			{
-				LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
-				LogMsg("STATUS: We survived!  Exitting in a brief moment.");
+				//LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
+				//LogMsg("STATUS: We survived!  Exitting in a brief moment.");
 				//g_windowManagerRunning = false;
 				
 				// On Shutdown:
@@ -1968,7 +1968,7 @@ Control* GetControlByComboID(Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (!pWindow->m_pControlArray[i].m_active)
+		if (pWindow->m_pControlArray[i].m_active)
 		{
 			if (pWindow->m_pControlArray[i].m_comboID == comboID)
 				return &pWindow->m_pControlArray[i];

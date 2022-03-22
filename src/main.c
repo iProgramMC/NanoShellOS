@@ -4,6 +4,7 @@
 
  Kernel initialization and startup module
 ******************************************/
+#include <config.h>
 #include <elf.h>
 #include <fpu.h>
 #include <idt.h>
@@ -155,7 +156,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	// Initialize the video subsystem
 	VidInitialize(mbi);
-
+	
+	CfgInitialize();
+	
 	if (!VidIsAvailable())
 	{
 		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
@@ -187,7 +190,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 		KeStopSystem();
 	}
 
-	//LogMsg("CmdLine: %s", g_cmdline);
+	CfgLoadFromParms (g_cmdline);
 	
 	// Initialize the keyboard.
 	KbInitialize();
@@ -245,8 +248,42 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	FsInitializeInitRd((void*)pInitrdAddress);
 	
 	sti;
+	
+	LogMsg("(loading config from disk...)");
+	
+	char config_file [PATH_MAX+2];
+	ConfigEntry *pEntry = CfgGetEntry ("root");
+	if (!pEntry)
+	{
+		KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	}
+	strcpy (config_file, pEntry->value);
+	if (strcmp(config_file, "/"))//If the root dir isn't just /
+	{
+		strcat (config_file, "/ns.ini");
+	}
+	else
+	{
+		strcat (config_file, "ns.ini");
+	}
+	LogMsg("(loading config from disk from %s...)", config_file);
+	
+	int fd = FiOpen (config_file, O_RDONLY);
+	if (fd < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	
+	int size = FiTellSize(fd);
+	char *pText = MmAllocateK(size+1);
+	
+	int read = FiRead( fd, pText, size );
+	if (read < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	pText [read] = 0;
+	
+	CfgLoadFromTextBasic (pText);
+	
+	MmFreeK (pText);
 
-	LogMsg("Waiting to get time...");
+	// This is a hack, because VirtualBox does not emulate RTC update_finished interrupts
+	LogMsg("(waiting to get time...)");
 	while (!g_gotTime)
 	{
 		hlt;
@@ -289,21 +326,40 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())
 	{
-		LogMsg("\n\x01\x0CWARNING\x01\x0F: Running NanoShell in text mode is "
-					 "deprecated and will be removed in the future.\n");
+		LogMsg("\n\x01\x0CWarning\x01\x0F: NanoShell has fallen back to emergency text mode\n");
 		textMode = true;
 	}
-
-	// KePrintSystemInfo();
-
-	// LogMsg("Type 'w' to start up the GUI!");
+	else
+	{
+		// KePrintSystemInfo();
+	
+		// LogMsg("Type 'w' to start up the GUI!");
+		
+		ConfigEntry *pEntry = CfgGetEntry ("emergency");
+		if (pEntry)
+		{
+			if (strcmp(pEntry->value, "yes") == 0)
+			{
+				LogMsg("Using emergency text mode");
+			}
+			else
+			{
+				textMode = false;
+			}
+		}
+		else
+			LogMsg("No 'emergency' config key found, using text mode");
+	}
 
 	ShellInit();
 
 	if (textMode)
 		ShellRun(0);
 	else
+	{
+		LogMsg("Please wait...");
 		WindowManagerTask(0);
+	}
 	LogMsg("Kernel ready to shutdown.");
 	KeStopSystem();
 }

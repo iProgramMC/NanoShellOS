@@ -16,6 +16,7 @@ bool MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
 		pNewMenu->bHasIcons    = pNewMenu->nIconID != ICON_NULL;
 		return pNewMenu->bHasIcons;
 	}
+	pNewMenu->nLineSeparators = 0;
 	
 	pNewMenu->pMenuEntries = MmAllocateK(sizeof(WindowMenu) * pMenu->nMenuEntries);
 	memcpy(pNewMenu->pMenuEntries, pMenu->pMenuEntries, sizeof(WindowMenu) * pMenu->nMenuEntries);
@@ -61,12 +62,12 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 int GetMenuHeight (UNUSED WindowMenu* pMenu)
 {
 	int haute = (MENU_ITEM_HEIGHT + 6);//(pMenu->bHasIcons ? 6 : 0));
-	return 5 + 
+	return 3 + 
 	       pMenu->nMenuEntries * haute - 
 		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
 }
 
-#define MENU_ITEM_COMBOID (-1000000)
+#define MENU_ITEM_COMBOID (1000000)
 
 void MenuRecursivelyFreeEntries(WindowMenu* pMenu)
 {
@@ -151,6 +152,8 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 		}
 		case EVENT_COMMAND:
 		{
+			Control* p = GetControlByComboID(pWindow, parm1);
+			
 			if (!pWindow->m_data) break;
 			
 			WindowMenu* pData = (WindowMenu*)pWindow->m_data;
@@ -166,9 +169,10 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					pData->bOpen = true;
 					
 					int y_pos = 0;
-					Control* p = GetControlByComboID(pWindow, parm1);
 					if (p)
-						y_pos = p->m_rect.top;
+					{
+						y_pos = p->m_rect.top - 2;
+					}
 					
 					int newXPos = pWindow->m_rect.left + GetMenuWidth (pData),
 					    newYPos = pWindow->m_rect.top  + y_pos;
@@ -178,12 +182,14 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					if (newYPos < 0)
 						newYPos = 0;
 					
-					if (newXPos + GetMenuWidth (&pData->pMenuEntries[index]) >= GetScreenWidth())
-						newXPos = pWindow->m_rect.left - GetMenuWidth (&pData->pMenuEntries[index]);
-					if (newYPos + GetMenuHeight(&pData->pMenuEntries[index]) >= GetScreenHeight())
-						newYPos = pWindow->m_rect.left - GetMenuHeight(&pData->pMenuEntries[index]);
+					int menu_width  = GetMenuWidth (&pData->pMenuEntries[index]);
+					int menu_height = GetMenuHeight(&pData->pMenuEntries[index]);
 					
-					LogMsg("Spawn coords: %d %d", newXPos, newYPos);
+					if (newXPos + menu_width >= GetScreenWidth())
+						newXPos = pWindow->m_rect.left - menu_width;
+					if (newYPos + menu_height >= GetScreenHeight())
+						newYPos = pWindow->m_rect.top - menu_height;
+					
 					pData->pOpenWindow = SpawnMenu (pWindow, &pData->pMenuEntries[index], newXPos, newYPos);
 				}
 				else

@@ -23,6 +23,7 @@
 #include <cinterp.h>
 #include <fat.h>
 #include <pci.h>
+#include <config.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -151,6 +152,7 @@ void ShellExecuteCommand(char* p)
 		LogMsg("cls          - clear screen");
 		LogMsg("cm           - character map");
 		LogMsg("cd <dir>     - change directory");
+		LogMsg("cfg          - list all the kernel configuration parameters");
 		LogMsg("crash        - attempt to crash the kernel");
 		LogMsg("color <hex>  - change the screen color");
 		LogMsg("fd           - attempts to resolve a path, prints non-zero if found");
@@ -165,12 +167,12 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ls           - list the current working directory (right now just /)");
 		LogMsg("lt           - list currently running threads (pauses them during the print)");
 		LogMsg("mode X       - change the screen mode");
-		LogMsg("mspy         - Memory Spy! (TM)");
 		
 		//wait for new key
 		LogMsg("Strike a key to print more.");
 		CoGetChar();
 		
+		LogMsg("mspy         - Memory Spy! (TM)");
 		LogMsg("mrd <file>   - mounts a RAM Disk from a file");
 		LogMsg("ph           - prints current heap's address in kernel address space (or NULL for the default heap)");
 		LogMsg("rb <--force> - reboots the system");
@@ -648,6 +650,15 @@ void ShellExecuteCommand(char* p)
 			
 			//Do not free as the file system now owns this pointer.
 		}
+	}
+	else if (strcmp (token, "cfg") == 0)
+	{
+		CfgPrintEntries ();
+	}
+	else if (strcmp (token, "export") == 0)
+	{
+		char *parms = state.m_pContinuation;
+		CfgLoadFromParms (parms);
 	}
 	else if (strcmp (token, "kill") == 0)
 	{

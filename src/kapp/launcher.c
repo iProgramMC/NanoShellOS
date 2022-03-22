@@ -8,6 +8,7 @@
 #include <wbuiltin.h>
 #include <wterm.h>
 #include <wmenu.h>
+#include <config.h>
 #include <vfs.h>
 #include <elf.h>
 #include <resource.h>
@@ -323,12 +324,26 @@ void HomeMenu$LoadConfigFromString(Window* pWindow, const char* pData)
 	}
 }
 
+char g_launcher_path[PATH_MAX+2];
+
+const char* GetLauncherConfigPath()
+{
+	if (g_launcher_path[0] != 0) return g_launcher_path;
+	
+	ConfigEntry *pEntry = CfgGetEntry ("Launcher::ConfigPath");
+	if (!pEntry) return LAUNCHER_CONFIG_PATH;
+	
+	strcpy (g_launcher_path, pEntry->value);
+	
+	return g_launcher_path;
+}
+
 void HomeMenu$LoadConfig(Window* pWindow)
 {
 	if (g_pLauncherItems) return;//only load once
 	
 	//WORK: You can change the launcher config path here:
-	int fd = FiOpen(LAUNCHER_CONFIG_PATH, O_RDONLY);
+	int fd = FiOpen(GetLauncherConfigPath(), O_RDONLY);
 	if (fd < 0)
 	{
 		MessageBox(pWindow, "Could not load launcher configuration files.  The Home menu will now close, and open a text shell.", "Home Menu", ICON_ERROR << 16 | MB_OK);
@@ -407,6 +422,8 @@ void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int
 			
 			// Load config:
 			HomeMenu$LoadConfig(pWindow);
+			if (g_nLauncherItems == 0)
+				return;
 			
 			// Add list items:
 			ResetList(pWindow, LAUNCHER_LISTVIEW);

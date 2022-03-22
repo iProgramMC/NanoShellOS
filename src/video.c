@@ -1688,7 +1688,11 @@ void VidInitialize(multiboot_info_t* pInfo)
 		}
 		
 		SLogMsg("Allocating framebuffer copy: %dx%d.  Pitch:%d",pInfo->framebuffer_width,pInfo->framebuffer_height,pInfo->framebuffer_pitch);
-		g_framebufferCopy = MmAllocate (pInfo->framebuffer_width * pInfo->framebuffer_height * 4);
+		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
+		SLogMsg("Size: %d", p);
+		
+		g_framebufferCopy = MmAllocateK (p);
+		SLogMsg("Allocated!");
 		
 		MmTlbInvalidate();
 		
