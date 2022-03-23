@@ -24,7 +24,6 @@ AS=nasm
 
 KERNMAP_TARGET=$(BUILD_DIR)/kernel.map
 KERNEL_TARGET=$(BUILD_DIR)/kernel.bin
-INITRD_TARGET=$(BUILD_DIR)/initrd.tar
 IMAGE_TARGET=$(BUILD_DIR)/image.iso
 
 CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -DRANDOMIZE_MALLOCED_MEMORY -mno-sse -mno-sse2
@@ -57,11 +56,7 @@ $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"
 	@$(LD) $(LDFLAGS) -o $@ $^
 
-$(INITRD_TARGET):
-	@echo "Building initrd..."
-	@tar -cf $@ -C fs .
-
-$(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)
+$(IMAGE_TARGET): $(KERNEL_TARGET)
 	@echo "Building ISO..."
 	@rm -rf $(ISO_DIR)
 	@mkdir -p $(ISO_DIR)

@@ -15,15 +15,6 @@
 #include <memory.h>
 #include <misc.h>
 #include <task.h>
-#include <storabs.h>
-#include <window.h>
-#include <icon.h>
-#include <vfs.h>
-#include <elf.h>
-#include <cinterp.h>
-#include <fat.h>
-#include <pci.h>
-#include <config.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -108,34 +99,6 @@ int  g_ramDiskID      = 0x00;//ATA: Prim Mas
 int  g_lastReturnCode = 0;
 bool CoPrintCharInternal (Console* this, char c, char next);
 
-char g_cwd[PATH_MAX+1];
-FileNode* g_pCwdNode = NULL;
-
-
-void funnytest(UNUSED int argument)
-{
-	FileNode* pNode = g_pCwdNode;
-	FileNode* pFile = FsFindDir(pNode, "main.nse");
-	if (!pFile)
-		LogMsg("No such file or directory");
-	else
-	{
-		int length = pFile->m_length;
-		char* pData = (char*)MmAllocate(length + 1);
-		pData[length] = 0;
-		
-		FsRead(pFile, 0, length, pData);
-		
-		ElfExecute(pData, length, "");
-		
-		MmFree(pData);
-	}
-	LogMsg("");
-}
-extern Heap* g_pHeap;
-extern bool  g_windowManagerRunning;
-void WindowManagerShutdown ();
-
 void ShellExecuteCommand(char* p)
 {
 	TokenState state;
@@ -148,118 +111,26 @@ void ShellExecuteCommand(char* p)
 	if (strcmp (token, "help") == 0)
 	{
 		LogMsg("NanoShell Shell Help");
-		LogMsg("cat <file>   - prints the contents of a file");
 		LogMsg("cls          - clear screen");
 		LogMsg("cm           - character map");
-		LogMsg("cd <dir>     - change directory");
-		LogMsg("cfg          - list all the kernel configuration parameters");
 		LogMsg("crash        - attempt to crash the kernel");
 		LogMsg("color <hex>  - change the screen color");
-		LogMsg("fd           - attempts to resolve a path, prints non-zero if found");
-		LogMsg("ft           - attempts to write 'Hello, world\\n' to a file");
-		LogMsg("e <elf>      - executes an ELF from the initrd");
-		LogMsg("el           - prints the last returned value from an executed ELF");
 		LogMsg("help         - shows this list");
 		LogMsg("gt           - run a graphical test");
-		LogMsg("kill <pid>   - list memory allocations");
 		LogMsg("lm           - list memory allocations");
 		LogMsg("lr           - list the memory ranges provided by the bootloader");
-		LogMsg("ls           - list the current working directory (right now just /)");
 		LogMsg("lt           - list currently running threads (pauses them during the print)");
 		LogMsg("mode X       - change the screen mode");
-		
-		//wait for new key
-		LogMsg("Strike a key to print more.");
-		CoGetChar();
-		
 		LogMsg("mspy         - Memory Spy! (TM)");
-		LogMsg("mrd <file>   - mounts a RAM Disk from a file");
-		LogMsg("ph           - prints current heap's address in kernel address space (or NULL for the default heap)");
-		LogMsg("rb <--force> - reboots the system");
+		LogMsg("rb           - reboots the system");
 		LogMsg("sysinfo      - dump system information");
 		LogMsg("sysinfoa     - dump advanced system information");
 		LogMsg("time         - get timing information");
-		LogMsg("stt          - spawns a single thread that doesn't last forever");
-		LogMsg("st           - spawns a single thread that makes a random line forever");
-		LogMsg("tt           - spawns 64 threads that makes random lines forever");
-		LogMsg("tte          - spawns 1024 threads that makes random lines forever");
-		LogMsg("ttte         - spawns 1024 threads that prints stuff");
 		LogMsg("ver          - print system version");
-		LogMsg("w            - start desktop manager");
 	}
 	else if (strcmp (token, "rb") == 0)
 	{
-		bool force = false;
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (fileName)
-		{
-			if (strcmp (fileName, "--force") == 0) force = true;
-		}
-		if (KeGetRunningTask() == NULL)
-			KeRestartSystem();
-		else if (force)
-		{
-			WindowManagerShutdown ();
-		}
-		else
-			LogMsg("Use the launcher's \"Shutdown computer\" option, shut down the computer, and click \"Restart\" to reboot, or use --force.");
-	}
-	else if (strcmp (token, "ph") == 0)
-	{
-		LogMsg("Current Heap: %x",g_pHeap);
-	}
-	else if (strcmp (token, "cd") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-			LogMsg("Expected filename");
-		else if (*fileName == 0)
-			LogMsg("Expected filename");
-		else
-		{
-			if (strcmp (fileName, PATH_THISDIR) == 0) return;
-			if (strcmp (fileName, "/") == 0)
-			{
-				strcpy(g_cwd, "/");
-				g_pCwdNode = FsResolvePath(g_cwd);
-			}
-			if (strcmp (fileName, PATH_PARENTDIR) == 0)
-			{
-				for (int i = PATH_MAX - 1; i >= 0; i--)
-				{
-					if (g_cwd[i] == PATH_SEP)
-					{
-						g_cwd[i+(i==0)] = 0;
-						g_pCwdNode = FsResolvePath(g_cwd);
-						if (!g_pCwdNode)
-						{
-							LogMsg("Fatal: could not find parent directory?!");
-							return;
-						}
-						break;
-					}
-				}
-				return;
-			}
-			if (strlen (g_cwd) + strlen (fileName) < PATH_MAX - 3)
-			{
-				char cwd_copy[sizeof(g_cwd)];
-				memcpy(cwd_copy, g_cwd, sizeof(g_cwd));
-				if (g_cwd[1] != 0)
-					strcat (g_cwd, "/");
-				strcat (g_cwd, fileName);
-				FileNode *pPrev = g_pCwdNode;
-				g_pCwdNode = FsResolvePath(g_cwd);
-				if (!g_pCwdNode)
-				{
-					memcpy(g_cwd, cwd_copy, sizeof(g_cwd));
-					g_pCwdNode = pPrev;
-					LogMsg("No such file or directory");
-				}
-			}
-			else
-				LogMsg("Path would be too large");
-		}
+		KeRestartSystem();
 	}
 	else if (strcmp (token, "cm") == 0)
 	{
@@ -269,434 +140,13 @@ void ShellExecuteCommand(char* p)
 				CoPlotChar(g_currentConsole, x, y, (y<<4)|x);
 			}
 	}
-	else if (strcmp (token, "el") == 0)
-	{
-		LogMsg("Last run ELF returned: %d", g_lastReturnCode);
-	}
-	else if (strcmp (token, "em") == 0)
-	{
-		int erc = 0;
-		Task* pTask = KeStartTask(funnytest, 0, &erc);
-		
-		LogMsg("Started task!  Pointer: %x, errcode: %x", pTask, erc);
-	}
-	else if (strcmp (token, "fd") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			LogMsg("Got: %x", FsResolvePath (fileName));
-		}
-	}
-	else if (strcmp (token, "e") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (!g_windowManagerRunning)
-		{
-			LogMsg("Running apps outside the window manager is broken for now so don't.");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			ElfExecute(pData, length, g_lastCommandExecuted);
-			
-			MmFree(pData);
-			
-			LogMsg("");
-		}
-	}
-	else if (strcmp (token, "ec") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			//ElfExecute(pData, length);
-			
-			CCSTATUS status = CcRunCCode(pData, length);
-			LogMsg("Exited with status %d", status);
-			
-			MmFree(pData);
-			
-			LogMsg("");
-		}
-	}
-	else if (strcmp (token, "cat") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			/*int length = FiTellSize (fd);
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			*/
-			FiSeek(fd, 0, SEEK_SET);
-			
-			int result; char data[2];
-			while ((result = FiRead(fd, data, 1), result > 0))
-			{
-				CoPrintChar(g_currentConsole, data[0]);
-			}
-			
-			FiClose (fd);
-			LogMsg("");
-		}
-	}
-	else if (strcmp (token, "ft") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "fce") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY | O_CREAT);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "ffa") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
 	else if (strcmp (token, "lr") == 0)
 	{
 		KePrintMemoryMapInfo();
 	}
-	else if (strcmp (token, "ls") == 0)
-	{
-		FileNode* pNode = g_pCwdNode;
-		LogMsg("Directory of %s", pNode->m_name, pNode);
-		
-		if (!FsOpenDir(pNode))
-		{
-			LogMsg("ERROR: Could not open '%s', try 'cd'-ing back?", pNode->m_name);
-			return;
-		}
-		
-		DirEnt* pDirEnt;
-		int i = 0;
-		while ((pDirEnt = FsReadDir(pNode, i)) != 0)
-		{
-			FileNode* pSubnode = FsFindDir(pNode, pDirEnt->m_name);
-			if (!pSubnode)
-				LogMsg("- [NULL?!]");
-			else
-				LogMsg("- %s\t%c%c%c\t%d\x02\x16\"%s\"", 
-						(pSubnode->m_type & FILE_TYPE_DIRECTORY) ? "<DIR>" : "     ", 
-						"-R"[!!(pSubnode->m_perms & PERM_READ )],
-						"-W"[!!(pSubnode->m_perms & PERM_WRITE)],
-						"-X"[!!(pSubnode->m_perms & PERM_EXEC )],
-						pSubnode->m_length, 
-						pSubnode->m_name);
-			i++;
-		}
-		
-		FsCloseDir(pNode);
-	}
 	else if (strcmp (token, "gt") == 0)
 	{
 		GraphicsTest();
-	}
-	else if (strcmp (token, "w") == 0)
-	{
-		if (VidIsAvailable())
-		{
-			/*int errorCode = 0;
-			Task* pTask = KeStartTask (WindowManagerTask, 0, &errorCode);
-			LogMsg("TASK: %x %x", pTask, errorCode);
-			
-			while (1) hlt;*/
-			WindowManagerTask(0);
-		}
-		else
-			LogMsg("Cannot run window manager in text mode.  Restart your computer, then make sure the gfxpayload is valid in GRUB.");
-	}
-	else if (strcmp (token, "mrd") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("You want to mount what, exactly?");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("You want to mount what, exactly?");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			FsMountRamDisk(pData);
-			
-			//Do not free as the file system now owns this pointer.
-		}
-	}
-	else if (strcmp (token, "cfg") == 0)
-	{
-		CfgPrintEntries ();
-	}
-	else if (strcmp (token, "export") == 0)
-	{
-		char *parms = state.m_pContinuation;
-		CfgLoadFromParms (parms);
-	}
-	else if (strcmp (token, "kill") == 0)
-	{
-		char* procNum = Tokenize (&state, NULL, " ");
-		if (!procNum)
-		{
-			LogMsg( "No pid provided" );
-		}
-		if (*procNum == 0)
-		{
-			LogMsg( "No pid provided" );
-		}
-		
-		int proc = atoi (procNum);
-		
-		KeKillThreadByPID (proc);
-	}
-	else if (strcmp (token, "check") == 0)
-	{
-		char* fatNum = Tokenize (&state, NULL, " ");
-		if (!fatNum)
-		{
-			goto print_usage1;
-		}
-		if (*fatNum == 0)
-		{
-			goto print_usage1;
-		}
-		
-		int nFat = atoi (fatNum);
-		
-		CheckDiskFatMain (nFat);
-		
-		goto dont_print_usage1;
-	print_usage1:
-		LogMsg("Check Disk");
-		LogMsg("Usage: check <FAT file system number>");
-	dont_print_usage1:;
 	}
 	else if (strcmp (token, "mspy") == 0)
 	{
@@ -777,93 +227,19 @@ void ShellExecuteCommand(char* p)
 	{
 		KePrintSystemVersion();
 	}
-	else if (strcmp (token, "lf") == 0)
-	{
-		FiDebugDump();
-	}
 	else if (strcmp (token, "lm") == 0)
 	{
 		MmDebugDump();
 	}
-	else if (strcmp (token, "lp") == 0)
-	{
-		PciDump();
-	}
 	else if (strcmp (token, "lt") == 0)
 	{
 		KeTaskDebugDump();
-	}
-	/*else if (strcmp (token, "icon") == 0)
-	{
-		RenderIcon(ICON_NANOSHELL, 10, 10);
-	}*/
-	else if (strcmp (token, "stt") == 0)
-	{
-		int errorCode = 0;
-		Task* task = KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
-		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
-	}
-	else if (strcmp (token, "st") == 0)
-	{
-		int errorCode = 0;
-		Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
-	}
-	else if (strcmp (token, "tt") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 64; i++)
-		{
-			KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-		}
-		LogMsg("Tasks have been spawned.");
-		//LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
-	}
-	else if (strcmp (token, "tte") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 1024; i++)
-		{
-			KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-		}
-		LogMsg("Tasks have been spawned.");
-	}
-	else if (strcmp (token, "ttte") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 128; i++)
-		{
-			KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
-		}
-		LogMsg("Tasks have been spawned.");
 	}
 	else if (strcmp (token, "crash") == 0)
 	{
 		LogMsg("OK");
 		*((uint32_t*)0xFFFFFFFF) = 0;
 	}
-	/*else if (strcmp (token, "crashugly") == 0)
-	{
-		LogMsg("OK.  Crashing in a horrible, disgusting, and visceral way");
-		
-		//METHOD 1 doesn't work.  Just throws a page fault
-		//__asm__ volatile ("movl 0x53673689, %eax\n\tmovl %eax, %esp");
-		
-		//METHOD 2: Stack underflow.  Pop shouldn't write to the stack -- Still throws a pagefault
-		//while (1)
-		//	__asm__ volatile ("pop %eax\n");
-	
-		//METHOD 3: Stack overflow. -- Threw a DIFFERENT error this time, a stack overflow
-		//while (1)
-		//	__asm__ volatile ("push %eax");
-	
-		//METHOD 4: Combine them -- Threw a pagefault this time ??
-		//while (1)
-		//{
-		//	__asm__ volatile ("movl 0x28, %eax\n\tmovl %eax, %ss");
-		//	__asm__ volatile ("push %eax");
-		//}
-	}*/
 	else if (strcmp (token, "time") == 0)
 	{
 		int hi, lo;
@@ -970,15 +346,13 @@ void ShellExecuteCommand(char* p)
 
 void ShellInit()
 {
-	strcpy (g_cwd, "/");
-	g_pCwdNode = FsResolvePath (g_cwd);
 }
 
 void ShellRun(UNUSED int unused_arg)
 {
 	while (1) 
 	{
-		LogMsgNoCr("%s>", g_cwd);
+		LogMsgNoCr("shell>");
 		char buffer[256];
 		CoGetString (buffer, 256);
 		memcpy (g_lastCommandExecuted, buffer, 256);

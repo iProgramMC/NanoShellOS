@@ -135,18 +135,18 @@ void SwitchFont (const uint8_t* pFont)
 
 extern const unsigned char g_FamiSans8x8[];
 extern const unsigned char g_TamsynRegu8x16[];
-void SwitchMode(bool _80x50)
+void SwitchMode(UNUSED bool _80x50)
 {
-	if (_80x50)
+	/*if (_80x50)
 	{
 		VidWriteRegs(g_80x50_text);
 		SwitchFont(g_FamiSans8x8);
 		g_textWidth = 80, g_textHeight = 50;
 	}
 	else
-	{
-		VidWriteRegs(g_80x25_text);
-		SwitchFont(g_TamsynRegu8x16);
-		g_textWidth = 80, g_textHeight = 25;
-	}
+	{*/
+	VidWriteRegs(g_80x25_text);
+	SwitchFont(g_TamsynRegu8x16);
+	g_textWidth = 80, g_textHeight = 25;
+	//}
 }

@@ -573,29 +573,7 @@ KeCPUID:
 	RET
 
 
-extern WindowCall
 extern LogMsg
-extern UserCallStuffNotSupportedC
-; Window manager call stuff
-global UserCallStuff
-global UserCallStuffEnd
-UserCallStuff:
-	MOV ECX, [0xC0007CFC]
-	SHL ECX, 2
-	
-	MOV EAX, [WindowCall+ECX]
-	JMP EAX
-	
-	RET
-UserCallStuffEnd:
-
-global UserCallStuffNotSupported
-global UserCallStuffNotSupportedEnd
-UserCallStuffNotSupported:
-	MOV EAX, UserCallStuffNotSupportedC
-	JMP [EAX]
-UserCallStuffNotSupportedEnd:
-	
 section .bss
 
 ; eax=0, eax's value:

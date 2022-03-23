@@ -8,7 +8,6 @@
 #include <task.h>
 #include <keyboard.h>
 #include <print.h>
-#include <icon.h>
 
 void DumpRegisters (Registers* pRegs)
 {
@@ -136,15 +135,6 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	LogMsg("\nTechnical Information:");
 	
 	KeLogExceptionDetails (reason, pRegs);
-	
-	//enough text, draw the icon:
-	
-	int x_mid = (GetScreenSizeX() - 96) / 2;
-	int y_mid = (GetScreenSizeY() - 32) / 2;
-	
-	VidFillRect(0x00FFFF, x_mid - 5, y_mid - 5, x_mid + 105, y_mid + 41);
-	
-	RenderIcon(ICON_COMPUTER_PANIC, x_mid, y_mid);
 	
 #ifdef ALLOW_POST_CRASH_DEBUG
 	LogMsg("NanoShell has been put into debug mode.");

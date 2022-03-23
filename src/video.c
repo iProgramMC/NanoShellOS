@@ -9,7 +9,6 @@
 #include <video.h>
 #include <memory.h>
 #include <string.h>
-#include <icon.h>
 
 // Basic definitions for video
 #if 1
@@ -28,8 +27,6 @@ VBEData g_mainScreenVBEData;
 
 VBEData* g_vbeData = NULL;
 #endif
-
-extern bool g_RenderWindowContents;
 
 // Mouse graphics stuff
 #if 1
@@ -804,8 +801,8 @@ void VidSetClipRect(Rectangle *pRect)
 		
 		if (g_vbeData->m_clipRect.left   < 0) g_vbeData->m_clipRect.left   = 0;
 		if (g_vbeData->m_clipRect.top    < 0) g_vbeData->m_clipRect.top    = 0;
-		if (g_vbeData->m_clipRect.right  >= g_vbeData->m_width)  g_vbeData->m_clipRect.right  = g_vbeData->m_width;
-		if (g_vbeData->m_clipRect.bottom >= g_vbeData->m_height) g_vbeData->m_clipRect.bottom = g_vbeData->m_height;
+		if (g_vbeData->m_clipRect.right  >= (int)g_vbeData->m_width)  g_vbeData->m_clipRect.right  = g_vbeData->m_width;
+		if (g_vbeData->m_clipRect.bottom >= (int)g_vbeData->m_height) g_vbeData->m_clipRect.bottom = g_vbeData->m_height;
 	}
 	else
 	{
@@ -976,30 +973,6 @@ static inline void RenderCursorTransparent(void)
 __attribute__((always_inline))
 static inline void RenderCursorOpaque(void)
 {
-	if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                            ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                            ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                        ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky)^0xFFFFFFFF);
-		}
-		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                             VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                            )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                        )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2)^0xFFFFFFFF);
-		}
-		return;
-	}
 	if (g_vbeData->m_bitdepth == 2)
 	{
 		//NEW: Optimization
@@ -1063,30 +1036,6 @@ static inline void RenderCursorOpaque(void)
 __attribute__((always_inline))
 static inline void RenderCursorStretchy(void)
 {
-	//if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=g_mouseY - g_currentCursor->topOffs; i < g_currentCursor->boundsHeight; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                                  ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                              ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky)^0xFFFFFFFF);
-		}
-		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                                   VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                                  )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                              )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2)^0xFFFFFFFF);
-		}
-		return;
-	}
 	if (g_vbeData->m_bitdepth == 2)
 	{
 		//NEW: Optimization
@@ -1183,44 +1132,6 @@ static inline void RedrawOldPixelsTransparent(int oldX, int oldY)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 {
-	/*for (int i = 0; i < g_currentCursor->height; i++)
-	{
-		for (int j = 0; j < g_currentCursor->width; j++)
-		{
-			int kx = j + oldX - g_currentCursor->leftOffs,
-				ky = i + oldY - g_currentCursor->topOffs;
-			if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
-			VidPlotPixelCheckCursor (
-			//VidPlotPixelInline(
-				kx, ky, VidReadPixelInline (kx, ky)
-			);
-		}
-	}*/
-	if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=oldY - g_currentCursor->topOffs; i < g_currentCursor->height; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                            ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                            ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                        ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky));
-		}
-		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                             VidReadPixel(kx, oldY - g_currentCursor->topOffs                            ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                        ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2));
-		}
-		return;
-	}
-	
 	// Draw over the Y coordinate.
 	
 	int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;
@@ -1324,44 +1235,6 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 __attribute__((always_inline))
 static inline void RedrawOldPixelsStretchy(int oldX, int oldY)
 {
-	/*for (int i = 0; i < g_currentCursor->height; i++)
-	{
-		for (int j = 0; j < g_currentCursor->width; j++)
-		{
-			int kx = j + oldX - g_currentCursor->leftOffs,
-				ky = i + oldY - g_currentCursor->topOffs;
-			if (kx < 0 || ky < 0 || kx >= GetScreenSizeX() || ky >= GetScreenSizeY()) continue;
-			VidPlotPixelCheckCursor (
-			//VidPlotPixelInline(
-				kx, ky, VidReadPixelInline (kx, ky)
-			);
-		}
-	}*/
-	//if (!g_RenderWindowContents)
-	{
-		//Just XOR the pixels around the window frame
-		
-		for (int i = 0, ky=oldY - g_currentCursor->topOffs; i < g_currentCursor->boundsHeight; i++, ky++)
-		{
-			if (ky < 0) i = -ky, ky = 0;
-			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                                  ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                              ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky));
-		}
-		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
-		{
-			if (kx < 0) j = -kx, kx = 0;
-			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                                   VidReadPixel(kx, oldY - g_currentCursor->topOffs                                        ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                                    ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2));
-		}
-		return;
-	}
-	
 	// Draw over the Y coordinate.
 	
 	int left = oldX - g_currentCursor->leftOffs, right = left + g_currentCursor->width;

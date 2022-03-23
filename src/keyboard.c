@@ -6,14 +6,12 @@
 ******************************************/
 #include <keyboard.h>
 #include <string.h>
-#include <window.h>
 
 
 #define inb(a) ReadPort(a)
 #define outb(a,b) WritePort(a,b)
 
 Console* g_focusedOnConsole = &g_debugConsole;
-Window*  g_focusedOnWindow  = NULL;
 
 // This changes the console that keypresses also go to.
 void SetFocusedConsole(Console *pConsole)
@@ -193,8 +191,6 @@ void KbAddRawKeyToBuffer(char key)
 	RawKeyboardBuffer[RawKeyboardBufferEnd++] = key;
 	while (RawKeyboardBufferEnd >= KB_RAW_SIZE)
 		RawKeyboardBufferEnd -= KB_RAW_SIZE;
-	if (g_focusedOnWindow)
-		WinAddToInputQueue(g_focusedOnWindow, key);
 }
 bool KbIsRawBufferEmpty()
 {
