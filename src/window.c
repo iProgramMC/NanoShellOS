@@ -980,6 +980,11 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 	if (newHeight< WINDOW_MIN_HEIGHT)
 		newHeight= WINDOW_MIN_HEIGHT;
 	uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
+	if (!pNewFb)
+	{
+		SLogMsg("Cannot resize window to %dx%d, out of memory", newWidth, newHeight);
+		return;
+	}
 	
 	// Copy the entire framebuffer's contents from old to new.
 	int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
@@ -1181,6 +1186,11 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 {
 	ACQUIRE_LOCK(g_createLock);
 	
+	if (xSize > GetScreenWidth())
+		xSize = GetScreenWidth();
+	if (ySize > GetScreenHeight())
+		ySize = GetScreenHeight();
+	
 	if (xPos < 0 || yPos < 0)
 	{
 		g_NewWindowX += 10;
@@ -1245,6 +1255,12 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_vbeData.m_available     = true;
 	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
+	if (!pWnd->m_vbeData.m_framebuffer32)
+	{
+		LogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
+		pWnd->m_used = false;
+		return NULL;
+	}
 	ZeroMemory (pWnd->m_vbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
 	pWnd->m_vbeData.m_width         = xSize;
 	pWnd->m_vbeData.m_height        = ySize;
@@ -1261,6 +1277,16 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_controlArrayLen = 10;
 	size_t controlArraySize = sizeof(Control) * pWnd->m_controlArrayLen;
 	pWnd->m_pControlArray   = (Control*)MmAllocateK(controlArraySize);
+	
+	if (!pWnd->m_pControlArray)
+	{
+		// The framebuffer fit, but this didn't
+		LogMsg("Couldn't allocate pControlArray for window, out of memory!");
+		MmFreeK(pWnd->m_vbeData.m_framebuffer32);
+		pWnd->m_used = false;
+		return NULL;
+	}
+	
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
@@ -1983,8 +2009,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	if (!pWindow->m_pControlArray)
 	{
 		VidSetVBEData(NULL);
-		LogMsg("No pControlArray!?");
-		KeStopSystem();
+		LogMsg("No pControlArray?");
 		return -1;
 	}
 	int index = -1;
@@ -2008,6 +2033,11 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		
 		size_t newSize = sizeof(Control) * cal;
 		Control* newCtlArray = (Control*)MmAllocateK(newSize);
+		if (!newCtlArray)
+		{
+			SLogMsg("Cannot add control %d to window %x", type, pWindow);
+			return -1;
+		}
 		memset(newCtlArray, 0, newSize);
 		
 		// copy stuff into the new control array:

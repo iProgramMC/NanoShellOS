@@ -73,7 +73,10 @@ void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
 	ResetList        (pWindow, MAIN_LISTVIEW);
-	AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
+	
+	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
+		AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
+	
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
 	DirEnt* pEnt = NULL;

@@ -717,9 +717,9 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			Rectangle r;
 			
-			RECT (r, 4, 4, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			RECT (r, 4, 4-2, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_BUTTON, r, "\x05 NanoShell", TASKBAR_HELLO, 0, 0);
-			RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH, 4, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH, 4-2, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
 			
 			int launcherItemPosX = 8 + TASKBAR_BUTTON_WIDTH;
@@ -727,14 +727,14 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			{
 				if (g_pLauncherItems[i].m_addToQuickLaunch)
 				{
-					RECT (r, launcherItemPosX, 3, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
+					RECT (r, launcherItemPosX, 3-2, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
 					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
 					
 					launcherItemPosX += TASKBAR_BUTTON_HEIGHT + 2;
 				}
 			}
 			
-			RECT (r, launcherItemPosX, 4, 400, TASKBAR_BUTTON_HEIGHT);
+			RECT (r, launcherItemPosX, 4-2, 400, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "FPS: Wait...", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_FORCEBGCOL);
 			
 			pWindow->m_data = (void*)(launcherItemPosX + 400);
@@ -746,6 +746,11 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			break;
 		}
 		case EVENT_PAINT: {
+			
+			uint32_t e = DEFAULT_WINDOW_TITLE_INACTIVE_COLOR;
+			
+			VidDrawHLine (0x000000, pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - 1);
+			VidDrawHLine (    e   , pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - 2);
 			
 			break;
 		}
@@ -803,12 +808,12 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT;//, sh = GetScreenHeight();
+	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT-2;//, sh = GetScreenHeight();
 	int wx = 0, wy = 0;//(sh - wh)+2;
 	
 	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE);
+	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER);
 	
 	if (!pWindow)
 	{

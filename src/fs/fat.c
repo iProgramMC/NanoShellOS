@@ -850,6 +850,13 @@ bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, bool write)
 		pNode->nDataSize            = pFileNode->m_length;
 		pNode->nDataCapacity        = capacity;
 		pNode->pDataPointer         = MmAllocateK(capacity);
+		if (!pNode->pDataPointer)
+		{
+			pNode->pOpenedIn = NULL;
+			pNode->nClusterCurrent = 0;
+			pNode->nDataSize = pNode->nDataCapacity = 0;
+			return false;
+		}
 		
 		uint32_t nCurrentCluster = nFirstCluster;
 		uint32_t nFileSize = pNode->nDataSize, nOffset = 0;

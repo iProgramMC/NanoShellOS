@@ -73,6 +73,24 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	int szX, szY;
 	
 	char* test = MmAllocateK(strlen(pText)+5);
+	int buttonStyle = style & 0x7;
+	if (!test)
+	{
+		SLogMsg("Cannot allocate text buffer, returning default");
+		SLogMsg("%s", pText);
+		SLogMsg("Msgbox parms: %x", style);
+		
+		switch (buttonStyle)
+		{
+			case MB_OK: return MBID_OK;
+			case MB_OKCANCEL:
+			case MB_RETRYCANCEL:
+			case MB_CANCELTRYCONTINUE: 
+			case MB_YESNOCANCEL: return MBID_CANCEL;
+			case MB_YESNO: return MBID_NO;
+			case MB_ABORTRETRYIGNORE: return MBID_IGNORE;
+		}
+	}
 	WrapText(test, pText, GetScreenWidth() * 2 / 3);
 	
 	// Measure the pText text.
@@ -93,23 +111,41 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	
 	// We now have the text's size in szX and szY.  Get the window size.
 	int wSzX = szX + 
-			   40 + //X padding on both sides
-			   10 + //Gap between icon and text.
-			   32 * iconAvailable + //Icon's size.
-			   5 +
-			   WINDOW_RIGHT_SIDE_THICKNESS;//End.
+			40 + //X padding on both sides
+			10 + //Gap between icon and text.
+			32 * iconAvailable + //Icon's size.
+			5 +
+			WINDOW_RIGHT_SIDE_THICKNESS;//End.
 	int wSzY = szY + 
-			   20 + //Y padding on both sides
-			   buttonHeight + //Button's size.
-			   TITLE_BAR_HEIGHT +
-			   5 + 
-			   WINDOW_RIGHT_SIDE_THICKNESS;
+			20 + //Y padding on both sides
+			buttonHeight + //Button's size.
+			TITLE_BAR_HEIGHT +
+			5 + 
+			WINDOW_RIGHT_SIDE_THICKNESS;
 	
 	int wPosX = (GetScreenSizeX() - wSzX) / 2,
 		wPosY = (GetScreenSizeY() - wSzY) / 2;
 	
 	// Spawn a new window.
 	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
+	if (!pBox)
+	{
+		MmFreeK(test);
+		SLogMsg("Cannot show window, returning default");
+		SLogMsg("%s", pText);
+		SLogMsg("Msgbox parms: %x", style);
+		
+		switch (buttonStyle)
+		{
+			case MB_OK: return MBID_OK;
+			case MB_OKCANCEL:
+			case MB_RETRYCANCEL:
+			case MB_CANCELTRYCONTINUE: 
+			case MB_YESNOCANCEL: return MBID_CANCEL;
+			case MB_YESNO: return MBID_NO;
+			case MB_ABORTRETRYIGNORE: return MBID_IGNORE;
+		}
+	}
 	
 	// Add the basic controls required.
 	Rectangle rect;
@@ -131,7 +167,6 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		AddControl (pBox, CONTROL_ICON, rect, NULL, 0x10001, iconID, 0);
 	}
 	
-	int buttonStyle = style & 0x7;
 	switch (buttonStyle)
 	{
 		case MB_OK:
