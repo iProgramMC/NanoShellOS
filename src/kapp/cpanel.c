@@ -186,8 +186,8 @@ void RedrawEverything();
 		KEYBDP_CANCEL_BUTTON,
 		KEYBDP_TEST_BOX,
 	};
-	#define KEYBD_POPUP_WIDTH 300
-	#define KEYBD_POPUP_HEITE 140
+	#define KEYBD_POPUP_WIDTH 400
+	#define KEYBD_POPUP_HEITE 300
 	
 	uint8_t g_oldTypematicRepeatRate, g_oldTypematicRepeatDelay;
 	void CALLBACK Cpl$KeybdPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
@@ -203,41 +203,48 @@ void RedrawEverything();
 				
 				//add a button
 				Rectangle r;
-				RECT(r,8,8+TITLE_BAR_HEIGHT,KEYBD_POPUP_WIDTH-16,35);
-				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Keyboard repeat rate", 1, 0, 0);
+				RECT(r,8,8+TITLE_BAR_HEIGHT,KEYBD_POPUP_WIDTH-16,180);
+				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Character Repeat", 1, 0, 0);
 				{
 					//add stuff inside the rect.
 					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
 					
-					RECT(r, 16,  24 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 16,  34 + TITLE_BAR_HEIGHT, 32, 32);
+					AddControl(pWindow, CONTROL_ICON, r, NULL, 12, ICON_KEYB_REP_SPEED, 0);
+					RECT(r, 66,  34 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Repeat rate:", 2, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 66,  54 + TITLE_BAR_HEIGHT, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
-					RECT(r, KEYBD_POPUP_WIDTH - 40, 24 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 54 + TITLE_BAR_HEIGHT, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
-					RECT(r, 50,  22 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 1);
+					RECT(r, 100, 52 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_CPS,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)),
 						(1)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)-1-g_oldTypematicRepeatRate)
 					);
-				}
-				RECT(r,8,8+TITLE_BAR_HEIGHT+40,KEYBD_POPUP_WIDTH-16,35);
-				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Delay before repeat", 1, 0, 0);
-				{
-					//add stuff inside the rect.
-					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
 					
-					RECT(r, 16,  24+40 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 16,  15+80 + TITLE_BAR_HEIGHT, 32, 32);
+					AddControl(pWindow, CONTROL_ICON, r, NULL, 22, ICON_KEYB_REP_DELAY, 0);
+					RECT(r, 66,  15+80 + TITLE_BAR_HEIGHT, 32, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Repeat delay:", 2, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 66,  35+80 + TITLE_BAR_HEIGHT, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
-					RECT(r, KEYBD_POPUP_WIDTH - 40, 24+40 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 35+80 + TITLE_BAR_HEIGHT, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
-					RECT(r, 50,  22+40 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 1);
+					RECT(r, 100, 33+80 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_DELAY,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)),
 						(1)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-g_oldTypematicRepeatDelay)
 					);
+					
+					RECT(r, 16, 145 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 20);
+					AddControl(pWindow, CONTROL_TEXT, r, "Click here and hold down a key to test repeat rate:", 10000, 0, WINDOW_BACKGD_COLOR);
+					RECT(r, 16, 155 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 50, 20);
+					AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, 10000, 0, 0);
 				}
-				RECT(r,(KEYBD_POPUP_WIDTH-200)/2,8+TITLE_BAR_HEIGHT+80,95,20);
+				RECT(r,(KEYBD_POPUP_WIDTH-160)/2,KEYBD_POPUP_HEITE - 30,75,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Revert", KEYBDP_CANCEL_BUTTON, 0, 0);
-				RECT(r,(KEYBD_POPUP_WIDTH-200)/2+95,8+TITLE_BAR_HEIGHT+80,95,20);
+				RECT(r,(KEYBD_POPUP_WIDTH-160)/2+80,KEYBD_POPUP_HEITE - 30,75,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  KEYBDP_OK_BUTTON,     0, 0);
 				/*
 				RECT(r,8,8+TITLE_BAR_HEIGHT+80,KEYBD_POPUP_WIDTH-16,80);

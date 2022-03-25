@@ -150,10 +150,10 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	// Add the basic controls required.
 	Rectangle rect;
 	rect.left   = 20 + iconAvailable*32 + 10;
-	rect.top    = 20;
+	rect.top    = TITLE_BAR_HEIGHT + 2;
 	rect.right  = wSzX - 20;
 	rect.bottom = wSzY - buttonHeight - 20;
-	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, 0, TEXTSTYLE_VCENTERED);
+	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
 	SetHugeLabelText(pBox, 0x10000, test);
 	
 	MmFreeK(test);
@@ -161,7 +161,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	if (iconAvailable)
 	{
 		rect.left = 20;
-		rect.top  = 20 + (szY - 32) / 2;
+		rect.top  = TITLE_BAR_HEIGHT + 2 + (szY - 32) / 2;
 		rect.right = rect.left + 32;
 		rect.bottom= rect.top  + 32;
 		AddControl (pBox, CONTROL_ICON, rect, NULL, 0x10001, iconID, 0);
@@ -298,7 +298,8 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
 	if (wasSelectedBefore)
 	{
-		pWindow->m_isSelected = true;
+		//pWindow->m_isSelected = true;
+		SelectWindow (pWindow);
 		PaintWindowBorderNoBackgroundOverpaint (pWindow);
 	}
 	
@@ -465,7 +466,8 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
 	if (wasSelectedBefore)
 	{
-		pWindow->m_isSelected = true;
+		//pWindow->m_isSelected = true;
+		SelectWindow (pWindow);
 		PaintWindowBorderNoBackgroundOverpaint (pWindow);
 	}
 	
@@ -540,7 +542,8 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
 	if (wasSelectedBefore)
 	{
-		pWindow->m_isSelected = true;
+		//pWindow->m_isSelected = true;
+		SelectWindow (pWindow);
 		PaintWindowBorderNoBackgroundOverpaint (pWindow);
 	}
 	
@@ -773,7 +776,8 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 	//NB: No null dereference, because if pWindow is null, wasSelectedBefore would be false anyway
 	if (wasSelectedBefore)
 	{
-		pWindow->m_isSelected = true;
+		//pWindow->m_isSelected = true;
+		SelectWindow (pWindow);
 		PaintWindowBorderNoBackgroundOverpaint (pWindow);
 	}
 	

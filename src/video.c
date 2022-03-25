@@ -864,14 +864,14 @@ void VidShiftScreen (int howMuch)
 			int a = g_vbeData->m_width * 4;
 			for (int i = howMuch, j = 0, k = 0; i < GetScreenSizeY(); i++, j += g_vbeData->m_pitch, k += a)
 			{
-				fast_memcpy(((uint8_t*)g_vbeData->m_framebuffer32 + j), &g_framebufferCopy[i * g_vbeData->m_width], a);
-				fast_memcpy(((uint8_t*)g_framebufferCopy          + k), &g_framebufferCopy[i * g_vbeData->m_width], a);
+				memcpy_16_byte_aligned(((uint8_t*)g_vbeData->m_framebuffer32 + j), &g_framebufferCopy[i * g_vbeData->m_width], a);
+				memcpy_16_byte_aligned(((uint8_t*)g_framebufferCopy          + k), &g_framebufferCopy[i * g_vbeData->m_width], a);
 			}
 		}
 		else
 		{
 			int sz = g_vbeData->m_width * (g_vbeData->m_height - howMuch);
-			fast_memcpy(g_vbeData->m_framebuffer32, &g_vbeData->m_framebuffer32[g_vbeData->m_width * howMuch], sz);
+			memcpy_16_byte_aligned(g_vbeData->m_framebuffer32, &g_vbeData->m_framebuffer32[g_vbeData->m_width * howMuch], sz);
 		}
 	}
 	else

@@ -234,7 +234,6 @@ void MineCheckWin(Minesweeper *pGame)
 		{
 			if (pGame->m_unco[mx][my] == pGame->m_mine[mx][my])
 			{
-				SLogMsg("Tile at %d %d different (%b %b)", mx,my,pGame->m_unco[mx][my] , pGame->m_mine[mx][my]);
 				game_win = false;
 				break;
 			}
@@ -325,7 +324,7 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			pGame->m_leftClickHeld  = true;
 			
 			
-			SetLabelText(pWindow, 2001, ":-O");
+			SetIcon (pWindow, 2001, ICON_SWEEP_CLICK);
 			
 			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
@@ -426,15 +425,15 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			if (pGame->m_gameOver)
 			{
-				SetLabelText(pWindow, 2001, "X-(");
+				SetIcon (pWindow, 2001, ICON_SWEEP_DEAD);
 			}
 			else if (pGame->m_gameWon)
 			{
-				SetLabelText(pWindow, 2001, "B-)");
+				SetIcon (pWindow, 2001, ICON_SWEEP_CARET);
 			}
 			else
 			{
-				SetLabelText(pWindow, 2001, ":-)");
+				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 			}
 			
 			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
@@ -466,15 +465,15 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			if (pGame->m_gameOver)
 			{
-				SetLabelText(pWindow, 2001, "X-(");
+				SetIcon (pWindow, 2001, ICON_SWEEP_DEAD);
 			}
 			else if (pGame->m_gameWon)
 			{
-				SetLabelText(pWindow, 2001, "B-)");
+				SetIcon (pWindow, 2001, ICON_SWEEP_CARET);
 			}
 			else
 			{
-				SetLabelText(pWindow, 2001, ":-)");
+				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 			}
 			
 			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
@@ -510,7 +509,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 			AddMenuBarItem (pWindow, 2000, 1, 4, "Exit");
 			
 			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - 24) - 26) / 2/*74*/, 56, 26, 26);
-			AddControl (pWindow, CONTROL_BUTTON, rect, ":-)", 2001, 0, 0);
+			AddControl (pWindow, CONTROL_BUTTON_ICON, rect, "", 2001, ICON_SWEEP_SMILE, 17);
 			
 			break;
 		}
@@ -526,7 +525,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					// to reset a control's defaults
 					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
 					
-					SetLabelText(pWindow, 2001, ":-)");
+					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 					
 					CallWindowCallbackAndControls (pWindow, EVENT_PAINT, 0, 0);
 					break;
@@ -541,7 +540,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 				{
 					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
 					
-					SetLabelText(pWindow, 2001, ":-)");
+					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 					
 					CallWindowCallbackAndControls (pWindow, EVENT_PAINT, 0, 0);
 					break;

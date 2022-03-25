@@ -32,6 +32,7 @@ void KeTaskDone(void);
 #include <wcall.h>
 #include <vfs.h>
 #include <image.h>
+#include <config.h>
 
 #undef cli
 #undef sti
@@ -129,12 +130,102 @@ void SetThemingParameter(int type, uint32_t parm)
 	g_ThemingParms[type] = parm;
 }
 void SetDefaultTheme(void);
+
+uint8_t* ThmLoadEntireFile (const char *pPath, int *pSizeOut)
+{
+	int fd = FiOpen (pPath, O_RDONLY);
+	if (fd < 0) return NULL;
+	
+	int size = FiTellSize (fd);
+	
+	uint8_t* pMem = MmAllocate (size + 1);
+	int read_size = FiRead (fd, pMem, size);
+	pMem[read_size] = 0;//for text parsers
+	
+	*pSizeOut = read_size;
+	return pMem;
+}
+
+void ThmLoadFont(ConfigEntry *pEntry)
+{
+	//load some properties
+	ConfigEntry
+	* pBmpPath, * pFntPath, * pSysFont, * pTibFont, * pBmpSize, * pChrHeit;
+	
+	char buffer1[128], buffer2[128], buffer3[128], buffer4[128], buffer5[128], buffer6[128];
+	//TODO: Ensure safety
+	sprintf(buffer1, "%s::Bitmap",       pEntry->value);
+	sprintf(buffer2, "%s::FontData",     pEntry->value);
+	sprintf(buffer3, "%s::SystemFont",   pEntry->value);
+	sprintf(buffer4, "%s::TitleBarFont", pEntry->value);
+	sprintf(buffer5, "%s::BmpSize",      pEntry->value);
+	sprintf(buffer6, "%s::ChrHeight",    pEntry->value);
+	
+	pBmpPath = CfgGetEntry (buffer1),
+	pFntPath = CfgGetEntry (buffer2),
+	pSysFont = CfgGetEntry (buffer3),
+	pTibFont = CfgGetEntry (buffer4);
+	pBmpSize = CfgGetEntry (buffer5);
+	pChrHeit = CfgGetEntry (buffer6);
+	
+	if (!pBmpPath || !pFntPath) return;
+	
+	bool bSysFont = false, bTibFont = false;
+	if (pSysFont)
+		bSysFont = strcmp (pSysFont->value, "yes") == 0;
+	if (pTibFont)
+		bTibFont = strcmp (pTibFont->value, "yes") == 0;
+	
+	// Load Data
+	int nBmpSize = 128;
+	if (pBmpSize)
+		nBmpSize = atoi (pBmpSize->value);
+	int nChrHeit = 16;
+	if (pChrHeit)
+		nChrHeit = atoi (pChrHeit->value);
+	
+	int sizeof_bmp = 0, sizeof_fnt = 0;
+	uint8_t
+	*pBmp = ThmLoadEntireFile (pBmpPath->value, &sizeof_bmp),
+	*pFnt = ThmLoadEntireFile (pFntPath->value, &sizeof_fnt);
+	
+	int font_id = CreateFont (pFnt, pBmp, nBmpSize, nBmpSize, nChrHeit);
+	if (bSysFont)
+		SetThemingParameter (P_SYSTEM_FONT, font_id);
+	if (bTibFont)
+		SetThemingParameter (P_TITLE_BAR_FONT, font_id);
+}
+
+void ThmLoadExtraFonts()
+{
+	ConfigEntry *pFontsToLoadEntry = CfgGetEntry ("Theming::FontsToLoad");
+	
+	if (!pFontsToLoadEntry) return;
+	
+	//we only support one font for now
+	ThmLoadFont(pFontsToLoadEntry);
+}
+
+//make sure pOut is initialized first - if the config entry is missing this won't work!
+void ThmLoadFromConfig(uint32_t *pOut, const char *pString)
+{
+	ConfigEntry *pEntry = CfgGetEntry (pString);
+	if (!pEntry) return;
+	
+	uint32_t number = (uint32_t) atoi (pEntry->value);
+	
+	*pOut = number;
+}
 void LoadDefaultThemingParms()
 {
 	SetThemingParameter(P_BLACK, 0x000000);
 	
 	// Dark mode:
 	SetDefaultTheme();
+	
+	// Load config stuff
+	ThmLoadFromConfig(&g_ThemingParms[P_TITLE_BAR_HEIGHT], "Theming::TitleBarHeight");
+	ThmLoadExtraFonts();
 }
 void LoadThemingParmsFromFile(const char* pString)
 {
@@ -2444,9 +2535,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		rectc.bottom--;
 		
 		//Cut out the gap stuff so that the animation looks good
-		int iconGap = 0;//16 * (pWindow->m_iconID != ICON_NULL);
-		
-		//VidDrawRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, rectc);
+		int iconGap = 0;
 		
 		//draw the window title:
 		rectb.left++;
@@ -2454,7 +2543,6 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		rectb.right -= 2;
 		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 2;
 		
-		//VidFillRectangle(pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR : WINDOW_TITLE_INACTIVE_COLOR, rectb);
 		VidFillRectHGradient(
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
 			pWindow->m_isSelected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
@@ -2464,40 +2552,27 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 			rectb.bottom
 		);
 	
-		int textwidth, __attribute__((unused)) height;
+		int textwidth, height;
+		VidSetFont(TITLE_BAR_FONT);
 		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
 		
 		int MinimizAndCloseGap = 0;
-		/*if (!(pWindow->m_flags & WF_NOCLOSE))
-		{
-			MinimizAndCloseGap += TITLE_BAR_HEIGHT;
-			if (!(pWindow->m_flags & WF_NOMINIMZ))
-			{
-				MinimizAndCloseGap += TITLE_BAR_HEIGHT;
-			}
-			if (!(pWindow->m_flags & WF_NOMAXIMZ))
-			{
-				MinimizAndCloseGap += TITLE_BAR_HEIGHT;
-			}
-		}*/
+		
 		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
-	
-		/*const unsigned char* pBkp = g_pCurrentFont;
-		VidSetFont(FONT_BIGTEST2);*/
+		
+		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
+		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
 		
 		uint32_t flags = TEXT_RENDER_BOLD;
 		if (TITLE_BAR_FONT != SYSTEM_FONT)
 			flags = 0;
 		
-		VidSetFont(TITLE_BAR_FONT);
-		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
-		//g_pCurrentFont = pBkp;
-		
 		if (pWindow->m_iconID != ICON_NULL)
-			RenderIconForceSize(pWindow->m_iconID, rectb.left+1, rectb.top+1, 16);
+			RenderIconForceSize(pWindow->m_iconID, rectb.left+1, rectb.top+1+iconOffset, 16);
 	}
 	
 #undef X

@@ -27,8 +27,6 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 			// a la C#'s  new Bitmap(320,200);
 			Image *pImage = BitmapAllocate(MAGWID, MAGHEI, 0x00FFFFFF);
 			
-			((uint32_t*)pImage->framebuffer)[5] = 0x112233;
-			
 			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_ZOOM);
 			
 			ImageCtlZoomToFill(pWindow, 1000);

@@ -380,13 +380,20 @@ void KillFont (int fontID)
 					//TODO OPTIMIZE! :)
 					uint8_t  c = pFont->m_bitmap[ys + xs];
 					
-					if (trans) colorBg = VidReadPixelEx(ox+xi, oy+yi);
-					
-					uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;
-					uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;
-					uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;
-					//VidPlotPixel (ox + xi, oy + yi, ro<<16|go<<8|bo<<0);
-					VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);
+					if (c == 255)
+					{
+						VidPlotPixel (ox+xi, oy+yi, colorFg);
+					}
+					else
+					{
+						if (trans) colorBg = VidReadPixelEx(ox+xi, oy+yi);
+						
+						uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;
+						uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;
+						uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;
+						//VidPlotPixel (ox + xi, oy + yi, ro<<16|go<<8|bo<<0);
+						VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);
+					}
 				}
 			}
 			

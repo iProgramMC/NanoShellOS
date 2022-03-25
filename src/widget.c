@@ -2890,9 +2890,6 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 			
 			VidSetClipRect(&this->m_rect);
 			
-			if (!parm2)
-				VidFillRectangle(0x3f0000, this->m_rect);
-			
 			Image *pImage = (Image*)this->m_imageCtlData.pImage;
 			if (pImage)
 			{
@@ -2926,16 +2923,32 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 				
 				if (x <= this->m_rect.right && y <= this->m_rect.bottom && x + width >= this->m_rect.left && y + height >= this->m_rect.top)
 				{
+					if (GetWidth(&this->m_rect) > this->m_imageCtlData.nZoomedWidth)
+					{
+						VidFillRectangle(0x3f0000, this->m_rect);
+					}
 					if (ogSize)
 						VidBlitImage (pImage, x, y);
 					else
 						VidBlitImageResize(pImage, x, y, width, height);
 				}
-				else 
+				else
+				{
+					if (!parm2)
+					{
+						VidFillRectangle(0x3f0000, this->m_rect);
+					}
 					VidDrawText ("(Out of View)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
+				}
 			}
 			else
+			{
+				if (!parm2)
+				{
+					VidFillRectangle(0x3f0000, this->m_rect);
+				}
 				VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
+			}
 			
 			VidSetClipRect(NULL);
 			

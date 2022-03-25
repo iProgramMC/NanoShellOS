@@ -64,6 +64,7 @@ void fmemcpy128 (void* restrict dest, const void* restrict src, int size) {
 		size -= 16;
 	}
 }
+
 void* memmove(void* restrict dstptr, const void* restrict srcptr, size_t size)
 {
 	BYTE* dst = (BYTE*) dstptr;

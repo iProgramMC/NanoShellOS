@@ -31,6 +31,8 @@ char* strdup (const char* pText);//! Make sure to free this.
 void fast_memcpy(void* restrict dest, const void* restrict src, int size);//aligns to 32 bytes!!
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
 
+void memcpy_128_byte_aligned(void* restrict dest, const void* restrict src, int num_bytes);//Source/Dest - 16-byte aligned, count- 128 byte aligned!
+void memcpy_16_byte_aligned(void* restrict dest, const void* restrict src, int num_bytes);//Everything is 16 byte aligned
 void memset_ints(void* restrict dest, uint32_t src, int num_ints);
 void memcpy_ints(void* restrict dest, const void* restrict src, int num_ints);
 void memset_shorts(void* restrict dest, uint32_t src, int num_shorts);

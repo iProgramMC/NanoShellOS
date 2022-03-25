@@ -658,7 +658,10 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "export") == 0)
 	{
 		char *parms = state.m_pContinuation;
-		CfgLoadFromParms (parms);
+		if (!parms)
+			LogMsg("No parms provided");
+		else
+			CfgLoadFromParms (parms);
 	}
 	else if (strcmp (token, "kill") == 0)
 	{

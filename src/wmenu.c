@@ -287,7 +287,7 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 		newYPos = GetScreenHeight() - GetMenuHeight(pRoot);
 	
 	//Create a new window
-	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ | WF_FLATBORD);
+	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ);// | WF_FLATBORD);
 	cli;
 	pMenuWnd->m_bWindowManagerUpdated = true;
 	pMenuWnd->m_data = pRoot;

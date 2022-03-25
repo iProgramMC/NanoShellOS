@@ -6,6 +6,7 @@
 ******************************************/
 #include <main.h>
 #include <video.h>
+#include <string.h>
 #include <image.h>
 #include <memory.h>
 
@@ -113,7 +114,7 @@ Image *BitmapAllocate(int width, int height, uint32_t default_color)
 	uint32_t to_size = fb_size + sizeof (Image);
 	
 	Image *pImage = MmAllocate(to_size);
-	pImage->framebuffer = ((uint8_t*)pImage + sizeof *pImage);
+	pImage->framebuffer = (const uint32_t*)((uint8_t*)pImage + sizeof *pImage);
 	pImage->width       = width;
 	pImage->height      = height;
 	
