@@ -26,6 +26,9 @@ typedef struct MenuEntry
 }
 WindowMenu;
 
+int GetMenuWidth  (WindowMenu* pMenu);
+int GetMenuHeight (WindowMenu* pMenu);
+
 Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int x, int y);
 void ConvertMenuBarToWindowMenu(WindowMenu* pMenuOut, MenuBarTreeItem* pTreeItem, int controlComboID);
 void MenuRecursivelyFreeEntries(WindowMenu* pMenu);

@@ -47,27 +47,6 @@ extern void KeTaskDone();
 
 #define UNUSED __attribute__((unused))
 
-#ifdef MULTITASKED_WINDOW_MANAGER
-
-#define ACQUIRE_LOCK(lock_var) do {\
-	while (lock_var) {\
-		KeTaskDone(); \
-	}\
-	lock_var = 1;\
-} while (0)
-
-#define FREE_LOCK(lock_var) do {\
-	if (lock_var == 0)\
-		SLogMsg("warning: attempted to release not-acquired lock at " __FILE__ ":%d", __LINE__);\
-	lock_var = 0;\
-} while (0);
-
-#else
-	
-#define ACQUIRE_LOCK(var) do {} while(0)
-#define FREE_LOCK(var) do {} while(0)
-
-#endif
 
 extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);

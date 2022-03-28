@@ -86,6 +86,8 @@ typedef struct
 	const uint8_t* m_pFontContext;
 	
 	char 		   m_tag[33];
+	
+	int            m_reviveAt;
 }
 Task;
 
@@ -165,5 +167,14 @@ void KeTaskDebugDump();
     Kills a task by process index.
 ***********************************************************/
 void KeKillThreadByPID (int proc);
+
+typedef struct
+{
+	bool  m_held;
+	void* m_task_owning_it;
+}
+SafeLock;
+void LockAcquire (SafeLock *pLock);
+void LockFree (SafeLock *pLock);
 
 #endif//_TASK_H

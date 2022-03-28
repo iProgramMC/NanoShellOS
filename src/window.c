@@ -189,7 +189,7 @@ void ThmLoadFont(ConfigEntry *pEntry)
 	*pBmp = ThmLoadEntireFile (pBmpPath->value, &sizeof_bmp),
 	*pFnt = ThmLoadEntireFile (pFntPath->value, &sizeof_fnt);
 	
-	int font_id = CreateFont (pFnt, pBmp, nBmpSize, nBmpSize, nChrHeit);
+	int font_id = CreateFont ((char*)pFnt, pBmp, nBmpSize, nBmpSize, nChrHeit);
 	if (bSysFont)
 		SetThemingParameter (P_SYSTEM_FONT, font_id);
 	if (bTibFont)
@@ -664,13 +664,14 @@ bool g_windowManagerRunning = false;
 
 extern ClickInfo g_clickQueue [CLICK_INFO_MAX];
 extern int       g_clickQueueSize;
-extern bool      g_clickQueueLock;
+extern SafeLock  g_ClickQueueLock;
 
-bool g_windowLock = false;
-bool g_screenLock = false;
-bool g_bufferLock = false;
-bool g_createLock = false;
-bool g_backgdLock = false;
+SafeLock
+g_WindowLock, 
+g_ScreenLock, 
+g_BufferLock, 
+g_CreateLock, 
+g_BackgdLock; 
 
 bool g_shutdownSentDestroySignals = false;
 bool g_shutdownWaiting 			  = false;
@@ -888,8 +889,8 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 {
 	//ACQUIRE_LOCK (pWindow->m_eventQueueLock);
 	
-	int queue_timeout = 100000;
-	while (pWindow->m_eventQueueLock)
+	int queue_timeout = 10000;
+	while (pWindow->m_EventQueueLock.m_held)
 	{
 		queue_timeout--;
 		KeTaskDone();
@@ -904,11 +905,11 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 		}
 	}
 	
-	pWindow->m_eventQueueLock = true;
+	LockAcquire (&pWindow->m_EventQueueLock);
 	
 	WindowRegisterEventUnsafe (pWindow, eventType, parm1, parm2);
 	
-	FREE_LOCK (pWindow->m_eventQueueLock);
+	LockFree (&pWindow->m_EventQueueLock);
 }
 #endif
 
@@ -950,12 +951,12 @@ void UndrawWindow (Window* pWindow)
 	
 	UpdateDepthBuffer();
 	
-	ACQUIRE_LOCK(g_backgdLock);
+	LockAcquire (&g_BackgdLock);
 	
 	//redraw the background and all the things underneath:
 	RedrawBackground(pWindow->m_rect);
 	
-	FREE_LOCK(g_backgdLock);
+	LockFree (&g_BackgdLock);
 	
 	// draw the windows below it
 	int sz=0; Window* windowDrawList[WINDOWS_MAX];
@@ -1275,7 +1276,7 @@ int g_NewWindowX = 10, g_NewWindowY = 10;
 
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
-	ACQUIRE_LOCK(g_createLock);
+	LockAcquire (&g_CreateLock);
 	
 	if (xSize > GetScreenWidth())
 		xSize = GetScreenWidth();
@@ -1330,15 +1331,16 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_minimized      = false;
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
-	pWnd->m_eventQueueLock = false;
 	pWnd->m_flags          = flags;// | WF_FLATBORD;
+	
+	pWnd->m_EventQueueLock.m_held = false;
+	pWnd->m_EventQueueLock.m_task_owning_it = NULL;
 	
 	pWnd->m_rect.left = xPos;
 	pWnd->m_rect.top  = yPos;
 	pWnd->m_rect.right  = xPos + xSize;
 	pWnd->m_rect.bottom = yPos + ySize;
 	pWnd->m_eventQueueSize = 0;
-	pWnd->m_eventQueueLock = false;
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 
 	
@@ -1350,6 +1352,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	{
 		LogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		pWnd->m_used = false;
+		LockFree (&g_CreateLock);
 		return NULL;
 	}
 	ZeroMemory (pWnd->m_vbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
@@ -1375,6 +1378,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		LogMsg("Couldn't allocate pControlArray for window, out of memory!");
 		MmFreeK(pWnd->m_vbeData.m_framebuffer32);
 		pWnd->m_used = false;
+		LockFree (&g_CreateLock);
 		return NULL;
 	}
 	
@@ -1384,7 +1388,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	UseHeap (pHeapBackup);
 	
-	FREE_LOCK(g_createLock);
+	LockFree (&g_CreateLock);
 	return pWnd;
 }
 #endif 
@@ -1918,7 +1922,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			if (!pWindow->m_hidden)
 			{
 				//cli;
-				if (pWindow->m_renderFinished && !g_backgdLock)
+				if (pWindow->m_renderFinished && !g_BackgdLock.m_held)
 				{
 					if (!hasRedrawnThem)
 					{
@@ -1982,7 +1986,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		}
 		UpdateAltTabWindow();
 		//cli;
-		ACQUIRE_LOCK (g_clickQueueLock);
+		LockAcquire (&g_ClickQueueLock);
 		
 		RefreshMouse();
 		//ACQUIRE_LOCK (g_screenLock);
@@ -1999,7 +2003,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		}
 		g_clickQueueSize = 0;
 		//FREE_LOCK (g_screenLock);
-		FREE_LOCK (g_clickQueueLock);
+		LockFree (&g_ClickQueueLock);
 		//sti;
 		
 		timeout--;
@@ -2224,7 +2228,7 @@ void RemoveControl (Window* pWindow, int controlIndex)
 {
 	if (controlIndex >= pWindow->m_controlArrayLen || controlIndex < 0) return;
 	
-	ACQUIRE_LOCK(pWindow->m_eventQueueLock);
+	LockAcquire(&pWindow->m_EventQueueLock);
 	Control* pControl = &pWindow->m_pControlArray[controlIndex];
 	if (pControl->m_dataPtr)
 	{
@@ -2234,7 +2238,7 @@ void RemoveControl (Window* pWindow, int controlIndex)
 	pControl->m_bMarkedForDeletion = false;
 	pControl->OnEvent = NULL;
 	
-	FREE_LOCK(pWindow->m_eventQueueLock);
+	LockFree(&pWindow->m_EventQueueLock);
 }
 
 void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
@@ -2854,7 +2858,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		pWindow->m_eventQueueSize = 0;
 		
-		FREE_LOCK (pWindow->m_eventQueueLock);
+		LockFree (&pWindow->m_EventQueueLock);
 		KeTaskDone();
 		
 		NukeWindow(pWindow);
@@ -2867,7 +2871,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 bool HandleMessages(Window* pWindow)
 {
 	// grab the lock
-	ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+	LockAcquire (&pWindow->m_EventQueueLock);
 	
 	// While we have events in the master queue...
 	int et = 0, p1 = 0, p2 = 0;
@@ -2904,7 +2908,7 @@ bool HandleMessages(Window* pWindow)
 		}
 	}
 	
-	FREE_LOCK (pWindow->m_eventQueueLock);
+	LockFree (&pWindow->m_EventQueueLock);
 	KeTaskDone();//hlt; //give it a good halt
 	return true;
 }

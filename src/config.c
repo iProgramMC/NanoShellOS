@@ -107,7 +107,7 @@ void CfgLoadFromTextBasic(char* work)
     TokenState state;
     memset (&state, 0, sizeof state);
 
-    char namesp[32]; uint32_t namesp_hash = 0;
+    char namesp[32];
     namesp[0] = 0;
 
     char *p = Tokenize (&state, work, "\n");

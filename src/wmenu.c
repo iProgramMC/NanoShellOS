@@ -59,7 +59,7 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 {
 	return 200;
 }
-int GetMenuHeight (UNUSED WindowMenu* pMenu)
+int GetMenuHeight (WindowMenu* pMenu)
 {
 	int haute = (MENU_ITEM_HEIGHT + 6);//(pMenu->bHasIcons ? 6 : 0));
 	return 3 + 

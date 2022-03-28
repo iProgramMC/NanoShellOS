@@ -38,15 +38,15 @@ void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, i
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
 {
 	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
+	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
+	if  (wnLock) LockFree (&g_WindowLock);
+	if  (scLock) LockFree (&g_ScreenLock);
 	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+		eqLock = pWindow->m_EventQueueLock.m_held;
+		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
 	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
@@ -306,10 +306,10 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	// Re-acquire the locks that have been freed before.
 	if (pWindow)
 	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
 	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
+	if (wnLock) LockAcquire (&g_WindowLock);
+	if (scLock) LockAcquire (&g_ScreenLock);
 	return dataReturned;
 }
 
@@ -335,7 +335,11 @@ void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int p
 			if (!pText)
 				pWindow->m_data = FNULL;
 			else
-				pWindow->m_data = strdup(pText);
+			{
+				size_t len = strlen (pText);
+				pWindow->m_data = MmAllocateK(len + 1);
+				strcpy (pWindow->m_data, pText);
+			}
 		}
 	}
 	else if (messageType == EVENT_CREATE)
@@ -381,15 +385,15 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	
 	
 	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
+	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
+	if  (wnLock) LockFree (&g_WindowLock);
+	if  (scLock) LockFree (&g_ScreenLock);
 	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+		eqLock = pWindow->m_EventQueueLock.m_held;
+		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
 	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
@@ -474,10 +478,10 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	// Re-acquire the locks that have been freed before.
 	if (pWindow)
 	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
 	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
+	if (wnLock) LockAcquire (&g_WindowLock);
+	if (scLock) LockAcquire (&g_ScreenLock);
 	if (dataReturned == FNULL) dataReturned = NULL;
 	return dataReturned;
 }
@@ -490,15 +494,15 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* data)
 {
 	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
+	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
+	if  (wnLock) LockFree (&g_WindowLock);
+	if  (scLock) LockFree (&g_ScreenLock);
 	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+		eqLock = pWindow->m_EventQueueLock.m_held;
+		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
 	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
@@ -550,10 +554,10 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 	// Re-acquire the locks that have been freed before.
 	if (pWindow)
 	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
 	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
+	if (wnLock) LockAcquire (&g_WindowLock);
+	if (scLock) LockAcquire (&g_ScreenLock);
 }
 
 void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
@@ -662,15 +666,15 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 	
 	
 	// Free the locks that have been acquired.
-	bool wnLock = g_windowLock, scLock = g_screenLock, eqLock = false;
-	if  (wnLock) FREE_LOCK (g_windowLock);
-	if  (scLock) FREE_LOCK (g_screenLock);
+	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
+	if  (wnLock) LockFree (&g_WindowLock);
+	if  (scLock) LockFree (&g_ScreenLock);
 	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_eventQueueLock;
-		if (eqLock) FREE_LOCK (pWindow->m_eventQueueLock);
+		eqLock = pWindow->m_EventQueueLock.m_held;
+		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
 	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
@@ -784,10 +788,10 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 	// Re-acquire the locks that have been freed before.
 	if (pWindow)
 	{
-		if (eqLock) ACQUIRE_LOCK (pWindow->m_eventQueueLock);
+		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
 	}
-	if (wnLock) ACQUIRE_LOCK (g_windowLock);
-	if (scLock) ACQUIRE_LOCK (g_screenLock);
+	if (wnLock) LockAcquire (&g_WindowLock);
+	if (scLock) LockAcquire (&g_ScreenLock);
 	return dataReturned;
 }
 

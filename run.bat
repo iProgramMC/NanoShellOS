@@ -7,7 +7,7 @@ set NSPath=%CD%
 cd /d c:\Program Files\qemu
 set path=%path%;%NSPath%
 
-qemu-system-i386.exe -d cpu_reset -m 16M -boot d -cdrom %nspath%\build\image.iso -hda %nspath%\vdisk.vdi -debugcon stdio -display sdl -soundhw pcspk -accel tcg
+qemu-system-i386.exe -d cpu_reset -m 64M -boot d -cdrom %nspath%\build\image.iso -hda %nspath%\vdisk.vdi -debugcon stdio -display sdl -soundhw pcspk -accel tcg
 : -kernel %nspath%/kernel.bin 
 : -debugcon stdio
 : -monitor telnet:127.0.0.1:55555,server,nowait

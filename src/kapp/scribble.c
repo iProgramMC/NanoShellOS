@@ -6,6 +6,7 @@
 ******************************************/
 
 #include <wbuiltin.h>
+#include <image.h>
 
 #define DEF_SCRIB_WID 500
 #define DEF_SCRIB_HEI 400

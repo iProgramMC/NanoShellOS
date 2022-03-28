@@ -185,7 +185,7 @@ char KbGetKeyFromBuffer()
 	else return 0;
 }
 
-
+void WinAddToInputQueue (Window* this, char input);
 void KbAddRawKeyToBuffer(char key)
 {
 	if (!key) return;

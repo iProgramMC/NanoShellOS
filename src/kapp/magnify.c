@@ -6,6 +6,7 @@
 ******************************************/
 
 #include <wbuiltin.h>
+#include <image.h>
 
 #define MAGSCALE 2
 
@@ -15,6 +16,7 @@
 #define DEF_MAGNIFY_WID (MAGWID*MAGSCALE+6)
 #define DEF_MAGNIFY_HEI (MAGHEI*MAGSCALE+6 + TITLE_BAR_HEIGHT)
 
+unsigned VidReadPixelU (unsigned x, unsigned y);
 void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -42,15 +44,7 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 			bool bUpdated = false;
 			Point p = GetMousePos();
 			
-			int oldpx = GET_X_PARM((int)pWindow->m_data);
-			int oldpy = GET_Y_PARM((int)pWindow->m_data);
-			
-			/*if (oldpx != p.x || oldpy != p.y)
-				bUpdated = true;*/
-			
 			pWindow->m_data = (void*)(MAKE_MOUSE_PARM(p.x, p.y));
-			
-			//if (!bUpdated) break;
 			
 			// Paint
 			int xp = p.x - MAGWID / 2;
@@ -63,7 +57,7 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 				xp = p.x - MAGWID / 2;
 				for (int x = 0; x < MAGWID; x++)
 				{
-					register uint32_t px = VidReadPixelU(xp, yp);
+					uint32_t px = VidReadPixelU(xp, yp);
 					
 					if (!bUpdated)
 					{

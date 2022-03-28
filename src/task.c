@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <string.h>
 #include <print.h>
+#include <misc.h>
 
 // The kernel task is task 0.  Other tasks are 1-indexed.
 // This means g_runningTasks[0] is unused.
@@ -236,6 +237,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_authorFile = NULL;
 		pTask->m_authorFunc = NULL;
 		pTask->m_authorLine = 0;
+		pTask->m_reviveAt   = 0;
 		pTask->m_argument   = 0;
 		pTask->m_featuresArgs = false;
 		pTask->m_bMarkedForDeletion = false;
@@ -365,6 +367,8 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		}
 	}
 	
+	int g_tick_count = GetTickCount();
+	
 	Task* pNewTask = NULL;
 	if (g_forceKernelTaskToRunNext)
 	{
@@ -378,7 +382,11 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		for (; i < task; i++)
 		{
 			if (g_runningTasks[i].m_bExists)
-				break;
+			{
+				// Is the task scheduled to come back online?
+				if (g_runningTasks[i].m_reviveAt < g_tick_count)
+					break;
+			}
 		}
 		
 		if (i < task)
@@ -387,7 +395,10 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 			s_currentRunningTask = i;
 		}
 		else
+		{
+			//kernel task will always come back no matter what
 			s_currentRunningTask = -1;
+		}
 	}
 	
 	if (pNewTask)
@@ -411,5 +422,42 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		UseHeap (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}
+}
+
+void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
+{
+	while (true)
+	{
+		// Clear interrupts: we need the following to be atomic
+		cli;
+		
+		// If the lock's value is false (i.e. it has been freed) then we can grab it.
+		if (pLock->m_held == false)
+		{
+			// So grab it.
+			pLock->m_held = true;
+			pLock->m_task_owning_it = KeGetRunningTask ();
+			sti;
+			return;
+		}
+		
+		// Restore interrupts and let other threads run
+		sti;
+		KeTaskDone();
+	}
+}
+
+void LockFree (SafeLock *pLock)
+{
+	if (pLock->m_task_owning_it == KeGetRunningTask())
+	{
+		// The lock is ours: free it
+		cli;
+		pLock->m_task_owning_it =  NULL;
+		pLock->m_held = false;
+		sti;
+	}
+	else
+		SLogMsg("Cannot release lock %x held by task %x as task %x", pLock, pLock->m_task_owning_it, KeGetRunningTask ());
 }
 

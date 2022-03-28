@@ -444,7 +444,7 @@ typedef struct WindowStruct
 	
 	int        m_iconID;
 	
-	bool       m_eventQueueLock;
+	bool       m_eventQueueLockUnused; // left to keep compatibity with old ELFs that modify the window structure directly
 	short      m_eventQueue[EVENT_QUEUE_MAX];
 	int        m_eventQueueParm1[EVENT_QUEUE_MAX];
 	int        m_eventQueueParm2[EVENT_QUEUE_MAX];
@@ -475,6 +475,8 @@ typedef struct WindowStruct
 	int        m_inputBufferBeg, m_inputBufferEnd;
 	
 	bool       m_clickedInside;
+	
+	SafeLock   m_EventQueueLock;
 } Window;
 
 /**

@@ -506,6 +506,18 @@ void LauncherEntry(__attribute__((unused)) int arg)
 
 #endif
 
+// Taskbar widget
+#if 1
+
+bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	//switch (
+	
+	return false;
+}
+
+#endif
+
 // Taskbar
 #if 1
 

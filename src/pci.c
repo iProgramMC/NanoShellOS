@@ -6,6 +6,7 @@
 ******************************************/
 #include <main.h>
 #include <string.h>
+#include <print.h>
 #include <pci.h>
 
 //NOTE: The PCI driver will only use access mechanism #1 (ports 0xcf8 and 0xcfc)

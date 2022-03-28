@@ -111,7 +111,6 @@ bool CoPrintCharInternal (Console* this, char c, char next);
 char g_cwd[PATH_MAX+1];
 FileNode* g_pCwdNode = NULL;
 
-
 void funnytest(UNUSED int argument)
 {
 	FileNode* pNode = g_pCwdNode;
@@ -820,7 +819,6 @@ void ShellExecuteCommand(char* p)
 			KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
 		}
 		LogMsg("Tasks have been spawned.");
-		//LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
 	}
 	else if (strcmp (token, "tte") == 0)
 	{

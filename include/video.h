@@ -380,5 +380,19 @@ void OnUpdateMouse (uint8_t flags, uint8_t dx, uint8_t dy, uint8_t dz);
  */
 const char* VidGetFontName(unsigned fontType);
 
+/**
+ * Creates a BMfont based font.  Please note that pFntFileData should be disposable (i.e. modifiable
+ * by the function). Some example code you can use in order to avoid accidentally overwriting data:
+ 
+	char *pFntCopy = strdup (pFnt);
+	int font = CreateFont (pFntCopy, pBmp, imWidth, imHeight, chHeight);
+	MmFree(pFntCopy);
+ */
+int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight);
+
+/**
+ * Kills a CreateFont() created font.  Other fonts cannot be killed.
+ */
+void KillFont (int fontID);
 
 #endif//_VIDEO_H

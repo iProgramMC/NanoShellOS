@@ -10,23 +10,24 @@
 #include <memory.h>
 #include <string.h>
 #include <icon.h>
+#include <task.h>
 
 // Basic definitions for video
 #if 1
-bool g_isVideoMode = false;
-uint32_t g_framebufferPhysical = 0;
-
-extern uint32_t *g_curPageDir;
 
 //! TODO: if planning to extend this beyond 1920x1080x32, extend THIS variable.
 #define MAX_VIDEO_PAGES 2048
 #define FRAMEBUFFER_MAPPED_ADDR 0xE0000000
-uint32_t g_vbePageEntries[MAX_VIDEO_PAGES] __attribute__((aligned(4096))); 
+
+uint32_t  g_vbePageEntries[MAX_VIDEO_PAGES] __attribute__((aligned(4096))); 
 uint32_t* g_framebufferCopy = NULL;
 
-VBEData g_mainScreenVBEData;
+bool      g_isVideoMode = false;
+uint32_t  g_framebufferPhysical = 0;
 
-VBEData* g_vbeData = NULL;
+extern uint32_t *g_curPageDir;
+
+VBEData* g_vbeData = NULL, g_mainScreenVBEData;
 #endif
 
 extern bool g_RenderWindowContents;
@@ -60,7 +61,7 @@ static void VidPlotPixelIgnoreCursorChecksChecked(unsigned x, unsigned y, unsign
 //Click queue to handle clicks later (window manager)
 ClickInfo g_clickQueue [CLICK_INFO_MAX];
 int       g_clickQueueSize = 0;
-bool      g_clickQueueLock = false;
+SafeLock  g_ClickQueueLock;
 
 typedef struct
 {
@@ -121,7 +122,7 @@ void RefreshMouse()
 
 void AddClickInfoToQueue(const ClickInfo* info)
 {
-	ACQUIRE_LOCK (g_clickQueueLock);
+	LockAcquire (&g_ClickQueueLock);
 	
 	if (g_clickQueueSize >= CLICK_INFO_MAX)
 	{
@@ -130,7 +131,7 @@ void AddClickInfoToQueue(const ClickInfo* info)
 	}
 	g_clickQueue[g_clickQueueSize++] = *info;
 	
-	FREE_LOCK (g_clickQueueLock);
+	LockFree (&g_ClickQueueLock);
 }
 void OnLeftClick()
 {
@@ -201,13 +202,10 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 			OnLeftClick();
 		else
 			OnLeftClickDrag();
-		
-		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	else if (g_previousFlags & MOUSE_FLAG_L_BUTTON)
 	{
 		OnLeftClickRelease();
-		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	
 	// Right click
@@ -217,13 +215,10 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 			OnRightClick();
 		else
 			OnRightClickDrag();
-		
-		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	else if (g_previousFlags & MOUSE_FLAG_R_BUTTON)
 	{
 		OnRightClickRelease();
-		ForceKernelTaskToRunNext (); //window manager likes this
 	}
 	
 	g_previousFlags = flags & 7;
@@ -804,8 +799,8 @@ void VidSetClipRect(Rectangle *pRect)
 		
 		if (g_vbeData->m_clipRect.left   < 0) g_vbeData->m_clipRect.left   = 0;
 		if (g_vbeData->m_clipRect.top    < 0) g_vbeData->m_clipRect.top    = 0;
-		if (g_vbeData->m_clipRect.right  >= g_vbeData->m_width)  g_vbeData->m_clipRect.right  = g_vbeData->m_width;
-		if (g_vbeData->m_clipRect.bottom >= g_vbeData->m_height) g_vbeData->m_clipRect.bottom = g_vbeData->m_height;
+		if (g_vbeData->m_clipRect.right  >= (int)g_vbeData->m_width)  g_vbeData->m_clipRect.right  = g_vbeData->m_width;
+		if (g_vbeData->m_clipRect.bottom >= (int)g_vbeData->m_height) g_vbeData->m_clipRect.bottom = g_vbeData->m_height;
 	}
 	else
 	{

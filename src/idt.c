@@ -99,6 +99,10 @@ void WaitMS (int ms)
 	int tickCountToStop = GetTickCount() + ms;
 	while (GetTickCount() < tickCountToStop)
 	{
+		Task* pTask = KeGetRunningTask();
+		if (pTask)
+			pTask->m_reviveAt = tickCountToStop;
+		
 		KeTaskDone();
 	}
 }
