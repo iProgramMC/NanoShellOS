@@ -30,6 +30,7 @@ typedef struct
 	
 	int  m_type;
 	char m_short_str[256];
+	int  m_blob_size;
 	
 	union {
 		int   m_int_data;
@@ -41,10 +42,13 @@ ClipboardVariant;
 
 ClipboardVariant* CbGetCurrentVariant();                // Locks the clipboard until the current variant is gotten rid of
 void              CbRelease(ClipboardVariant*);         // Releases a lock to the clipboard variant.
-void              CbPushTextIntoBuffer();               // If possible, pushes text as keyboard events.
+bool              CbPushTextIntoBuffer();               // If possible, pushes text as keyboard events.
 
 void              CbClear();                            // Clears the clipboard
 bool              CbCopyText(const char* pText);        // Copies a piece of text into the clipboard.  Will return true on success.
 bool              CbCopyBlob(void* pBlob, size_t size); // Copies a piece of data into the clipboard.  Will return true on success.
+
+void              CbDump ();                            // Dumps the clipboard
+void              CbInit ();                            // Inits the clipboard
 
 #endif

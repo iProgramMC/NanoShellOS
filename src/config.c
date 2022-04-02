@@ -5,6 +5,7 @@
         Kernel Configuration module
 ******************************************/
 #include <config.h>
+#include <task.h>
 
 uint32_t val_32_const = 0x811c9dc5u;
 uint32_t prime_32_const = 0x1000193u;
@@ -25,6 +26,8 @@ static bool IsSpace (char c)
 	return (c == '\t' || c == ' ');
 }
 
+SafeLock g_config_lock;
+
 ConfigEntry* g_config_entries = NULL;
 int          g_config_entries_count = 0;
 int          g_config_entries_max   = 512;
@@ -37,7 +40,7 @@ void CfgInitialize()
 }
 
 //Append
-ConfigEntry* CfgGetEntry(const char* key)
+ConfigEntry* CfgGetEntryUnsafe(const char* key)
 {
 	uint32_t entry_hash = HashString (key);
     int l = 0, r = g_config_entries_count;
@@ -45,7 +48,9 @@ ConfigEntry* CfgGetEntry(const char* key)
     {
         int m = (l+r) / 2;
 		if (g_config_entries[m].entry_hash == entry_hash)
+		{
 			return &g_config_entries[m];
+		}
         if (g_config_entries[m].entry_hash >  entry_hash)
         {
             r = m;
@@ -57,17 +62,27 @@ ConfigEntry* CfgGetEntry(const char* key)
     }
 	return NULL;
 }
+ConfigEntry* CfgGetEntry(const char* key)
+{
+	LockAcquire (&g_config_lock);
+	ConfigEntry *pEntry = CfgGetEntryUnsafe (key);
+	LockFree (&g_config_lock);
+	return pEntry;
+}
 ConfigEntry* CfgAddEntry(ConfigEntry *pEntry)
 {
+	LockAcquire (&g_config_lock);
 	if (g_config_entries_count >= g_config_entries_max)
 	{
 		LogMsg("Couldn't add config `%s=%s`, too many config parms already specified", pEntry->entry, pEntry->value);
+		LockFree (&g_config_lock);
 		return NULL;
 	}
-	ConfigEntry *p = CfgGetEntry (pEntry->entry);
+	ConfigEntry *p = CfgGetEntryUnsafe (pEntry->entry);
 	if (p)
 	{
 		*p = *pEntry;
+		LockFree (&g_config_lock);
 		return p;
 	}
     int l = 0, r = g_config_entries_count, spot = 0;
@@ -90,6 +105,7 @@ ConfigEntry* CfgAddEntry(ConfigEntry *pEntry)
     }
     g_config_entries[spot] = *pEntry;
     g_config_entries_count ++;
+	LockFree (&g_config_lock);
     return &g_config_entries[spot];
 }
 void CfgPrintEntries()

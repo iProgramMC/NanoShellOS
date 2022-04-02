@@ -10,10 +10,10 @@
 #include<stddef.h>
 #include<stdarg.h>
 #include<stdint.h>
+#include<stdbool.h>
 
 #define EXPERIMENTAL
 
-typedef char bool;
 typedef char byte;
 typedef char BYTE;
 typedef unsigned uint;
@@ -21,9 +21,6 @@ typedef unsigned uint;
 #define USE_SSE_FXSAVE
 
 extern void KeTaskDone();
-
-#define false 0
-#define true 1
 
 #define asm __asm__ volatile
 
@@ -36,17 +33,15 @@ extern void KeTaskDone();
 
 #define UNUSED __attribute__((unused))
 
-#define crash __asm__ volatile("int $0x10\n\t") // Int 0x10 doesn't work in pmode! Might as well make use of it.
-
 #define KERNEL_MEM_START 0xC0000000
 
-//note: needs to be used for SIZED arrays only
+//note: needs to be used for arrays only (So no pointers, otherwise that will be UB)
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(*array))
 
 #define STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 
 #define UNUSED __attribute__((unused))
-
+#define ALWAYS_INLINE __attribute__((always_inline))
 
 extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);

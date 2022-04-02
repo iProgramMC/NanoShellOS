@@ -160,7 +160,7 @@ WriteFont16px:
 	;copy 16 bytes to bitmap
 .b:	movsd
 	movsd
-    movsd
+	movsd
 	movsd
 	;skip another 16 bytes
 	add	edi, 16
@@ -284,7 +284,84 @@ UserCallStuffNotSupported:
 	MOV EAX, UserCallStuffNotSupportedC
 	JMP [EAX]
 UserCallStuffNotSupportedEnd:
-	
+
+; To facilitate 64-bit math (thanks https://github.com/llvm-mirror/compiler-rt/blob/master/lib/builtins/i386/udivdi3.S ) :
+; TODO: Re-factor this later :^)
+global __udivdi3 ; Unsigned division of two 64-bit integers
+__udivdi3:
+	push    ebx
+	mov     ebx, [esp+14h]
+	bsr     ecx, ebx
+	jz      short loc_8000087
+	mov     eax, [esp+10h]
+	shr     eax, cl
+	shr     eax, 1
+	not     ecx
+	shl     ebx, cl
+	or      ebx, eax
+	mov     edx, [esp+0Ch]
+	mov     eax, [esp+8]
+	cmp     edx, ebx
+	jnb     short loc_8000052
+	div     ebx
+	push    edi
+	not     ecx
+	shr     eax, 1
+	shr     eax, cl
+	mov     edi, eax
+	mul     dword [esp+14h]
+	mov     ebx, [esp+0Ch]
+	mov     ecx, [esp+10h]
+	sub     ebx, eax
+	sbb     ecx, edx
+	mov     eax, [esp+18h]
+	imul    eax, edi
+	sub     ecx, eax
+	sbb     edi, 0
+	xor     edx, edx
+	mov     eax, edi
+	pop     edi
+	pop     ebx
+	retn
+; ---------------------------------------------------------------------------
+
+loc_8000052:                            ; CODE XREF: .text:08000022↑j
+	sub     edx, ebx
+	div     ebx
+	push    edi
+	not     ecx
+	shr     eax, 1
+	or      eax, 80000000h
+	shr     eax, cl
+	mov     edi, eax
+	mul     dword [esp+14h]
+	mov     ebx, [esp+0Ch]
+	mov     ecx, [esp+10h]
+	sub     ebx, eax
+	sbb     ecx, edx
+	mov     eax, [esp+18h]
+	imul    eax, edi
+	sub     ecx, eax
+	sbb     edi, 0
+	xor     edx, edx
+	mov     eax, edi
+	pop     edi
+	pop     ebx
+	retn
+; ---------------------------------------------------------------------------
+
+loc_8000087:                            ; CODE XREF: .text:08000008↑j
+	mov     eax, [esp+0Ch]
+	mov     ecx, [esp+10h]
+	xor     edx, edx
+	div     ecx
+	mov     ebx, eax
+	mov     eax, [esp+8]
+	div     ecx
+	mov     edx, ebx
+	pop     ebx
+	retn
+
 section .bss
 
 ; eax=0, eax's value:
@@ -300,8 +377,3 @@ g_cpuidBrandingInfo resd 13
 
 ; eax=1, eax's value:
 g_cpuidFeatureBits resd 1
-
-
-
-
-	

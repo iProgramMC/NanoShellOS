@@ -203,3 +203,32 @@ void sprintf(char*a, const char*c, ...) {
 
 extern int g_textX, g_textY;
 
+void DumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)
+{
+	int ints = nBytes/4;
+	if (ints > 1024) ints = 1024;
+	if (ints < 4) ints = 4;
+	
+	uint32_t* pAddr = (uint32_t*)((uintptr_t)nAddr << 12);
+	uint8_t* pAddrB = (uint8_t*) ((uintptr_t)nAddr << 12);
+	for (int i = 0; i < ints; i += (8 >> as_bytes))
+	{
+		for (int j = 0; j < (8 >> as_bytes); j++)
+		{
+			if (as_bytes)
+			{
+				LogMsgNoCr("%b %b %b %b ", pAddrB[((i+j)<<2)+0], pAddrB[((i+j)<<2)+1], pAddrB[((i+j)<<2)+2], pAddrB[((i+j)<<2)+3]);
+			}
+			else
+				LogMsgNoCr("%x ", pAddr[i+j]);
+		}
+		for (int j = 0; j < (8 >> as_bytes); j++)
+		{
+			#define FIXUP(c) ((c<32||c>126)?'.':c)
+			char c1 = pAddrB[((i+j)<<2)+0], c2 = pAddrB[((i+j)<<2)+1], c3 = pAddrB[((i+j)<<2)+2], c4 = pAddrB[((i+j)<<2)+3];
+			LogMsgNoCr("%c%c%c%c", FIXUP(c1), FIXUP(c2), FIXUP(c3), FIXUP(c4));
+		}
+		LogMsg("");
+	}
+}
+

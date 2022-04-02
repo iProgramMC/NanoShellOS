@@ -24,6 +24,7 @@
 #include <fat.h>
 #include <pci.h>
 #include <config.h>
+#include <clip.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -160,7 +161,8 @@ void ShellExecuteCommand(char* p)
 		LogMsg("el           - prints the last returned value from an executed ELF");
 		LogMsg("help         - shows this list");
 		LogMsg("gt           - run a graphical test");
-		LogMsg("kill <pid>   - list memory allocations");
+		LogMsg("kill <pid>   - kill a thread with an id");
+		LogMsg("lc           - list clipboard contents");
 		LogMsg("lm           - list memory allocations");
 		LogMsg("lr           - list the memory ranges provided by the bootloader");
 		LogMsg("ls           - list the current working directory (right now just /)");
@@ -733,31 +735,8 @@ void ShellExecuteCommand(char* p)
 		int nAddr = atoi (secNum);
 		int nBytes= atoi (nBytesS);
 		
-		int ints = nBytes/4;
-		if (ints > 1024) ints = 1024;
-		if (ints < 4) ints = 4;
+		DumpBytesAsHex ((void*)nAddr, nBytes, as_bytes);
 		
-		uint32_t* pAddr = (uint32_t*)(nAddr << 12);
-		uint8_t* pAddrB = (uint8_t*) (nAddr << 12);
-		for (int i = 0; i < ints; i += (8 >> as_bytes))
-		{
-			for (int j = 0; j < (8 >> as_bytes); j++)
-			{
-				if (as_bytes)
-				{
-					LogMsgNoCr("%b %b %b %b ", pAddrB[((i+j)<<2)+0], pAddrB[((i+j)<<2)+1], pAddrB[((i+j)<<2)+2], pAddrB[((i+j)<<2)+3]);
-				}
-				else
-					LogMsgNoCr("%x ", pAddr[i+j]);
-			}
-			for (int j = 0; j < (8 >> as_bytes); j++)
-			{
-				#define FIXUP(c) ((c<32||c>126)?'.':c)
-				char c1 = pAddrB[((i+j)<<2)+0], c2 = pAddrB[((i+j)<<2)+1], c3 = pAddrB[((i+j)<<2)+2], c4 = pAddrB[((i+j)<<2)+3];
-				LogMsgNoCr("%c%c%c%c", FIXUP(c1), FIXUP(c2), FIXUP(c3), FIXUP(c4));
-			}
-			LogMsg("");
-		}
 		goto dont_print_usage;
 	print_usage:
 		LogMsg("Virtual Memory Spy (TM)");
@@ -775,6 +754,12 @@ void ShellExecuteCommand(char* p)
 		CoClearScreen (g_currentConsole);
 		g_currentConsole->curX = g_currentConsole->curY = 0;
 	}
+	else if (strcmp (token, "sb") == 0)
+	{
+		SbSoundVolumeMaster(255);
+		SbSoundVolume (0, 255);
+		SbSoundNote (0, 5, 1);
+	}
 	else if (strcmp (token, "ver") == 0)
 	{
 		KePrintSystemVersion();
@@ -786,6 +771,14 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "lm") == 0)
 	{
 		MmDebugDump();
+	}
+	else if (strcmp (token, "lc") == 0)
+	{
+		CbDump();
+	}
+	else if (strcmp (token, "tc") == 0)
+	{
+		CbCopyText("Hello, world!");
 	}
 	else if (strcmp (token, "lp") == 0)
 	{

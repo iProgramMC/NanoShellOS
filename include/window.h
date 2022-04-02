@@ -145,6 +145,7 @@ enum {
 	EVENT_IMAGE_REFRESH,
 	EVENT_RIGHTCLICK,
 	EVENT_RIGHTCLICKRELEASE,
+	EVENT_CHECKBOX,
 	EVENT_MAX
 };
 
@@ -371,6 +372,7 @@ typedef struct ControlStruct
 	void*     m_dataPtr;
 	Rectangle m_rect;
 	bool      m_bMarkedForDeletion;
+	bool      m_bFocused;
 	
 	//data for controls:
 	union
@@ -590,6 +592,16 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
  * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
  */
 char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
+
+/**
+ * Pops up a modal dialog box requesting a file name, and returns a MmAllocate'd
+ * region of memory with the text inside.  Make sure to free the result, if it's non-null.
+ *
+ * Returns NULL if the user clicks "Cancel".
+ *
+ * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
+ */
+char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 
 /**
  * Allows the user to select a color.  Returns 0xffffffff if they did not pick.

@@ -7,6 +7,7 @@
 #include <keyboard.h>
 #include <string.h>
 #include <window.h>
+#include <clip.h>
 
 
 #define inb(a) ReadPort(a)
@@ -459,6 +460,11 @@ void IrqKeyboard(UNUSED int e[50])
 			
 			keyboardState[kc] = KEY_PRESSED;
 			KbAddKeyToBuffer(KbMapAtCodeToChar(kc));
+		}
+		
+		if (keycode == (SCANCODE_RELEASE | KEY_F12))
+		{
+			CbPushTextIntoBuffer();
 		}
 		
 		if (g_virtualMouseEnabled && VidIsAvailable() && !g_ps2MouseAvail)

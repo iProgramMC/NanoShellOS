@@ -185,4 +185,9 @@ Image* GetImageCtlCurrentImage (Window *pWindow, int comboID);
  */
 void ImageCtlZoomToFill (Window *pWindow, int comboID);
 
+/**
+ * Sets the focused control to the one with this comboid.
+ */
+void SetFocusedControl(Window *pWindow, int comboId);
+
 #endif//_WIDGET_H

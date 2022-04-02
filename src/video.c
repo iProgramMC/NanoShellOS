@@ -122,16 +122,12 @@ void RefreshMouse()
 
 void AddClickInfoToQueue(const ClickInfo* info)
 {
-	LockAcquire (&g_ClickQueueLock);
-	
 	if (g_clickQueueSize >= CLICK_INFO_MAX)
 	{
 		//only handle the next clicks now
 		g_clickQueueSize = 0;
 	}
 	g_clickQueue[g_clickQueueSize++] = *info;
-	
-	LockFree (&g_ClickQueueLock);
 }
 void OnLeftClick()
 {

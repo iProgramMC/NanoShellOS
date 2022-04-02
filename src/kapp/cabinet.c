@@ -69,6 +69,45 @@ void CabinetMountRamDisk(Window *pwnd, const char *pfn)
 	}
 }
 
+IconType CabGetIconBasedOnName(const char *pName, int pType)
+{
+	IconType icon = ICON_FILE;
+	if (pType & FILE_TYPE_MOUNTPOINT)
+	{
+		icon = ICON_HARD_DRIVE; //- or ICON_DEVICE_BLOCK
+	}
+	else if (pType & FILE_TYPE_DIRECTORY)
+	{
+		icon = ICON_FOLDER;
+	}
+	else if (pType == FILE_TYPE_CHAR_DEVICE)
+	{
+		icon = ICON_DEVICE_CHAR; //TODO
+	}
+	else if (EndsWith (pName, ".nse"))
+	{
+		//icon = ICON_EXECUTE_FILE;
+		icon = ICON_APPLICATION;
+	}
+	else if (EndsWith (pName, ".c"))
+	{
+		icon = ICON_FILE_CSCRIPT;
+	}
+	else if (EndsWith (pName, ".txt"))
+	{
+		icon = ICON_TEXT_FILE;
+	}
+	else if (EndsWith (pName, ".md"))
+	{
+		icon = ICON_FILE_MKDOWN;
+	}
+	else if (EndsWith (pName, ".tar") || EndsWith (pName, ".mrd"))
+	{
+		icon = ICON_TAR_ARCHIVE;//ICON_CABINET_COMBINE;
+	}
+	return icon;
+}
+
 void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
@@ -84,7 +123,7 @@ reset:
 	
 	if (!FsOpenDir(pFolderNode))
 	{
-		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", ICON_ERROR | ICON_WARNING << 16);
+		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
 		strcpy (g_cabinetCWD, "/");
 		goto reset;
 	}
@@ -99,43 +138,17 @@ reset:
 		}
 		else
 		{
-			IconType icon = ICON_FILE;
-			if (pNode->m_type & FILE_TYPE_MOUNTPOINT)
-			{
-				icon = ICON_CHAIN; //TODO
-			}
-			else if (pNode->m_type & FILE_TYPE_DIRECTORY)
-			{
-				icon = ICON_FOLDER;
-			}
-			else if (pNode->m_type == FILE_TYPE_CHAR_DEVICE)
-			{
-				icon = ICON_CHAIN; //TODO
-			}
-			else if (EndsWith (pNode->m_name, ".nse"))
-			{
-				icon = ICON_EXECUTE_FILE;
-			}
-			else if (EndsWith (pNode->m_name, ".c"))
-			{
-				icon = ICON_FILE_CSCRIPT;
-			}
-			else if (EndsWith (pNode->m_name, ".txt"))
-			{
-				icon = ICON_TEXT_FILE;
-			}
-			else if (EndsWith (pNode->m_name, ".md"))
-			{
-				icon = ICON_FILE_MKDOWN;
-			}
-			else if (EndsWith (pNode->m_name, ".tar") || EndsWith (pNode->m_name, ".mrd"))
-			{
-				icon = ICON_TAR_ARCHIVE;//ICON_CABINET_COMBINE;
-			}
-			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, icon);
+			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
 			i++;
 		}
 	}
+	
+	int icon = CabGetIconBasedOnName(pFolderNode->m_name, pFolderNode->m_type);
+	//SetWindowIcon (pWindow, icon);
+	//SetWindowTitle(pWindow, pFolderNode->m_name);
+	pWindow->m_iconID = icon;
+	strcpy (pWindow->m_title, "Cabinet - ");
+	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	
 	RequestRepaint(pWindow);
 }
@@ -293,7 +306,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
 							char buffer [256];
 							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-							MessageBox(pWindow, buffer, pWindow->m_title, ICON_ERROR << 16 | MB_OK);
+							MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 						}
 						else
 							UpdateDirectoryListing (pWindow);
@@ -305,7 +318,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						// Executing file.  Might want to MessageBox the user about it?
 						char buffer[512];
 						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
-						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_EXECUTE_FILE << 16 | MB_YESNO) == MBID_YES)
+						if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
 						{
 							OnBusy(pWindow);
 							
@@ -328,7 +341,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						// Executing file.  Might want to MessageBox the user about it?
 						char buffer[512];
 						sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
-						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_FILE_CSCRIPT << 16 | MB_YESNO) == MBID_YES)
+						if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
 						{
 							OnBusy(pWindow);
 							
@@ -371,19 +384,14 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_CABINET_COMBINE << 16 | MB_YESNO) == MBID_YES)
 						{
 							OnBusy(pWindow);
-							OnBusy(pWindow);
-						
-						char filename[1024];
-						strcpy (filename, g_cabinetCWD);
-						if (g_cabinetCWD[1] != 0)
-							strcat (filename, "/");
-						strcat (filename, pFileName);
-						
-						CabinetMountRamDisk(pWindow, filename);
-						OnNotBusy(pWindow);
-						
-						OnNotBusy(pWindow);
 							
+							char filename[1024];
+							strcpy (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							
+							CabinetMountRamDisk(pWindow, filename);
 							
 							OnNotBusy(pWindow);
 						}
@@ -409,14 +417,14 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					{
 						char buffer[256];
 						sprintf (buffer, "Don't know how to open '%s'.", pFileName);
-						MessageBox(pWindow, buffer, pWindow->m_title, ICON_STOP << 16 | MB_OK);
+						MessageBox(pWindow, buffer, "Error", ICON_INFO << 16 | MB_OK);//ICON_QUESTION
 					}
 				}
 				else
 				{
 					char buffer [256];
 					sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-					MessageBox(pWindow, buffer, pWindow->m_title, ICON_ERROR << 16 | MB_OK);
+					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 				}
 			}
 			else if (parm1 == MAIN_MENU_BAR)

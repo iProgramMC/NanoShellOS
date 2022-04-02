@@ -4,6 +4,7 @@
 
  Kernel initialization and startup module
 ******************************************/
+#include <clip.h>
 #include <config.h>
 #include <elf.h>
 #include <fpu.h>
@@ -16,6 +17,7 @@
 #include <multiboot.h>
 #include <pci.h>
 #include <print.h>
+#include <sb.h>
 #include <shell.h>
 #include <storabs.h>
 #include <task.h>
@@ -44,7 +46,7 @@ int g_nKbExtRam = 0;
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), March 2022 - " VersionString);
+	LogMsg("NanoShell (TM), April 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam,
 				 GetNumPhysPages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
@@ -89,7 +91,6 @@ extern bool g_IsBGADevicePresent; // pci.c
 multiboot_info_t *g_pMultibootInfo;
 
 extern bool g_gotTime; // idt.c
-void FpuTest();
 
 extern uint32_t e_temporary1, e_temporary2;
 extern uint32_t g_BGADeviceBAR0;
@@ -143,8 +144,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	KiFpuInit();
 
-	FpuTest();
-
 	KiIdtInit();
 	cli;
 	// Initialize the Memory Management Subsystem
@@ -153,10 +152,14 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Initialize eventual PCI devices.	This is useful to find the main BGA
 	// controller, if there's one.
 	PciInit();
-
+	
 	// Initialize the video subsystem
 	VidInitialize(mbi);
 	
+	// Initialize the clipboard
+	CbInit();
+	
+	// Initialize the configuration system
 	CfgInitialize();
 	
 	if (!VidIsAvailable())
@@ -194,6 +197,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	
 	// Initialize the keyboard.
 	KbInitialize();
+
+	// Initialize the sound blaster device
+	SbInit();
 
 	KePrintSystemVersion();
 
@@ -281,6 +287,8 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	CfgLoadFromTextBasic (pText);
 	
 	MmFreeK (pText);
+	
+	FiClose (fd);
 
 	// This is a hack, because VirtualBox does not emulate RTC update_finished interrupts
 	LogMsg("(waiting to get time...)");

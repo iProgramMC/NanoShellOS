@@ -66,9 +66,14 @@ void KeFindLastRunningTaskIndex(void)
 }
 
 // Requests a re-schedule.
+bool gIdleOnDoneTask = false, gDisableIdle = false;
 void KeTaskDone(void)
 {
-	asm ("int $0x81\n\t");
+	if (gIdleOnDoneTask)
+		hlt;
+	else
+		// actually request a re-schedule.
+		asm ("int $0x81\n\t");
 }
 
 void KeTaskDebugDump(void)
@@ -328,6 +333,10 @@ void KeFxRestore(int *fpstate)
 		"frstor (%0)" :: "r"(fpstate));
 }
 #endif
+
+// Every 10 milliseconds the task switches continue
+int g_TaskSwitchingAggressiveness = 10;
+
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	Task* pTask = KeGetRunningTask();
@@ -351,10 +360,6 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_kernelFontContext = g_pCurrentFont;
 	}
 	ResetToKernelHeap();
-	
-	// If using RTC, also flush register C
-	//WritePort (0x70, 0x0C);
-	//ReadPort  (0x71);
 	
 	if (!pTask) //switching away from kernel task?
 	{

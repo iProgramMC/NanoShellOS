@@ -214,6 +214,20 @@ char* strchr (char* stringToSearch, const char characterToSearchFor)
 	return NULL;
 }
 
+char* strrchr (char* stringToSearch, const char characterToSearchFor)
+{
+	int sl = strlen (stringToSearch);
+	
+	char*  p1 = stringToSearch + sl - 1;
+	while (p1 >= stringToSearch)
+	{
+		if (*p1 == characterToSearchFor)
+			return p1;
+		p1--;
+	}
+	return NULL;
+}
+
 char* strdup (const char* pText)
 {
 	int len1 = strlen(pText);

@@ -17,6 +17,15 @@
 // Utilitary functions
 #if 1
 
+void SetFocusedControl(Window *pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control *pControl = &pWindow->m_pControlArray[i];
+		pControl->m_bFocused = (pControl->m_comboID == comboID);
+	}
+}
+
 #define BUTTONDARK 0x808080
 #define BUTTONMIDD BUTTON_MIDDLE_COLOR
 #define BUTTONLITE 0xFFFFFF
@@ -885,6 +894,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		case EVENT_CLICKCURSOR:
 		case EVENT_RELEASECURSOR:
 		{
+			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			//TODO: Allow change of cursor via click.
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
@@ -895,9 +905,14 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				}
 				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			}
+			
+			if (!RectangleContains (&this->m_rect, &mouseClickPos))
+				break;
+			
+			SetFocusedControl(pWindow, this->m_comboID);
+			
 			if (this->m_textInputData.m_enableStyling && eventType == EVENT_RELEASECURSOR)
 			{
-				Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 				if (this->m_textInputData.m_pText)
 				{
 					//HACK
@@ -1002,6 +1017,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			break;
 		case EVENT_KEYRAW:
 		{
+			if (!this->m_bFocused) break;
 			if (this->m_textInputData.m_readOnly) break;
 			bool repaint = true;
 			switch (parm1)
@@ -1202,6 +1218,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		}
 		case EVENT_KEYPRESS:
 		{
+			if (!this->m_bFocused) break;
 			if (this->m_textInputData.m_readOnly) break;
 			if ((char)parm1 == '\n' && this->m_textInputData.m_onlyOneLine)
 				break;
@@ -1213,11 +1230,13 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				
 				if (this->m_textInputData.m_onlyOneLine)
 				{
-					if (this->m_textInputData.m_scrollY >= this->m_textInputData.m_textCursorIndex)
+					//while (this->m_textInputData.m_scrollY >= this->m_textInputData.m_textCursorIndex)
 					{
-						this->m_textInputData.m_scrollY -= 10;
+						this->m_textInputData.m_scrollY--;
 						if (this->m_textInputData.m_scrollY < 0)
+						{
 							this->m_textInputData.m_scrollY = 0;
+						}
 					}
 				}
 			}
@@ -1227,9 +1246,9 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				
 				if (this->m_textInputData.m_onlyOneLine)
 				{
-					if (this->m_textInputData.m_scrollY + charsPerLine <= this->m_textInputData.m_textCursorIndex)
+					while (this->m_textInputData.m_scrollY + charsPerLine <= this->m_textInputData.m_textCursorIndex)
 					{
-						this->m_textInputData.m_scrollY += 10;
+						this->m_textInputData.m_scrollY++;
 					}
 				}
 			}
@@ -1327,7 +1346,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				
 				if (this->m_textInputData.m_onlyOneLine)
 				{
-					xPos = this->m_rect.left + 4 - 8 * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
+					xPos = this->m_rect.left + 4 - GetCharWidth('W') * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
 				}
 				
 				int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY;// linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
@@ -1442,10 +1461,9 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					text++;
 					offset++;
 				}
-				if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly)
-				{
+				if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly && this->m_bFocused)
 					VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
-				}
+				
 				VidSetFont(SYSTEM_FONT);
 			}
 			else
@@ -3032,7 +3050,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 	}
 	return false;
 }
-#define CHECKBOX_SIZE 12
+#define CHECKBOX_SIZE 14
 bool CheckboxGetChecked(Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -3070,16 +3088,17 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	{
 		case EVENT_PAINT:
 		{
-			VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT, check_rect);
-			VidDrawRectangle(WINDOW_TEXT_COLOR,                                                   check_rect);
+			//VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT, check_rect);
+			//VidDrawRectangle(WINDOW_TEXT_COLOR,  
+			//RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			check_rect.right--;
+			//check_rect.bottom--;
+			RenderButtonShapeSmallInsideOut (check_rect, 0xBFBFBF, BUTTONDARK, this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT);
+			
 			//if checked, mark it as "checked"
 			if (this->m_checkBoxData.m_checked)
 			{
-				check_rect.left++;
-				check_rect.top ++;
-				check_rect.left++;
-				check_rect.top ++;
-				VidDrawText("\x09", check_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				VidTextOut("\x15", check_rect.left + 3, check_rect.top + 3, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			
 			VidDrawText(this->m_text, text_rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
@@ -3103,6 +3122,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			{
 				this->m_checkBoxData.m_checked ^= 1;
 				this->m_checkBoxData.m_clicked = false;
+				CallWindowCallback(pWindow, EVENT_CHECKBOX, this->m_comboID, this->m_checkBoxData.m_checked);
 				WidgetCheckbox_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			

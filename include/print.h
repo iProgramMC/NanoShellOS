@@ -12,8 +12,7 @@
 
 void sprintf(char*a, const char*c, ...);
 void vsprintf(char* memory, const char* format, va_list list);
-/*void LogInt (uint32_t i);
-void LogIntDec (int i);
-void PrInitialize();*/
+
+void DumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 
 #endif//_PRINT_H

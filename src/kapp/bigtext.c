@@ -111,7 +111,7 @@ void NotepadOnSave(UNUSED Window* pWindow)
 	if (NOTEPDATA(pWindow)->m_untitled)
 	{
 		// Request a name to save to
-		char* data = InputBox(pWindow, "Type in a file path to save to.", "Notepad", NULL);
+		char* data = FilePickerBox(pWindow, "Type in a file path to save to.", "Notepad", NULL);
 		if (!data) return;//No input
 		SLogMsg("Properly got fed data: '%s'", data);
 		if (strlen (data) > sizeof (NOTEPDATA(pWindow)->m_filename)-5)
@@ -299,7 +299,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 							}
 						}
 						//Now that we've saved (or not), open the new document.
-						char* data = InputBox(pWindow, "Type in a file path to open.", "Notepad", NULL);
+						char* data = FilePickerBox(pWindow, "Type in a file path to open.", "Notepad", NULL);
 						if (!data) break;
 						SLogMsg("Properly got fed data: '%s'", data);
 						NotepadOpenFile(pWindow, data);
