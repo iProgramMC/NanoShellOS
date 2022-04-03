@@ -17,7 +17,6 @@
 
 //! TODO: if planning to extend this beyond 1920x1080x32, extend THIS variable.
 #define MAX_VIDEO_PAGES 2048
-#define FRAMEBUFFER_MAPPED_ADDR 0xE0000000
 
 uint32_t  g_vbePageEntries[MAX_VIDEO_PAGES] __attribute__((aligned(4096))); 
 uint32_t* g_framebufferCopy = NULL;
@@ -1550,9 +1549,9 @@ void VidInitializeVBEData(multiboot_info_t* pInfo)
 	g_vbeData->m_pitch32   = pInfo->framebuffer_pitch / sizeof (int);
 	g_vbeData->m_pitch16   = pInfo->framebuffer_pitch / sizeof (short);
 	
-	g_vbeData->m_framebuffer32 = (uint32_t*)FRAMEBUFFER_MAPPED_ADDR;
-	g_vbeData->m_framebuffer16 = (uint16_t*)FRAMEBUFFER_MAPPED_ADDR;
-	g_vbeData->m_framebuffer8  = (uint8_t *)FRAMEBUFFER_MAPPED_ADDR;
+	g_vbeData->m_framebuffer32 = (uint32_t*)VBE_FRAMEBUFFER_HINT;
+	g_vbeData->m_framebuffer16 = (uint16_t*)VBE_FRAMEBUFFER_HINT;
+	g_vbeData->m_framebuffer8  = (uint8_t *)VBE_FRAMEBUFFER_HINT;
 	
 	VidSetClipRect (NULL);
 }
@@ -1656,7 +1655,7 @@ void VidInitialize(multiboot_info_t* pInfo)
 			return;
 		}
 		// map shit to 0xE0000000 or above
-		int index = FRAMEBUFFER_MAPPED_ADDR >> 22;
+		int index = VBE_FRAMEBUFFER_HINT >> 22;
 		uint32_t pointer = pInfo->framebuffer_addr;
 		uint32_t final_address = 0xE0000000;
 		final_address += pointer & 0xFFF;

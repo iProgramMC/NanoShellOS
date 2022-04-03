@@ -17,5 +17,7 @@ apps/notepad/*.nse
 apps/clock/build/*
 apps/clock/*.nse
 
+apps/nesemu/*
+
 vdisk.vdi
 vdisk*.vdi

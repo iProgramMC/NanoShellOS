@@ -12,6 +12,7 @@ extern IrqTimer
 extern IrqClock
 extern IrqMouse
 extern IrqKeyboard
+extern IrqVirtualBox
 extern OnSyscallReceived
 extern IsrSoftware
 extern UartOnInterrupt
@@ -21,6 +22,7 @@ global IrqTimerA
 global IrqClockA
 global IrqMouseA
 global IrqSb16A
+global IrqVirtualBoxA
 global IrqKeyboardA
 global IrqCascadeA
 global IrqSerialCom1A
@@ -32,6 +34,11 @@ section .text
 IrqSerialCom1A:
 	pusha
 	call SbIrqHandler
+	popa
+	iretd
+IrqVirtualBoxA:
+	pusha
+	call IrqVirtualBox
 	popa
 	iretd
 IrqSb16A:

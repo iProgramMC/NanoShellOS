@@ -11,7 +11,8 @@
 #include <nsstructs.h>
 
 // Formatting
-void sprintf(char* OutBuffer, const char* FormatType, ...);
+void vsprintf(char* OutBuffer, const char* FormatType, va_list list);
+void sprintf (char* OutBuffer, const char* FormatType, ...);
 
 // Threading
 void sleep(int ms);
@@ -41,7 +42,7 @@ void   memtolower (char* as, int w);
 void   memtoupper (char* as, int w);
 size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
-void   sprintf(char*a, const char*c, ...);
+char*  strdup     (const char *pText);
 
 // Optimized memory operations to word width
 

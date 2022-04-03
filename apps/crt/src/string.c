@@ -230,3 +230,12 @@ char* Tokenize (TokenState* pState, char* pString, char* separator) {
     return pString;
 }
 
+void *malloc (size_t size);
+char *strdup (const char *pText)
+{
+	size_t len = strlen (pText) + 1;
+	char *p = malloc (len);
+	if (p)
+		memcpy (p, pText, len);
+	return p;
+}

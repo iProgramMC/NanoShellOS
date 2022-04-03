@@ -95,6 +95,12 @@ extern bool g_gotTime; // idt.c
 extern uint32_t e_temporary1, e_temporary2;
 extern uint32_t g_BGADeviceBAR0;
 
+#ifdef EXPERIMENTAL
+extern void VbGuestInit();
+#endif
+
+bool gInitializeVB;
+	
 __attribute__((noreturn))
 void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 {
@@ -144,14 +150,14 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	KiFpuInit();
 
+	// Initialize eventual PCI devices.	This is useful to find the main BGA
+	// controller, if there's one.
+	PciInit();
+
 	KiIdtInit();
 	cli;
 	// Initialize the Memory Management Subsystem
 	MmInit(mbi);
-
-	// Initialize eventual PCI devices.	This is useful to find the main BGA
-	// controller, if there's one.
-	PciInit();
 	
 	// Initialize the video subsystem
 	VidInitialize(mbi);
@@ -292,45 +298,30 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	// This is a hack, because VirtualBox does not emulate RTC update_finished interrupts
 	LogMsg("(waiting to get time...)");
-	while (!g_gotTime)
+	/*while (!g_gotTime)
 	{
 		hlt;
+	}*/
+	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
+	MouseInit ();
+	
+	#ifdef EXPERIMENTAL
+	pEntry = CfgGetEntry ("Driver::VirtualBox");
+	if (pEntry)
+	{
+		if (strcmp (pEntry->value, "on") == 0)
+			gInitializeVB = true;
 	}
+	
+	if (gInitializeVB)
+		VbGuestInit();
+	#endif
 
 	// Initialize the mouse driver too
 	sti;
-	if (VidIsAvailable())
-	{
-		LogMsg("Press any key to initialize the PS/2 mouse, or wait about 5 "
-					 "seconds to control it by keyboard.");
-
-		// Wait 5 seconds.
-		bool choseToInit = false;
-		for (int i = 0; i < 5; i++)
-		{
-			// Wait 1 second.
-			int startTick = GetTickCount();
-			while (startTick + 1000 > GetTickCount())
-			{
-				if (!KbIsBufferEmpty())
-				{
-					// They pressed a key.	Skip the mouse init.
-					choseToInit = true;
-					break;
-				}
-			}
-			if (choseToInit)
-				break;
-			LogMsgNoCr(".");
-		}
-
-		if (choseToInit)
-		{
-			LogMsg("Initializing!	(If on real hardware, you have been warned!!)");
-			MouseInit();
-		}
-	}
-
+	
+	//MouseInit();
+	
 	// print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())
 	{

@@ -243,7 +243,7 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	g_numPagesAvailable = GetNumFreePhysPages();
 }
 
-uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end)
+uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
 {
 	// Get the hint offset in the page tables we should start out at
 	int page_table_offset = (int)((hint >> 12) & 0xFFF);
@@ -309,7 +309,7 @@ uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_e
 		// Fill out an entry in the current page table
 		PageEntry *pEntry = &pPageTable[page_table_offset];
 		pEntry->m_bPresent   = 1;
-		pEntry->m_bReadWrite = 0;
+		pEntry->m_bReadWrite = bReadWrite;
 		pEntry->m_bUserSuper = 1;
 		pEntry->m_bAccessed  = 0;
 		pEntry->m_bDirty     = 0;
@@ -326,7 +326,13 @@ uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_e
 		MmSetFrame (i >> 12);
 	}
 	
+	MmTlbInvalidate ();
+	
 	return hint + (phys_start & 0xFFF);
+}
+uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end)
+{
+	return MmMapPhysicalMemoryRW(hint, phys_start, phys_end, false);
 }
 
 #endif

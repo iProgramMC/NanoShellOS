@@ -338,7 +338,12 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 		}
 	}
 	
-	char* dataReturned = (char*)pBox->m_data;
+	char*  data1 = (char*)pBox->m_data;
+	size_t leng1 = strlen (data1) + 1;
+	
+	char* dataReturned = MmAllocate (leng1);//allocate it on the user heap
+	memcpy (dataReturned, data1, leng1);
+	MmFreeK(data1);
 	
 	DestroyWindow(pBox);
 	while (HandleMessages(pBox));

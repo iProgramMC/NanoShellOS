@@ -11,6 +11,21 @@
 #include <main.h>
 #include <multiboot.h>
 
+#define USER_EXEC_MAPPING_START    0x00C00000
+
+#define USER_HEAP_DYNAMEM_START    0x40000000
+
+#define KERNEL_HEAP_DYNAMEM_START  0x80000000
+
+#define KERNEL_CODE_AND_DATA_START 0xC0000000
+
+#define MMIO_AREA_0                0xD0000000
+
+#define VBE_FRAMEBUFFER_HINT       0xE0000000
+
+#define MMIO_AREA_1                0xF0000000
+	#define MMIO_VBOX_HINT         0xFF000000
+
 //TODO: Proper heap so we won't use 4kb per small allocation.
 
 typedef struct {
@@ -71,8 +86,12 @@ void MmInit(multiboot_info_t*);
  * Maps a contiguous block of physical memory near the hint address.
  *
  * The result address will either be NULL, a kernel halt, or >= the hint address.
+ *
+ * MmMapPhysicalMemory by default returns a _read-only_ section, use MmMapPhysicalMemoryRW
+ * to be able to write to it.
  */
-uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end);
+uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
+uint32_t MmMapPhysicalMemory  (uint32_t hint, uint32_t phys_start, uint32_t phys_end);
 
 /**
  * Allocates a single page (4096 bytes).

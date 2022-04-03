@@ -148,8 +148,8 @@ bool CbPushTextIntoBufferInt(ClipboardVariant* pVar)
 		// hacky hack alert:
 		// send a shift release so that the window manager does not get confused
 		// note that this may mess with user's keyboard inputs, so be careful
-		KbAddRawKeyToBuffer (SCANCODE_RELEASE | KEY_LSHIFT);
-		KbAddRawKeyToBuffer (SCANCODE_RELEASE | KEY_RSHIFT);
+		KbAddRawKeyToBuffer ((char)(SCANCODE_RELEASE | KEY_LSHIFT));
+		KbAddRawKeyToBuffer ((char)(SCANCODE_RELEASE | KEY_RSHIFT));
 		
 		while (*pChars)
 		{
@@ -165,7 +165,7 @@ bool CbPushTextIntoBufferInt(ClipboardVariant* pVar)
 			// Support adding at codes too, for window manager to handle.
 			// I don't really feel like adding a SECONDARY input queue JUST for this
 			// purpose, so I'm not.
-			unsigned short at_code = g_ascii_to_raw_input_codes[chr];
+			unsigned short at_code = g_ascii_to_raw_input_codes[(unsigned char)chr];
 			if (!at_code)
 			{
 				pChars++;
@@ -181,7 +181,7 @@ bool CbPushTextIntoBufferInt(ClipboardVariant* pVar)
 			else
 			{
 				if (holds_shift)
-					KbAddRawKeyToBuffer (SCANCODE_RELEASE | KEY_LSHIFT);
+					KbAddRawKeyToBuffer ((char)(SCANCODE_RELEASE | KEY_LSHIFT));
 				holds_shift = false;
 			}
 			
@@ -190,7 +190,7 @@ bool CbPushTextIntoBufferInt(ClipboardVariant* pVar)
 			KbAddRawKeyToBuffer (nope);
 			
 			// Immediately release this key
-			KbAddRawKeyToBuffer (SCANCODE_RELEASE | nope);
+			KbAddRawKeyToBuffer ((char)(SCANCODE_RELEASE | nope));
 			
 			pChars++;
 		}

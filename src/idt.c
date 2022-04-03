@@ -31,6 +31,10 @@ void KeHandleSsFailureC()
 	LogMsg("Unrecoverable stack error");
 }
 
+#ifdef EXPERIMENTAL
+int VbGuestGetInterruptNumber();//experimental/vboxguest.c
+#endif
+
 void SetupSoftInterrupt (int intNum, void *pIsrHandler)
 {
 	IdtEntry* pEntry = &g_idt[intNum];
@@ -298,11 +302,14 @@ extern void IrqTaskA();
 extern void IrqClockA();
 extern void IrqMouseA();
 extern void IrqSb16A();
+extern void IrqVirtualBoxA();
 extern void IrqCascadeA();
 extern void IrqSerialCom1A();
 extern void IrqSerialCom2A();
 extern void OnSyscallReceivedA();
 void KeClockInit();
+
+extern bool gInitializeVB;
 
 /**
  * IDT initializer routines.  Also sets up the system call interrupt.
@@ -365,6 +372,13 @@ void KiIdtInit()
 	
 	SetupSoftInterrupt (0x80, OnSyscallReceivedA);
 	SetupSoftInterrupt (0x81, IrqTaskA);
+	
+	// SPECIAL CASE: Vbox Guest driver
+#ifdef EXPERIMENTAL
+	int in = VbGuestGetInterruptNumber();
+	if (in >= 0 && gInitializeVB)
+		SetupInterrupt (&mask1, &mask2, in, IrqVirtualBoxA);
+#endif
 	
 	//initialize the pics
 	WritePort (0x20, 0x11);

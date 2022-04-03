@@ -19,7 +19,7 @@ enum
 };
 
 uint8_t g_commandRunning, g_resetStages, g_mouseDeviceID = 0, g_mouseCycle;
-bool g_mouseAvailable = true, g_mouseInitted = false, g_ps2MouseAvail = false;
+bool g_mouseAvailable = true, g_mouseInitted = false, g_ps2MouseAvail = false, g_ps2DisableMovement = false;
 
 MousePacket g_currentPacket;
 bool g_discardPacket;
@@ -239,8 +239,11 @@ void IrqMouse()
 						g_discardPacket = false;
 						return;
 					}
-					g_currentPacket.xMov = g_currentPacket.xMov;
-					g_currentPacket.yMov = g_currentPacket.yMov;
+					if (g_ps2DisableMovement)
+					{
+						g_currentPacket.xMov = 0;
+						g_currentPacket.yMov = 0;
+					}
 					OnUpdateMouse (g_currentPacket.flags, g_currentPacket.xMov, g_currentPacket.yMov, 0);
 				}
 				else g_mouseCycle++;
@@ -253,6 +256,11 @@ void IrqMouse()
 				{
 					g_discardPacket = false;
 					return;
+				}
+				if (g_ps2DisableMovement)
+				{
+					g_currentPacket.xMov = 0;
+					g_currentPacket.yMov = 0;
 				}
 				OnUpdateMouse (g_currentPacket.flags, g_currentPacket.xMov, g_currentPacket.yMov, g_currentPacket.zMov);
 				break;
