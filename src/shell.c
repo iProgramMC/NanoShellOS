@@ -75,18 +75,20 @@ extern void KeTaskDone();
 
 typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom);
 
+void VidPrintTestingPattern();
+void VidPrintTestingPattern2();
 void GraphicsTest()
 {
-	g_currentConsole->color = 0x2F;
 	CoClearScreen(g_currentConsole);
 	
-	//demonstrate some of the apis that the kernel provides:
-	//VidFillRect(0xFF0000, 10, 150, 210, 310);
-	/**((uint32_t*)0xC0007CFC) = 14;
+	// Show the testing pattern first
 	
-	Pointer ptr = (Pointer) 0xC0007C00;
+	VidPrintTestingPattern();
 	
-	ptr(0xFF0000, 10, 150, 210, 310);return;*/
+	g_currentConsole->curX = g_currentConsole->curY = 0;
+	LogMsg("Press any key to advance");
+	CoGetChar();
+	
 	VidDrawRect(0x00FF00, 100, 150, 250, 250);
 	
 	//lines, triangles, polygons, circles perhaps?
@@ -98,7 +100,8 @@ void GraphicsTest()
 	VidTextOut("Hello, transparent background world.\nI support newlines too!", 300, 182, 0xFFFFFF, TRANSPARENT);
 	VidShiftScreen(10);
 	
-	LogMsg("Test complete.  Strike a key to exit.");
+	g_currentConsole->curX = g_currentConsole->curY = 0;
+	LogMsg("Test complete! Strike a key to exit.");
 	CoGetChar();
 	g_currentConsole->color = 0x1F;
 }

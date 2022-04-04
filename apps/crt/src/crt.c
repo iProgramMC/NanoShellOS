@@ -192,6 +192,8 @@ FILE* fopen (const char* file, const char* mode)
 
 int fclose(FILE* file)
 {
+	if (file <= stderr)
+		return 0;
 	if (file)
 	{
 		int op = close(file->fd);
@@ -203,21 +205,32 @@ int fclose(FILE* file)
 
 size_t fread (void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
+	if (stream <= stderr)
+		return 0;
 	return read(stream->fd, ptr, size * nmemb);
 }
 
 size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
+	if (stream <= stderr)
+	{
+		for (int i = 0; i < size; i++)
+			LogMsgNoCr("%c", ((const char*)ptr)[size]);
+	}
 	return write(stream->fd, ptr, size * nmemb);
 }
 
 int fseek(FILE* file, int offset, int whence)
 {
+	if (file <= stderr)
+		return 0;
 	return lseek(file->fd, offset, whence);
 }
 
 int ftell(FILE* file)
 {
+	if (file <= stderr)
+		return 0;
 	return tellf(file->fd);
 }
 

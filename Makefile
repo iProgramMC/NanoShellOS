@@ -38,7 +38,7 @@ KERNEL_O_FILES=$(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%.o,$(KERNEL_C_FILES) $(KERN
 all: kernel
 
 limine:
-	git clone https://github.com/limine-bootloader/limine -b latest-binary --depth=1
+	git clone https://github.com/limine-bootloader/limine -b v3.0-binary --depth=1
 	make -C limine
 
 kernel: $(KERNEL_TARGET)
@@ -67,7 +67,7 @@ $(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)
 	@mkdir -p $(ISO_DIR)
 	@cp $^ limine.cfg limine/limine.sys limine/limine-cd.bin $(ISO_DIR)
 	@xorriso -as mkisofs -b limine-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --protective-msdos-label $(ISO_DIR) -o $@ 2>/dev/null
-	@limine/limine-install $@ 2>/dev/null
+	@limine/limine-deploy $@ 2>/dev/null
 	@rm -rf $(ISO_DIR)
 
 $(BUILD_DIR)/%.asm.o: $(SRC_DIR)/%.asm

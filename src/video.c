@@ -489,6 +489,7 @@ void VidPrintTestingPattern()
 		}
 	}
 }
+
 void VidFillScreen(unsigned color)
 {
 	VidFillRect (color, 0, 0, GetScreenSizeX() - 1, GetScreenSizeY() - 1);

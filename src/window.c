@@ -12,6 +12,8 @@
 // The action queues shall resort to using the unsafe versions if the caller running
 // Hide/Show/Nuke/ResizeWindow if it's called by window manager itself (i.e. menus)
 
+//#define ENABLE_MAXIMIZE
+
 #define THREADING_ENABLED 1 //0
 #if THREADING_ENABLED
 #define MULTITASKED_WINDOW_MANAGER
@@ -598,10 +600,71 @@ void RedrawBackgdDetails()
 	WinRenderTextBkgd("For evaluation purposes only.",                  GetScreenHeight()-12, JUSTIFY_RIGHT, 0xFFFFFF);
 }
 
+/*__attribute__((always_inline))
+inline void VidPlotPixelInline(unsigned x, unsigned y, unsigned color)
+{
+	if (
+		(int)x <  g_vbeData->m_clipRect.left ||
+		(int)y <  g_vbeData->m_clipRect.top  ||
+		(int)x >= g_vbeData->m_clipRect.right ||
+		(int)y >= g_vbeData->m_clipRect.bottom
+	)
+		return;
+	VidPlotPixelToCopyInlineUnsafe(x, y, color);
+	VidPlotPixelRaw32I (x, y, color);
+}*/
+void VidPrintTestingPattern2(uint32_t or_mask, uint32_t y_shift)
+{
+	for (int y = 0, z = 0; y < GetScreenSizeY(); y++, z += g_vbeData->m_pitch32) 
+	{
+		uint32_t ty = (y * 255 / GetScreenSizeY());
+		ty = (ty << y_shift) | ((ty << y_shift) << 8);
+		for (int x = 0; x < GetScreenSizeX(); x++)
+		{
+			uint32_t pixel = or_mask | ty;
+			g_vbeData->m_framebuffer32[z + x] = pixel;
+		}
+	}
+}
+void GenerateBackground()
+{
+	ConfigEntry *pEntryGradient = CfgGetEntry ("Theming::BackgroundGradient");
+	if (!pEntryGradient) return;
+	
+	if (strcmp (pEntryGradient->value, "yes")) return;
+	
+	Image *pImage = BitmapAllocate (GetScreenWidth(), GetScreenHeight(), 0xFFFFFFFF);
+	
+	if (!pImage)
+	{
+		SLogMsg("Could not allocate background big enough");
+		g_BackgroundSolidColorActive = true;
+	}
+	else
+	{
+		VBEData sData;
+		BuildGraphCtxBasedOnImage (&sData, pImage);
+		
+		VidSetVBEData (&sData);
+		VidPrintTestingPattern2(0x0000FF, 8);
+		VidSetVBEData (NULL);
+		
+		g_background = pImage;
+		g_BackgroundSolidColorActive = false;
+	}
+}
+
 void SetDefaultBackground()
 {
 	SLogMsg("Loading Wallpaper...");
 	g_background = &g_defaultBackground;
+	
+	ConfigEntry *pEntry = CfgGetEntry ("Theming::BackgroundFile");
+	const char *pFileName = NULL;	
+	if (pEntry)
+	{
+		pFileName = pEntry->value;
+	}
 	
 	//Try to open a file now.
 	//WORK: Change the file name here.  Should work
@@ -609,7 +672,8 @@ void SetDefaultBackground()
 	if (fd < 0)
 	{
 		SLogMsg("Could not open wallpaper. Using default one!");
-		g_BackgroundSolidColorActive = true;
+		//g_BackgroundSolidColorActive = true;
+		GenerateBackground();
 		return;
 	}
 	
@@ -619,7 +683,8 @@ void SetDefaultBackground()
 	if (!pData)
 	{
 		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
-		g_BackgroundSolidColorActive = true;
+		//g_BackgroundSolidColorActive = true;
+		GenerateBackground();
 		return;
 	}
 	
@@ -639,7 +704,8 @@ void SetDefaultBackground()
 	else
 	{
 		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
-		g_BackgroundSolidColorActive = true;
+		//g_BackgroundSolidColorActive = true;
+		GenerateBackground();
 	}
 }
 
@@ -1304,6 +1370,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		if (yPos >= GetScreenHeight() - ySize)
 			yPos  = GetScreenHeight() - ySize-1;
 	}
+	
+	if (!(flags & WF_ALWRESIZ))
+		flags |= WF_NOMAXIMZ;
 	
 	int freeArea = -1;
 	for (int i = 0; i < WINDOWS_MAX; i++)
@@ -2868,10 +2937,42 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			pWindow->m_rectBackup = pWindow->m_rect;
 		pWindow->m_maximized  = true;
 		pWindow->m_rect.left = -2;
-		pWindow->m_rect.top  = -2+g_TaskbarHeight;
-		ResizeWindow(pWindow, -1, -1, GetScreenWidth() + 2, GetScreenHeight() - g_TaskbarHeight + 2);
+		pWindow->m_rect.top  = -2;//+g_TaskbarHeight;
 		
-		SetLabelText(pWindow, 0xFFFF0002, "\x1F");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
+		if (!(pWindow->m_flags & WF_FLATBORD))
+			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
+		
+		Control* pControl;
+		
+		//adjust top buttons
+		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   += 2;
+			pControl->m_triedRect.top    -= 2;
+			pControl->m_triedRect.right  += 2;
+			pControl->m_triedRect.bottom -= 2;
+		}
+		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   += 2;
+			pControl->m_triedRect.top    -= 2;
+			pControl->m_triedRect.right  += 2;
+			pControl->m_triedRect.bottom -= 2;
+		}
+		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   += 2;
+			pControl->m_triedRect.top    -= 2;
+			pControl->m_triedRect.right  += 2;
+			pControl->m_triedRect.bottom -= 2;
+		}
+		
+		ResizeWindow(pWindow, 0, 0, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
+		
+		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
 		
 		pWindow->m_renderFinished = true;
@@ -2888,6 +2989,37 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
 		pWindow->m_maximized = false;
 		
+		if (pWindow->m_flags & WF_FLBRDFRC)
+		{
+			pWindow->m_flags &= ~(WF_FLBRDFRC | WF_FLATBORD);
+		}
+		
+		//adjust top buttons
+		Control*
+		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   -= 2;
+			pControl->m_triedRect.top    += 2;
+			pControl->m_triedRect.right  -= 2;
+			pControl->m_triedRect.bottom += 2;
+		}
+		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   -= 2;
+			pControl->m_triedRect.top    += 2;
+			pControl->m_triedRect.right  -= 2;
+			pControl->m_triedRect.bottom += 2;
+		}
+		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
+		if (pControl)
+		{
+			pControl->m_triedRect.left   -= 2;
+			pControl->m_triedRect.top    += 2;
+			pControl->m_triedRect.right  -= 2;
+			pControl->m_triedRect.bottom += 2;
+		}
 		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x08");
