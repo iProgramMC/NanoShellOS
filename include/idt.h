@@ -37,16 +37,11 @@ typedef struct
 }
 CrashInfo;
 
-extern uint8_t gPicMask1, gPicMask2;
-
-extern void KiSetupDefaultInterrupts();
-extern void KiPicInit();
+extern void KiIdtInit();
 extern void KeTimerInit();
 extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
 extern void WaitMS(int ms);
-extern void SetupSoftInterrupt (int intNum, void *pIsrHandler);
-extern void SetupPicInterrupt (int intNum, void* isrHandler);
 
 #endif//_IDT_H
