@@ -757,6 +757,11 @@ void ShellExecuteCommand(char* p)
 		CoClearScreen (g_currentConsole);
 		g_currentConsole->curX = g_currentConsole->curY = 0;
 	}
+	else if (strcmp (token, "gv") == 0)
+	{
+		extern volatile uint32_t gVmwCounter2;
+		LogMsg("gVmwCounter2: %u", gVmwCounter2);
+	}
 	else if (strcmp (token, "sb") == 0)
 	{
 		SbSoundVolumeMaster(255);

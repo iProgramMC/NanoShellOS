@@ -103,6 +103,7 @@ bool VmwDetect();
 bool VmwInit();
 
 bool gInitializeVB;
+extern void KiIdtInit2();
 	
 __attribute__((noreturn))
 void KiStartupSystem(unsigned long check, unsigned long mbaddr)
@@ -158,7 +159,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	PciInit();
 
 	KiIdtInit();
-	cli;
+	
+	KiIdtInit2();
+	
 	// Initialize the Memory Management Subsystem
 	MmInit(mbi);
 	
@@ -203,15 +206,15 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	}
 
 	CfgLoadFromParms (g_cmdline);
-	
-	// Initialize the keyboard.
-	KbInitialize();
 
 	// Initialize the sound blaster device
 	SbInit();
 
 	KePrintSystemVersion();
 
+	// Initialize the keyboard.
+	KbInitialize();
+	
 	// KePrintMemoryMapInfo();
 	//	Initialize the task scheduler
 	KiTaskSystemInitialize();
@@ -262,7 +265,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Load the initrd last so its entries show up last when we type 'ls'.
 	FsInitializeInitRd((void*)pInitrdAddress);
 	
-	sti;
 	
 	LogMsg("(loading config from disk...)");
 	
@@ -323,14 +325,15 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//MouseInit ();
 	
-	
-	//MouseInit();
+	MouseInit();
 	bool e = VmwDetect();
-	LogMsg("E:%d",e);
+	SLogMsg("E:%d",e);
 	if (e)
 	{
 		VmwInit();
 	}
+	
+	
 	
 	// print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())

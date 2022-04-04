@@ -188,7 +188,8 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 	//move the cursor:
 	g_queueMouseUpdateTo.newX += dx;
 	g_queueMouseUpdateTo.newY += -dy;
-	g_queueMouseUpdateTo.updated = true;
+	if (dx || dy)
+		g_queueMouseUpdateTo.updated = true;
 	
 	// Left click
 	if (flags & MOUSE_FLAG_L_BUTTON)

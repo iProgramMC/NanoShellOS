@@ -88,14 +88,18 @@ bool VmwDetect()
 
 uint8_t gVmwCounter = 0;
 
+volatile uint32_t gVmwCounter2 = 0;
+
+void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)) uint8_t Dz);
+void VmwAbsCursorIrqA();
 void VmwAbsCursorIrq()
 {
 	gVmwCounter++;
+	gVmwCounter2++;
 	
 	//EOI
 	WritePort (0x20,0x20);
 	WritePort (0xA0,0x20);
-	SLogMsg("VMware input device");
 	
 	// drop byte from PS/2 buffer
 	ReadPort (0x60);
@@ -114,7 +118,7 @@ void VmwAbsCursorIrq()
 		
 		if (sOut.eax == 0xffff0000) // Error
 		{
-			LogMsg("VMware input device problem");
+			LogMsg("VMware mouse device error");
 			KeStopSystem();
 		}
 		
@@ -140,7 +144,23 @@ void VmwAbsCursorIrq()
 			uint16_t n_scroll = (uint16_t)(sPkt.edx);
 			
 			// LogMsg
-			SLogMsg("Buttons: %d-%d-%d, %d %d  <->%d", lmb, mmb, rmb, scaled_x, scaled_y, n_scroll);
+			//SLogMsg("Buttons: %d-%d-%d, %d %d  <->%d", lmb, mmb, rmb, scaled_x, scaled_y, n_scroll);
+			OnUpdateMouse (
+				(lmb ? MOUSE_FLAG_L_BUTTON : 0) |
+				(rmb ? MOUSE_FLAG_R_BUTTON : 0) |
+				(mmb ? MOUSE_FLAG_M_BUTTON : 0),
+				0,
+				0,
+				0
+			);
+			
+			// the mouse coordinates are scaled to the range (0x0000, 0xffff) independently
+			// in each dimension, so scale them back
+			uint32_t
+			x = (scaled_x * GetScreenWidth ()) / 0xFFFF,
+			y = (scaled_y * GetScreenHeight()) / 0xFFFF;
+			
+			SetMousePos (x, y);
 		}
 	}
 }
@@ -170,6 +190,8 @@ bool VmwInit()
 	VmwSend (command);
 	SLogMsg("AbsPtr Stat...");
 	
+	SLogMsg("AbsPtr Interrupt hooked...");
+	SetupPicInterrupt (0x0C, VmwAbsCursorIrqA);
 	
 	command.command = CMD_ABSPTR_DATA;
 	command.size    = 1;
@@ -183,8 +205,6 @@ bool VmwInit()
 	SLogMsg("AbsPtr Cmnd2...");
 	
 	
-	//SetupPicInterrupt (0x0C, VmwAbsCursorIrqA);
-	SLogMsg("AbsPtr Interrupt hooked...");
 	
 	
 	LogMsg("Done!");
