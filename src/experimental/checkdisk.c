@@ -5,7 +5,7 @@
     FAT File System Disk Check Utility
 ******************************************/
 #include <fat.h>
-
+#ifdef EXPERIMENTAL
 bool g_CheckdiskErrorValue = false;
 
 void CheckDiskFatScanFileOrDir(FileNode *pNode, uint32_t *pFat)
@@ -168,3 +168,4 @@ void CheckDiskFatMain(int fat_number)
 		MmFree (pFat);
 }
 
+#endif

@@ -44,7 +44,7 @@ void SetupSoftInterrupt (int intNum, void *pIsrHandler)
 	pEntry->type_attr = INTGATE;
 	pEntry->selector = KECODESEG;
 }
-void SetupInterrupt (uint8_t *mask1, uint8_t* mask2, int intNum, void* isrHandler)
+void SetupPicInterrupt (int intNum, void* isrHandler)
 {
 	IdtEntry* pEntry = &g_idt[0x20 + intNum];
 	pEntry->offset_lowerbits  = ((int)(isrHandler) & 0xffff);
@@ -56,7 +56,7 @@ void SetupInterrupt (uint8_t *mask1, uint8_t* mask2, int intNum, void* isrHandle
 	int picFlag = intNum & 7;
 	int whichPic = intNum >= 8;
 	
-	*(whichPic ? mask2 : mask1) &= ~(1<<picFlag);
+	*(whichPic ? &gPicMask2 : &gPicMask1) &= ~(1<<picFlag);
 }
 void SetupExceptionInterrupt (int intNum, void* isrHandler)
 {
@@ -318,18 +318,21 @@ void KeIdtLoad1(IdtPointer *ptr)
 {
 	__asm__ ("lidt %0" :: "m"(*ptr));
 }
-void KiIdtInit()
+
+uint8_t gPicMask1, gPicMask2;
+
+void KiSetupDefaultInterrupts()
 {
-	uint8_t mask1 = 0xff, mask2 = 0xff;
+	gPicMask1 = gPicMask2 = 0xff;
 	
-	SetupInterrupt (&mask1, &mask2, 0x0, IrqTaskA);//IrqTimerA);
-	SetupInterrupt (&mask1, &mask2, 0x1, IrqKeyboardA);
-	SetupInterrupt (&mask1, &mask2, 0x2, IrqClockA); // IRQ2: Cascade. Never triggered
-	SetupInterrupt (&mask1, &mask2, 0x3, IrqSerialCom2A);
-	SetupInterrupt (&mask1, &mask2, 0x4, IrqSerialCom1A);
-	SetupInterrupt (&mask1, &mask2, 0x5, IrqSb16A);
-	SetupInterrupt (&mask1, &mask2, 0x8, IrqClockA);
-	SetupInterrupt (&mask1, &mask2, 0xC, IrqMouseA);
+	SetupPicInterrupt (0x0, IrqTaskA);//IrqTimerA);
+	SetupPicInterrupt (0x1, IrqKeyboardA);
+	SetupPicInterrupt (0x2, IrqClockA); // IRQ2: Cascade. Never triggered
+	SetupPicInterrupt (0x3, IrqSerialCom2A);
+	SetupPicInterrupt (0x4, IrqSerialCom1A);
+	SetupPicInterrupt (0x5, IrqSb16A);
+	SetupPicInterrupt (0x8, IrqClockA);
+	SetupPicInterrupt (0xC, IrqMouseA);
 	//prim and sec IDE drives.  Enable IRQs to avoid spending all the
 	//CPU time polling and heating up the shit out of our CPU.
 	//SetupInterrupt (&mask1, &mask2, 0xE, IrqCascadeA);
@@ -377,9 +380,12 @@ void KiIdtInit()
 #ifdef EXPERIMENTAL
 	int in = VbGuestGetInterruptNumber();
 	if (in >= 0 && gInitializeVB)
-		SetupInterrupt (&mask1, &mask2, in, IrqVirtualBoxA);
+		SetupPicInterrupt (&mask1, &mask2, in, IrqVirtualBoxA);
 #endif
-	
+}
+
+void KiPicInit()
+{
 	//initialize the pics
 	WritePort (0x20, 0x11);
 	WritePort (0xa0, 0x11);
@@ -399,8 +405,8 @@ void KiIdtInit()
 	WritePort (0x21, 0x01);
 	WritePort (0xA1, 0x01);
 	
-	WritePort (0x21, mask1);
-	WritePort (0xA1, mask2);
+	WritePort (0x21, gPicMask1);
+	WritePort (0xA1, gPicMask2);
 	
 	// Load the IDT
 	

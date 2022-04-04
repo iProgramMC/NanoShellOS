@@ -9,6 +9,8 @@
 #include <pci.h>
 #include <video.h>
 
+#ifdef EXPERIMENTAL
+
 #define VB_VMMDEV_VERSION         (0x00010003)
 #define VB_REQUEST_HEADER_VERSION (0x10001)
 #define VB_REQUEST_GUEST_INFO     (50)
@@ -226,4 +228,6 @@ void VbGuestInit()
 	// Enable VmmDevMem interrupts - all of them for now
 	gVbVmmDev[3] = 0xFFFFFFFF;
 }
+
+#endif
 

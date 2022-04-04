@@ -12,7 +12,8 @@
 #include<stdint.h>
 #include<stdbool.h>
 
-#define EXPERIMENTAL
+//#define EXPERIMENTAL
+#define EXPERIMENTAL_VMWARE
 
 typedef char byte;
 typedef char BYTE;

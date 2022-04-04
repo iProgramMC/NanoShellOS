@@ -15,6 +15,8 @@
 #include <memory.h>
 #include <vfs.h>
 
+#ifdef EXPERIMENTAL
+
 // TODO
 #if 0
 
@@ -142,3 +144,4 @@ void LimineInstallMain(int arg)
 
 #endif
 
+#endif

@@ -98,6 +98,8 @@ extern uint32_t g_BGADeviceBAR0;
 #ifdef EXPERIMENTAL
 extern void VbGuestInit();
 #endif
+bool VmwDetect();
+bool VmwInit();
 
 bool gInitializeVB;
 	
@@ -154,8 +156,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// controller, if there's one.
 	PciInit();
 
-	KiIdtInit();
 	cli;
+	KiSetupDefaultInterrupts();
+	
 	// Initialize the Memory Management Subsystem
 	MmInit(mbi);
 	
@@ -200,12 +203,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	}
 
 	CfgLoadFromParms (g_cmdline);
-	
-	// Initialize the keyboard.
-	KbInitialize();
-
-	// Initialize the sound blaster device
-	SbInit();
 
 	KePrintSystemVersion();
 
@@ -316,7 +313,18 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	if (gInitializeVB)
 		VbGuestInit();
 	#endif
+	
+	LogMsg("E: %d", VmwInit ());
 
+	// Initialize the pic, after allowing all drivers to hook their interrupts in
+	KiPicInit();
+	
+	// Initialize the keyboard.
+	KbInitialize();
+
+	// Initialize the sound blaster device
+	SbInit();
+	
 	// Initialize the mouse driver too
 	sti;
 	

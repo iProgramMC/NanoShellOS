@@ -37,9 +37,9 @@ IrqSerialCom1A:
 	popa
 	iretd
 IrqVirtualBoxA:
-	pusha
-	call IrqVirtualBox
-	popa
+	;pusha
+	;call IrqVirtualBox
+	;popa
 	iretd
 IrqSb16A:
 	pusha
