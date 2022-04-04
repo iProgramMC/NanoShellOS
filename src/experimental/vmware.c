@@ -69,9 +69,12 @@ VmwCommandResult* VmwGetHb(VmwCommand input)
 	return &VmwCommandOutput;
 }
 
-
+bool gVmwAttemptedDetect, gVmwDetected;
 bool VmwDetect()
 {
+	if (gVmwAttemptedDetect)
+		return gVmwDetected;
+	
 	VmwCommand command;
 	memset (&command, 0, sizeof command);
 	
@@ -79,17 +82,20 @@ bool VmwDetect()
 	
 	VmwCommandResult *pResult = VmwSend (command);
 	
-	if (pResult->ebx != VMWARE_MAGIC) return false;
-	return true;
+	gVmwDetected = (pResult->ebx == VMWARE_MAGIC);
+	return gVmwDetected;
 }
-
-void VmwAbsCursorIrqA();
 
 uint8_t gVmwCounter = 0;
 
 void VmwAbsCursorIrq()
 {
 	gVmwCounter++;
+	
+	//EOI
+	WritePort (0x20,0x20);
+	WritePort (0xA0,0x20);
+	SLogMsg("VMware input device");
 	
 	// drop byte from PS/2 buffer
 	ReadPort (0x60);
@@ -147,7 +153,7 @@ bool VmwInit()
 		return false;
 	}
 	
-	SLogMsg("VMware device detected, initializing");
+	LogMsg("VMware device detected, initializing");
 	
 	SLogMsg("Enabling abscursor ...");
 	
@@ -177,7 +183,7 @@ bool VmwInit()
 	SLogMsg("AbsPtr Cmnd2...");
 	
 	
-	SetupPicInterrupt (0x0C, VmwAbsCursorIrqA);
+	//SetupPicInterrupt (0x0C, VmwAbsCursorIrqA);
 	SLogMsg("AbsPtr Interrupt hooked...");
 	
 	
