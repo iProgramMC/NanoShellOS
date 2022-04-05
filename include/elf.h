@@ -105,6 +105,8 @@ enum {
 	ELF_FILETYPE_INCORRECT,
 	ELF_RELOCATE_ERROR,
 	ELF_CANT_MAKE_HEAP,
+	ELF_INVALID_SEGMENTS,
+	ELF_ERR_COUNT,
 };
 
 enum
@@ -125,6 +127,7 @@ enum
 };
 
 void ElfPerformTest();
-int ElfExecute (void *pElfFile, size_t size, const char* pArgs);
+int  ElfExecute (void *pElfFile, size_t size, const char* pArgs);
+const char *ElfGetErrorMsg (int error_code);
 
 #endif//_ELF_H

@@ -14,7 +14,7 @@ typedef struct {
 	unsigned short offset_lowerbits;
 	unsigned short int selector;
 	unsigned char zero;
-	unsigned char type_attr;
+	unsigned char type_attr; 
 	unsigned short offset_higherbits;
 }
 __attribute__((packed)) 
@@ -43,5 +43,6 @@ extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
 extern void WaitMS(int ms);
+extern void SetupPicInterrupt (int intNum, void* isrHandler);
 
 #endif//_IDT_H

@@ -71,6 +71,22 @@ void TemporaryTask(__attribute__((unused)) int arg)
 			hlt;
 	}
 }
+
+void HeapTest()
+{
+	Heap heap;
+	memset(&heap, 0, sizeof heap);
+	
+	AllocateHeap (&heap, 1024);
+	
+	UseHeap (&heap);
+	
+	void*ptr = MmAllocate(100000);
+	LogMsg("Allocated %x on %x", ptr, &heap);
+	
+	FreeHeap (&heap);
+}
+
 extern void KeTaskDone();
 
 typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom);
@@ -207,6 +223,10 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 			LogMsg("Use the launcher's \"Shutdown computer\" option, shut down the computer, and click \"Restart\" to reboot, or use --force.");
+	}
+	else if (strcmp (token, "th") == 0)
+	{
+		HeapTest();
 	}
 	else if (strcmp (token, "ph") == 0)
 	{
@@ -756,6 +776,11 @@ void ShellExecuteCommand(char* p)
 	{
 		CoClearScreen (g_currentConsole);
 		g_currentConsole->curX = g_currentConsole->curY = 0;
+	}
+	else if (strcmp (token, "gv") == 0)
+	{
+		extern volatile uint32_t gVmwCounter2;
+		LogMsg("gVmwCounter2: %u", gVmwCounter2);
 	}
 	else if (strcmp (token, "sb") == 0)
 	{

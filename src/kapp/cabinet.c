@@ -179,10 +179,18 @@ void LaunchExecutable (int fd)
 	FiClose (fd);
 	
 	// And execute!
-	ElfExecute(pData, length, "CabinetExecuted");
+	int ec = ElfExecute(pData, length, "guiExecuted");
 	
 	// Once done executing, free the exacutable data from memory.
 	MmFree(pData);
+	
+	if (ec != ELF_ERROR_NONE)
+	{
+		//show an error message:
+		char buffer[1024];
+		sprintf(buffer, ElfGetErrorMsg(ec), "");//TODO: Allow passing in of filename
+		MessageBox (NULL, buffer, "Application Execution Error", MB_OK | ICON_ERROR << 16);
+	}
 }
 
 //TODO FIXME
