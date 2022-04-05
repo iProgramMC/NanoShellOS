@@ -71,6 +71,22 @@ void TemporaryTask(__attribute__((unused)) int arg)
 			hlt;
 	}
 }
+
+void HeapTest()
+{
+	Heap heap;
+	memset(&heap, 0, sizeof heap);
+	
+	AllocateHeap (&heap, 1024);
+	
+	UseHeap (&heap);
+	
+	void*ptr = MmAllocate(100000);
+	LogMsg("Allocated %x on %x", ptr, &heap);
+	
+	FreeHeap (&heap);
+}
+
 extern void KeTaskDone();
 
 typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom);
@@ -207,6 +223,10 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 			LogMsg("Use the launcher's \"Shutdown computer\" option, shut down the computer, and click \"Restart\" to reboot, or use --force.");
+	}
+	else if (strcmp (token, "th") == 0)
+	{
+		HeapTest();
 	}
 	else if (strcmp (token, "ph") == 0)
 	{

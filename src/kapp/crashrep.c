@@ -42,7 +42,7 @@ void CrashReportWindow( int argument )
 	sprintf(
 		otherString,
 		"This task has performed an illegal operation and will be shut down.\n\n"
-		"If the problem persists, contact the program vendor.\n\n"
+		"A restart of the computer is strongly recommended. Save your work and restart.\n\n"
 	);
 	
 	int index = 0;

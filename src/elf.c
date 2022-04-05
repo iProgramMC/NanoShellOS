@@ -15,6 +15,8 @@
 #define EDLogMsg(...)
 #endif
 
+extern Heap *g_pHeap;
+
 typedef struct 
 {
 	uint32_t* m_pageDirectory;
@@ -57,12 +59,12 @@ void ElfCleanup (ElfProcess* pProcess)
 	FreeHeap (&pProcess->m_heap);
 	pProcess->m_pageDirectory = NULL;
 	for (int i=0; i<1024; i++) {
-		MmFree (pProcess->m_pageTablesList[i]);
+		MmFreeK (pProcess->m_pageTablesList[i]);
 		pProcess->m_pageTablesList[i] = 0;
 	}
 	for (uint32_t i=0; i<pProcess->m_pageAllocationCount; i++)
 	{
-		MmFree (pProcess->m_pagesAllocated[i]);
+		MmFreeK (pProcess->m_pagesAllocated[i]);
 		pProcess->m_pagesAllocated[i] = NULL;
 	}
 }
@@ -152,6 +154,9 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 	//check the header.
 	ElfHeader* pHeader = (ElfHeader*)pElfFile;
 	
+	Heap *pBackup = g_pHeap;
+	ResetToKernelHeap();
+	
 	int errCode = ElfIsSupported(pHeader);
 	if (errCode != 1) //not supported.
 	{
@@ -159,8 +164,10 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 		return errCode;
 	}
 	//ElfDumpInfo(pHeader);
-	// Allocate a new page directory for the elf:
 	
+	bool failed = false;
+	
+	// Allocate a new page directory for the elf:
 	EDLogMsg("(allocating heap...)");
 	if (!AllocateHeap (&proc.m_heap, 4096))//2048))//256))
 		return ELF_CANT_MAKE_HEAP;
@@ -186,35 +193,74 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 			EDLogMsg("Found section that doesn't map to anything...  We won't map that.");
 			continue;
 		}
-		ElfMapAddress (&proc, addr, size1, &pElfData[offs], size2);
-	}
-	
-	EDLogMsg("(loaded and mapped everything, activating heap!)");
-	UseHeap (&proc.m_heap);
-	
-	EDLogMsg("(looking for NOBITS sections to zero out...)");
-	for (int i = 0; i < pHeader->m_shNum; i++)
-	{
-		ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
-		void *addr = (void*)pSectHeader->m_addr;
-		if (pSectHeader->m_type == SHT_NOBITS)
+		
+		// Check if the virtaddr is proper
+		if (pProgHeader->m_virtAddr < 0xC00000 || pProgHeader->m_virtAddr + pProgHeader->m_memSize >= 0x10000000)
 		{
-			//clear
-			ZeroMemory(addr, pSectHeader->m_shSize);
+			failed = true;
+			break;
+		}
+		else
+		{
+			ElfMapAddress (&proc, addr, size1, &pElfData[offs], size2);
 		}
 	}
 	
-	EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
-	//now that we have switched, call the entry func:
-	ElfEntry entry = (ElfEntry)pHeader->m_entry;
+	if (!failed)
+	{
+		EDLogMsg("(loaded and mapped everything, activating heap!)");
+		UseHeap (&proc.m_heap);
+		
+		EDLogMsg("(looking for NOBITS sections to zero out...)");
+		for (int i = 0; i < pHeader->m_shNum; i++)
+		{
+			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
+			void *addr = (void*)pSectHeader->m_addr;
+			if (pSectHeader->m_type == SHT_NOBITS)
+			{
+				//clear
+				ZeroMemory(addr, pSectHeader->m_shSize);
+			}
+		}
+		
+		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
+		//now that we have switched, call the entry func:
+		ElfEntry entry = (ElfEntry)pHeader->m_entry;
+		
+		int e = entry(pArgs);
+		
+		EDLogMsg("The Elf Entry exited!!! Cleaning up and quitting...");
+		
+		g_lastReturnCode = e;
+	}
 	
-	int e = entry(pArgs);
-	
-	EDLogMsg("The Elf Entry exited!!! Cleaning up and quitting...");
-	
-	g_lastReturnCode = e;
 	ResetToKernelHeap();
 	ElfCleanup (&proc);
 	
-	return ELF_ERROR_NONE;
+	if (pBackup)
+		UseHeap( pBackup );
+	
+	return failed ? ELF_INVALID_SEGMENTS : ELF_ERROR_NONE;
+}
+
+const char *gElfErrorCodes[] =
+{
+	"I don't see why you needed to ElfGetErrorMsg, because the elf you tried to execute (%s) ran successfully!",
+	"The image file %s is not a valid NanoShell32 application.",
+	"The image file %s is valid, but is for a machine type other than the current machine.",
+	"The image file %s is valid, but is for a machine type other than the current machine.",
+	"The image file %s is valid, but is for a machine type other than the current machine.",
+	"The image file %s is valid, but is not ELF Version 1, so not supported.",
+	"The image file %s is not a valid NanoShell32 application.",
+	"The image file %s is corrupted.\n\nUnable to apply relocations.",
+	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
+	"The image file %s is corrupted.\n\nThe segment mapping is invalid.",
+};
+
+const char *ElfGetErrorMsg (int error_code)
+{
+	if (error_code < ELF_ERROR_NONE || error_code >= ELF_ERR_COUNT)
+		return "Unknown Elf Execution Error";
+	
+	return gElfErrorCodes[error_code - ELF_ERROR_NONE];
 }
