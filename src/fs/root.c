@@ -301,8 +301,6 @@ void FsInitializeInitRd(void* pRamDisk)
 			strcpy (directory_name, full_file_name);
 			strcpy (file_name,      pname2);
 			
-			SLogMsg("DirName:%s FileName:%s", directory_name, file_name);
-			
 			FileNode *pNewNode = NULL;
 			
 			if (directory_name[0] == 0)

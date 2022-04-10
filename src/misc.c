@@ -174,8 +174,8 @@ void KeRestartSystem(void)
 	if (true)
 	{
 		// Try a triple fault instead.
-		asm("mov $0, %esp\n\
-			 ret");
+		asm("mov $0, %eax\n\t"
+			"mov %eax, %cr3\n");
 		
 		// If all else fails, declare defeat:
 		KeStopSystem();

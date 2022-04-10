@@ -16,6 +16,8 @@
 #include <string.h>
 #include <vga.h>
 
+extern bool g_interruptsAvailable;
+
 extern uint32_t g_kernelPageDirectory[];
 extern uint32_t g_pageTableArray[];
 extern uint32_t* e_frameBitsetVirt;
@@ -349,9 +351,8 @@ int GetHeapSize()
 	return g_heapSize;
 }
 
-void ResetToKernelHeap()
+void ResetToKernelHeapUnsafe()
 {
-	//ACQUIRE_LOCK (g_memoryHeapLock);
 	g_pageAllocationBase = PAGE_ALLOCATION_BASE;
 	g_heapSize = PAGE_ENTRY_TOTAL;
 	g_pageEntries = g_kernelPageEntries;
@@ -361,16 +362,23 @@ void ResetToKernelHeap()
 	g_memoryAllocationSize = g_kernelMemoryAllocationSize;
 	g_pHeap = NULL;
 	MmUsePageDirectory(g_kernelPageDirectory, (uint32_t)g_kernelPageDirectory - BASE_ADDRESS);
-	//FREE_LOCK (g_memoryHeapLock);
 }
 
-void UseHeap (Heap* pHeap)
+void ResetToKernelHeap()
+{
+	cli;
+	ResetToKernelHeapUnsafe();
+	sti;
+}
+
+void UseHeapUnsafe (Heap* pHeap)
 {
 	//ACQUIRE_LOCK (g_memoryHeapLock);
 	if (!pHeap) {
-		ResetToKernelHeap();
+		ResetToKernelHeapUnsafe();
 		return;
 	}
+	
 	g_pHeap = pHeap;
 	g_heapSize                   = pHeap->m_pageEntrySize;
 	g_pageEntries                = pHeap->m_pageEntries;
@@ -384,6 +392,15 @@ void UseHeap (Heap* pHeap)
 	
 	
 	MmUsePageDirectory(pHeap->m_pageDirectory, pHeap->m_pageDirectoryPhys);
+	
+	//FREE_LOCK (g_memoryHeapLock);
+}
+
+void UseHeap (Heap* pHeap)
+{
+	cli;
+	UseHeapUnsafe (pHeap);
+	sti;
 	//FREE_LOCK (g_memoryHeapLock);
 }
 

@@ -322,9 +322,9 @@ void KeIdtLoad1(IdtPointer *ptr)
 bool VmwDetect();
 void VmwAbsCursorIrqA();
 void KiIdtInit()
-{
-	
-	SetupPicInterrupt (0x0, IrqTaskA);//IrqTimerA);
+{	
+	// Allow a bit of leeway before task switching is allowed
+	SetupPicInterrupt (0x0, IrqTimerA);
 	SetupPicInterrupt (0x1, IrqKeyboardA);
 	SetupPicInterrupt (0x2, IrqClockA); // IRQ2: Cascade. Never triggered
 	SetupPicInterrupt (0x3, IrqSerialCom2A);
@@ -383,7 +383,12 @@ void KiIdtInit()
 #endif
 }
 
-void KiIdtInit2()
+void KiPermitTaskSwitching()
+{
+	SetupPicInterrupt (0x0, IrqTaskA);
+}
+
+void KiSetupPic()
 {
 	
 	//initialize the pics
@@ -414,7 +419,6 @@ void KiIdtInit2()
 	ptr.limit = (sizeof(IdtEntry) * IDT_SIZE);
 	ptr.base = (size_t)g_idt;
 	
-	g_interruptsAvailable = true;// sti was set in LoadIDT
 	KeIdtLoad1 (&ptr);
 	
 	KeTimerInit();

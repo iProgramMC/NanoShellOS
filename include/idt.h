@@ -38,6 +38,8 @@ typedef struct
 CrashInfo;
 
 extern void KiIdtInit();
+extern void KiSetupPic();
+extern void KiPermitTaskSwitching();
 extern void KeTimerInit();
 extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);

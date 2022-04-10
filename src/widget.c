@@ -14,6 +14,8 @@
 #include <wmenu.h>
 #include <string.h>
 
+bool g_GlowOnHover = true;
+
 // Utilitary functions
 #if 1
 
@@ -2398,6 +2400,23 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 		}
 		case EVENT_MOVECURSOR:
 		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p))
+			{
+				if (!this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = true;
+					if (g_GlowOnHover)
+						WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
+			}
+			else if (this->m_buttonData.m_hovered)
+			{
+				this->m_buttonData.m_hovered = false;
+				if (g_GlowOnHover)
+					WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
 			break;
 		}
 		case EVENT_PAINT:
@@ -2410,6 +2429,11 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 				r.left++; r.right++; r.bottom++; r.top++;
 				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			}
+			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
+			{
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD + 0x101010);
+				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
 			{
@@ -2570,13 +2594,15 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				if (!this->m_buttonData.m_hovered)
 				{
 					this->m_buttonData.m_hovered = true;
-					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+					if (g_GlowOnHover)
+						WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 				}
 			}
 			else if (this->m_buttonData.m_hovered)
 			{
 				this->m_buttonData.m_hovered = false;
-				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				if (g_GlowOnHover)
+					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			break;
 		}
@@ -2586,16 +2612,16 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
+				VidFillRectangle(0x7F, r);
 				r.left++; r.right++; r.bottom++; r.top++;
-				VidFillRectangle(0x7F, this->m_rect);
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 			}
-			else if (this->m_buttonData.m_hovered)
+			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				VidFillRectangle(0x7F, this->m_rect);
+				VidFillRectangle(0x7F, r);
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;
@@ -2603,7 +2629,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			else
 			{
-				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.left += 30;
 				r.top += 1;
 				r.bottom += 1;

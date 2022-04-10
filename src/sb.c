@@ -228,7 +228,6 @@ void SbSoundWave (uint8_t index, uint8_t wave)
 extern int GetRandom();
 static void SbFill(uint16_t* pBuf, int nLen)
 {
-	SLogMsg("Filling ...");
 	for (int i = 0; i < nLen; i++)
 	{
 		double f = 0.0;
@@ -368,7 +367,6 @@ void SbIrqHandler()
 {
 	sbBufferFlip ^= true;
 	
-	SLogMsg("Irq...");
 	SbFill (&snBuffer[sbBufferFlip ? 0 : (BUFFER_SIZE / 2)], (BUFFER_SIZE / 2));
 	
 	ReadPort(DSP_READ_STATUS);

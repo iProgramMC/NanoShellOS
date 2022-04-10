@@ -91,7 +91,7 @@ void CrashReportWindow( int argument )
 	SetTextInputText(pWindow, 4, string);
 	
 	RECT(r, (winwidth - 50) / 2, (winheight - 30), 50, 20);
-	AddControl (pWindow, CONTROL_BUTTON, r, "Close", 3, 0, 0);
+	AddControl (pWindow, CONTROL_BUTTON, r, "Damn", 3, 0, 0);
 	
 	while (HandleMessages (pWindow));
 }

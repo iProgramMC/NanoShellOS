@@ -66,6 +66,7 @@ typedef struct FSNodeS
 	uint32_t           m_implData1;
 	uint32_t           m_implData2;
 	uint32_t           m_implData3;
+	uint64_t           m_modifyTime, m_createTime;
 	FileReadFunc       Read;
 	FileWriteFunc      Write;
 	FileOpenFunc       Open;

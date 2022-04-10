@@ -16,6 +16,7 @@
 __attribute__((aligned(16)))
 Task g_runningTasks[C_MAX_TASKS];
 
+extern bool g_interruptsAvailable;
 
 static int s_lastRunningTaskIndex = 1;
 
@@ -31,6 +32,8 @@ static const uint8_t* g_kernelFontContext = NULL;
 extern Heap*          g_pHeap;
 extern Console*       g_currentConsole; //logmsg
 extern const uint8_t* g_pCurrentFont;
+
+extern bool           g_interruptsAvailable;
 
 bool g_forceKernelTaskToRunNext = false;
 
@@ -162,6 +165,14 @@ void KeConstructTask (Task* pTask)
 
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
 {
+	// Pre-allocate the stack, since it depends on interrupts being on
+	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
+	if (!pStack)
+	{
+		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
+		return NULL;
+	}
+	
 	cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
 	
 	int i = 1;
@@ -177,10 +188,14 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 	{
 		*pErrorCodeOut = TASK_ERROR_TOO_MANY_TASKS;
 		sti;
+		
+		// Pre-free the pre-allocated stack. Don't need it lying around
+		if (pStack)
+			MmFreeK(pStack);
+		
 		return NULL;
 	}
 	
-	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
 	if (pStack)
 	{
 		//Setup our new task here:
@@ -337,6 +352,8 @@ void KeFxRestore(int *fpstate)
 // Every 10 milliseconds the task switches continue
 int g_TaskSwitchingAggressiveness = 10;
 
+void ResetToKernelHeapUnsafe();
+void UseHeapUnsafe (Heap* pHeap);
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	Task* pTask = KeGetRunningTask();
@@ -359,7 +376,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_kernelConsoleContext = g_currentConsole;
 		g_kernelFontContext = g_pCurrentFont;
 	}
-	ResetToKernelHeap();
+	ResetToKernelHeapUnsafe();
 	
 	if (!pTask) //switching away from kernel task?
 	{
@@ -413,7 +430,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_vbeData = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
 		g_pCurrentFont = pNewTask->m_pFontContext;
-		UseHeap (pNewTask->m_pCurrentHeap);
+		UseHeapUnsafe (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
 	else
@@ -424,7 +441,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
 		g_pCurrentFont = g_kernelFontContext;
-		UseHeap (g_kernelHeapContext);
+		UseHeapUnsafe (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}
 }
@@ -457,10 +474,8 @@ void LockFree (SafeLock *pLock)
 	if (pLock->m_task_owning_it == KeGetRunningTask())
 	{
 		// The lock is ours: free it
-		cli;
 		pLock->m_task_owning_it =  NULL;
 		pLock->m_held = false;
-		sti;
 	}
 	else
 		SLogMsg("Cannot release lock %x held by task %x as task %x", pLock, pLock->m_task_owning_it, KeGetRunningTask ());

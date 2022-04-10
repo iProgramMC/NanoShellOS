@@ -31,7 +31,7 @@ global OnSyscallReceivedA
 
 section .text
 
-IrqSerialCom1A:
+IrqSb16A:
 	pusha
 	call SbIrqHandler
 	popa
@@ -41,9 +41,11 @@ IrqVirtualBoxA:
 	;call IrqVirtualBox
 	;popa
 	iretd
-IrqSb16A:
+IrqSerialCom1A:
 	pusha
+	push 0
 	call UartOnInterrupt
+	add  esp, 4
 	popa
 	iretd
 IrqSerialCom2A:
@@ -78,7 +80,7 @@ IrqMouseA:
 IrqCascadeA:
 	iretd
 OnSyscallReceivedA:
-	cli
+	; Allow interrupts to come in again. Nested interrupts are supported by the CPU
 	push 0
 	pusha
 	

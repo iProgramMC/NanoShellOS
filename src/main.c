@@ -21,14 +21,14 @@
 #include <shell.h>
 #include <storabs.h>
 #include <task.h>
+#include <uart.h>
 #include <vfs.h>
 #include <vga.h>
 #include <video.h>
 #include <wcall.h>
 #include <window.h>
 
-
-// TODO FIXME: Add a global VFS lock.
+extern bool g_interruptsAvailable;
 
 extern void FsMountFatPartitions(void);
 
@@ -157,10 +157,17 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Initialize eventual PCI devices.	This is useful to find the main BGA
 	// controller, if there's one.
 	PciInit();
+	
+	// Initialize the task scheduler
+	KiTaskSystemInitialize();
 
+	// Setup the IDT
 	KiIdtInit();
 	
-	KiIdtInit2();
+	KiSetupPic();
+	
+	// Tell the OS that interrupts are now available. :)
+	g_interruptsAvailable = true;
 	
 	// Initialize the Memory Management Subsystem
 	MmInit(mbi);
@@ -209,6 +216,9 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	// Initialize the sound blaster device
 	SbInit();
+	
+	// Allow task switching
+	KiPermitTaskSwitching();
 
 	KePrintSystemVersion();
 
@@ -216,8 +226,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	KbInitialize();
 	
 	// KePrintMemoryMapInfo();
-	//	Initialize the task scheduler
-	KiTaskSystemInitialize();
 	
 	// Initialize the file system
 	FsSetup ();
@@ -255,7 +263,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	}
 	
 	LogMsg("Physical address that we should load from: %x", pInitrdAddress);
-
+	
 	// Initialize the IDE driver
 	StIdeInitialize();
 
@@ -265,6 +273,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Load the initrd last so its entries show up last when we type 'ls'.
 	FsInitializeInitRd((void*)pInitrdAddress);
 	
+	UartInit(0);
 	
 	LogMsg("(loading config from disk...)");
 	

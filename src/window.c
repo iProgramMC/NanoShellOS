@@ -3088,6 +3088,12 @@ bool HandleMessages(Window* pWindow)
 	// grab the lock
 	LockAcquire (&pWindow->m_EventQueueLock);
 	
+	// If the window manager was being asked to redraw the window, but it did not
+	// Withdraw the statement, so you can draw another frame
+	//bool bkp = pWindow->m_renderFinished;
+	
+	//pWindow->m_renderFinished = false;
+	
 	// While we have events in the master queue...
 	int et = 0, p1 = 0, p2 = 0;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
@@ -3122,6 +3128,10 @@ bool HandleMessages(Window* pWindow)
 				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
 		}
 	}
+	
+	// If handling this event did nothing, just restore the old state
+	//if (!pWindow->m_renderFinished)
+	//	pWindow->m_renderFinished = bkp;
 	
 	LockFree (&pWindow->m_EventQueueLock);
 	KeTaskDone();//hlt; //give it a good halt

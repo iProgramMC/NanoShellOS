@@ -83,12 +83,14 @@ void RedrawEverything();
 		DESKTOP_CHANGE_BACKGD,
 		DESKTOP_CHOOSETHEMETEXT,
 		DESKTOP_ORMAKEYOUROWNTEXT,
+		DESKTOP_GLOW_ON_HOVER,
 		
 		DESKTOP_CANCEL,
 		
 		DESKTOP_THEME_DEFAULT = 5000,
 		DESKTOP_THEME_DARK,
 	};
+	extern bool g_GlowOnHover;
 	void SetDefaultTheme();
 	void SetDarkTheme   ();
 	#define DESKTOP_POPUP_WIDTH 300
@@ -109,8 +111,10 @@ void RedrawEverything();
 				AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
 				RECT(r,10, 35 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
+				RECT(r,10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make buttons glow when hovering over them", DESKTOP_GLOW_ON_HOVER, g_GlowOnHover, 0);
 				
-				RECT(r, 10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r, 10, 75 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
 				#define THEMES_PER_ROW 4
@@ -118,7 +122,7 @@ void RedrawEverything();
 				#define ADD_THEME(themenum) \
 					RECT(r, \
 					     10 + ((DESKTOP_POPUP_WIDTH - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
-						 75 + TITLE_BAR_HEIGHT + ((themenum) / THEMES_PER_ROW) * 25,\
+						 95 + TITLE_BAR_HEIGHT + ((themenum) / THEMES_PER_ROW) * 25,\
 						 (DESKTOP_POPUP_WIDTH - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
 						 20);\
 					AddControl(pWindow, CONTROL_BUTTON, r, GetThemeName(themenum), DESKTOP_THEME_DEFAULT + (themenum), 0, 0);
@@ -133,7 +137,7 @@ void RedrawEverything();
 				ADD_THEME(TH_DESERT);
 				ADD_THEME(TH_RAINYDAY);
 				
-				RECT(r, 10, 155 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r, 10, 175 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
 				RECT(r,(DESKTOP_POPUP_WIDTH-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
@@ -164,6 +168,7 @@ void RedrawEverything();
 				{
 					g_BackgroundSolidColorActive = CheckboxGetChecked(pWindow, DESKTOP_ENABLE_BACKGD);
 					g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);
+					g_GlowOnHover                = CheckboxGetChecked(pWindow, DESKTOP_GLOW_ON_HOVER);
 					RedrawEverything();
 				}
 				DestroyWindow(pWindow);

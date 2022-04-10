@@ -38,6 +38,7 @@ typedef struct ConsoleStruct {
 	char m_inputBuffer[KB_BUF_SIZE];
 	int  m_inputBufferBeg, m_inputBufferEnd;
 	int  m_cursorFlashTimer, m_cursorFlashState;
+	int  m_scrollY, m_actualHeight;//for wterm
 } Console;
 
 extern Console g_debugConsole; // for LogMsg
