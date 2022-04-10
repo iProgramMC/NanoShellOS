@@ -106,6 +106,11 @@ enum {
 	ELF_RELOCATE_ERROR,
 	ELF_CANT_MAKE_HEAP,
 	ELF_INVALID_SEGMENTS,
+	ELF_FILE_NOT_FOUND,
+	ELF_FILE_IO_ERROR,
+	ELF_OUT_OF_MEMORY,
+	ELF_PROCESS_ERROR,
+	ELF_KILLED,
 	ELF_ERR_COUNT,
 };
 
@@ -126,8 +131,10 @@ enum
 	//...
 };
 
+#define DEFAULT_HEAP_SIZE 1024
+
 void ElfPerformTest();
-int  ElfExecute (void *pElfFile, size_t size, const char* pArgs);
 const char *ElfGetErrorMsg (int error_code);
+int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, int nHeapSize, int *pElfErrorCodeOut);
 
 #endif//_ELF_H

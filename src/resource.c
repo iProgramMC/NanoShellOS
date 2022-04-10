@@ -22,36 +22,12 @@
 void LaunchExecutable (int fd);
 RESOURCE_STATUS CabinetExecute(const char* filename)
 {
-	// Open it up
-	int fd = FiOpen (filename, O_RDONLY | O_EXEC);
-	if (fd < 0)
-	{
-		//LogMsg("Got error %d while trying to open %s", fd, filename);
-		char buffer[1024];
-		sprintf (buffer, "Got error %d while trying to open %s.", fd, filename);
-		MessageBox(NULL, buffer, "File cabinet", MB_OK | ICON_ERROR << 16);
-		return RESOURCE_LAUNCH_NOT_FOUND;
-	}
+	// Execute a cabinet file
+	int ec1 = 0, ec2 = 0;
 	
-	// Create the Launch Executable thread with the file descriptor as its parameter.
-	int errorCode = 0;
-    Task* pTask = KeStartTask (LaunchExecutable, fd, &errorCode);
-    if (errorCode != TASK_SUCCESS)
-    {
-		char buffer[1024];
-        sprintf (buffer, "Cannot create thread to execute '%s'. Out of memory?", filename);
-        MessageBox(NULL, buffer, "Error", ICON_ERROR << 16 | MB_OK);
-		
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-    }
+	ec1 = ElfRunProgram (filename, NULL, true, true, DEFAULT_HEAP_SIZE, &ec2);
 	
-	// After the task was created, give it a tag.
-	cli;
-	KeTaskAssignTag(pTask, filename);
-	sti;
-	
-	// Consider it done.  LaunchExecutable task shall now FiClose the open file descriptor we've created.
-	return RESOURCE_LAUNCH_SUCCESS;
+	return ec1 == ELF_ERROR_NONE ? RESOURCE_LAUNCH_SUCCESS : RESOURCE_LAUNCH_OUT_OF_MEMORY;
 }
 
 RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)

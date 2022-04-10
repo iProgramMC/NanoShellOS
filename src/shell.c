@@ -21,6 +21,7 @@
 #include <vfs.h>
 #include <elf.h>
 #include <cinterp.h>
+#include <sb.h>
 #include <fat.h>
 #include <pci.h>
 #include <config.h>
@@ -131,26 +132,6 @@ bool CoPrintCharInternal (Console* this, char c, char next);
 char g_cwd[PATH_MAX+1];
 FileNode* g_pCwdNode = NULL;
 
-void funnytest(UNUSED int argument)
-{
-	FileNode* pNode = g_pCwdNode;
-	FileNode* pFile = FsFindDir(pNode, "main.nse");
-	if (!pFile)
-		LogMsg("No such file or directory");
-	else
-	{
-		int length = pFile->m_length;
-		char* pData = (char*)MmAllocate(length + 1);
-		pData[length] = 0;
-		
-		FsRead(pFile, 0, length, pData);
-		
-		ElfExecute(pData, length, "");
-		
-		MmFree(pData);
-	}
-	LogMsg("");
-}
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
@@ -297,13 +278,6 @@ void ShellExecuteCommand(char* p)
 	{
 		LogMsg("Last run ELF returned: %d", g_lastReturnCode);
 	}
-	else if (strcmp (token, "em") == 0)
-	{
-		int erc = 0;
-		Task* pTask = KeStartTask(funnytest, 0, &erc);
-		
-		LogMsg("Started task!  Pointer: %x, errcode: %x", pTask, erc);
-	}
 	else if (strcmp (token, "fd") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
@@ -333,7 +307,7 @@ void ShellExecuteCommand(char* p)
 		}
 		else if (!g_windowManagerRunning)
 		{
-			LogMsg("Running apps outside the window manager is broken for now so don't.");
+			LogMsg("Running apps outside the window manager is broken for now, so don't.");
 		}
 		else
 		{
@@ -346,25 +320,13 @@ void ShellExecuteCommand(char* p)
 			}
 			strcat (s, fileName);
 			
-			int fd = FiOpen (s, O_RDONLY);
-			if (fd < 0)
+			int er = 0;
+			int ec = ElfRunProgram(s, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, &er);
+			
+			if (ec != ELF_ERROR_NONE)
 			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
+				LogMsg(ElfGetErrorMsg(ec), s);
 			}
-			
-			int length = FiTellSize(fd);
-			
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			
-			FiRead(fd, pData, length);
-			
-			FiClose(fd);
-			
-			ElfExecute(pData, length, g_lastCommandExecuted);
-			
-			MmFree(pData);
 			
 			LogMsg("");
 		}
@@ -715,9 +677,9 @@ void ShellExecuteCommand(char* p)
 			goto print_usage1;
 		}
 		
-		int nFat = atoi (fatNum);
+//		int nFat = atoi (fatNum);
 		
-		CheckDiskFatMain (nFat);
+//		CheckDiskFatMain (nFat);
 		
 		goto dont_print_usage1;
 	print_usage1:

@@ -55,12 +55,11 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			break;
 		}
 		case EVENT_PAINT:
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 			if (pConsole)
 			{
 				pConsole->m_dirty = true;
 			}
-	#pragma GCC diagnostic pop
+			
 		case EVENT_UPDATE:
 		{
 			if (pConsole)

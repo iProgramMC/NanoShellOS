@@ -258,7 +258,7 @@ void RedrawEverything();
 				*/
 				break;
 			}
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"//fallthrough intentional.
+			
 			case EVENT_COMMAND:
 				if (parm1 != KEYBDP_CANCEL_BUTTON)
 				{
@@ -282,7 +282,7 @@ void RedrawEverything();
 			case EVENT_CLOSE:
 				DefaultWindowProc(pWindow, messageType, parm1, parm2);
 				break;
-	#pragma GCC diagnostic pop
+			
 			case EVENT_RELEASECURSOR:
 				SetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT,  GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-GetScrollBarPos(pWindow, KEYBDP_REPEAT_DELAY));
 				SetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY,     GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)   -1-GetScrollBarPos(pWindow, KEYBDP_REPEAT_CPS));
@@ -343,7 +343,6 @@ void RedrawEverything();
 				
 				break;
 			}
-	#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"//fallthrough intentional.
 			case EVENT_COMMAND:
 				if (parm1 == NTERM_FONT_LIST)
 				{
@@ -395,7 +394,7 @@ void RedrawEverything();
 			case EVENT_CLOSE:
 				DefaultWindowProc(pWindow, messageType, parm1, parm2);
 				break;
-	#pragma GCC diagnostic pop
+			
 			default:
 				DefaultWindowProc(pWindow, messageType, parm1, parm2);
 				break;

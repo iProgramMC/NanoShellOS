@@ -9,6 +9,7 @@
 #include <wterm.h>
 #include <wmenu.h>
 #include <config.h>
+#include <process.h>
 #include <vfs.h>
 #include <elf.h>
 #include <resource.h>
@@ -20,7 +21,7 @@
 
 RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	
 	char* pText;
 	if (pTextIn)
@@ -37,7 +38,6 @@ RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 	}
 	
 	Task* pTask = KeStartTask(VersionProgramTask, (int) pText, &errorCode);
-	DebugLogMsg("Created version window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -45,9 +45,8 @@ RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 }
 RESOURCE_STATUS LaunchSystem()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(SystemMonitorEntry, 0, &errorCode);
-	DebugLogMsg("Created System window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -55,9 +54,8 @@ RESOURCE_STATUS LaunchSystem()
 }
 RESOURCE_STATUS LaunchIconTest()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
-	DebugLogMsg("Created icon test window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -65,10 +63,8 @@ RESOURCE_STATUS LaunchIconTest()
 }
 RESOURCE_STATUS LaunchTextShell()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(TerminalHostTask, 0, &errorCode);
-	//Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
-	DebugLogMsg("Created Text Shell window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -76,9 +72,8 @@ RESOURCE_STATUS LaunchTextShell()
 }
 RESOURCE_STATUS LaunchPaint()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(PrgPaintTask, 0, &errorCode);
-	DebugLogMsg("Created Paint window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -87,9 +82,8 @@ RESOURCE_STATUS LaunchPaint()
 
 RESOURCE_STATUS LaunchControlPanel()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(ControlEntry, 0, &errorCode);
-	DebugLogMsg("Created Control Panel window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -97,9 +91,8 @@ RESOURCE_STATUS LaunchControlPanel()
 }
 RESOURCE_STATUS LaunchNotepad()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(BigTextEntry, 0, &errorCode);
-	DebugLogMsg("Created Notepad window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -107,9 +100,8 @@ RESOURCE_STATUS LaunchNotepad()
 }
 RESOURCE_STATUS LaunchCabinet()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(CabinetEntry, 0, &errorCode);
-	DebugLogMsg("Created Cabinet window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -117,9 +109,8 @@ RESOURCE_STATUS LaunchCabinet()
 }
 RESOURCE_STATUS LaunchMineGame()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(PrgMineTask, 0, &errorCode);
-	DebugLogMsg("Created Minesweeper window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -127,9 +118,8 @@ RESOURCE_STATUS LaunchMineGame()
 }
 RESOURCE_STATUS LaunchVBuilder()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(PrgVBldTask, 0, &errorCode);
-	DebugLogMsg("Created Codename V-Build window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -137,9 +127,8 @@ RESOURCE_STATUS LaunchVBuilder()
 }
 RESOURCE_STATUS LaunchMagnifier()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask = KeStartTask(PrgMagnifyTask, 0, &errorCode);
-	DebugLogMsg("Created Magnifier window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;

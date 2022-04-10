@@ -7,8 +7,11 @@
 #include <elf.h>
 #include <string.h>
 #include <memory.h>
+#include <vfs.h>
+#include <task.h>
+#include <process.h>
 
-//#define ELF_DEBUG
+#define ELF_DEBUG
 #ifdef ELF_DEBUG
 #define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
 #else
@@ -22,11 +25,11 @@ typedef struct
 	uint32_t* m_pageDirectory;
 	uint32_t  m_pageDirectoryPhys;
 	uint32_t* m_pageTablesList[1024];
-	#define MAX_PAGE_ALLOC_COUNT 4096
+	#define MAX_PAGE_ALLOC_COUNT 4096 //max: 16 MB, should be plenty.
 	uint32_t  m_pageAllocationCount;
 	uint32_t* m_pagesAllocated[MAX_PAGE_ALLOC_COUNT];
 	
-	Heap m_heap;
+	Heap* m_heap;
 }
 ElfProcess;
 
@@ -54,19 +57,8 @@ int ElfIsSupported(ElfHeader* pHeader)
 	return true;
 }
 
-void ElfCleanup (ElfProcess* pProcess)
+void ElfCleanup (UNUSED ElfProcess* pProcess)
 {
-	FreeHeap (&pProcess->m_heap);
-	pProcess->m_pageDirectory = NULL;
-	for (int i=0; i<1024; i++) {
-		MmFreeK (pProcess->m_pageTablesList[i]);
-		pProcess->m_pageTablesList[i] = 0;
-	}
-	for (uint32_t i=0; i<pProcess->m_pageAllocationCount; i++)
-	{
-		MmFreeK (pProcess->m_pagesAllocated[i]);
-		pProcess->m_pagesAllocated[i] = NULL;
-	}
 }
 void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
 {
@@ -143,19 +135,21 @@ void ElfDumpInfo(ElfHeader* pHeader)
 
 extern int g_lastReturnCode;
 
-int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
+static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut)
 {
 	EDLogMsg("Loading elf file");
-	size += 0; //to circumvent unused warning
+	
+	// The heap associated with this process
+	Heap *pHeap  = g_pHeap;
+	
 	ElfProcess proc;
 	memset(&proc, 0, sizeof(proc));
+	
+	proc.m_heap = pHeap;
 	
 	uint8_t* pElfData = (uint8_t*)pElfFile; //to do arithmetic with this
 	//check the header.
 	ElfHeader* pHeader = (ElfHeader*)pElfFile;
-	
-	Heap *pBackup = g_pHeap;
-	ResetToKernelHeap();
 	
 	int errCode = ElfIsSupported(pHeader);
 	if (errCode != 1) //not supported.
@@ -163,20 +157,11 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 		LogMsg("Got error %d while loading the elf.", errCode);
 		return errCode;
 	}
-	//ElfDumpInfo(pHeader);
+	
+	proc.m_pageDirectory     = proc.m_heap->m_pageDirectory;
+	proc.m_pageDirectoryPhys = proc.m_heap->m_pageDirectoryPhys;
 	
 	bool failed = false;
-	
-	// Allocate a new page directory for the elf:
-	EDLogMsg("(allocating heap...)");
-	if (!AllocateHeap (&proc.m_heap, 4096))//2048))//256))
-		return ELF_CANT_MAKE_HEAP;
-	
-	uint32_t* newPageDir = proc.m_heap.m_pageDirectory,
-			  newPageDirP= proc.m_heap.m_pageDirectoryPhys;
-	
-	proc.m_pageDirectory     = newPageDir;
-	proc.m_pageDirectoryPhys = newPageDirP;
 	
 	EDLogMsg("(loading prog hdrs into memory...)");
 	for (int i = 0; i < pHeader->m_phNum; i++)
@@ -209,7 +194,7 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 	if (!failed)
 	{
 		EDLogMsg("(loaded and mapped everything, activating heap!)");
-		UseHeap (&proc.m_heap);
+		UseHeap (pHeap);
 		
 		EDLogMsg("(looking for NOBITS sections to zero out...)");
 		for (int i = 0; i < pHeader->m_shNum; i++)
@@ -224,21 +209,16 @@ int ElfExecute (void *pElfFile, size_t size, const char* pArgs)
 		}
 		
 		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
+		
 		//now that we have switched, call the entry func:
 		ElfEntry entry = (ElfEntry)pHeader->m_entry;
 		
 		int e = entry(pArgs);
 		
-		EDLogMsg("The Elf Entry exited!!! Cleaning up and quitting...");
+		EDLogMsg("Executable has exited.");
 		
-		g_lastReturnCode = e;
+		*pErrCodeOut = g_lastReturnCode = e;
 	}
-	
-	ResetToKernelHeap();
-	ElfCleanup (&proc);
-	
-	if (pBackup)
-		UseHeap( pBackup );
 	
 	return failed ? ELF_INVALID_SEGMENTS : ELF_ERROR_NONE;
 }
@@ -255,6 +235,11 @@ const char *gElfErrorCodes[] =
 	"The image file %s is corrupted.\n\nUnable to apply relocations.",
 	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
 	"The image file %s is corrupted.\n\nThe segment mapping is invalid.",
+	"The image file %s does not exist.",
+	"The image file %s could not be opened due to unspecified I/O error.",
+	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
+	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
+	"Execution of this executable was killed.",
 };
 
 const char *ElfGetErrorMsg (int error_code)
@@ -263,4 +248,147 @@ const char *ElfGetErrorMsg (int error_code)
 		return "Unknown Elf Execution Error";
 	
 	return gElfErrorCodes[error_code - ELF_ERROR_NONE];
+}
+
+typedef struct
+{
+	void*  pFileData;
+	size_t nFileSize;
+	bool   bGui;        //false if ran from command shell
+	bool   bAsync;      //false if the parent is waiting for this to finish
+	bool   bExecDone;   //true if the execution of this process has completed
+	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
+	char   sArgs[1024];
+	char   sFileName[PATH_MAX+5];
+	int*   pElfErrorCodeOut; // The error code that the ELF file will return.
+}
+ElfLoaderBlock;
+
+static void ElfExecThread(int pnLoaderBlock)
+{
+	// Load the pLoaderBlock
+	ElfLoaderBlock block = *((ElfLoaderBlock*)pnLoaderBlock);
+	
+	// Make a clone of the elf data, so that in the event that this thread dies, it won't leak memory
+	void *pMem = MmAllocate (block.nFileSize);
+	memcpy (pMem, block.pFileData, block.nFileSize);
+	MmFreeK(block.pFileData);
+	block.pFileData = pMem;
+	
+	// Try to load the ELF in
+	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, block.pElfErrorCodeOut);
+	
+	if (erc != ELF_ERROR_NONE)
+	{
+		// Show an error code, depending on the bRunFromGui
+		SLogMsg("ELF Execution Error: %d", erc);
+	}
+	
+	MmFreeK(block.pFileData);
+	
+	if (block.bAsync)
+	{
+		ExGetRunningProc()->pDetail = NULL;
+		MmFreeK ((void*)pnLoaderBlock);
+	}
+	else
+	{
+		((ElfLoaderBlock*)pnLoaderBlock)->bExecDone = true;
+		KeExit ();
+	}
+}
+
+void ElfOnDeath(Process* pProc)
+{
+	if (pProc->pDetail)
+	{
+		ElfLoaderBlock* pBlk = (ElfLoaderBlock*)pProc->pDetail;
+		if (pBlk->bAsync)
+		{
+			MmFreeK(pProc->pDetail);
+			pProc->pDetail = NULL;
+		}
+		else
+		{
+			pBlk->bExecDone = true;
+			*(pBlk->pElfErrorCodeOut) = ELF_KILLED;
+		}
+	}
+}
+
+// bAsync : Does not wait for the process to die
+// pElfErrorCodeOut : The error code returned by the spawned elf executable itself.
+int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bGui, int nHeapSize, int *pElfErrorCodeOut)
+{
+	int fd = FiOpen(pFileName, O_RDONLY);
+	if (fd < 0)
+	{
+		// Show an error code, depending on the bRunFromGui
+		SLogMsg("Couldn't open file: %d", fd);
+		return (fd == -EEXIST) ? ELF_FILE_NOT_FOUND : ELF_FILE_IO_ERROR;
+	}
+	
+	// Get the file size
+	size_t nFileSize = FiTellSize (fd);
+	
+	void* pData = MmAllocateK (nFileSize);
+	
+	if (!pData)
+		return ELF_OUT_OF_MEMORY;
+	
+	size_t nActualFileSz = FiRead (fd, pData, nFileSize);
+	
+	FiClose (fd);
+	
+	// Try to execute it.
+	ElfLoaderBlock *pBlock = MmAllocateK (sizeof (ElfLoaderBlock));
+	if (!pBlock)
+		return ELF_OUT_OF_MEMORY;
+	
+	// Fill in the block
+	memset (pBlock, 0, sizeof *pBlock);
+	
+	strcpy (pBlock->sFileName, pFileName);
+	
+	strcpy (pBlock->sArgs,     pFileName);
+	
+	// If we have arguments at all and we have something inside...
+	if (pArgs && *pArgs)
+	{
+		strcat (pBlock->sArgs, " ");
+		strcat (pBlock->sArgs, pArgs);
+	}
+	
+	pBlock->bAsync    = bAsync;
+	pBlock->bGui      = bGui;
+	pBlock->nHeapSize = nHeapSize;
+	pBlock->pFileData = pData;
+	pBlock->nFileSize = nActualFileSz;
+	pBlock->pElfErrorCodeOut = pElfErrorCodeOut;
+	
+	// Create a new process
+	int erc = 0;
+	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc);
+	pProc->pDetail = pBlock;
+	pProc->OnDeath = ElfOnDeath;
+	if (!pProc)
+	{
+		MmFreeK (pBlock);
+		return ELF_PROCESS_ERROR;
+	}
+	
+	// If this is an async execution, our job is done, and the KeExecThread will continue.
+	if (bAsync) return ELF_ERROR_NONE;
+	
+	// Otherwise, wait until you're done.
+	while (!pBlock->bExecDone)
+	{
+		KeTaskDone();
+	}
+	
+	// Ok, execution is complete. Free all related data
+	
+	MmFreeK (pBlock);
+	
+	return ELF_ERROR_NONE;
 }

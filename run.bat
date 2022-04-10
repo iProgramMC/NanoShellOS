@@ -8,6 +8,7 @@ cd /d c:\Program Files\qemu
 set path=%path%;%NSPath%
 
 qemu-system-i386.exe -d cpu_reset -m 64M -boot d -cdrom %nspath%\build\image.iso -hda %nspath%\vdisk.vdi -debugcon stdio -display sdl -device sb16 -accel tcg
+: -s -S
 : -serial COM7
 : -kernel %nspath%/kernel.bin 
 : -debugcon stdio

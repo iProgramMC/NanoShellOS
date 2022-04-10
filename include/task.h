@@ -88,6 +88,8 @@ typedef struct
 	char 		   m_tag[33];
 	
 	int            m_reviveAt;
+	
+	void *         m_pProcess;
 }
 Task;
 
@@ -111,6 +113,9 @@ enum {
 	is not NULL. errorCodeOut can also be NULL, if we don't
 	actually care (although, this is recommended against)
 ***********************************************************/
+// note that the void pointer is there because I really do not want to include <process.h>, which includes us...
+Task* KeStartTaskExD(TaskedFunction function, int argument, int *pErrorCodeOut, void* pProc, const char* a, const char* b, int c);
+
 Task* KeStartTaskD(TaskedFunction function, int argument, int *pErrorCodeOut, const char* a, const char* b, int c);
 #define KeStartTask(function, argument, errorPtr) \
         KeStartTaskD(function, argument, errorPtr, __FILE__, __FUNCTION__, __LINE__)

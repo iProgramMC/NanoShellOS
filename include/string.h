@@ -46,6 +46,7 @@ void fmemcpy128(void* restrict dest, const void* restrict src, int size);
 void fmemcpy256(void* restrict dest, const void* restrict src, int size);
 
 //Other string functions:
+bool StartsWith(const char* pText, const char* pCheck);
 bool EndsWith(const char* pText, const char* pCheck);
 
 //requires 4 byte aligned size.

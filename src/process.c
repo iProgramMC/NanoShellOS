@@ -1,0 +1,182 @@
+#include <process.h>
+
+SafeLock gProcessLock;
+
+Process gProcesses[64];
+
+void UseHeapUnsafe  (Heap* pHeap);
+void FreeHeapUnsafe (Heap* pHeap);
+void ResetToKernelHeapUnsafe();
+
+Process* ExMakeUpAProcess()
+{
+	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
+	{
+		if (!gProcesses[i].bActive)
+			return &gProcesses[i];
+	}
+	return NULL;
+}
+
+extern Heap *g_pHeap;
+
+void ExDisposeProcess(Process *pProc)
+{
+	// Assert that all threads are dead
+	if (pProc->nTasks != 0)
+	{
+		// They are not.  We need to try again
+		pProc->bWillDie = false;
+		return;
+	}
+	
+	// If the current heap is this process' heap (which we hope it isn't),
+	// disposing of this heap will automatically switch to the kernel heap :^)
+	SLogMsg("Freeing Heap %x from task %x...", pProc, KeGetRunningTask());
+	FreeHeapUnsafe (&pProc->sHeap);
+	SLogMsg("Freed   Heap...");
+	
+	// Deactivate this process
+	pProc->bActive = false;
+}
+
+void ExCheckDyingProcesses()
+{
+	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
+	{
+		if (!gProcesses[i].bActive) continue;
+		if (!gProcesses[i].bWillDie) continue;
+		
+		ExDisposeProcess(&gProcesses[i]);
+	}
+}
+
+void ExKillProcess(Process *pProc)
+{
+	LockAcquire (&gProcessLock);
+	
+	Task* pThisTask = KeGetRunningTask();
+	
+	bool triedToKillSelf = false;
+	
+	for (int i = 0; i < pProc->nTasks; i++)
+	{
+		Task* pTask = pProc->sTasks[i];
+		//TODO: this is a special case, if trying to kill this process
+		if (pThisTask == pTask)
+		{
+			//Special case. Let us finish killing the other tasks first
+			triedToKillSelf = true;
+		}
+		else
+		{
+			KeKillTask (pTask);
+		}
+	}
+	pProc->bWillDie = true;
+	pProc->nTasks   = 0;
+	
+	//TODO
+	if (triedToKillSelf)
+	{
+		LockFree (&gProcessLock);
+		
+		// All the required processing for the death of this process is done,
+		// we just need to kill this task
+		KeKillTask(pThisTask);
+	}
+	else
+		LockFree (&gProcessLock);
+}
+
+void ExOnThreadExit (Process* pProc, Task* pTask)
+{
+	// Locate the task
+	for (int i = 0; i < pProc->nTasks; i++)
+	{
+		if (pProc->sTasks[i] == pTask)
+		{
+			// Remove it
+			memcpy (&pProc->sTasks[i], &pProc->sTasks[i+1], sizeof (Task*) * (pProc->nTasks - i - 1));
+			pProc->nTasks--;
+			
+			if (pProc->nTasks == 0)
+			{
+				pProc->bWillDie = true;//it is useless now
+				
+				// Let the process free its stuff first
+				if (pProc->OnDeath)
+				{
+					SLogMsg("Calling process' death function...");
+					UseHeapUnsafe (&pProc->sHeap);
+					pProc->OnDeath(pProc);
+					ResetToKernelHeapUnsafe ();
+					SLogMsg("Calling process' death function done");
+				}
+			}
+			
+			return;
+		}
+	}
+}
+
+Process* ExGetRunningProc()
+{
+	if (KeGetRunningTask())
+		return (Process*)KeGetRunningTask()->m_pProcess;
+	else
+		return NULL;
+}
+
+Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode)
+{
+	LockAcquire (&gProcessLock);
+	
+	Process* pProc = ExMakeUpAProcess();
+	if (!pProc)
+	{
+		*pErrCode = EX_PROC_TOO_MANY_PROCESSES;
+		LockFree (&gProcessLock);
+		return NULL;
+	}
+	
+	memset (pProc, 0, sizeof *pProc);
+	
+	// Create a new heap
+	if (nHeapSize < 128)
+		nHeapSize = 128;
+	
+	if (!AllocateHeapD (&pProc->sHeap, nHeapSize, pIdent, 10000))
+	{
+		*pErrCode = EX_PROC_CANT_MAKE_HEAP;
+		LockFree (&gProcessLock);
+		return NULL;
+	}
+	
+	// Use the heap, so that it can be used in the task
+	Heap* pBkp = g_pHeap;
+	UseHeap (&pProc->sHeap);
+	
+	// Create the task itself
+	Task* pTask = KeStartTaskExD(pTaskedFunc, nParm, pErrCode, pProc, pIdent, "--Process--", 1337);
+	if (!pTask)
+	{
+		SLogMsg("shit");
+		//error code was already set
+		LockFree (&gProcessLock);
+		return NULL;
+	}
+	
+	// Setup the process structure.
+	pProc->bActive  = true;
+	pProc->bWillDie = false;
+	pProc->nTasks = 1;
+	pProc->sTasks[0] = pTask;
+	strcpy (pProc->sIdentifier, pIdent);
+	
+	UseHeap (pBkp);
+	
+	LockFree (&gProcessLock);
+	return pProc;
+}
+

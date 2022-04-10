@@ -17,6 +17,18 @@ bool EndsWith(const char* pText, const char* pCheck)
 	return (strcmp (pTextEnd, pCheck) == 0);
 }
 
+bool StartsWith(const char* pText, const char* pCheck)
+{
+	int slt = strlen (pText), slc = strlen (pCheck);
+	if (slt < slc) return false; //obviously, it can't.
+	
+	char text[slc+1];
+	memcpy (text, pText, slc);
+	text[slc] = 0;
+	
+	return (strcmp (text, pCheck) == 0);
+}
+
 int memcmp(const void* ap, const void* bp, size_t size)
 {
 	const BYTE* a = (const BYTE*) ap;

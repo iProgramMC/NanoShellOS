@@ -141,7 +141,7 @@ void VmwAbsCursorIrq()
 			
 			uint16_t scaled_x = (uint16_t)(sPkt.ebx);
 			uint16_t scaled_y = (uint16_t)(sPkt.ecx);
-			uint16_t n_scroll = (uint16_t)(sPkt.edx);
+			UNUSED uint16_t n_scroll = (uint16_t)(sPkt.edx);
 			
 			// LogMsg
 			//SLogMsg("Buttons: %d-%d-%d, %d %d  <->%d", lmb, mmb, rmb, scaled_x, scaled_y, n_scroll);

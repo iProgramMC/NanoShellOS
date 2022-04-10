@@ -278,7 +278,7 @@ static void SbDspWrite (uint8_t b)
 	WritePort (DSP_WRITE, b);
 }
 
-static void SbDspRead (uint8_t b)
+UNUSED static void SbDspRead (uint8_t b)
 {
 	while (ReadPort (DSP_READ_STATUS) & 0x80) asm ("pause");
 	WritePort (DSP_READ, b);

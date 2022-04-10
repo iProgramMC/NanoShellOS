@@ -22,7 +22,11 @@
 	
 ***************************************************************/
 
-typedef struct
+struct Proc;
+
+typedef void (*DeathProc) (struct Proc*);
+
+struct Proc
 {
 	bool  bActive;
 	bool  bWillDie;
@@ -31,10 +35,13 @@ typedef struct
 	
 	int   nTasks;
 	Task* sTasks [4];
+	void* pDetail;
+	
+	DeathProc OnDeath;
 	
 	Heap  sHeap;
-}
-Process;
+};
+typedef struct Proc Process;
 
 enum
 {
@@ -43,6 +50,7 @@ enum
 	EX_PROC_CANT_MAKE_HEAP,
 };
 
+Process* ExGetRunningProc();
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode);
 
 #endif//_PROCESS_H

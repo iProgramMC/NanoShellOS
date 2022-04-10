@@ -6,6 +6,7 @@
 ******************************************/
 #include <task.h>
 #include <memory.h>
+#include <process.h>
 #include <string.h>
 #include <print.h>
 #include <misc.h>
@@ -28,6 +29,7 @@ static VBEData*       g_kernelVBEContext = NULL;
 static Heap*          g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
 static const uint8_t* g_kernelFontContext = NULL;
+static Process*       g_pProcess = NULL;
 
 extern Heap*          g_pHeap;
 extern Console*       g_currentConsole; //logmsg
@@ -163,8 +165,11 @@ void KeConstructTask (Task* pTask)
 	KeFxSave (pTask->m_fpuState);
 }
 
-Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
+void ExOnThreadExit (Process* pProc, Task* pTask);
+
+Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
+	Process *pProc = (Process*)pProcVoid;
 	// Pre-allocate the stack, since it depends on interrupts being on
 	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
 	if (!pStack)
@@ -209,16 +214,28 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 		pTask->m_authorLine = authorLine;
 		pTask->m_argument   = argument;
 		pTask->m_bMarkedForDeletion = false;
+		pTask->m_pProcess = pProc;
+		
+		Heap* pBkp = g_pHeap;
+		
+		// This replacement is purely symbolic: while it won't use the
+		// page directory of this heap, it will apply it to the new task.
+		if (pProc)
+			g_pHeap = &pProc->sHeap;
 		
 		char buffer[32];
 		sprintf(buffer, "<task no. %d>", i);
 		
 		KeConstructTask(pTask);
 		
+		// Restore Old Heap
+		g_pHeap = pBkp;
+		
 		if (pErrorCodeOut)
 			*pErrorCodeOut = TASK_SUCCESS;
 		sti;
 		
+		// Update last running task index. Makes task scheduling faster
 		KeFindLastRunningTaskIndex ();
 		
 		return pTask;
@@ -230,12 +247,18 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 		return NULL;
 	}
 }
+Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
+{
+	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
+}
+
+void MmFreeUnsafeK(void *ptr);
+
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt) cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
 	if (pTask == KeGetRunningTask())
 	{
-		//SLogMsg("Marked current task for execution (KeResetTask)");
 		pTask->m_bMarkedForDeletion = true;
 		sti;//if we didn't restore interrupts here would be our death point
 		while (1) hlt;
@@ -245,12 +268,10 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		//SLogMsg("Deleting task %x (KeResetTask, killing:%d)", pTask, killing);
 		if (killing && pTask->m_pStack)
 		{
-			//SLogMsg("Freeing this task's stack");
-			MmFreeK(pTask->m_pStack);
+			MmFreeUnsafeK(pTask->m_pStack);
 		}
 		pTask->m_pStack = NULL;
 		
-		//SLogMsg("Resetting stuff about it...");
 		pTask->m_bFirstTime = false;
 		pTask->m_bExists    = false;
 		pTask->m_pFunction  = NULL;
@@ -268,6 +289,9 @@ bool KeKillTask(Task* pTask)
 {
 	if (pTask == KeGetRunningTask())
 		KeExit();
+	
+	if (pTask->m_pProcess)
+		ExOnThreadExit ((Process*)pTask->m_pProcess, pTask);
 	
 	cli;
 	if (pTask == NULL)
@@ -323,9 +347,15 @@ void KeExit()
 		KeStopSystem();
 	}
 	
+	Task* pTask = KeGetRunningTask();
+	
+	if (pTask->m_pProcess)
+		ExOnThreadExit ((Process*)pTask->m_pProcess, pTask);
+	
 	//SLogMsg("Marked current task for execution (KeExit)");
-	KeGetRunningTask()->m_bMarkedForDeletion = true;
-	while (1) hlt;
+	pTask->m_bMarkedForDeletion = true;
+	while (1)
+		KeTaskDone ();
 }
 #ifdef USE_SSE_FXSAVE
 void KeFxSave(int *fpstate)
@@ -349,13 +379,27 @@ void KeFxRestore(int *fpstate)
 }
 #endif
 
+void KeCheckDyingTasks()
+{
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		if (g_runningTasks[i].m_bMarkedForDeletion)
+		{
+			KeResetTask(&g_runningTasks[i], true, true);
+		}
+	}
+}	
+
 // Every 10 milliseconds the task switches continue
-int g_TaskSwitchingAggressiveness = 10;
+///int g_TaskSwitchingAggressiveness = 10;
 
 void ResetToKernelHeapUnsafe();
 void UseHeapUnsafe (Heap* pHeap);
+void ExCheckDyingProcesses();
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
+	g_pProcess = NULL;
+	
 	Task* pTask = KeGetRunningTask();
 	//Please note that tasking code does not use the FPU, so we should be safe just saving it here.
 	if (pTask)
@@ -380,13 +424,8 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 	
 	if (!pTask) //switching away from kernel task?
 	{
-		for (int i = 0; i < C_MAX_TASKS; i++)
-		{
-			if (g_runningTasks[i].m_bMarkedForDeletion)
-			{
-				KeResetTask(&g_runningTasks[i], true, true);
-			}
-		}
+		KeCheckDyingTasks();
+		ExCheckDyingProcesses();
 	}
 	
 	int g_tick_count = GetTickCount();
@@ -430,6 +469,9 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_vbeData = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
 		g_pCurrentFont = pNewTask->m_pFontContext;
+		
+		g_pProcess = (Process*)pNewTask->m_pProcess;
+		
 		UseHeapUnsafe (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
@@ -441,6 +483,9 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
 		g_pCurrentFont = g_kernelFontContext;
+		
+		g_pProcess = NULL;
+		
 		UseHeapUnsafe (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}

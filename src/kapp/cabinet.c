@@ -82,7 +82,10 @@ IconType CabGetIconBasedOnName(const char *pName, int pType)
 	}
 	else if (pType == FILE_TYPE_CHAR_DEVICE)
 	{
-		icon = ICON_DEVICE_CHAR; //TODO
+		if (StartsWith (pName, "Com"))
+			icon = ICON_SERIAL;
+		else
+			icon = ICON_DEVICE_CHAR;
 	}
 	else if (EndsWith (pName, ".nse"))
 	{
@@ -151,46 +154,6 @@ reset:
 	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	
 	RequestRepaint(pWindow);
-}
-
-//TODO FIXME: Spawn a console window if the ELF file is not marked as using the GUI.
-void LaunchExecutable (int fd)
-{
-	//The argument is assumed to be a valid file descriptor.
-	//The CabinetExecute function gave us a tag and everything.
-	//We just need to load the data and execute it.
-	
-	// Get the length we need to take
-	int length = FiTellSize (fd);
-	
-	// Allocate a buffer sufficient enough
-	char* pData = (char*)MmAllocate(length + 1);
-	if (!pData)
-	{
-		LogMsg("Out of memory in LaunchExecutable?!");
-		//just kill the file
-		FiClose (fd);
-		return;
-	}
-	pData[length] = 0;
-	
-	// Read the data from the file and close the file
-	FiRead(fd, pData, length);
-	FiClose (fd);
-	
-	// And execute!
-	int ec = ElfExecute(pData, length, "guiExecuted");
-	
-	// Once done executing, free the exacutable data from memory.
-	MmFree(pData);
-	
-	if (ec != ELF_ERROR_NONE)
-	{
-		//show an error message:
-		char buffer[1024];
-		sprintf(buffer, ElfGetErrorMsg(ec), "");//TODO: Allow passing in of filename
-		MessageBox (NULL, buffer, "Application Execution Error", MB_OK | ICON_ERROR << 16);
-	}
 }
 
 //TODO FIXME
@@ -277,7 +240,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		case EVENT_PAINT:
 		{
 			VidTextOut (g_cbntOldCWD, 8, 15 + TITLE_BAR_HEIGHT*2, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2, 0x00000000000000000, WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
 			strcpy(g_cbntOldCWD, g_cabinetCWD);
 			break;
 		}
