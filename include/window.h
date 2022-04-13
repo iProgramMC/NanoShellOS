@@ -204,6 +204,8 @@ enum {
 	//When creating the control, the image gets duplicated, so the caller may free/dispose of
 	//the old image.  The system will get rid of its own copy when the control gets destroyed.
 	CONTROL_IMAGE,
+	//Task list control
+	CONTROL_TASKLIST,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -291,6 +293,13 @@ typedef struct
 	MenuBarTreeItem m_root;
 }
 MenuBarData;
+
+typedef struct
+{
+	bool m_clicked[WINDOWS_MAX];
+	bool m_hovered[WINDOWS_MAX];
+}
+TaskListData;
 
 typedef struct
 {
@@ -384,6 +393,7 @@ typedef struct ControlStruct
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
 		ImageCtlData  m_imageCtlData;
+		TaskListData  m_taskListData;
 	};
 	
 	int m_anchorMode;
@@ -418,6 +428,7 @@ enum CURSORTYPE
 #define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
+#define WF_SYSPOPUP 0x10000000//Internal flag: System Popup (omit from taskbar)
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
 

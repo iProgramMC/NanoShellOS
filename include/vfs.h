@@ -183,32 +183,7 @@ void EraseFileNode (FileNode* pFileNode);
 	#define SEEK_CUR 1
 	#define SEEK_END 2
 	
-	enum
-	{
-		ENOTHING,
-		EACCES,
-		EEXIST,
-		EINTR,
-		EINVAL,
-		EIO,
-		EISDIR,
-		ELOOP,
-		EMFILE,
-		ENAMETOOLONG,
-		ENFILE,
-		ENOENT,
-		ENOSR,
-		ENOSPC,
-		ENOTDIR,
-		ENXIO,
-		EOVERFLOW,
-		EROFS,
-		EAGAIN,
-		ENOMEM,
-		ETXTBUSY,
-		EBADF,
-		ESPIPE,
-	};
+	#include <errors.h>
 	
 	// Opens a file and returns its descriptor.
 	int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine);

@@ -14,7 +14,7 @@ add_item|118|0|Magnifier|shell:magnify
 add_item|93|0|Codename V-Builder|shell:vbuild
 add_item|38|0|Minesweeper|shell:mineswp
 
-add_item|65|0|Clock|exwindow:/Clock.nse
+add_item|65|0|Clock|exwindow:/Bin/Clock.nse
 
 add_item|23|0|Icon demo|shell:icontest
 add_item|7|0|Scribble!|shell:scribble

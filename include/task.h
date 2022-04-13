@@ -75,6 +75,7 @@ typedef struct
 	int            m_argument;
 	bool           m_bFirstTime;
 	bool           m_bMarkedForDeletion;
+	bool           m_bSuspended;
 	
 	const char*    m_authorFile, 
 	          *    m_authorFunc;

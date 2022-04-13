@@ -32,9 +32,11 @@ typedef struct {
 	bool m_bPresent:1;
 	bool m_bReadWrite:1;
 	bool m_bUserSuper:1;
+	bool m_bWriteThrough:1;
+	bool m_bCacheDisabled:1;
 	bool m_bAccessed:1;
 	bool m_bDirty:1;
-	int m_unused:7;
+	int m_unused:5;
 	uint32_t m_pAddress:20;
 } 
 __attribute__((packed))

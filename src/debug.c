@@ -71,6 +71,12 @@ const char* g_pBugCheckReasonText[] = {
 	/*Abort*/"INACCESSIBLE_BOOT_DEVICE",
 };
 
+const char* GetBugCheckReasonText(BugCheckReason reason)
+{
+	if (reason < 0 || reason > (BugCheckReason)ARRAY_COUNT (g_pBugCheckReasonText)) return "UNKNOWN";
+	
+	return g_pBugCheckReasonText[reason];
+}
 const char* GetMemoryRangeString(uint32_t range)
 {
 	if (range >= 0xD0000000) return "Framebuffer (huh?!)";

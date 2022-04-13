@@ -497,18 +497,6 @@ void LauncherEntry(__attribute__((unused)) int arg)
 
 #endif
 
-// Taskbar widget
-#if 1
-
-bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
-{
-	//switch (
-	
-	return false;
-}
-
-#endif
-
 // Taskbar
 #if 1
 
@@ -547,12 +535,6 @@ void UpdateTaskbar (Window* pWindow)
 {
 	char buffer[1024];
 	
-	//TODO: Window buttons.
-	
-	// FPS
-	sprintf(buffer, "FPS: %d     ", GetWindowManagerFPS());
-	SetLabelText(pWindow, TASKBAR_START_TEXT, buffer);
-	
 	// Time
 	TimeStruct* time = TmReadTime();
 	sprintf(buffer, "  %02d:%02d:%02d", time->hours, time->minutes, time->seconds);
@@ -568,6 +550,7 @@ static inline void CreateEntry (Window* pWindow, WindowMenu* pMenu, const char* 
 	pMenu->nIconID      = nIconID;
 	pMenu->nMenuComboID = nComboID;
 	pMenu->nOrigCtlComboID = 999;
+	pMenu->nWidth       = 200;
 	pMenu->bOpen        = false;
 	pMenu->pOpenWindow  = NULL;
 	strcpy (pMenu->sText, pString);
@@ -718,6 +701,7 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
 			}
 			g_taskbarMenu.nLineSeparators = 3;
+			g_taskbarMenu.nWidth    = 200;
 			g_taskbarMenu.bHasIcons = true;
 			
 			Rectangle r;
@@ -739,20 +723,21 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				}
 			}
 			
-			RECT (r, launcherItemPosX, 4, 400, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXTCENTER, r, "FPS: Wait...", TASKBAR_START_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_FORCEBGCOL);
+			RECT (r, launcherItemPosX, 3, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2);
+			AddControl(pWindow, CONTROL_TASKLIST, r, NULL, TASKBAR_START_TEXT, 0, 0);
 			
 			pWindow->m_data = (void*)(launcherItemPosX + 400);
 			
 			break;
 		}
-		case EVENT_UPDATE: {
+		case EVENT_UPDATE:
+		{
 			UpdateTaskbar(pWindow);
 			break;
 		}
-		case EVENT_PAINT: {
+		case EVENT_PAINT:
+		{
 			
-			VidDrawHLine (WINDOW_TITLE_TEXT_COLOR,       pWindow->m_rect.left, pWindow->m_rect.right, 0);
 			VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR_B, pWindow->m_rect.left, pWindow->m_rect.right, 1);
 			
 			break;
@@ -798,7 +783,13 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				int idx = parm1-1000;
 				if (idx < g_nLauncherItems)
 				{
-					LaunchResource(g_pLauncherItems[idx].m_resourceID);
+					RESOURCE_STATUS status = LaunchResource(g_pLauncherItems[idx].m_resourceID);
+					if (status)
+					{
+						char Buffer [2048];
+						sprintf (Buffer, GetResourceErrorText(status), g_pLauncherItems[idx].m_resourceID);
+						MessageBox (pWindow, Buffer, "NanoShell Menu", MB_OK | ICON_ERROR << 16);
+					}
 				}
 			}
 			break;
@@ -816,11 +807,11 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS);
+	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP);
 	
 	if (!pWindow)
 	{
-		DebugLogMsg("Hey, the window couldn't be created. Why?");
+		DebugLogMsg("Hey, the taskbar couldn't be created. Why?");
 		return;
 	}
 	

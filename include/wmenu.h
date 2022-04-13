@@ -7,7 +7,7 @@
 #ifndef _WMENU_H
 #define _WMENU_H
 
-#define MENU_ITEM_HEIGHT 16
+#define MENU_ITEM_HEIGHT 18
 #define MENU_SEPA_HEIGHT 5
 
 typedef struct MenuEntry
@@ -23,6 +23,7 @@ typedef struct MenuEntry
 	int               nLineSeparators;
 	Window*           pOpenWindow;
 	int               nIconID;
+	int               nWidth;
 }
 WindowMenu;
 

@@ -6,6 +6,7 @@
 ******************************************/
 #include <wbuiltin.h>
 #include <task.h>
+#include <process.h>
 #include <debug.h>
 #include <idt.h>
 bool KeDidATaskCrash();
@@ -28,12 +29,14 @@ void CALLBACK CrashReportWndProc( Window* pWindow, int messageType, int parm1, i
 	}
 }
 
+const char* GetBugCheckReasonText(BugCheckReason reason);
 //The argument is assumed to be a pointer to a Registers* structure.  It gets freed automatically by the task.
 void CrashReportWindow( int argument )
 {
 	CrashInfo* pCrashInfo = (CrashInfo*)argument;
 	
 	char string [8192];
+	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
 	
 	char otherString[512], 
@@ -45,6 +48,8 @@ void CrashReportWindow( int argument )
 		"A restart of the computer is strongly recommended. Save your work and restart.\n\n"
 	);
 	
+	sprintf(string + strlen (string), "\nError %x (%s)\nStack Trace:", pCrashInfo->m_nErrorCode, GetBugCheckReasonText (pCrashInfo->m_nErrorCode));
+	
 	int index = 0;
 	while (pCrashInfo->m_stackTrace[index] != 0)
 	{
@@ -55,8 +60,11 @@ void CrashReportWindow( int argument )
 	
 	int winwidth = 500, winheight = 260;
 	
+	char winTitle[500];
+	sprintf(winTitle, "Application Execution Error - %s", pCrashInfo->m_tag);
+	
 	Window* pWindow = CreateWindow (
-		pCrashInfo->m_tag, 
+		winTitle, 
 		(GetScreenWidth()  - winwidth)  / 2,
 		(GetScreenHeight() - winheight) / 2,
 		winwidth,
@@ -100,10 +108,19 @@ void CrashReporterCheck()
 {
 	if (KeDidATaskCrash())
 	{
-		//OMG! A task died? Call the ambulance!!!
+		// OMG! A task died? Call the ambulance!!!
 		
 		// Allocate the registers so we can pass them onto the new task.
 		CrashInfo* pCrashInfo = MmAllocate (sizeof (CrashInfo)), crashInfo = *KeGetCrashedTaskInfo();
+		
+		if (!pCrashInfo)
+		{
+			LogMsg("Could not create crash report task.");
+			LogMsg("Some task crashed, here is its register dump:");
+			DumpRegisters(&crashInfo.m_regs);
+			return;
+		}
+		
 		memcpy (pCrashInfo, &crashInfo, sizeof(CrashInfo));
 		
 		// Let the kernel know that we have processed its crash report.
@@ -121,6 +138,13 @@ void CrashReporterCheck()
 			MmFree(pCrashInfo);
 		}
 		
-		//Done.
+		// Kill the process
+		if (crashInfo.m_pTaskKilled->m_pProcess)
+		{
+			SLogMsg("Killing Process...");
+			ExKillProcess((Process*)crashInfo.m_pTaskKilled->m_pProcess);
+		}
 	}
+	
+	// Check for low memory
 }

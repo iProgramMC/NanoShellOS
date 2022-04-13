@@ -442,10 +442,11 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		int task = s_lastRunningTaskIndex;
 		for (; i < task; i++)
 		{
-			if (g_runningTasks[i].m_bExists)
+			Task* p = &g_runningTasks[i];
+			if (p->m_bExists)
 			{
 				// Is the task scheduled to come back online?
-				if (g_runningTasks[i].m_reviveAt < g_tick_count)
+				if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
 					break;
 			}
 		}

@@ -32,7 +32,8 @@ typedef struct
 {
 	Registers m_regs;
 	Task*     m_pTaskKilled;
-	char      m_tag[33];
+	uint32_t  m_nErrorCode;
+	char      m_tag[256];
 	uint32_t  m_stackTrace[51];
 }
 CrashInfo;

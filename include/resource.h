@@ -35,5 +35,6 @@ enum
 };
 
 RESOURCE_STATUS LaunchResource (const char* pResource);
+const char* GetResourceErrorText (RESOURCE_STATUS state);
 
 #endif//_RESOURCE_H

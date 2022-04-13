@@ -1638,7 +1638,7 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 }
 
 //present, read/write, user/supervisor, writethrough
-#define VBE_PAGE_BITS (1 | 2 | 4 | 8)
+#define VBE_PAGE_BITS (1 | 2 | 4 | 16)
 void VidInitialize(multiboot_info_t* pInfo)
 {
 	cli;

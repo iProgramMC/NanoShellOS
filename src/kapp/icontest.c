@@ -61,6 +61,8 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 				int x = i % icons_per_width, y = i / icons_per_width;
 				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
 			}
+			
+			VidFillRect(0xCCDDEE, 100, 100, 900, 900);
 			/*RenderIcon(ICON_CABINET, 10, 20);*/
 			break;
 		}

@@ -53,8 +53,6 @@ void ExCheckDyingProcesses()
 
 void ExKillProcess(Process *pProc)
 {
-	LockAcquire (&gProcessLock);
-	
 	Task* pThisTask = KeGetRunningTask();
 	
 	bool triedToKillSelf = false;
@@ -73,20 +71,14 @@ void ExKillProcess(Process *pProc)
 			KeKillTask (pTask);
 		}
 	}
-	pProc->bWillDie = true;
-	pProc->nTasks   = 0;
 	
 	//TODO
 	if (triedToKillSelf)
 	{
-		LockFree (&gProcessLock);
-		
 		// All the required processing for the death of this process is done,
 		// we just need to kill this task
-		KeKillTask(pThisTask);
+		KeExit();
 	}
-	else
-		LockFree (&gProcessLock);
 }
 
 void ExOnThreadExit (Process* pProc, Task* pTask)
@@ -102,17 +94,21 @@ void ExOnThreadExit (Process* pProc, Task* pTask)
 			
 			if (pProc->nTasks == 0)
 			{
-				pProc->bWillDie = true;//it is useless now
-				
 				// Let the process free its stuff first
 				if (pProc->OnDeath)
 				{
 					SLogMsg("Calling process' death function...");
-					UseHeapUnsafe (&pProc->sHeap);
+					UseHeap (&pProc->sHeap);
+					
 					pProc->OnDeath(pProc);
-					ResetToKernelHeapUnsafe ();
+					pProc->OnDeath = NULL;
+					
+					ResetToKernelHeap ();
 					SLogMsg("Calling process' death function done");
 				}
+				
+				
+				pProc->bWillDie = true;//it is useless now
 			}
 			
 			return;

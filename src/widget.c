@@ -501,13 +501,19 @@ void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 
 void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 {
-	if (this->m_textInputData.m_pText)
-		MmFreeK(this->m_textInputData.m_pText);
 	
 	int slen = strlen (pText);
 	int newCapacity = slen + 1;
 	if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
-	this->m_textInputData.m_pText = MmAllocateK (newCapacity);
+	
+	char *pNewText = MmAllocateK (newCapacity);
+	if (!pNewText) return;
+	
+	if (this->m_textInputData.m_pText)
+		MmFreeK(this->m_textInputData.m_pText);
+	
+	this->m_textInputData.m_pText = pNewText;
+	
 	strcpy (this->m_textInputData.m_pText, pText);
 	this->m_textInputData.m_textCapacity = newCapacity;
 	this->m_textInputData.m_textLength   = slen;
@@ -606,6 +612,10 @@ void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
 		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
 		char* pText = (char*)MmAllocateK(newCapacity);
+		
+		if (!pText)
+			return;
+		
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
 		
 		MmFreeK(this->m_textInputData.m_pText);
@@ -635,6 +645,9 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
 		
 		char* pText = (char*)MmAllocateK(newCapacity);
+		if (!pText)
+			return;
+		
 		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
 		
 		MmFreeK(this->m_textInputData.m_pText);
@@ -1500,6 +1513,9 @@ static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalI
 		int oldSize = sizeof (ListItem) * pData->m_capacity;
 		int newSize = oldSize * 2;
 		ListItem* pNewItems = MmAllocateK(newSize);
+		if (!pNewItems)
+			return;
+		
 		ZeroMemory(pNewItems, newSize);
 		memcpy (pNewItems, pData->m_pItems, oldSize);
 		MmFreeK (pData->m_pItems);
@@ -1540,6 +1556,10 @@ static void CtlResetList (Control* pCtl, Window* pWindow)
 	pData->m_capacity     = 10;
 	int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 	pData->m_pItems       = MmAllocateK (itemsSize);
+	if (!pData->m_pItems)
+	{
+		return;
+	}
 	memset (pData->m_pItems, 0, itemsSize);
 	
 	//also update the scroll bar.
@@ -1665,6 +1685,8 @@ go_back:
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 			pData->m_pItems       = MmAllocateK (itemsSize);
+			if (!pData->m_pItems)
+				return false;
 			memset (pData->m_pItems, 0, itemsSize);
 			
 			// Add a vertical scroll bar to its right.
@@ -1729,6 +1751,9 @@ static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int o
 		int oldSize = sizeof (ListItem) * pData->m_capacity;
 		int newSize = oldSize * 2;
 		ListItem* pNewItems = MmAllocateK(newSize);
+		if (!pNewItems)
+			return;
+		
 		ZeroMemory(pNewItems, newSize);
 		memcpy (pNewItems, pData->m_pItems, oldSize);
 		MmFreeK (pData->m_pItems);
@@ -1850,20 +1875,27 @@ go_back:
 			
 			for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
 			{
-				uint32_t color = WINDOW_TEXT_COLOR, colorT = TRANSPARENT;
+				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
+				uint32_t color = WINDOW_TEXT_COLOR;
+				Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 				if (pData->m_highlightedElementIdx == i)
 				{
-					color = WINDOW_TEXT_COLOR_LIGHT, colorT = 0x7F;
+					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
+					
+					int w, h;
+					VidTextOutInternal(pData->m_pItems[i].m_contents, 0, 0, 0, 0, true, &w, &h);
+					
+					int mid = (br.left + br.right) / 2;
+					
+					VidFillRect(0x7F, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
 				}
-				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
 				if (pData->m_hasIcons)
 				{
 					if (pData->m_pItems[i].m_icon)
 						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, this->m_rect.top + 2 + j * ICON_ITEM_HEIGHT, 32);
 				}
 				//VidTextOut (pData->m_pItems[i].m_contents, this->m_rect.left + 4 + elementX, this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32, color, colorT);
-				Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
-				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, colorT);
+				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
 				
 				elementX += ICON_ITEM_WIDTH;
 				k++;
@@ -1889,6 +1921,9 @@ go_back:
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 			pData->m_pItems       = MmAllocateK (itemsSize);
+			if (!pData->m_pItems)
+				return false;
+			
 			memset (pData->m_pItems, 0, itemsSize);
 			
 			// Add a vertical scroll bar to its right.
@@ -2009,6 +2044,11 @@ void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comb
 	this->m_childrenCount    = 0;
 	this->m_childrenCapacity = 4;
 	this->m_childrenArray    = (MenuBarTreeItem*)MmAllocateK (this->m_childrenCapacity * sizeof (MenuBarTreeItem));
+	if (!this->m_childrenArray)
+	{
+		this->m_childrenCapacity = 0;
+		return;
+	}
 	memset (this->m_childrenArray, 0, 4 * sizeof (MenuBarTreeItem));
 	this->m_text[0]          = 0;
 	this->m_isOpen           = false;
@@ -2022,6 +2062,7 @@ bool WidgetMenuBar_TryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comb
 		{
 			// Doesn't fit.  Need to expand.
 			MenuBarTreeItem* new = (MenuBarTreeItem*)MmAllocateK (this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
+			if (!new) return false;
 			memset (new, 0, this->m_childrenCapacity * 2 * sizeof (MenuBarTreeItem));
 			memcpy (new, this->m_childrenArray, this->m_childrenCapacity * sizeof (MenuBarTreeItem));
 			this->m_childrenCapacity *= 2;
@@ -2043,6 +2084,7 @@ bool WidgetMenuBar_TryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comb
 		//Allocate a default of 2 items.
 		pItem->m_childrenCapacity = 2;
 		pItem->m_childrenArray    = (MenuBarTreeItem*)MmAllocateK (2 * sizeof (MenuBarTreeItem));
+		if (!pItem->m_childrenArray) return false;
 		memset (pItem->m_childrenArray, 0, 2 * sizeof (MenuBarTreeItem));
 		
 		//We were able to add it.  Leave and tell the caller that we did it.
@@ -2078,7 +2120,7 @@ void WidgetMenuBar_DeInitializeChild(MenuBarTreeItem *this)
 	}
 	
 	// then, deinitialize this
-	MmFree(this->m_childrenArray);
+	MmFreeK(this->m_childrenArray);
 }
 
 void WidgetMenuBar_DeInitializeRoot(Control* this)
@@ -2398,6 +2440,11 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			}
 			break;
 		}
+		case EVENT_KILLFOCUS:
+			this->m_buttonData.m_hovered = false;
+			if (g_GlowOnHover)
+				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
 		case EVENT_MOVECURSOR:
 		{
 			Rectangle r = this->m_rect;
@@ -2432,7 +2479,11 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD + 0x101010);
+				uint32_t bm = BUTTONMIDD;
+				if (bm > 0xDFDFDF)//avoid overflow
+					bm = 0xDFDFDF;
+				bm += 0x202020;
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, bm);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
@@ -2585,6 +2636,11 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			break;
 		}
+		case EVENT_KILLFOCUS:
+			this->m_buttonData.m_hovered = false;
+			if (g_GlowOnHover)
+				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
 		case EVENT_MOVECURSOR:
 		{
 			Rectangle r = this->m_rect;
@@ -2609,12 +2665,16 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		case EVENT_PAINT:
 		{
 			Rectangle r = this->m_rect;
+			
+			int offs = 20;
+			if (this->m_parm1) offs += 10;
+			
 			if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
 				VidFillRectangle(0x7F, r);
 				r.left++; r.right++; r.bottom++; r.top++;
-				r.left += 30;
+				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
@@ -2622,7 +2682,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
 				VidFillRectangle(0x7F, r);
-				r.left += 30;
+				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
@@ -2630,12 +2690,12 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			else
 			{
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
-				r.left += 30;
+				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
-			r.left -= 30;
+			r.left -= offs;
 			if (this->m_parm1)
 				RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
 			
@@ -2833,7 +2893,6 @@ void SetImageCtlMode (Window *pWindow, int comboID, int mode)
 		}
 	}
 }
-
 void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -2845,7 +2904,6 @@ void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
 		}
 	}
 }
-
 void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -2864,7 +2922,6 @@ void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
 		}
 	}
 }
-
 Image* GetImageCtlCurrentImage (Window *pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -2876,7 +2933,6 @@ Image* GetImageCtlCurrentImage (Window *pWindow, int comboID)
 	}
 	return NULL;
 }
-
 void ImageCtlZoomToFill (Window *pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -2887,7 +2943,6 @@ void ImageCtlZoomToFill (Window *pWindow, int comboID)
 		}
 	}
 }
-
 bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
 	switch (eventType)
@@ -3144,12 +3199,184 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 		case EVENT_RELEASECURSOR:
 		{
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if ( (RectangleContains (&check_rect, &p) || RectangleContains (&text_rect, &p)) && this->m_checkBoxData.m_clicked )
+			bool contains = (RectangleContains (&check_rect, &p) || RectangleContains (&text_rect, &p));
+			if ( this->m_checkBoxData.m_clicked )
 			{
-				this->m_checkBoxData.m_checked ^= 1;
+				if (contains)
+					this->m_checkBoxData.m_checked ^= 1;
 				this->m_checkBoxData.m_clicked = false;
+				
 				CallWindowCallback(pWindow, EVENT_CHECKBOX, this->m_comboID, this->m_checkBoxData.m_checked);
 				WidgetCheckbox_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			
+			break;
+		}
+	}
+	
+	return false;
+}
+
+extern Window g_windows[WINDOWS_MAX];
+extern short  g_windowDrawOrder[WINDOWS_MAX];
+
+void SelectWindow (Window *pWnd);
+
+bool g_TaskListCompact = false;
+
+bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_PAINT:
+		{
+			VidFillRectangle (WINDOW_BACKGD_COLOR, this->m_rect);
+			
+			int nWindows = 0;
+			for (int i = 0; i < WINDOWS_MAX; i++)
+			{
+				if (!g_windows[i].m_used) continue;
+				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				nWindows++;
+			}
+			
+			if (!nWindows) break;
+			
+			int btn_width = GetWidth (&this->m_rect) / nWindows;
+			
+			int btn_max_width = g_TaskListCompact ? 28 : 200;
+			
+			if (btn_width > btn_max_width)
+				btn_width = btn_max_width;
+			
+			int btn_x = this->m_rect.left;
+			
+			
+			for (int i = 0; i < WINDOWS_MAX; i++)
+			{
+				if (!g_windows[i].m_used) continue;
+				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				
+				
+				Rectangle r;
+				RECT (r, btn_x, this->m_rect.top, btn_width - 4, GetHeight(&this->m_rect));
+				
+				bool clicked = this->m_taskListData.m_clicked[i];
+				bool hovered = this->m_taskListData.m_hovered[i];
+				
+				uint32_t flgs = 0;
+				
+				if (g_windows[i].m_isSelected)
+				{
+					RenderButtonShape(r, BUTTONLITE, BUTTONDARK, BUTTONMIDD);
+					
+					flgs |= TEXT_RENDER_BOLD;
+				}
+				else if (clicked)
+				{
+					RenderButtonShape(r, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				}
+				else if (hovered)
+				{
+					uint32_t bm = BUTTONMIDD;
+					if (bm > 0xDFDFDF)//avoid overflow
+						bm = 0xDFDFDF;
+					bm += 0x202020;
+					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, bm);
+				}
+				else
+					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				
+				Window *pWnd = &g_windows[i];
+				
+				int textX = btn_x + 4;
+				// if this window has an icon:
+				if (pWnd->m_iconID)
+				{
+					RenderIconForceSize(pWnd->m_iconID, textX + clicked, this->m_rect.top + 3 + clicked, 16);
+					textX += 22; 
+				}
+				
+				if (!g_TaskListCompact)
+				{
+					VidSetClipRect (&r);
+					
+					//VidTextOut (pWnd->m_title, textX, this->m_rect.top + 5, WINDOW_TEXT_COLOR, TRANSPARENT);
+					
+					RECT(r, textX + clicked, this->m_rect.top + 2 + clicked, btn_x + btn_width - textX - 2, GetHeight(&this->m_rect) - 4);
+					
+					VidDrawText (pWnd->m_title, r, TEXTSTYLE_VCENTERED, FLAGS_TOO(flgs, WINDOW_TEXT_COLOR), TRANSPARENT);
+					
+					VidSetClipRect (NULL);
+				}
+				
+				btn_x += btn_width;
+			}
+			
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		case EVENT_CLICKCURSOR:
+		case EVENT_MOVECURSOR:
+		{
+			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			
+			int nWindows = 0;
+			for (int i = 0; i < WINDOWS_MAX; i++)
+			{
+				if (!g_windows[i].m_used) continue;
+				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				nWindows++;
+			}
+			
+			if (!nWindows) break;
+			
+			int btn_width = GetWidth (&this->m_rect) / nWindows;
+			
+			int btn_max_width = g_TaskListCompact ? 28 : 200;
+			
+			if (btn_width > btn_max_width)
+				btn_width = btn_max_width;
+			
+			int btn_x = this->m_rect.left;
+			
+			for (int i = 0; i < WINDOWS_MAX; i++)
+			{
+				if (!g_windows[i].m_used) continue;
+				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				
+				this->m_taskListData.m_hovered[i] = false;
+				
+				Rectangle r;
+				RECT (r, btn_x, this->m_rect.top, btn_width - 4, GetHeight(&this->m_rect));
+				
+				if (RectangleContains (&r, &mouseClickPos))
+				{
+					if (eventType == EVENT_MOVECURSOR)
+					{
+						this->m_taskListData.m_hovered[i] = true;
+					}
+					else if (eventType == EVENT_CLICKCURSOR)
+					{
+						this->m_taskListData.m_clicked[i] = true;
+					}
+					else if (this->m_taskListData.m_clicked[i]) // EVENT_RELEASECURSOR
+					{
+						// switch to this window
+						for (int j = 0; j < WINDOWS_MAX; j++)
+							this->m_taskListData.m_clicked[j] = false;
+						
+						SelectWindow (&g_windows[i]);
+					}
+					
+					if (eventType != EVENT_MOVECURSOR || g_GlowOnHover)
+						WidgetTaskList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+					
+					if (eventType != EVENT_MOVECURSOR)
+						break;
+				}
+				
+				btn_x += btn_width;
 			}
 			
 			break;
@@ -3183,6 +3410,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetButtonIconBar_OnEvent,
 	WidgetSimpleLine_OnEvent,
 	WidgetImage_OnEvent,
+	WidgetTaskList_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

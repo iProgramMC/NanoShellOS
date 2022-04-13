@@ -1,8 +1,8 @@
 /*****************************************
 		NanoShell Operating System
-		  (C) 2021 iProgramInCpp
+		(C)2021-2022 iProgramInCpp
 
-	      Interrupt system module
+	     Interrupt handler module
 ******************************************/
 #include <main.h>
 #include <idt.h>
@@ -12,6 +12,7 @@
 #include <misc.h>
 #include <video.h>
 #include <task.h>
+#include <process.h>
 #include <string.h>
 
 #define KBDATA 0x60
@@ -170,8 +171,6 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 		if (!g_hasAlreadyThrownException1)
 		{
 			g_hasAlreadyThrownException1 = true;
-			//Just quit the task
-			KeGetRunningTask()->m_bMarkedForDeletion = true;
 			
 			memset(
 				g_taskKilledCrashInfo.m_stackTrace,
@@ -180,21 +179,32 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 			);
 			
 			//If the task was not using the kernel heap, dispose of its heap.
-			if (KeGetRunningTask()->m_pCurrentHeap != NULL)
+			/*if (KeGetRunningTask()->m_pCurrentHeap != NULL)
 			{
 				//FreeHeap switches to the kernel heap after its done freeing everything.
 				FreeHeap (KeGetRunningTask()->m_pCurrentHeap);
-			}
+			}*/
 			
 			g_killedTaskBecauseOfException = true;
 			g_taskKilledCrashInfo.m_pTaskKilled = KeGetRunningTask();
 			g_taskKilledCrashInfo.m_regs        = *pRegs;
+			g_taskKilledCrashInfo.m_nErrorCode  = code;
 			
 			strcpy (g_taskKilledCrashInfo.m_tag, KeGetRunningTask()->m_tag);
 			if (strlen (g_taskKilledCrashInfo.m_tag) == 0)
 			{
 				strcpy (g_taskKilledCrashInfo.m_tag, "Generic task");
 			}
+			
+			if (KeGetRunningTask()->m_pProcess)
+			{
+				strcpy (g_taskKilledCrashInfo.m_tag, ((Process*)KeGetRunningTask()->m_pProcess)->sIdentifier);
+			}
+			
+			//Just kill the process
+			// Mark the process to be killed eventually
+			KeGetRunningTask()->m_bSuspended = false;
+			
 			
 			//Get the stacktrace too
 			StackFrame* stk = (StackFrame*)(pRegs->ebp);

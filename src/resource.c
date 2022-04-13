@@ -16,6 +16,24 @@
 
 #define STREQ(str1,str2) (!strcmp(str1,str2))
 
+static const char* g_ErrorMsgs [] = {
+	"Unknown Resource Launch Error",
+	"The specified resource '%s' does not exist.",
+	"Insufficient memory to open the resource '%s'. Quit one or more NanoShell applications and then try again.",
+	"The resource protocol for the resource '%s' has not been specified.",
+	"The resource protocol for the resource '%s' is invalid."
+};
+
+const char* GetResourceErrorText (RESOURCE_STATUS state)
+{
+	if (state < RESOURCE_LAUNCH_NOT_FOUND)
+		return g_ErrorMsgs[0];
+	state -= RESOURCE_LAUNCH_NOT_FOUND - 1;
+	if (state > (int)ARRAY_COUNT (g_ErrorMsgs))
+		return g_ErrorMsgs[0];
+	return g_ErrorMsgs[state];
+}
+
 // Resource invoke definitions:
 #if 1
 

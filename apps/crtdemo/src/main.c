@@ -15,6 +15,8 @@ int NsMain (int argc, char** argv)
 	// Allocate an amount of memory
 	void* memory = malloc(8192);
 	
+	memset (memory, 0, 8192);
+	
 	// Sleep for a small amount of time
 	sleep(5000);
 	

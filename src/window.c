@@ -43,6 +43,8 @@ void KeTaskDone(void);
 
 extern Window*  g_focusedOnWindow;
 
+extern bool     g_GlowOnHover;
+
 // Window Internal Action Queue
 #if 1
 
@@ -97,7 +99,7 @@ bool ActionQueueEmpty()
 #if 1
 
 int  g_FPS, g_FPSThisSecond, g_FPSLastCounted;
-bool g_RenderWindowContents = false;//while moving
+bool g_RenderWindowContents = true;//while moving
 
 void UpdateFPSCounter()
 {
@@ -429,92 +431,6 @@ inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
 	}
 }
 
-extern const unsigned char g_BasicFontData[];
-extern const unsigned char g_TestFont216x16[];
-void WinPlotCharBkgd (char c, unsigned ox, unsigned oy, unsigned colorFg)
-{
-	VidSetVBEData(NULL);
-	bool bold = false;
-	if (colorFg & TEXT_RENDER_BOLD)
-	{
-		bold = true;
-	}
-	colorFg &= 0xFFFFFF;
-	
-	//big text?
-	/*
-	if (c > '~' || c < ' ') c = '?';
-	int width = g_TestFont216x16[0], height = g_TestFont216x16[1];
-	const unsigned char* testa = (const unsigned char*)(g_TestFont216x16 + 3);
-	for (int y = 0; y < height; y++)
-	{
-		int to = ((c-' ') * height + y)*2;
-		unsigned short test1 = testa[to+1]|testa[to]<<8;
-		
-		for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
-		{
-			if (test1 & bitmask)
-			{
-				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
-				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
-			}
-		}
-	}
-	*/
-	
-	//standard font?
-	int width = g_BasicFontData[0], height = g_BasicFontData[1];
-	const unsigned char* test = (const unsigned char*)(g_BasicFontData + 3);
-	for (int y = 0; y < height; y++)
-	{
-		for (int x = 0, bitmask = (1 << (width - 1)); x < width; x++, bitmask >>= 1)
-		{
-			if (test[c * height + y] & bitmask)
-			{
-				VidPlotPixelInlineRF(ox + x, oy + y, colorFg);
-				if (bold) VidPlotPixelInlineRF(ox + x + bold, oy + y, colorFg);
-			}
-		}
-	}
-}
-enum
-{
-	JUSTIFY_LEFT,
-	JUSTIFY_CENTER,
-	JUSTIFY_RIGHT,
-};
-//really basic, no lf support
-void WinRenderTextBkgd(const char* text, int yaxis, int justify, unsigned color)
-{
-	int text_width = 0;
-	const char* text1 = text;
-	bool bold = false;
-	if (color & TEXT_RENDER_BOLD)
-	{
-		bold = true;
-	}
-	
-	while (*text1)
-	{
-		//text_width += GetCharWidth(*text);
-		text_width += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text1)];
-		if (bold) text_width++;
-		text1++;
-	}
-	int xaxis = 0;
-	if (justify > JUSTIFY_LEFT)
-		xaxis = (GetScreenWidth()-text_width);
-	if (justify == JUSTIFY_CENTER)
-		xaxis /= 2;
-	while (*text)
-	{
-		WinPlotCharBkgd (*text, xaxis, yaxis, color);
-		xaxis += g_BasicFontData[3 + 256 * g_BasicFontData[1] + (*text)];
-		if (bold) xaxis++;
-		text++;
-	}
-}
-	
 extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RedrawBackground (Rectangle rect)
 {
@@ -585,7 +501,7 @@ void RedrawBackground (Rectangle rect)
 			else
 				xa = xa % g_background->width;
 			
-			VidPlotPixel (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
+			VidPlotPixelInlineRF (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
 		}
 	}
 	
@@ -593,26 +509,8 @@ void RedrawBackground (Rectangle rect)
 	/*VidFillRectangle (BACKGROUND_COLOR, rect);*/
 }
 
-void RedrawBackgdDetails()
-{
-	//WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, 0, JUSTIFY_CENTER, 0xFFFFFF);
-	WinRenderTextBkgd("New 32-bit NanoShell (NEWX86BLD) "VersionString, GetScreenHeight()-22, JUSTIFY_RIGHT, 0xFFFFFF);
-	WinRenderTextBkgd("For evaluation purposes only.",                  GetScreenHeight()-12, JUSTIFY_RIGHT, 0xFFFFFF);
-}
+int g_TaskbarHeight = 0;
 
-/*__attribute__((always_inline))
-inline void VidPlotPixelInline(unsigned x, unsigned y, unsigned color)
-{
-	if (
-		(int)x <  g_vbeData->m_clipRect.left ||
-		(int)y <  g_vbeData->m_clipRect.top  ||
-		(int)x >= g_vbeData->m_clipRect.right ||
-		(int)y >= g_vbeData->m_clipRect.bottom
-	)
-		return;
-	VidPlotPixelToCopyInlineUnsafe(x, y, color);
-	VidPlotPixelRaw32I (x, y, color);
-}*/
 void VidPrintTestingPattern2(uint32_t or_mask, uint32_t y_shift)
 {
 	for (int y = 0, z = 0; y < GetScreenSizeY(); y++, z += g_vbeData->m_pitch32) 
@@ -956,7 +854,7 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 {
 	//ACQUIRE_LOCK (pWindow->m_eventQueueLock);
 	
-	int queue_timeout = 10000;
+	int queue_timeout = 1000;
 	while (pWindow->m_EventQueueLock.m_held)
 	{
 		queue_timeout--;
@@ -1119,8 +1017,6 @@ void ShowWindow (Window* pWindow)
 		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
-int g_TaskbarHeight = 0;
-
 static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
 	if (newPosX != -1)
@@ -1219,9 +1115,18 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 
 extern Heap* g_pHeap;
 
+Cursor g_windowDragCursor;
+int g_currentlyClickedWindow = -1;
+
 void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
+	
+	Window* pDraggedWnd = GetWindowFromIndex(g_currentlyClickedWindow);
+	if (GetCurrentCursor() == &g_windowDragCursor  && pWindow == pDraggedWnd)
+	{
+		SetCursor(NULL);
+	}
 	
 	Heap *pHeapBackup = g_pHeap;
 	ResetToKernelHeap ();
@@ -1421,6 +1326,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
 	if (!pWnd->m_vbeData.m_framebuffer32)
 	{
+		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		LogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);
@@ -1466,7 +1372,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 
 // Mouse event handlers
 #if 1
-int g_currentlyClickedWindow = -1;
 int g_prevMouseX, g_prevMouseY;
 
 void OnUILeftClick (int mouseX, int mouseY)
@@ -1535,7 +1440,6 @@ void OnUILeftClick (int mouseX, int mouseY)
 	//FREE_LOCK(g_windowLock);
 }
 bool g_heldAlt = false;
-Cursor g_windowDragCursor;
 void OnUILeftClickDrag (int mouseX, int mouseY)
 {
 	if (!g_windowManagerRunning) return;
@@ -1819,10 +1723,11 @@ void SetupWindowManager()
 	
 	LogMsg("Please wait...");
 	
+	memset (&g_windows, 0, sizeof (g_windows));
+	
 	g_debugConsole.curY = g_debugConsole.height / 2;
 	g_clickQueueSize = 0;
 	// load background?
-	memset (&g_windows, 0, sizeof (g_windows));
 	InitWindowDepthBuffer();
 	//CoClearScreen (&g_debugConsole);
 	g_debugConsole.curX = g_debugConsole.curY = 0;
@@ -1909,7 +1814,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	
 	while (true)
 	{
-		bool handled = false, hasRedrawnThem = false;
+		bool handled = false;
 		UpdateFPSCounter();
 		CrashReporterCheck();
 		bool updated = false;
@@ -1957,7 +1862,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			
 			//TODO: This method misses a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
 			//into a window's input buffer and read that instead of doing this hacky method right here?
-			if (pWindow->m_isSelected)
+			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{
 				if (updated)
 				{
@@ -1966,7 +1871,16 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					int posY = g_mouseY - pWindow->m_rect.top;
 					if (g_oldMouseX != posX || g_oldMouseY != posY)
 					{
-						if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
+						if (posX < 0) posX = 0;
+						if (posY < 0) posY = 0;
+						if (posX >= (int)pWindow->m_vbeData.m_width)  posX = (int)pWindow->m_vbeData.m_width  - 1;
+						if (posY >= (int)pWindow->m_vbeData.m_height) posY = (int)pWindow->m_vbeData.m_height - 1;
+						
+						if (g_GlowOnHover)
+						{
+							WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						}
+						else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
 						{
 							WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
 						}
@@ -1995,11 +1909,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				//cli;
 				if (pWindow->m_renderFinished && !g_BackgdLock.m_held)
 				{
-					if (!hasRedrawnThem)
-					{
-						hasRedrawnThem = true;
-						RedrawBackgdDetails();
-					}
 					pWindow->m_renderFinished = false;
 					
 					//ACQUIRE_LOCK(g_backgdLock);
@@ -2775,6 +2684,8 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_KEYRAW:
 		case EVENT_SIZE:
 		case EVENT_MENU_CLOSE:
+		case EVENT_SETFOCUS:
+		case EVENT_KILLFOCUS:
 			return true;
 	}
 	return false;

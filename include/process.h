@@ -50,6 +50,7 @@ enum
 	EX_PROC_CANT_MAKE_HEAP,
 };
 
+void ExKillProcess(Process *pProc);
 Process* ExGetRunningProc();
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode);
 

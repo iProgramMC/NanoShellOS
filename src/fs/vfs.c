@@ -330,7 +330,7 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			{
 				//couldn't even find parent dir
 				LockFree (&g_FileSystemLock);
-				return -EEXIST;
+				return -ENOENT;
 			}
 			
 			// Try creating a file
@@ -341,14 +341,14 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			if (!pFile)
 			{
 				LockFree (&g_FileSystemLock);
-				return -EEXIST;
+				return -ENOSPC;
 			}
 		}
 		else
 		{
 			//Can't append to/read from a missing file!
 			LockFree (&g_FileSystemLock);
-			return -EEXIST;
+			return -ENOENT;
 		}
 	}
 	
