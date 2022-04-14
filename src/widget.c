@@ -255,7 +255,11 @@ go_back:;
 	int final_height = height - SCROLL_BAR_WIDTH;
 		
 	int offset = this->m_scrollBarData.m_pos - this->m_scrollBarData.m_min;
-	int posoff = offset * final_height / (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min);
+	int posoff = 0, thing = (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min);
+	if (thing <= 0)
+		thing = 1;
+	
+	posoff = offset * final_height / thing;
 	
 	Rectangle scroller = basic_rectangle;
 	scroller.left  = clickable_rect.left + posoff;
@@ -291,11 +295,14 @@ go_back:;
 				if (this->m_scrollBarData.m_isBeingDragged)
 				{
 					int posoff2 = p.x - clickable_rect.left - SCROLL_BAR_WIDTH/2;
-					posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
-					posoff2 = posoff2 +  this->m_scrollBarData.m_min;
-					if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
-					if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
-					this->m_scrollBarData.m_pos = posoff2;
+					if (final_height > 0)
+					{
+						posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
+						posoff2 = posoff2 +  this->m_scrollBarData.m_min;
+						if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
+						if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
+						this->m_scrollBarData.m_pos = posoff2;
+					}
 				}
 				
 				this->m_scrollBarData.m_clickedBefore = true;
@@ -447,11 +454,14 @@ go_back:;
 				if (this->m_scrollBarData.m_isBeingDragged)
 				{
 					int posoff2 = p.y - clickable_rect.top - SCROLL_BAR_WIDTH/2;
-					posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
-					posoff2 = posoff2 +  this->m_scrollBarData.m_min;
-					if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
-					if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
-					this->m_scrollBarData.m_pos = posoff2;
+					if (final_height > 0)
+					{
+						posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
+						posoff2 = posoff2 +  this->m_scrollBarData.m_min;
+						if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
+						if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
+						this->m_scrollBarData.m_pos = posoff2;
+					}
 				}
 				
 				this->m_scrollBarData.m_clickedBefore = true;
@@ -482,7 +492,7 @@ go_back:;
 			
 			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-			//VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			break;
 		}
 	}

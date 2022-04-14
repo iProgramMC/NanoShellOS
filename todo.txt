@@ -1,7 +1,8 @@
 TODO:
 
 - [X] Make DestroyWindow queue a window destruction instead of doing the dirty work. really the only thing doing the drawing should be the main window manager task
-- Disallow typing into two textinput controls at the same time
+- [X] Disallow typing into two textinput controls at the same time
+- Add a top bar instead of having a menu bar for each window
 
 VBuilder:
 - Allow resizing of existing controls

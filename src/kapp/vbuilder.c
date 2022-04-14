@@ -15,6 +15,16 @@
 #define DEF_TOOLBOX_WID (96+6)
 #define DEF_TOOLBOX_HEI (24*7+6+TITLE_BAR_HEIGHT)
 
+#define BUTTONDARK 0x808080
+#define BUTTONMIDD BUTTON_MIDDLE_COLOR
+#define BUTTONLITE 0xFFFFFF
+#define BUTTONMIDC WINDOW_BACKGD_COLOR
+
+void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
+void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
+
 typedef struct
 {
 	bool      m_used;
@@ -54,6 +64,7 @@ void VbDrawGrid(Window* pWindow)
 		}
 	}
 }
+bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow);
 void VbRenderCtls(Window* pWindow)
 {
 	for (int i = 0; i < (int)ARRAY_COUNT(V->m_controls); i++)
@@ -62,24 +73,50 @@ void VbRenderCtls(Window* pWindow)
 		
 		DesignerControl *C = &V->m_controls[i];
 		
-		VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
-		
 		Rectangle rect = C->m_rect;
 		rect.left += 5;
 		rect.top  += 5;
 		
-		if (C->m_type == CONTROL_TEXTCENTER || C->m_type == CONTROL_BUTTON)
-			VidDrawText (C->m_text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-		else
-			VidDrawText (C->m_text, rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, TRANSPARENT);
+		switch (C->m_type)
+		{
+			case CONTROL_TEXTCENTER:
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
+				VidDrawText (C->m_text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				break;
+			case CONTROL_BUTTON:
+				RenderButtonShape (C->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				VidDrawText (C->m_text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				break;
+			case CONTROL_TEXTINPUT:
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
+				RenderButtonShapeSmallInsideOut (C->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+				break;
+			case CONTROL_CHECKBOX:
+			{
+				VidFillRectangle(WINDOW_BACKGD_COLOR, C->m_rect);
+				// Since I am too lazy to replicate that code, just construct a fake control and
+				// call its render event
+				Control c;
+				memset (&c, 0, sizeof c);
+				c.m_rect = C->m_rect;
+				c.m_checkBoxData.m_checked = false;
+				strcpy (c.m_text, C->m_text);
+				
+				WidgetCheckbox_OnEvent(&c, EVENT_PAINT, 0, 0, pWindow);
+				
+				break;
+			}
+			default:
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
+				VidDrawText (C->m_text, rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				if (!C->m_sele)
+					VidDrawRectangle(0x0000FF, C->m_rect);
+				break;
+		}
 		
 		if (C->m_sele)
 		{
 			VidDrawRectangle(0xFF0000, C->m_rect);
-		}
-		else
-		{
-			VidDrawRectangle(0x0000FF, C->m_rect);
 		}
 	}
 }
