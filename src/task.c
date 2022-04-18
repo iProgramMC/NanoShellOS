@@ -29,11 +29,13 @@ static VBEData*       g_kernelVBEContext = NULL;
 static Heap*          g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
 static const uint8_t* g_kernelFontContext = NULL;
+static char           g_kernelCwd[PATH_MAX+2];
 static Process*       g_pProcess = NULL;
 
 extern Heap*          g_pHeap;
 extern Console*       g_currentConsole; //logmsg
 extern const uint8_t* g_pCurrentFont;
+extern char           g_cwd[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
 
@@ -160,6 +162,7 @@ void KeConstructTask (Task* pTask)
 	pTask->m_pCurrentHeap    = g_pHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
 	pTask->m_pFontContext    = g_pCurrentFont;
+	strcpy (pTask->m_cwd, g_cwd); // inherit from parent
 	
 	memset   (pTask->m_fpuState, 0, sizeof (pTask->m_fpuState));
 	KeFxSave (pTask->m_fpuState);
@@ -405,15 +408,17 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 	if (pTask)
 	{
 		memcpy (& pTask -> m_state, pSaveState, sizeof(CPUSaveState));
+		memcpy   (pTask -> m_cwd,   g_cwd,      sizeof(g_cwd));
 		KeFxSave (pTask -> m_fpuState);
-		pTask->m_pVBEContext = g_vbeData;
-		pTask->m_pCurrentHeap = g_pHeap;
+		pTask->m_pVBEContext     = g_vbeData;
+		pTask->m_pCurrentHeap    = g_pHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
-		pTask->m_pFontContext = g_pCurrentFont;
+		pTask->m_pFontContext    = g_pCurrentFont;
 	}
 	else
 	{
 		memcpy (&g_kernelSaveState, pSaveState, sizeof(CPUSaveState));
+		memcpy   (g_kernelCwd,      g_cwd,      sizeof(g_cwd));
 		KeFxSave (g_kernelFPUState); //perhaps we won't use this.
 		g_kernelVBEContext = g_vbeData;
 		g_kernelHeapContext = g_pHeap;
@@ -467,6 +472,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 	{
 		//first, restore this task's FPU registers:
 		KeFxRestore(pNewTask->m_fpuState);
+		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
 		g_vbeData = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
 		g_pCurrentFont = pNewTask->m_pFontContext;
@@ -481,6 +487,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		//Kernel task
 		//first, restore the kernel task's FPU registers:
 		KeFxRestore(g_kernelFPUState);
+		memcpy (g_cwd, g_kernelCwd, sizeof (g_cwd));
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
 		g_pCurrentFont = g_kernelFontContext;

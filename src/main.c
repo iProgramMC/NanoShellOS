@@ -213,14 +213,14 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	}
 
 	CfgLoadFromParms (g_cmdline);
-
-	// Initialize the sound blaster device
-	SbInit();
 	
 	// Allow task switching
 	KiPermitTaskSwitching();
 
-	KePrintSystemVersion();
+	LogMsg("NanoShell is initializing... please wait");
+	
+	// Initialize the sound blaster device
+	SbInit();
 
 	// Initialize the keyboard.
 	KbInitialize();
@@ -259,7 +259,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	if (initRdModule->mod_end >= 0x100000)
 	{
 		//Actually go to the effort of mapping the initrd to be used.
-		pInitrdAddress = MmMapPhysicalMemory (0x10000000, initRdModule->mod_start, initRdModule->mod_end);
+		pInitrdAddress = MmMapPhysicalMemory (0x30000000, initRdModule->mod_start, initRdModule->mod_end);
 	}
 	
 	LogMsg("Physical address that we should load from: %x", pInitrdAddress);
@@ -335,15 +335,15 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	//MouseInit ();
 	
 	MouseInit();
-	bool e = VmwDetect();
-	SLogMsg("E:%d",e);
-	if (e)
-	{
+	if (VmwDetect())
 		VmwInit();
-	}
 	
+	extern Console* g_currentConsole;
+	CoClearScreen(g_currentConsole);
+	g_currentConsole->curX = g_currentConsole->curY = 0;
 	
-	
+	KePrintSystemVersion();
+
 	// print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())
 	{

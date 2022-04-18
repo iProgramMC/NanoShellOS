@@ -66,6 +66,7 @@ static DirEnt* FsRamDiskReadDir (FileNode *pDirNode, uint32_t index)
 	if (!pNode) return NULL;
 	strcpy(g_ramDiskDirEnt.m_name, pNode->m_name);
 	g_ramDiskDirEnt.m_inode      = pNode->m_inode;
+	g_ramDiskDirEnt.m_type       = pNode->m_type;
 	return &g_ramDiskDirEnt;
 }
 static FileNode* FsRamDiskFindDir(FileNode* pDirNode, const char* pName)

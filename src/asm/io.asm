@@ -201,7 +201,7 @@ MmStartupStuff:
 ; WORK: Change this if necessary.  Paging is not setup at this stage
 ;       so this address is purely PHYSICAL.
 ; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
-	mov ecx, 0x600000
+	mov ecx, 0x700000
 	mov dword [e_placement], ecx
 	ret
 	

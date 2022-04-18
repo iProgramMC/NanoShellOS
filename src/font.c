@@ -383,16 +383,21 @@ void KillFont (int fontID)
 					if (c == 255)
 					{
 						VidPlotPixel (ox+xi, oy+yi, colorFg);
+						if (bold) VidPlotPixel (ox+xi+bold, oy+yi, colorFg);
 					}
 					else
 					{
-						if (trans) colorBg = VidReadPixelEx(ox+xi, oy+yi);
+#define Blend(ox,xi,oy,yi) {\
+							if (trans) colorBg = VidReadPixelEx(ox+xi, oy+yi);\
+							uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;\
+							uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;\
+							uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;\
+							VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);\
+						}
 						
-						uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;
-						uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;
-						uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;
-						//VidPlotPixel (ox + xi, oy + yi, ro<<16|go<<8|bo<<0);
-						VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);
+						Blend(ox,xi,oy,yi);
+						if (bold)
+							Blend(ox,xi+1,oy,yi);
 					}
 				}
 			}
@@ -408,7 +413,8 @@ void KillFont (int fontID)
 				int to = ((c-' ') * height + y)*2;
 				unsigned short test1 = testa[to+1]|testa[to]<<8;
 				
-				for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
+				//for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
+				for (int x = width - 1, bitmask = (1 << (width - 1)); x >= 0; x--, bitmask >>= 1)
 				{
 					if (test1 & bitmask)
 					{
@@ -423,7 +429,8 @@ void KillFont (int fontID)
 		else if (g_pCurrentFont[2] == FONTTYPE_GLCD)
 		{
 			int x = 0;
-			for (x = 0; x < width; x++)
+			//for (x = 0; x < width; x++)
+			for (x = width - 1; x >= 0; x--)
 			{
 				for (int y = 0, bitmask = 1; y < height; y++, bitmask <<= 1)
 				{
@@ -451,7 +458,8 @@ void KillFont (int fontID)
 			}
 			for (int y = 0; y < height; y++)
 			{
-				for (int x = 0, bitmask = /*(1 << (width - 1))*/ 1 << 7; x < width; x++, bitmask >>= 1)
+				//for (int x = 0, bitmask = /*(1 << (width - 1))*/ 1 << 7; x < width; x++, bitmask >>= 1)
+				for (int x = width - 1, bitmask = (1 << (8 - width)); x >= 0; x--, bitmask <<= 1)
 				{
 					if (test[c * height + y] & bitmask)
 					{

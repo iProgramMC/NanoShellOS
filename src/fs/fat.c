@@ -1502,7 +1502,7 @@ uint32_t FsFatWrite (FileNode *pFileNode, uint32_t offset, uint32_t size, void* 
 
 bool FsFatOpenNonRootDir(FileNode *pFileNode);
 void FsFatCloseNonRootDir (FileNode* pFileNode);
-static DirEnt* FsFatReadNonRootDir(FileNode* pNode, uint32_t index);
+static DirEnt*   FsFatReadNonRootDir(FileNode* pNode, uint32_t index);
 static FileNode* FsFatFindNonRootDir(FileNode* pNode, const char* pName);
 //generic purpose fillup directory entry thing
 
@@ -1618,7 +1618,7 @@ static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t index)
 	int loaded = pDirNode->m_implData3;
 	if (loaded == -1)
 	{
-		LogMsg("[FATAL] Warning: did you mean to `FiOpenDir` first?  Opening for you, but do keep in mind that this isn't how you do things.");
+		LogMsg("[FATAL] Warning: did you mean to `FsOpenDir` first?  Opening for you, but do keep in mind that this isn't how you do things.");
 		if (!FsFatOpenNonRootDir(pDirNode))
 		{
 			LogMsg("[FATAL] Couldn't even open pNode.  What a shame.");
@@ -1638,6 +1638,7 @@ static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t index)
 	if (!pNode) return NULL;
 	strcpy(g_FatDirEnt.m_name, pNode->m_name);
 	g_FatDirEnt.m_inode      = pNode->m_inode;
+	g_FatDirEnt.m_type       = pNode->m_type;
 	return &g_FatDirEnt;
 }
 static FileNode* FsFatFindNonRootDir(FileNode* pDirNode, const char* pName)
@@ -1680,6 +1681,7 @@ static DirEnt* FsFatReadRootDir(FileNode* pDirNode, uint32_t index)
 	
 	strcpy(g_FatDirEnt.m_name, pNode->m_name);
 	g_FatDirEnt.m_inode      = pNode->m_inode;
+	g_FatDirEnt.m_type       = pNode->m_type;
 	return &g_FatDirEnt;
 }
 static FileNode* FsFatFindRootDir(FileNode *pDirNode, const char* pName)

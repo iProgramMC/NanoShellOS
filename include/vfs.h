@@ -12,7 +12,6 @@
 struct FSNodeS;
 struct DirEntS;
 
-#define PATH_MAX (260)
 #define PATH_SEP ('/')
 #define PATH_THISDIR (".")
 #define PATH_PARENTDIR ("..")
@@ -84,6 +83,7 @@ typedef struct DirEntS
 {
 	char     m_name[128]; //+nullterm, so 127 concrete chars
 	uint32_t m_inode;     //device specific
+	uint32_t m_type;
 }
 DirEnt;
 
@@ -166,11 +166,33 @@ void EraseFileNode (FileNode* pFileNode);
 		int       m_nStreamOffset;
 		int       m_nFileEnd;
 		bool      m_bIsFIFO; //is a char device, basically
+		
 		const char* m_openFile;
 		int       m_openLine;
 	}
 	FileDescriptor;
+	
+	typedef struct {
+		bool      m_bOpen;
+		FileNode *m_pNode;
+		char      m_sPath[PATH_MAX+2];
+		int       m_nStreamOffset;
+		DirEnt    m_sCurDirEnt;
+		
+		const char* m_openFile;
+		int       m_openLine;
+	}
+	DirDescriptor ;
 
+	typedef struct
+	{
+		uint32_t m_type;
+		uint32_t m_size;
+		uint32_t m_blocks;
+		uint32_t m_inode;
+	}
+	StatResult;
+	
 	#define O_RDONLY (1)
 	#define O_WRONLY (2)
 	#define O_RDWR   (O_RDONLY | O_WRONLY)

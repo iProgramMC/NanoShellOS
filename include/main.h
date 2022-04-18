@@ -21,6 +21,8 @@ typedef unsigned uint;
 
 #define USE_SSE_FXSAVE
 
+#define PATH_MAX (260)
+
 extern void KeTaskDone();
 
 #define asm __asm__ volatile

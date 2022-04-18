@@ -70,6 +70,9 @@ typedef struct
 	__attribute__((aligned(16)))
 	int			   m_fpuState[128];
 	
+	char           m_cwd[PATH_MAX+2];
+	int            m_errNo;//todo
+	
 	void *         m_pStack;   //this task's stack (This pointer is equivalent to the peak of the stack.)
 	bool           m_featuresArgs;
 	int            m_argument;

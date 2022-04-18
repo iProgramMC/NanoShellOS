@@ -115,6 +115,7 @@ static DirEnt* FsRootFsReadDir (FileNode *pDirNode, uint32_t index)
 	if (!pNode) return NULL;
 	strcpy(g_DirEnt.m_name, pNode->m_name);
 	g_DirEnt.m_inode      = pNode->m_inode;
+	g_DirEnt.m_type       = pNode->m_type;
 	return &g_DirEnt;
 }
 static FileNode* FsRootFsFindDir(FileNode* pDirNode, const char* pName)
@@ -141,6 +142,7 @@ static DirEnt* FsDevFsReadDir (FileNode *pDirNode, uint32_t index)
 	if (!pNode) return NULL;
 	strcpy(g_DirEnt.m_name, pNode->m_name);
 	g_DirEnt.m_inode      = pNode->m_inode;
+	g_DirEnt.m_type       = pNode->m_type;
 	return &g_DirEnt;
 }
 static FileNode* FsDevFsFindDir(FileNode* pDirNode, const char* pName)

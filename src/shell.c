@@ -129,7 +129,7 @@ int  g_ramDiskID      = 0x00;//ATA: Prim Mas
 int  g_lastReturnCode = 0;
 bool CoPrintCharInternal (Console* this, char c, char next);
 
-char g_cwd[PATH_MAX+1];
+extern char g_cwd[PATH_MAX+2];
 FileNode* g_pCwdNode = NULL;
 
 extern Heap* g_pHeap;
@@ -145,6 +145,10 @@ void ShellExecuteCommand(char* p)
 		return;
 	if (*token == 0)
 		return;
+	
+	//TODO
+	g_pCwdNode = FsResolvePath (g_cwd);
+	
 	if (strcmp (token, "help") == 0)
 	{
 		LogMsg("NanoShell Shell Help");
@@ -187,6 +191,10 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ttte         - spawns 1024 threads that prints stuff");
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
+	}
+	else if (strcmp (token, "pwd") == 0)
+	{
+		LogMsg(g_cwd);
 	}
 	else if (strcmp (token, "rb") == 0)
 	{

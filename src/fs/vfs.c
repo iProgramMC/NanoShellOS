@@ -18,6 +18,8 @@
 #include <task.h>
 #include <misc.h>
 
+char g_cwd[PATH_MAX+2];
+
 uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	if (pNode)
@@ -93,8 +95,8 @@ void FsCloseDir(FileNode* pNode)
 {
 	if (pNode)
 	{
-		if (pNode->OpenDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
-			pNode->OpenDir(pNode);
+		if (pNode->CloseDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
+			pNode->CloseDir(pNode);
 	}
 }
 void FsClearFile(FileNode* pNode)
@@ -132,7 +134,6 @@ FileNode* FsResolvePath (const char* pPath)
 	//and run this function again.
 	if (*initial_filename == 0)
 	{
-		//LogMsg("Resolving absolute path '%s'", pPath);
 		FileNode *pNode = FsGetRootNode ();//TODO
 		while (true)
 		{
@@ -141,26 +142,22 @@ FileNode* FsResolvePath (const char* pPath)
 			//are we done?
 			if (path && *path)
 			{
-				//LogMsg("Finding directory: '%s'", path);
 				//nope, resolve pNode again.
 				pNode = FsFindDir (pNode, path);
 				if (!pNode)
 				{
-					//LogMsg("File not found inside %s", path);
 					return NULL;
 				}
 			}
 			else
 			{
-				//LogMsg("Done!  Returning to caller...");
 				return pNode;
 			}
 		}
 	}
 	else
 	{
-		//TODO
-		//LogMsg("Not an absolute path");
+		//TODO- Not an absolute path
 		return NULL;
 	}
 }
@@ -255,6 +252,7 @@ void FsSetup ()
 #if 1
 
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
+DirDescriptor  g_DirNodeToDescriptor [FD_MAX];
 
 void FiDebugDump()
 {
@@ -287,8 +285,36 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	return -ENFILE;
 }
 
+static int FiFindFreeDirDescriptor(const char* reqPath)
+{
+	for (int i = 0; i < FD_MAX; i++)
+	{
+		if (g_DirNodeToDescriptor[i].m_bOpen)
+			if (strcmp (g_DirNodeToDescriptor[i].m_sPath, reqPath) == 0)
+				return -EAGAIN;
+	}
+	for (int i = 0; i < FD_MAX; i++)
+	{
+		if (!g_DirNodeToDescriptor[i].m_bOpen)
+			return i;
+	}
+	return -ENFILE;
+}
+
 //TODO: improve MT
 SafeLock g_FileSystemLock;
+
+bool FiIsValidDescriptor(int fd)
+{
+	if (fd < 0 || fd >= FD_MAX) return false;
+	return g_FileNodeToDescriptor[fd].m_bOpen;
+}
+
+bool FiIsValidDirDescriptor(int fd)
+{
+	if (fd < 0 || fd >= FD_MAX) return false;
+	return g_DirNodeToDescriptor[fd].m_bOpen;
+}
 
 int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
@@ -415,12 +441,6 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	
 	return fd;
 }
-bool FiIsValidDescriptor(int fd)
-{
-	if (fd < 0 || fd >= FD_MAX) return false;
-	if (!g_FileNodeToDescriptor[fd].m_bOpen) return false;
-	return true;
-}
 
 int FiClose (int fd)
 {
@@ -440,6 +460,183 @@ int FiClose (int fd)
 	
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
+	
+	LockFree (&g_FileSystemLock);
+	return -ENOTHING;
+}
+
+int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
+{
+	LockAcquire (&g_FileSystemLock);
+	// find a free fd to open:
+	int dd = FiFindFreeDirDescriptor(pFileName);
+	if (dd < 0)
+	{
+		LockFree (&g_FileSystemLock);
+		return dd;
+	}
+	FileNode* pDir = FsResolvePath(pFileName);
+	if (!pDir)
+	{
+		// No File
+		LockFree (&g_FileSystemLock);
+		return -ENOENT;
+	}
+	
+	if (!(pDir->m_type & FILE_TYPE_DIRECTORY))
+	{
+		// Not a Directory
+		LockFree (&g_FileSystemLock);
+		return -ENOTDIR;
+	}
+	
+	// Try to open the Directory
+	bool result = FsOpenDir (pDir);
+	if (!result)
+	{
+		LockFree (&g_FileSystemLock);
+		return -EIO; // Cannot open the directory
+	}
+	
+	//we have all the perms, let's write the filenode there:
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	pDesc->m_bOpen 			= true;
+	strcpy(pDesc->m_sPath, pFileName);
+	pDesc->m_pNode 			= pDir;
+	pDesc->m_openFile	 	= srcFile;
+	pDesc->m_openLine	 	= srcLine;
+	pDesc->m_nStreamOffset 	= 0;
+	
+	LockFree (&g_FileSystemLock);
+	
+	return dd;
+}
+
+int FiCloseDir (int dd)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(dd))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EBADF;
+	}
+	
+	//closes the file:
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	pDesc->m_bOpen = false;
+	strcpy(pDesc->m_sPath, "");
+	
+	FsCloseDir (pDesc->m_pNode);
+	
+	pDesc->m_pNode = NULL;
+	pDesc->m_nStreamOffset = 0;
+	
+	LockFree (&g_FileSystemLock);
+	return -ENOTHING;
+}
+
+DirEnt* FiReadDir (int dd)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(dd))
+	{
+		LockFree (&g_FileSystemLock);
+		return NULL;
+	}
+	
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, pDesc->m_nStreamOffset);
+	if (!pDirEnt)
+	{
+		LockFree (&g_FileSystemLock);
+		return NULL;
+	}
+	
+	pDesc->m_sCurDirEnt = *pDirEnt;
+	
+	pDesc->m_nStreamOffset++;
+	
+	LockFree (&g_FileSystemLock);
+	return &pDesc->m_sCurDirEnt;
+}
+
+int FiSeekDir (int dd, long loc)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(dd))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EBADF;
+	}
+	
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	pDesc->m_nStreamOffset = loc;
+	
+	LockFree (&g_FileSystemLock);
+	return -ENOTHING;
+}
+
+int FiRewindDir (int dd)
+{
+	return FiSeekDir (dd, 0);
+}
+
+int FiTellDir (int dd)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(dd))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EBADF;
+	}
+	
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	
+	LockFree (&g_FileSystemLock);
+	return pDesc->m_nStreamOffset;
+}
+
+int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(dd))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EBADF;
+	}
+	
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileNode *pNode = FsFindDir(pDesc->m_pNode, pFileName);
+	if (!pNode)
+	{
+		LockFree (&g_FileSystemLock);
+		return -ENOENT;
+	}
+	
+	pOut->m_type   = pNode->m_type;
+	pOut->m_size   = pNode->m_length;
+	pOut->m_inode  = pNode->m_inode;
+	pOut->m_blocks = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	
+	LockFree (&g_FileSystemLock);
+	return -ENOTHING;
+}
+
+int FiStat (const char *pFileName, StatResult* pOut)
+{
+	LockAcquire (&g_FileSystemLock);
+	
+	FileNode *pNode = FsResolvePath(pFileName);
+	if (!pNode)
+	{
+		LockFree (&g_FileSystemLock);
+		return -ENOENT;
+	}
+	
+	pOut->m_type   = pNode->m_type;
+	pOut->m_size   = pNode->m_length;
+	pOut->m_inode  = pNode->m_inode;
+	pOut->m_blocks = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;

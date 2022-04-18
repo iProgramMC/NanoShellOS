@@ -32,8 +32,7 @@ const short g_uart_port_bases[] = { 0x3F8, 0x2F8 };//, 0x3E8, 0x2E8 };
 #define FCR_RXTRIG (3 << 6)
 
 // Interrupt Enable register
-#define IER_NOINTS (0 << 7)
-#define IER_ENINTS (1 << 7)
+#define IER_NOINTS (0)
 
 // Modem Control Register
 #define MCR_DTR    (1 << 0)
@@ -87,6 +86,18 @@ const short g_uart_port_bases[] = { 0x3F8, 0x2F8 };//, 0x3E8, 0x2E8 };
 
 #define S_CHECK_BYTE 0xCA
 
+bool UartIsTransmitEmpty(uint8_t comNum)
+{
+	short Port = g_uart_port_bases[comNum];
+	return((ReadPort(Port + 5) & 0x20) != 0);
+}
+
+bool UartIsReceiveEmpty(uint8_t comNum)
+{
+	short Port = g_uart_port_bases[comNum];
+	return((ReadPort(Port + 5) & 0x01) != 0);
+}
+
 void UartOnInterrupt(uint8_t com_num)
 {
 	// PIC EOI
@@ -96,6 +107,14 @@ void UartOnInterrupt(uint8_t com_num)
 	uint8_t status = ReadPort (S_IIR);
 	
 	SLogMsg("Got uart interrupt on COM%d. Status: %b", com_num + 1, status);
+	
+	status &= 0xF;
+	
+	if (status == 0x4) // Receiver
+	{
+		while (!UartIsReceiveEmpty(com_num))
+			ReadPort (S_RBR);
+	}
 }
 
 short UartGetPortBase(uint8_t com_num)
@@ -169,6 +188,9 @@ void UartInit(uint8_t com_num)
 	// Set this serial port to normal operation
 	WritePort (Port+4, MCR_OUT1 | MCR_OUT2 | MCR_RTS | MCR_DTR); // IRQs enabled, OUT#1 and OUT#2 bits, no loop-back
 	
+	// Enable interrupts again
+	WritePort (Port+1, IER_ERBFI | IER_ETBEI);
+	
 	// Ok, port init has completed, now add it to the file system
 	FileNode *pDirNode = FsResolvePath ("/Device");
 	
@@ -201,18 +223,6 @@ void UartInit(uint8_t com_num)
 		pnText++;
 	}
 	
-}
-
-bool UartIsTransmitEmpty(uint8_t comNum)
-{
-	short Port = g_uart_port_bases[comNum];
-	return((ReadPort(Port + 5) & 0x20) != 0);
-}
-
-bool UartIsReceiveEmpty(uint8_t comNum)
-{
-	short Port = g_uart_port_bases[comNum];
-	return((ReadPort(Port + 5) & 0x01) != 0);
 }
 
 void UartWriteSingleChar(uint8_t com_num, char c)
