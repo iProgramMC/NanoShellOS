@@ -492,6 +492,8 @@ typedef struct WindowStruct
 	bool       m_clickedInside;
 	
 	SafeLock   m_EventQueueLock;
+	
+	int        m_menuBarControlIdx;
 } Window;
 
 /**

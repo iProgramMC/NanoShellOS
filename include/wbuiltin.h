@@ -20,6 +20,15 @@
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
 
+typedef struct
+{
+	char m_text[61];
+	char m_resourceID[31];
+	int  m_icon;
+	bool m_addToQuickLaunch;
+}
+LauncherItem;
+
 // ALT TAB
 void UpdateAltTabWindow();
 void OnPressAltTabOnce();
@@ -43,5 +52,6 @@ void LauncherEntry(int arg);
 void TaskbarEntry(int arg);
 void CrashReporterCheck();
 void ShellAbout (const char *pText, int iconID);
+void InitGlobalMenuBar();
 
 #endif//_WBUILTIN_H

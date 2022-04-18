@@ -2138,16 +2138,32 @@ void WidgetMenuBar_DeInitializeRoot(Control* this)
 	WidgetMenuBar_DeInitializeChild (&this->m_menuBarData.m_root);
 }
 
+void WidgetMenuBar_Reset(Control *this)
+{
+	WidgetMenuBar_DeInitializeRoot(this);
+	WidgetMenuBar_InitializeRoot  (this);
+}
+
+Control* WidgetMenuBar_GetCtl(Window* pWnd)
+{
+	if (pWnd->m_menuBarControlIdx < 0) return NULL;
+	else return &pWnd->m_pControlArray[pWnd->m_menuBarControlIdx];
+}
+
 bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
 	
-	Rectangle menu_bar_rect;
-	menu_bar_rect.left   = 1 + 3 * has3dBorder;
-	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
-	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
-	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 3;
-	
+	Rectangle menu_bar_rect = this->m_rect;
+	if (this->m_parm1)//taskbar mode
+	{
+		int w,h;
+		//measure out the text
+		VidTextOutInternal (this->m_text,0,0,0,0,true,&w,&h);
+		
+		//update the rect to be ok
+		menu_bar_rect.left += w + 20;
+	}
 	switch (eventType)
 	{
 		case EVENT_CREATE:
@@ -2164,8 +2180,20 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		case EVENT_PAINT:
 		{
 			// Render the root.  If any children are opened, draw them.
-			VidFillRectangle (BUTTONMIDD, menu_bar_rect);
-			VidDrawHLine (0, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom);
+			
+			if (this->m_parm1)//taskbar mode
+			{
+				Rectangle some_rect = menu_bar_rect;
+				some_rect.left = this->m_rect.left;
+				some_rect.top += 4;
+				VidFillRectangle (WINDOW_BACKGD_COLOR, this->m_rect);
+				VidDrawText      (this->m_text, some_rect, TEXTSTYLE_VCENTERED, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TEXT_COLOR), WINDOW_BACKGD_COLOR);
+			}
+			else
+			{
+				VidFillRectangle (BUTTONMIDD, menu_bar_rect);
+				VidDrawHLine (0, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom);
+			}
 			
 			if (this->m_menuBarData.m_root.m_childrenArray)
 			{

@@ -1118,6 +1118,8 @@ extern Heap* g_pHeap;
 Cursor g_windowDragCursor;
 int g_currentlyClickedWindow = -1;
 
+void SelectWindowUnsafe(Window* pWindow);
+
 void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
@@ -1142,11 +1144,44 @@ void NukeWindowUnsafe (Window* pWindow)
 		MmFreeK(pWindow->m_pControlArray);
 		pWindow->m_controlArrayLen = 0;
 	}
+	
+	pWindow->m_menuBarControlIdx = -1;
 	memset (pWindow, 0, sizeof (*pWindow));
 	UseHeap (pHeapBackup);
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
+	
+	// Reset the draw order
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (GetWindowFromIndex(g_windowDrawOrder[i]) == pWindow) //this is our window, reset the draw order
+			g_windowDrawOrder[i] = -1;
+	}
+	
+	OnWindowDestroyed(pWindow);
+	
+	// Select the (currently) frontmost window
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (g_windowDrawOrder[i] < 0)//doesn't exist
+			continue;
+		if (GetWindowFromIndex(g_windowDrawOrder[i])->m_flags & WF_SYSPOPUP) //prioritize non-system windows
+			continue;
+		
+		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		return;
+	}
+	
+	// Select the (currently) frontmost window, even if it's a system popup
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (g_windowDrawOrder[i] < 0)//doesn't exist
+			continue;
+		
+		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		return;
+	}
 }
 
 void NukeWindow (Window* pWindow)
@@ -1180,6 +1215,7 @@ void DestroyWindow (Window* pWindow)
 		return;
 	
 	WindowAddEventToMasterQueue(pWindow, EVENT_DESTROY, 0, 0);
+	
 	// the task's last WindowCheckMessages call will see this and go
 	// "ah yeah they want my window gone", then the WindowCallback will reply and say
 	// "yeah you're good to go" and call ReadyToDestroyWindow().
@@ -1219,6 +1255,8 @@ void SelectWindowUnsafe(Window* pWindow)
 		pWindow->m_renderFinished = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 		g_focusedOnWindow = pWindow;
+		
+		OnUpdateFocusedWindow(pWindow);
 	}
 }
 void SelectWindow(Window* pWindow)
@@ -1308,6 +1346,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_flags          = flags;// | WF_FLATBORD;
+	
+	pWnd->m_menuBarControlIdx = -1;
 	
 	pWnd->m_EventQueueLock.m_held = false;
 	pWnd->m_EventQueueLock.m_task_owning_it = NULL;
@@ -2077,6 +2117,7 @@ Control* GetControlByComboID(Window* pWindow, int comboID)
 	}
 	return NULL;
 }
+#define MENU_BAR_HEIGHT 15
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
 int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
@@ -2087,6 +2128,21 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		LogMsg("No pControlArray?");
 		return -1;
 	}
+	if (type == CONTROL_MENUBAR)
+	{
+		if (pWindow->m_menuBarControlIdx >= 0) return -1;//I Refuse
+		
+		if (!p1)
+		{
+			bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
+			
+			rect.left   = 1 + 3 * has3dBorder;
+			rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
+			rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
+			rect.bottom = rect.top + MENU_BAR_HEIGHT + 3;
+		}
+	}
+	
 	int index = -1;
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -2153,6 +2209,11 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	pControl->m_bMarkedForDeletion = false;
 	pControl->m_anchorMode = anchoringMode;
 	
+	if (type == CONTROL_MENUBAR)
+	{
+		pWindow->m_menuBarControlIdx = index;
+	}
+	
 	if (text)
 		strcpy (pControl->m_text, text);
 	else
@@ -2198,6 +2259,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	
 	return index;
 }
+
 int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
 	return
@@ -2619,18 +2681,19 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	
 		int textwidth, height;
 		VidSetFont(TITLE_BAR_FONT);
-		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
-		
-		int MinimizAndCloseGap = 0;
-		
-		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
-		
-		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
-		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
 		
 		uint32_t flags = TEXT_RENDER_BOLD;
 		if (TITLE_BAR_FONT != SYSTEM_FONT)
 			flags = 0;
+		
+		VidTextOutInternal(pWindow->m_title, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
+		
+		int MinimizAndCloseGap = 0;
+		
+		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
+		
+		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
+		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
 		
 		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);

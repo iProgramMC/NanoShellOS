@@ -22,6 +22,13 @@ This software is licensed under the GNU General Public License V3 only.
 <img src="images/13_03_2022_22_17_48.png"/>
 <img src="images/demoshot050.png"/>
 
+## Features
+
+- Virtual File System, can mount arbitrary file systems such as FAT32
+- PS/2 Mouse and Keyboard support
+- VMware absolute mouse support
+- Full fledged process executive, which loads executables from the file system and runs them
+
 ## Goals
 
 Note that **user mode** is "mysteriously" absent.  This OS is entirely running in ring-0.
