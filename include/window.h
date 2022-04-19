@@ -371,6 +371,15 @@ CheckBoxData;
 // If this bit isn't set, the control's bottom edge anchors to the window's top edge.
 #define ANCHOR_BOTTOM_TO_BOTTOM 8
 
+typedef struct ControlContainerStruct
+{
+	struct ControlStruct*   m_pControlArray;
+	int        m_controlArrayLen;
+	
+	Rectangle  m_clipRect;
+}
+ControlContainer;
+
 typedef struct ControlStruct
 {
 	bool      m_active;
@@ -396,6 +405,8 @@ typedef struct ControlStruct
 		TaskListData  m_taskListData;
 	};
 	
+	struct ControlContainerStruct m_sContainer;
+	
 	int m_anchorMode;
 	
 	//event handler
@@ -406,6 +417,9 @@ typedef struct ControlStruct
 	Rectangle m_triedRect;
 	
 	// The smallest rectangle a control can occupy is 10x10.
+	
+	
+	struct ControlContainerStruct* pParent;
 }
 Control;
 
@@ -436,6 +450,7 @@ enum CURSORTYPE
 #define WI_INITGOOD 0x40000000//If the initialization process succeeded
 
 #define WIN_KB_BUF_SIZE  512
+
 typedef struct WindowStruct
 {
 	bool       m_used;
@@ -469,8 +484,7 @@ typedef struct WindowStruct
 	
 	bool       m_markedForDeletion;
 	
-	Control*   m_pControlArray;
-	int        m_controlArrayLen;
+	ControlContainer m_CtlContainer;
 	
 	void*      m_data; //user data
 	
