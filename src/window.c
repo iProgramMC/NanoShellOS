@@ -1120,22 +1120,6 @@ int g_currentlyClickedWindow = -1;
 
 void SelectWindowUnsafe(Window* pWindow);
 
-//Recursive :)
-void NukeCtlContainer(ControlContainer* pContainer)
-{
-	if (pContainer->m_pControlArray)
-	{
-		for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-		{
-			NukeCtlContainer(&pContainer->m_pControlArray[i].m_sContainer);
-		}
-		
-		MmFreeK(pContainer->m_pControlArray);
-	}
-	pContainer->m_pControlArray = NULL;
-	pContainer->m_controlArrayLen = 0;
-}
-
 void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
@@ -1155,8 +1139,11 @@ void NukeWindowUnsafe (Window* pWindow)
 		pWindow->m_vbeData.m_available     = 0;
 		pWindow->m_vbeData.m_framebuffer32 = NULL;
 	}
-	
-	NukeCtlContainer(&pWindow->m_CtlContainer);
+	if (pWindow->m_pControlArray)
+	{
+		MmFreeK(pWindow->m_pControlArray);
+		pWindow->m_controlArrayLen = 0;
+	}
 	
 	pWindow->m_menuBarControlIdx = -1;
 	memset (pWindow, 0, sizeof (*pWindow));
@@ -1298,16 +1285,6 @@ void SelectWindow(Window* pWindow)
 
 int g_NewWindowX = 10, g_NewWindowY = 10;
 
-void InitCtlContainer(ControlContainer* pCont, int hint)
-{
-	pCont->m_controlArrayLen = hint;
-	size_t controlArraySize = sizeof(Control) * pCont->m_controlArrayLen;
-	pCont->m_pControlArray   = (Control*)MmAllocateK(controlArraySize);
-	
-	if (pCont->m_pControlArray)
-		memset(pCont->m_pControlArray, 0, controlArraySize);
-}
-
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
 	LockAcquire (&g_CreateLock);
@@ -1408,10 +1385,11 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_eventQueueSize = 0;
 	
 	//give the window a starting point of 10 controls:
+	pWnd->m_controlArrayLen = 10;
+	size_t controlArraySize = sizeof(Control) * pWnd->m_controlArrayLen;
+	pWnd->m_pControlArray   = (Control*)MmAllocateK(controlArraySize);
 	
-	InitCtlContainer(&pWnd->m_CtlContainer, 10);
-	
-	if (!pWnd->m_CtlContainer.m_pControlArray)
+	if (!pWnd->m_pControlArray)
 	{
 		// The framebuffer fit, but this didn't
 		LogMsg("Couldn't allocate pControlArray for window, out of memory!");
@@ -1420,6 +1398,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		LockFree (&g_CreateLock);
 		return NULL;
 	}
+	
+	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
 	
@@ -2125,42 +2105,48 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 // Control creation and management
 #if 1
 
-static Control* GetControlByComboIDRec(ControlContainer* pCont, int comboID)
+Control* GetControlByComboID(Window* pWindow, int comboID)
 {
-	for (int i = 0; i < pCont->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pCont->m_pControlArray[i].m_active)
+		if (pWindow->m_pControlArray[i].m_active)
 		{
-			if (pCont->m_pControlArray[i].m_comboID == comboID)
-				return &pCont->m_pControlArray[i];
+			if (pWindow->m_pControlArray[i].m_comboID == comboID)
+				return &pWindow->m_pControlArray[i];
 		}
-		
-		Control* p = GetControlByComboIDRec (&pCont->m_pControlArray[i].m_sContainer, comboID);
-		if (p) return p;
 	}
 	return NULL;
 }
-Control* GetControlByComboID(Window* pWindow, int comboID)
-{
-	return GetControlByComboIDRec(&pWindow->m_CtlContainer, comboID);
-}
-
 #define MENU_BAR_HEIGHT 15
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
-int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
+int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
-	if (!pContainer->m_pControlArray)
+	if (!pWindow->m_pControlArray)
 	{
 		VidSetVBEData(NULL);
 		LogMsg("No pControlArray?");
 		return -1;
 	}
+	if (type == CONTROL_MENUBAR)
+	{
+		if (pWindow->m_menuBarControlIdx >= 0) return -1;//I Refuse
+		
+		if (!p1)
+		{
+			bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
+			
+			rect.left   = 1 + 3 * has3dBorder;
+			rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
+			rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
+			rect.bottom = rect.top + MENU_BAR_HEIGHT + 3;
+		}
+	}
 	
 	int index = -1;
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (!pContainer->m_pControlArray[i].m_active)
+		if (!pWindow->m_pControlArray[i].m_active)
 		{
 			index = i;
 			break;
@@ -2170,7 +2156,7 @@ int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type
 	{
 		//Couldn't find a spot in the currently allocated thing.
 		//Perhaps we need to expand the array.
-		int cal = pContainer->m_controlArrayLen;
+		int cal = pWindow->m_controlArrayLen;
 		if (cal < 2) cal = 2;
 		
 		cal += cal / 2;
@@ -2180,26 +2166,26 @@ int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type
 		Control* newCtlArray = (Control*)MmAllocateK(newSize);
 		if (!newCtlArray)
 		{
-			SLogMsg("Cannot add control %d to Container %x", type, pContainer);
+			SLogMsg("Cannot add control %d to window %x", type, pWindow);
 			return -1;
 		}
 		memset(newCtlArray, 0, newSize);
 		
 		// copy stuff into the new control array:
-		memcpy(newCtlArray, pContainer->m_pControlArray, sizeof(Control) * pContainer->m_controlArrayLen);
+		memcpy(newCtlArray, pWindow->m_pControlArray, sizeof(Control) * pWindow->m_controlArrayLen);
 		
 		// free the previous array:
-		MmFreeK(pContainer->m_pControlArray);
+		MmFreeK(pWindow->m_pControlArray);
 		
 		// then assign the new one
-		pContainer->m_pControlArray   = newCtlArray;
-		pContainer->m_controlArrayLen = cal;
+		pWindow->m_pControlArray   = newCtlArray;
+		pWindow->m_controlArrayLen = cal;
 		
 		// last, re-search the thing
 		index = -1;
-		for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+		for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 		{
-			if (!pContainer->m_pControlArray[i].m_active)
+			if (!pWindow->m_pControlArray[i].m_active)
 			{
 				index = i;
 				break;
@@ -2212,7 +2198,7 @@ int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type
 	}
 	
 	// add the control itself:
-	Control *pControl = &pContainer->m_pControlArray[index];
+	Control *pControl = &pWindow->m_pControlArray[index];
 	pControl->m_active  = true;
 	pControl->m_type    = type;
 	pControl->m_dataPtr = NULL;
@@ -2222,9 +2208,11 @@ int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type
 	pControl->m_parm2   = p2;
 	pControl->m_bMarkedForDeletion = false;
 	pControl->m_anchorMode = anchoringMode;
-	pControl->pParent      = pContainer;
-	pControl->m_sContainer.m_pControlArray   = NULL;
-	pControl->m_sContainer.m_controlArrayLen = 0;
+	
+	if (type == CONTROL_MENUBAR)
+	{
+		pWindow->m_menuBarControlIdx = index;
+	}
 	
 	if (text)
 		strcpy (pControl->m_text, text);
@@ -2272,53 +2260,26 @@ int AddWidgetToContainer(ControlContainer* pContainer, Window* pWindow, int type
 	return index;
 }
 
-int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
-{
-	if (!pWindow)
-	{
-		return -1;
-	}
-	if (type == CONTROL_MENUBAR)
-	{
-		if (!p1)
-		{
-			bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
-			
-			rect.left   = 1 + 3 * has3dBorder;
-			rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
-			rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
-			rect.bottom = rect.top + MENU_BAR_HEIGHT + 3;
-		}
-	}
-	
-	int result = AddWidgetToContainer(&pWindow->m_CtlContainer, pWindow, type, anchoringMode, rect, text, comboID, p1, p2);
-	pWindow->m_menuBarControlIdx = result;
-	
-	return result;
-}
-
 int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
 	return
 	AddControlEx(pWindow, type, 0, rect, text, comboID, p1, p2);
 }
 
-void RemoveControlFromContainer (ControlContainer* pCont, Window *pWindow, int controlIndex)
+void RemoveControl (Window* pWindow, int controlIndex)
 {
-	if (controlIndex >= pCont->m_controlArrayLen || controlIndex < 0) return;
+	if (controlIndex >= pWindow->m_controlArrayLen || controlIndex < 0) return;
 	
-	Control* pControl = &pCont->m_pControlArray[controlIndex];
-	if (pControl->OnEvent)
-		pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
+	LockAcquire(&pWindow->m_EventQueueLock);
+	Control* pControl = &pWindow->m_pControlArray[controlIndex];
+	if (pControl->m_dataPtr)
+	{
+		//TODO
+	}
 	pControl->m_active = false;
 	pControl->m_bMarkedForDeletion = false;
 	pControl->OnEvent = NULL;
 	
-}
-void RemoveControl (Window* pWindow, int controlIndex)
-{
-	LockAcquire(&pWindow->m_EventQueueLock);
-	RemoveControlFromContainer(&pWindow->m_CtlContainer, pWindow, controlIndex);
 	LockFree(&pWindow->m_EventQueueLock);
 }
 
@@ -2331,17 +2292,15 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 	//Prioritise menu bar, as it's always at the top
 	Control* pMenuBar = NULL;
 	
-	ControlContainer* pCont = &pWindow->m_CtlContainer;
-	
 	WidgetEventHandler pHandler = GetWidgetOnEventFunction(CONTROL_MENUBAR);
-	for (int i = pCont->m_controlArrayLen - 1; i != -1; i--)
+	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
 	{
-		if (pCont->m_pControlArray[i].m_active)
+		if (pWindow->m_pControlArray[i].m_active)
 		{
-			Control* p = &pCont->m_pControlArray[i];
+			Control* p = &pWindow->m_pControlArray[i];
 			if (p->OnEvent == pHandler)
 			{
-				pMenuBar = &pCont->m_pControlArray[i];
+				pMenuBar = &pWindow->m_pControlArray[i];
 				break;
 			}
 		}
@@ -2360,13 +2319,13 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 				}
 			}
 	
-	for (int i = pCont->m_controlArrayLen - 1; i != -1; i--)
+	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
 	{
-		if (&pCont->m_pControlArray[i] == pMenuBar) continue; // Skip over the menu bar.
+		if (&pWindow->m_pControlArray[i] == pMenuBar) continue; // Skip over the menu bar.
 		
-		if (pCont->m_pControlArray[i].m_active)
+		if (pWindow->m_pControlArray[i].m_active)
 		{
-			Control* p = &pCont->m_pControlArray[i];
+			Control* p = &pWindow->m_pControlArray[i];
 			if (p->OnEvent)
 			{
 				if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
@@ -2828,11 +2787,11 @@ void UpdateControlsBasedOnAnchoringModes(UNUSED Window* pWindow, int oldSizeParm
 	int sizeDifX = oldSizeX - newSizeX;
 	int sizeDifY = oldSizeY - newSizeY;
 	
-	for (int i = 0; i < pWindow->m_CtlContainer.m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pWindow->m_CtlContainer.m_pControlArray[i].m_active)
+		if (pWindow->m_pControlArray[i].m_active)
 		{
-			Control *pControl = &pWindow->m_CtlContainer.m_pControlArray[i];
+			Control *pControl = &pWindow->m_pControlArray[i];
 			
 			if (pControl->m_anchorMode & ANCHOR_LEFT_TO_RIGHT)
 				pControl->m_triedRect.left   += sizeDifX;

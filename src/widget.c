@@ -19,52 +19,14 @@ bool g_GlowOnHover = true;
 // Utilitary functions
 #if 1
 
-static void SetFocusedControlRec (ControlContainer* pContainer, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		pControl->m_bFocused = (pControl->m_comboID == comboID);
-		
-		SetFocusedControlRec (&pControl->m_sContainer, comboID);
-	}
-}
-
 void SetFocusedControl(Window *pWindow, int comboID)
 {
-	SLogMsg("TODO: SetFocusedControl");
-	SetFocusedControlRec(&pWindow->m_CtlContainer, comboID);
-}
-
-static void SetWidgetEventHandlerRec (ControlContainer* pContainer, Window* pWindow, int comboID, WidgetEventHandler handler)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			// Set It
-			if (pControl->OnEvent)
-				pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
-			
-			pControl->OnEvent = handler;
-			
-			if (pControl->OnEvent)
-				pControl->OnEvent(pControl, EVENT_CREATE,  0, 0, pWindow);
-			
-			return;
-		}
-		
-		SetWidgetEventHandlerRec (&pControl->m_sContainer, pWindow, comboID, handler);
+		Control *pControl = &pWindow->m_pControlArray[i];
+		pControl->m_bFocused = (pControl->m_comboID == comboID);
 	}
 }
-
-void SetWidgetEventHandler (Window *pWindow, int comboID, WidgetEventHandler handler)
-{
-	SLogMsg("TODO: SetWidgetEventHandler");
-	SetWidgetEventHandlerRec (&pWindow->m_CtlContainer, pWindow, comboID, handler);
-}
-
 
 #define BUTTONDARK 0x808080
 #define BUTTONMIDD BUTTON_MIDDLE_COLOR
@@ -181,6 +143,28 @@ void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, 
 	//RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
 }
 
+
+void SetWidgetEventHandler (Window *pWindow, int comboID, WidgetEventHandler handler)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control *pControl = &pWindow->m_pControlArray[i];
+		if (pControl->m_comboID == comboID)
+		{
+			// Set It
+			if (pControl->OnEvent)
+				pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
+			
+			pControl->OnEvent = handler;
+			
+			if (pControl->OnEvent)
+				pControl->OnEvent(pControl, EVENT_CREATE,  0, 0, pWindow);
+			
+			return;
+		}
+	}
+}
+
 #endif
 
 // Scroll bar
@@ -207,80 +191,47 @@ int CtlGetScrollBarPos (Control *pControl)
 	return pControl->m_scrollBarData.m_pos;
 }
 
-void SetScrollBarMinRec (ControlContainer* pContainer, int comboID, int min)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			CtlSetScrollBarMin (pControl, min);
-			return;
-		}
-		
-		SetScrollBarMinRec (&pControl->m_sContainer, comboID, min);
-	}
-}
-void SetScrollBarMaxRec (ControlContainer* pContainer, int comboID, int max)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			CtlSetScrollBarMax (pControl, max);
-			return;
-		}
-		
-		SetScrollBarMaxRec (&pControl->m_sContainer, comboID, max);
-	}
-}
-void SetScrollBarPosRec (ControlContainer* pContainer, int comboID, int pos)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			CtlSetScrollBarPos (pControl, pos);
-			return;
-		}
-		
-		SetScrollBarPosRec (&pControl->m_sContainer, comboID, pos);
-	}
-}
-int GetScrollBarPosRec (ControlContainer* pContainer, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			return CtlGetScrollBarPos (pControl);
-		}
-		
-		int e = GetScrollBarPosRec (&pControl->m_sContainer, comboID);
-		if (e >= 0) return e;
-	}
-	return -1;
-}
-
-
 void SetScrollBarMin (Window *pWindow, int comboID, int min)
 {
-	SetScrollBarMinRec(&pWindow->m_CtlContainer, comboID, min);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetScrollBarMin (&pWindow->m_pControlArray[i], min);
+			return;
+		}
+	}
 }
 void SetScrollBarMax (Window *pWindow, int comboID, int max)
 {
-	SetScrollBarMaxRec(&pWindow->m_CtlContainer, comboID, max);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetScrollBarMax (&pWindow->m_pControlArray[i], max);
+			return;
+		}
+	}
 }
 void SetScrollBarPos (Window *pWindow, int comboID, int pos)
 {
-	SetScrollBarPosRec(&pWindow->m_CtlContainer, comboID, pos);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetScrollBarPos (&pWindow->m_pControlArray[i], pos);
+			return;
+		}
+	}
 }
 int GetScrollBarPos (Window *pWindow, int comboID)
 {
-	return GetScrollBarPosRec(&pWindow->m_CtlContainer, comboID);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+			return CtlGetScrollBarPos (&pWindow->m_pControlArray[i]);
+	}
+	return -1;
 }
 
 #define SCROLL_BAR_WIDTH 16
@@ -584,6 +535,50 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	CtlTextInputUpdateScrollSize (this, pWindow);
 }
 
+void SetTextInputText(Window* pWindow, int comboID, const char* pText)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetTextInputText (&pWindow->m_pControlArray[i], pWindow, pText);
+			return;
+		}
+	}
+}
+void TextInputClearDirtyFlag(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_textInputData.m_dirty = false;
+			return;
+		}
+	}
+}
+bool TextInputQueryDirtyFlag(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_textInputData.m_dirty;
+		}
+	}
+	return false;
+}
+const char* TextInputGetRawText(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_textInputData.m_pText;
+		}
+	}
+	return NULL;
+}
 
 void CtlTextInputUpdateMode (Control *pControl)
 {
@@ -604,100 +599,18 @@ void CtlTextInputUpdateMode (Control *pControl)
 		pControl->m_textInputData.m_enableSyntaxHilite = true;
 }
 
-
-static void SetTextInputTextRec(ControlContainer* pContainer, Window* pWindow, int comboID, const char* pText)
+void TextInputSetMode (Window *pWindow, int comboID, int mode)
 {
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			CtlSetTextInputText (pControl, pWindow, pText);
-			return;
-		}
-		
-		SetTextInputTextRec(&pControl->m_sContainer, pWindow, comboID, pText);
-	}
-}
-static void TextInputClearDirtyFlagRec(ControlContainer* pContainer, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			pControl->m_textInputData.m_dirty = false;
-			return;
-		}
-		
-		TextInputClearDirtyFlagRec(&pControl->m_sContainer, comboID);
-	}
-}
-static bool TextInputQueryDirtyFlagRec(ControlContainer* pContainer, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			return pControl->m_textInputData.m_dirty;
-		}
-		
-		bool b = TextInputQueryDirtyFlagRec(&pControl->m_sContainer, comboID);
-		if (b) return b;
-	}
-	return false;
-}
-static const char* TextInputGetRawTextRec(ControlContainer* pContainer, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		Control *pControl = &pContainer->m_pControlArray[i];
-		if (pControl->m_comboID == comboID)
-		{
-			return pControl->m_textInputData.m_pText;
-		}
-		
-		const char* b = TextInputGetRawTextRec(&pControl->m_sContainer, comboID);
-		if (b) return b;
-	}
-	return NULL;
-}
-
-static void TextInputSetModeRec (ControlContainer* pContainer, int comboID, int mode)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			Control *p = &pContainer->m_pControlArray[i];
+			Control *p = &pWindow->m_pControlArray[i];
 			
 			p->m_parm1 = mode;
 			CtlTextInputUpdateMode(p);
 		}
 	}
-}
-
-
-void SetTextInputText(Window* pWindow, int comboID, const char* pText)
-{
-	SetTextInputTextRec(&pWindow->m_CtlContainer, pWindow, comboID, pText);
-}
-void TextInputClearDirtyFlag(Window* pWindow, int comboID)
-{
-	TextInputClearDirtyFlagRec(&pWindow->m_CtlContainer, comboID);
-}
-bool TextInputQueryDirtyFlag(Window* pWindow, int comboID)
-{
-	return TextInputQueryDirtyFlagRec(&pWindow->m_CtlContainer, comboID);
-}
-const char* TextInputGetRawText(Window* pWindow, int comboID)
-{
-	return TextInputGetRawTextRec(&pWindow->m_CtlContainer, comboID);
-}
-void TextInputSetMode (Window *pWindow, int comboID, int mode)
-{
-	TextInputSetModeRec(&pWindow->m_CtlContainer, comboID, mode);
 }
 
 void CtlAppendChar(Control* this, Window* pWindow, char charToAppend)
@@ -2066,81 +1979,56 @@ go_back:
 
 // List view modifiers
 #if 1
-static void AddElementToListRec (ControlContainer* pContainer, Window* pWindow, int comboID, const char* pText, int optionalIcon)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			if (pContainer->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
-				CtlIconAddElementToList (&pContainer->m_pControlArray[i], pText, optionalIcon, pWindow);
-			else
-				CtlAddElementToList     (&pContainer->m_pControlArray[i], pText, optionalIcon, pWindow);
-			return;
-		}
-		
-		AddElementToListRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow,  comboID, pText, optionalIcon);
-	}
-}
-static const char* GetElementStringFromListRec (ControlContainer* pContainer, Window* pWindow, int comboID, int index)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			return CtlGetElementStringFromList (&pContainer->m_pControlArray[i], index);
-		}
-		
-		const char* p = 
-		GetElementStringFromListRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow, comboID, index);
-		if (p) return p;
-	}
-	return NULL;
-}
-static void RemoveElementFromListRec (ControlContainer* pContainer, Window* pWindow, int comboID, int elementIndex)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			if (pContainer->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
-				CtlIconRemoveElementFromList (&pContainer->m_pControlArray[i], elementIndex, pWindow);
-			else
-				CtlRemoveElementFromList     (&pContainer->m_pControlArray[i], elementIndex, pWindow);
-			return;
-		}
-		
-		RemoveElementFromListRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow, comboID, elementIndex);
-	}
-}
-static void ResetListRec (ControlContainer* pContainer, Window* pWindow, int comboID)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			CtlResetList (&pContainer->m_pControlArray[i], pWindow);
-			return;
-		}
-		
-		ResetListRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow, comboID);
-	}
-}
+
 void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon)
 {
-	AddElementToListRec(&pWindow->m_CtlContainer, pWindow, comboID, pText, optionalIcon);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
+				CtlIconAddElementToList (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
+			else
+				CtlAddElementToList     (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
+			return;
+		}
+	}
 }
 const char* GetElementStringFromList (Window* pWindow, int comboID, int index)
 {
-	return GetElementStringFromListRec(&pWindow->m_CtlContainer, pWindow, comboID, index);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return CtlGetElementStringFromList (&pWindow->m_pControlArray[i], index);
+		}
+	}
+	return NULL;
 }
-void RemoveElementFromList (Window* pWindow, int comboID, int index)
+void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
 {
-	RemoveElementFromListRec(&pWindow->m_CtlContainer, pWindow, comboID, index);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
+				CtlIconRemoveElementFromList (&pWindow->m_pControlArray[i], elementIndex, pWindow);
+			else
+				CtlRemoveElementFromList     (&pWindow->m_pControlArray[i], elementIndex, pWindow);
+			return;
+		}
+	}
 }
 void ResetList (Window* pWindow, int comboID)
 {
-	ResetListRec(&pWindow->m_CtlContainer, pWindow, comboID);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlResetList (&pWindow->m_pControlArray[i], pWindow);
+			return;
+		}
+	}
 }
 #endif
 
@@ -2254,6 +2142,12 @@ void WidgetMenuBar_Reset(Control *this)
 {
 	WidgetMenuBar_DeInitializeRoot(this);
 	WidgetMenuBar_InitializeRoot  (this);
+}
+
+Control* WidgetMenuBar_GetCtl(Window* pWnd)
+{
+	if (pWnd->m_menuBarControlIdx < 0) return NULL;
+	else return &pWnd->m_pControlArray[pWnd->m_menuBarControlIdx];
 }
 
 bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
@@ -2434,23 +2328,16 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 
 // Works on the control with the comboID of 'menuBarControlId'.
 // To that control, it adds a menu item with the comboID of 'comboIdAs' to the menu item with the comboID of 'comboIdTo'.
-static void AddMenuBarItemRec (ControlContainer* pContainer, Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == menuBarControlId && pContainer->m_pControlArray[i].m_type == CONTROL_MENUBAR)
-		{
-			WidgetMenuBar_AddMenuBarItem (&pContainer->m_pControlArray[i], comboIdTo, comboIdAs, pText);
-			return;
-		}
-		
-		AddMenuBarItemRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow, menuBarControlId, comboIdTo, comboIdAs, pText);
-	}
-}
-
 void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText)
 {
-	AddMenuBarItemRec (&pWindow->m_CtlContainer, pWindow, menuBarControlId, comboIdTo, comboIdAs, pText);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == menuBarControlId && pWindow->m_pControlArray[i].m_type == CONTROL_MENUBAR)
+		{
+			WidgetMenuBar_AddMenuBarItem (&pWindow->m_pControlArray[i], comboIdTo, comboIdAs, pText);
+			return;
+		}
+	}
 }
 
 #endif
@@ -2458,7 +2345,7 @@ void AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int c
 // Misc setters
 #if 1
 
-static void SetLabelTextRec (ControlContainer *pWindow, int comboID, const char* pText)
+void SetLabelText (Window *pWindow, int comboID, const char* pText)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -2467,10 +2354,9 @@ static void SetLabelTextRec (ControlContainer *pWindow, int comboID, const char*
 			strcpy(pWindow->m_pControlArray[i].m_text, pText);
 			return;
 		}
-		SetLabelTextRec(&pWindow->m_pControlArray[i].m_sContainer, comboID, pText);
 	}
 }
-static void SetIconRec (ControlContainer *pWindow, int comboID, int icon)
+void SetIcon (Window *pWindow, int comboID, int icon)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -2479,17 +2365,7 @@ static void SetIconRec (ControlContainer *pWindow, int comboID, int icon)
 			pWindow->m_pControlArray[i].m_parm1 = icon;
 			return;
 		}
-		SetIconRec(&pWindow->m_pControlArray[i].m_sContainer, comboID, icon);
 	}
-}
-
-void SetLabelText (Window *pWindow, int comboID, const char* pText)
-{
-	SetLabelTextRec(&pWindow->m_CtlContainer, comboID, pText);
-}
-void SetIcon (Window *pWindow, int comboID, int icon)
-{
-	SetIconRec(&pWindow->m_CtlContainer, comboID, icon);
 }
 
 #endif
@@ -2545,7 +2421,7 @@ bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	}
 	return false;
 }
-static void SetHugeLabelTextRec (ControlContainer *pWindow, int comboID, const char* pText)
+void SetHugeLabelText (Window *pWindow, int comboID, const char* pText)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -2561,12 +2437,7 @@ static void SetHugeLabelTextRec (ControlContainer *pWindow, int comboID, const c
 			
 			return;
 		}
-		SetHugeLabelTextRec(&pWindow->m_pControlArray[i].m_sContainer, comboID, pText);
 	}
-}
-void SetHugeLabelText (Window *pWindow, int comboID, const char* pText)
-{
-	SetHugeLabelTextRec(&pWindow->m_CtlContainer, comboID, pText);
 }
 
 bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
@@ -3049,95 +2920,66 @@ bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	return false;
 }
 
-
-static void SetImageCtlModeRec (ControlContainer* pContainer, int comboID, int mode)//no pWindow
+void SetImageCtlMode (Window *pWindow, int comboID, int mode)
 {
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			pContainer->m_pControlArray[i].m_parm2 = mode;
+			pWindow->m_pControlArray[i].m_parm2 = mode;
 			return;
 		}
-		SetImageCtlModeRec(&pContainer->m_pControlArray[i].m_sContainer, comboID, mode);
 	}
 }
-static void SetImageCtlColorRec (ControlContainer *pContainer, int comboID, uint32_t color)//no pWindow
+void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
 {
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			pContainer->m_pControlArray[i].m_imageCtlData.nCurrentColor = color;
+			pWindow->m_pControlArray[i].m_imageCtlData.nCurrentColor = color;
 			return;
 		}
-		SetImageCtlColorRec(&pContainer->m_pControlArray[i].m_sContainer, comboID, color);
 	}
 }
-static void SetImageCtlCurrentImageRec (ControlContainer* pContainer, Window *pWindow, int comboID, Image* pImage)//need pWindow
+void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
 {
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
 			// Force a refresh of the image.
-			pContainer->m_pControlArray[i].m_parm1 = (int)pImage;
-			if (pContainer->m_pControlArray[i].m_imageCtlData.pImage)
-				MmFree(pContainer->m_pControlArray[i].m_imageCtlData.pImage);
-			pContainer->m_pControlArray[i].m_imageCtlData.pImage = NULL;
+			pWindow->m_pControlArray[i].m_parm1 = (int)pImage;
+			if (pWindow->m_pControlArray[i].m_imageCtlData.pImage)
+				MmFree(pWindow->m_pControlArray[i].m_imageCtlData.pImage);
+			pWindow->m_pControlArray[i].m_imageCtlData.pImage = NULL;
 			
 			WindowRegisterEventUnsafe (pWindow, EVENT_IMAGE_REFRESH, 0, 0);
 			
 			return;
 		}
-		
-		SetImageCtlCurrentImageRec (&pContainer->m_pControlArray[i].m_sContainer, pWindow, comboID, pImage);
 	}
-}
-static Image* GetImageCtlCurrentImageRec (ControlContainer *pContainer, int comboID)//no pWindow
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			return pContainer->m_pControlArray[i].m_imageCtlData.pImage;
-		}
-		Image* p = GetImageCtlCurrentImageRec(&pContainer->m_pControlArray[i].m_sContainer, comboID);
-		if (p) return p;
-	}
-	return NULL;
-}
-static void ImageCtlZoomToFillRec (ControlContainer *pContainer, int comboID)//no pWindow
-{
-	for (int i = 0; i < pContainer->m_controlArrayLen; i++)
-	{
-		if (pContainer->m_pControlArray[i].m_comboID == comboID)
-		{
-			pContainer->m_pControlArray[i].m_imageCtlData.nZoomedWidth = GetWidth (&pContainer->m_pControlArray[i].m_rect);
-		}
-		ImageCtlZoomToFillRec(&pContainer->m_pControlArray[i].m_sContainer, comboID);
-	}
-}
-
-void SetImageCtlMode (Window *pWindow, int comboID, int mode)
-{
-	SetImageCtlModeRec(&pWindow->m_CtlContainer, comboID, mode);
-}
-void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
-{
-	SetImageCtlColorRec(&pWindow->m_CtlContainer, comboID, color);
-}
-void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
-{
-	SetImageCtlCurrentImageRec(&pWindow->m_CtlContainer, pWindow, comboID, pImage);
 }
 Image* GetImageCtlCurrentImage (Window *pWindow, int comboID)
 {
-	return GetImageCtlCurrentImageRec (&pWindow->m_CtlContainer, comboID);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return pWindow->m_pControlArray[i].m_imageCtlData.pImage;
+		}
+	}
+	return NULL;
 }
 void ImageCtlZoomToFill (Window *pWindow, int comboID)
 {
-	ImageCtlZoomToFillRec(&pWindow->m_CtlContainer, comboID);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			pWindow->m_pControlArray[i].m_imageCtlData.nZoomedWidth = GetWidth (&pWindow->m_pControlArray[i].m_rect);
+		}
+	}
 }
 bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
@@ -3328,7 +3170,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 	return false;
 }
 #define CHECKBOX_SIZE 14
-static bool CheckboxGetCheckedRec (ControlContainer* pWindow, int comboID)
+bool CheckboxGetChecked(Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -3336,30 +3178,18 @@ static bool CheckboxGetCheckedRec (ControlContainer* pWindow, int comboID)
 		{
 			return pWindow->m_pControlArray[i].m_checkBoxData.m_checked;
 		}
-		bool b = CheckboxGetCheckedRec (&pWindow->m_pControlArray[i].m_sContainer, comboID);
-		if (b) return b;
 	}
 	return false;
 }
-static void CheckboxSetCheckedRec (ControlContainer* pWindow, int comboID, bool checked)
+void CheckboxSetChecked(Window* pWindow, int comboID, bool checked)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
 			pWindow->m_pControlArray[i].m_checkBoxData.m_checked = checked;
-			return;
 		}
-		CheckboxSetCheckedRec (&pWindow->m_pControlArray[i].m_sContainer, comboID, checked);
 	}
-}
-bool CheckboxGetChecked(Window* pWindow, int comboID)
-{
-	return CheckboxGetCheckedRec (&pWindow->m_CtlContainer, comboID);
-}
-void CheckboxSetChecked(Window* pWindow, int comboID, bool checked)
-{
-	return CheckboxSetCheckedRec (&pWindow->m_CtlContainer, comboID, checked);
 }
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
