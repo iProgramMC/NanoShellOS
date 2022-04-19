@@ -257,17 +257,27 @@ void ShellExecuteCommand(char* p)
 			if (strlen (g_cwd) + strlen (fileName) < PATH_MAX - 3)
 			{
 				char cwd_copy[sizeof(g_cwd)];
+				
 				memcpy(cwd_copy, g_cwd, sizeof(g_cwd));
 				if (g_cwd[1] != 0)
 					strcat (g_cwd, "/");
+				
 				strcat (g_cwd, fileName);
+				
 				FileNode *pPrev = g_pCwdNode;
 				g_pCwdNode = FsResolvePath(g_cwd);
+				
 				if (!g_pCwdNode)
 				{
 					memcpy(g_cwd, cwd_copy, sizeof(g_cwd));
 					g_pCwdNode = pPrev;
-					LogMsg("No such file or directory");
+					LogMsg("cd: %s: No such file or directory", fileName);
+				}
+				if (!(g_pCwdNode->m_type & FILE_TYPE_DIRECTORY))
+				{
+					memcpy(g_cwd, cwd_copy, sizeof(g_cwd));
+					g_pCwdNode = pPrev;
+					LogMsg("cd: %s: Not a directory", fileName);
 				}
 			}
 			else
@@ -285,22 +295,6 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "el") == 0)
 	{
 		LogMsg("Last run ELF returned: %d", g_lastReturnCode);
-	}
-	else if (strcmp (token, "fd") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			LogMsg("Got: %x", FsResolvePath (fileName));
-		}
 	}
 	else if (strcmp (token, "e") == 0)
 	{
@@ -364,7 +358,7 @@ void ShellExecuteCommand(char* p)
 			int fd = FiOpen (s, O_RDONLY);
 			if (fd < 0)
 			{
-				LogMsg("Got error code %d when opening file", fd);
+				LogMsg("ec: %s: %s", fileName, GetErrNoString(fd));
 				return;
 			}
 			
@@ -412,7 +406,7 @@ void ShellExecuteCommand(char* p)
 			int fd = FiOpen (s, O_RDONLY);
 			if (fd < 0)
 			{
-				LogMsg("Got error code %d when opening file", fd);
+				LogMsg("cat: %s: %s", fileName, GetErrNoString(fd));
 				return;
 			}
 			
@@ -457,85 +451,7 @@ void ShellExecuteCommand(char* p)
 			int fd = FiOpen (s, O_WRONLY);
 			if (fd < 0)
 			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "fce") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY | O_CREAT);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
-				return;
-			}
-			
-			FiSeek(fd, 0, SEEK_END);
-			
-			char text[] = "Hello World from FiWrite!\n\n\n";
-			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
-			
-			FiClose (fd);
-			LogMsg("Done");
-		}
-	}
-	else if (strcmp (token, "ffa") == 0)
-	{
-		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			char s[1024];
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY);
-			if (fd < 0)
-			{
-				LogMsg("Got error code %d when opening file", fd);
+				LogMsg("ft: %s: %s", fileName, GetErrNoString(fd));
 				return;
 			}
 			
@@ -555,34 +471,65 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "ls") == 0)
 	{
-		FileNode* pNode = g_pCwdNode;
-		LogMsg("Directory of %s", pNode->m_name, pNode);
+		uint8_t color = g_currentConsole->color;
 		
-		if (!FsOpenDir(pNode))
+		FileNode* pNode = g_pCwdNode;
+		LogMsg("\x01\x0F" "Directory of %s", pNode->m_name, pNode);
+		
+		bool bareMode = false;
+		
+		int dd = FiOpenDir (g_cwd);
+		if (dd < 0)
 		{
-			LogMsg("ERROR: Could not open '%s', try 'cd'-ing back?", pNode->m_name);
+			LogMsg("ls: cannot list '%s': %s", g_cwd, GetErrNoString(dd));
 			return;
 		}
 		
+		FiRewindDir(dd);
+		
 		DirEnt* pDirEnt;
-		int i = 0;
-		while ((pDirEnt = FsReadDir(pNode, i)) != 0)
+		while ((pDirEnt = FiReadDir(dd)) != NULL)
 		{
-			FileNode* pSubnode = FsFindDir(pNode, pDirEnt->m_name);
-			if (!pSubnode)
-				LogMsg("- [NULL?!]");
+			if (bareMode)
+			{
+				LogMsg("%s", pDirEnt->m_name);
+				continue;
+			}
+			
+			StatResult statResult;
+			int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
+			
+			if (res < 0)
+			{
+				LogMsg("ls: cannot stat '%s': %s", pDirEnt->m_name, GetErrNoString(res));
+				continue;
+			}
+			#define THING "\x10"
+			if (statResult.m_type & FILE_TYPE_DIRECTORY)
+			{
+				LogMsg("%c%c%c\x02" THING "\x01\x0C%s\x01\x0F",
+					"-r"[!!(statResult.m_perms & PERM_READ )],
+					"-w"[!!(statResult.m_perms & PERM_WRITE)],
+					"-x"[!!(statResult.m_perms & PERM_EXEC )],
+					pDirEnt->m_name
+				);
+			}
 			else
-				LogMsg("- %s\t%c%c%c\t%d\x02\x16\"%s\"", 
-						(pSubnode->m_type & FILE_TYPE_DIRECTORY) ? "<DIR>" : "     ", 
-						"-R"[!!(pSubnode->m_perms & PERM_READ )],
-						"-W"[!!(pSubnode->m_perms & PERM_WRITE)],
-						"-X"[!!(pSubnode->m_perms & PERM_EXEC )],
-						pSubnode->m_length, 
-						pSubnode->m_name);
-			i++;
+			{
+				LogMsg("%c%c%c %d\x02" THING "%s",
+					"-r"[!!(statResult.m_perms & PERM_READ )],
+					"-w"[!!(statResult.m_perms & PERM_WRITE)],
+					"-x"[!!(statResult.m_perms & PERM_EXEC )],
+					statResult.m_size,
+					pDirEnt->m_name
+				);
+			}
+			#undef THING
 		}
 		
-		FsCloseDir(pNode);
+		g_currentConsole->color = color;
+		
+		FiCloseDir(dd);
 	}
 	else if (strcmp (token, "gt") == 0)
 	{

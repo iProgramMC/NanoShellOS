@@ -25,6 +25,7 @@ enum
 	ETXTBUSY,      // Text file busy
 	EBADF,         // Bad file descriptor
 	ESPIPE,        // Illegal seek
+	ECOUNT,
 };
 	
 #define ERR_NOTHING                (-ENOTHING)
@@ -57,3 +58,5 @@ enum
 	ERR_CANCELED      = 0x80000002, ECANCELED = -ERR_CANCELED,
 	ERR_FILE_TOO_BIG  = 0x80000003, EFBIG     = -ERR_FILE_TOO_BIG,
 };
+
+const char *GetErrNoString(int errno);

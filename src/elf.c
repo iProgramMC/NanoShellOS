@@ -293,6 +293,7 @@ static void ElfExecThread(int pnLoaderBlock)
 	}
 	else
 	{
+		ExGetRunningProc()->pDetail = NULL; // the runner will handle us anyway.
 		((ElfLoaderBlock*)pnLoaderBlock)->bExecDone = true;
 		KeExit ();
 	}

@@ -515,7 +515,7 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 int FiCloseDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(dd))
+	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -538,7 +538,7 @@ int FiCloseDir (int dd)
 DirEnt* FiReadDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(dd))
+	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return NULL;
@@ -548,6 +548,7 @@ DirEnt* FiReadDir (int dd)
 	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, pDesc->m_nStreamOffset);
 	if (!pDirEnt)
 	{
+		SLogMsg("No Dir ent");
 		LockFree (&g_FileSystemLock);
 		return NULL;
 	}
@@ -560,13 +561,19 @@ DirEnt* FiReadDir (int dd)
 	return &pDesc->m_sCurDirEnt;
 }
 
-int FiSeekDir (int dd, long loc)
+int FiSeekDir (int dd, int loc)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(dd))
+	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
+	}
+	
+	if (loc < 0)
+	{
+		LockFree (&g_FileSystemLock);
+		return -EOVERFLOW;
 	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
@@ -584,7 +591,7 @@ int FiRewindDir (int dd)
 int FiTellDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(dd))
+	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -599,7 +606,7 @@ int FiTellDir (int dd)
 int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(dd))
+	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -613,10 +620,13 @@ int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 		return -ENOENT;
 	}
 	
-	pOut->m_type   = pNode->m_type;
-	pOut->m_size   = pNode->m_length;
-	pOut->m_inode  = pNode->m_inode;
-	pOut->m_blocks = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	pOut->m_type       = pNode->m_type;
+	pOut->m_size       = pNode->m_length;
+	pOut->m_inode      = pNode->m_inode;
+	pOut->m_perms      = pNode->m_perms;
+	pOut->m_modifyTime = pNode->m_modifyTime;
+	pOut->m_createTime = pNode->m_createTime;
+	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
@@ -633,10 +643,13 @@ int FiStat (const char *pFileName, StatResult* pOut)
 		return -ENOENT;
 	}
 	
-	pOut->m_type   = pNode->m_type;
-	pOut->m_size   = pNode->m_length;
-	pOut->m_inode  = pNode->m_inode;
-	pOut->m_blocks = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	pOut->m_type       = pNode->m_type;
+	pOut->m_size       = pNode->m_length;
+	pOut->m_inode      = pNode->m_inode;
+	pOut->m_perms      = pNode->m_perms;
+	pOut->m_modifyTime = pNode->m_modifyTime;
+	pOut->m_createTime = pNode->m_createTime;
+	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
@@ -765,3 +778,41 @@ int FiTellSize (int fd)
 
 #endif
 
+static const char* ErrorStrings[] = {
+	"Success",
+	"Permission denied",
+	"File exists",
+	"Interrupted system call",
+	"Invalid argument",
+	"I/O error",
+	"Is a directory",
+	"Too many symbolic links",
+	"Too many open files",
+	"File or path name too long",
+	"Too many open files in system",
+	"No such file or directory",
+	"Out of stream resources",
+	"No space left on device",
+	"Not a directory",
+	"No such device or address",
+	"Value is too large for defined data type",
+	"Read only file system",
+	"Already open",
+	"Not enough memory",
+	"Text file busy",
+	"Bad file descriptor",
+	"Illegal seek (is FIFO)",
+};
+
+STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");
+
+const char *GetErrNoString(int errno)
+{
+	errno = -errno;
+	if (errno < 0)
+		return "Unknown Error";
+	if (errno >= ECOUNT)
+		return "Unknown Error";
+	
+	return ErrorStrings[errno];
+}

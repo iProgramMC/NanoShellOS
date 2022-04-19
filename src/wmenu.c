@@ -149,7 +149,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			WindowMenu* pData = (WindowMenu*)pWindow->m_data;
 			if (!pData->bOpen)
 			{
-				if (!pData->pWindow->m_bWindowManagerUpdated)//i.e. not a popup menu
+				if (!(pData->pWindow->m_flags & WF_MENUITEM))//i.e. not a popup menu
 				{
 					DestroyWindow(pWindow);//kill self
 				}
@@ -304,7 +304,7 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 		newYPos = GetScreenHeight() - GetMenuHeight(pRoot);
 	
 	//Create a new window
-	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ | WF_SYSPOPUP);
+	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_MENUITEM | WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ | WF_SYSPOPUP);
 	cli;
 	pMenuWnd->m_bWindowManagerUpdated = true;
 	pMenuWnd->m_data = pRoot;

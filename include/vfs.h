@@ -183,13 +183,17 @@ void EraseFileNode (FileNode* pFileNode);
 		int       m_openLine;
 	}
 	DirDescriptor ;
-
+	
 	typedef struct
 	{
 		uint32_t m_type;
 		uint32_t m_size;
 		uint32_t m_blocks;
 		uint32_t m_inode;
+		
+		uint32_t m_perms;
+		uint32_t m_modifyTime;
+		uint32_t m_createTime;
 	}
 	StatResult;
 	
@@ -228,7 +232,33 @@ void EraseFileNode (FileNode* pFileNode);
 	
 	// Seeks around a file, if it's seekable.
 	int FiSeek (int fd, int offset, int whence);
+	
+	
+	// Opens a directory and returns a descriptor
+	int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine);
+	#define FiOpenDir(pFileName) FiOpenDirD(pFileName, __FILE__, __LINE__)
+	
+	// Closes a directory and frees its descriptor for future use.
+	int FiCloseDir (int dd);
+	
+	// Reads a directory entry from the directory and advances the stream pointer.
+	DirEnt* FiReadDir (int dd);
+	
+	// Seeks on a directory descriptor.
+	int FiSeekDir (int dd, int loc);
+	
+	// Rewinds the directory, or moves the directory entry pointer to the start.
+	int FiRewindDir (int dd);
+	
+	// Get the current file directory offset.
+	int FiTellDir (int dd);
 
+	// Retrieves information about a file in the directory.
+	int FiStatAt (int dd, const char *pFileName, StatResult* pOut);
+
+	// Retrieves information about a file.
+	int FiStat (const char *pFileName, StatResult* pOut);
+	
 #endif
 
 #endif//_VFS_H

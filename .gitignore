@@ -16,9 +16,13 @@ apps/notepad/build/*
 apps/notepad/*.nse
 apps/clock/build/*
 apps/clock/*.nse
+apps/dink/*
 
 apps/doomns/*
 apps/nesemu/*
 
 vdisk.vdi
 vdisk*.vdi
+
+todo.txt
+todo1.txt

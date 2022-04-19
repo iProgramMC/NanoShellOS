@@ -1118,6 +1118,7 @@ extern Heap* g_pHeap;
 Cursor g_windowDragCursor;
 int g_currentlyClickedWindow = -1;
 
+void SelectWindowUnsafe(Window* pWindow);
 void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
@@ -1147,6 +1148,35 @@ void NukeWindowUnsafe (Window* pWindow)
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
+
+	// Reset the draw order
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (GetWindowFromIndex(g_windowDrawOrder[i]) == pWindow) //this is our window, reset the draw order
+			g_windowDrawOrder[i] = -1;
+	}
+
+	// Select the (currently) frontmost window
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (g_windowDrawOrder[i] < 0)//doesn't exist
+			continue;
+		if (GetWindowFromIndex(g_windowDrawOrder[i])->m_flags & WF_SYSPOPUP) //prioritize non-system windows
+			continue;
+
+		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		return;
+	}
+
+	// Select the (currently) frontmost window, even if it's a system popup
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		if (g_windowDrawOrder[i] < 0)//doesn't exist
+			continue;
+
+		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		return;
+	}
 }
 
 void NukeWindow (Window* pWindow)
@@ -2619,18 +2649,18 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	
 		int textwidth, height;
 		VidSetFont(TITLE_BAR_FONT);
-		VidTextOutInternal(pWindow->m_title, 0, 0, 0, 0, true, &textwidth, &height);
-		
-		int MinimizAndCloseGap = 0;
-		
-		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth - MinimizAndCloseGap - iconGap) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
-		
-		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
-		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
-		
 		uint32_t flags = TEXT_RENDER_BOLD;
 		if (TITLE_BAR_FONT != SYSTEM_FONT)
 			flags = 0;
+
+		VidTextOutInternal(pWindow->m_title, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
+		
+		int MinimizAndCloseGap = 0;
+		
+		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
+		
+		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
+		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
 		
 		VidTextOut(pWindow->m_title, rectb.left + offset + 1, rectb.top + 2 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pWindow->m_title, rectb.left + offset + 0, rectb.top + 1 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
