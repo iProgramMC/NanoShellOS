@@ -68,8 +68,9 @@ int     FiRewindDir(int dd);
 int     FiTellDir  (int dd);
 int     FiStatAt   (int dd,         const char*pfn,  StatResult* pres);
 int     FiStat     (const char*pfn, StatResult* pres);
-const char* FiGetCwd();
 int     FiChDir    (const char*pfn);
+const char* FiGetCwd();
+const char* ErrNoStr(int errno);
 
 // C Standard I/O
 

@@ -13,6 +13,10 @@ typedef uint8_t bool;
 #define false 0
 #define true 1
 
+#define PERM_READ  (1)
+#define PERM_WRITE (2)
+#define PERM_EXEC  (4)
+
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(*array))
 
 #define UNUSED __attribute__((unused))
@@ -229,6 +233,16 @@ typedef uint8_t bool;
 #define WINDOW_MINIMIZED_HEIGHT (3+TITLE_BAR_HEIGHT)
 
 // Structs and enums
+
+enum
+{
+	FILE_TYPE_NONE = 0,
+	FILE_TYPE_FILE,
+	FILE_TYPE_CHAR_DEVICE,
+	FILE_TYPE_BLOCK_DEVICE,
+	FILE_TYPE_DIRECTORY  = 8,
+	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
+};
 
 // use with the negative prefix
 enum

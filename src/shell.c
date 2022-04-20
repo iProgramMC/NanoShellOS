@@ -263,6 +263,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
+			s[0] = 0;
 			if (*fileName != '/')
 			{
 				strcpy (s, g_cwd);
@@ -296,6 +297,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
+			s[0] = 0;
 			if (*fileName != '/')
 			{
 				strcpy (s, g_cwd);
@@ -344,6 +346,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
+			s[0] = 0;
 			if (*fileName != '/')
 			{
 				strcpy (s, g_cwd);
@@ -389,6 +392,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
+			s[0] = 0;
 			if (*fileName != '/')
 			{
 				strcpy (s, g_cwd);
@@ -512,6 +516,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			char s[1024];
+			s[0] = 0;
 			if (*fileName != '/')
 			{
 				strcpy (s, g_cwd);

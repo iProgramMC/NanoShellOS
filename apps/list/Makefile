@@ -13,20 +13,16 @@ AS=nasm
 
 FEATURES=\
 	-DUSE_CONSOLE    \
-	-DUSE_CC         \
-	-DUSE_CLIP       \
 	-DUSE_FILE       \
 	-DUSE_MEMORY     \
-	-DUSE_MISC       \
-	-DUSE_VIDEO      \
-	-DUSE_WINDOW
+	-DUSE_MISC
 
 CFLAGS=-I $(INC_DIR) -I $(LII_DIR) $(FEATURES) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 
 # Compile the application
-APP_TARGET=ls.nse
+APP_TARGET=List.nse
 
 APP_C_FILES=$(shell find $(SRC_DIR) -type f -name '*.c')
 APP_S_FILES=$(shell find $(SRC_DIR) -type f -name '*.asm')

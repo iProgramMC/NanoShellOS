@@ -182,6 +182,10 @@ int FiChDir(const char* pfn)
 {
 	return _I_FiChDir(pfn);
 }
+const char* ErrNoStr (int errno)
+{
+	return _I_ErrNoStr (errno);
+}
 #endif
 
 void _I_CloseOpenFiles()
