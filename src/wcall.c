@@ -14,6 +14,7 @@
 #include <memory.h>
 #include <cinterp.h>
 #include <vfs.h>
+#include <clip.h>
 #include <misc.h>
 #include <idt.h>
 
@@ -53,6 +54,61 @@
  * my old self for going this way. :^)
 *****************************************************/
 
+// Miscellaneous utils
+int GetVersionNumber()
+{
+	return VersionNumber;
+}
+extern Console* g_currentConsole;
+Console* GetCurrentConsole()
+{
+	return g_currentConsole;
+}
+int FiRemoveFile(const char* pText);
+
+void VidSetClipRectP (Rectangle rect)
+{
+	// A safer version that's exposed to user space
+	if (rect.left < 0 || rect.top < 0 || rect.right < 0 || rect.bottom < 0)
+		VidSetClipRect(NULL);
+	else
+		VidSetClipRect(&rect);
+}
+const char* FiGetCwd ()
+{
+	extern char g_cwd[PATH_MAX + 2];
+	return g_cwd;
+}
+void LogString(const char* pText)
+{
+	LogMsgNoCr("%s", pText);
+}
+int FiRemoveFile(UNUSED const char* pText)
+{
+	// TODO
+	return  -ENXIO;
+}
+void SetWindowIcon (Window* pWindow, int icon)
+{
+	pWindow->m_iconID = icon;
+}
+extern VBEData * g_vbeData;
+void SetWindowTitle(Window* pWindow, const char* pTitle)
+{
+	int len = strlen (pTitle);
+	if (len < WINDOW_TITLE_MAX-1)
+		len = WINDOW_TITLE_MAX-1;
+	
+	memcpy (pWindow->m_title, pTitle, len);
+	pWindow->m_title[len] = 0;
+	
+	VBEData * backup = g_vbeData;
+	VidSetVBEData (&pWindow->m_vbeData);
+	RequestRepaintNew(pWindow);
+	g_vbeData = backup;
+}
+
+// System call interface
 enum
 {
 	// System Calls V1.0
@@ -163,42 +219,42 @@ enum
 		WIN_COLOR_BOX,
 		WIN_FILE_CHOOSE_BOX,
 		WIN_POPUP_WINDOW,
+		
+	// System Calls V1.4
+		VID_SET_VBE_DATA,//dangerous!! be careful!!
+		
+		FI_OPEN_DIR_D,
+		FI_CLOSE_DIR,
+		FI_READ_DIR,
+		FI_SEEK_DIR,
+		FI_REWIND_DIR,
+		FI_TELL_DIR,
+		FI_STAT_AT,
+		FI_STAT,
+		FI_GET_CWD,
+		FI_CHANGE_DIR,
+		
+		WIN_GET_WIDGET_EVENT_HANDLER,
+		WIN_SET_WIDGET_EVENT_HANDLER,
+		WIN_SET_IMAGE_CTL_MODE,
+		WIN_SET_IMAGE_CTL_COLOR,
+		WIN_SET_IMAGE_CTL_IMAGE,
+		WIN_GET_IMAGE_CTL_IMAGE,
+		WIN_IMAGE_CTL_ZOOM_TO_FILL,
+		WIN_SET_FOCUSED_CONTROL,
+		WIN_POPUP_WINDOW_EX,
+		
+		ERR_GET_STRING,
+		
+		VID_GET_MOUSE_POS,
+		VID_SET_CLIP_RECT,
+		
+		CB_CLEAR,
+		CB_COPY_TEXT,
+		CB_COPY_BLOB,
+		CB_GET_CURRENT_VARIANT,
+		CB_RELEASE,
 };
-
-void LogString(const char* pText)
-{
-	LogMsgNoCr("%s", pText);
-}
-
-void SetWindowIcon (Window* pWindow, int icon)
-{
-	pWindow->m_iconID = icon;
-}
-extern VBEData * g_vbeData;
-void SetWindowTitle(Window* pWindow, const char* pTitle)
-{
-	int len = strlen (pTitle);
-	if (len < WINDOW_TITLE_MAX-1)
-		len = WINDOW_TITLE_MAX-1;
-	
-	memcpy (pWindow->m_title, pTitle, len);
-	pWindow->m_title[len] = 0;
-	
-	VBEData * backup = g_vbeData;
-	VidSetVBEData (&pWindow->m_vbeData);
-	RequestRepaintNew(pWindow);
-	g_vbeData = backup;
-}
-int GetVersionNumber()
-{
-	return VersionNumber;
-}
-extern Console* g_currentConsole;
-Console* GetCurrentConsole()
-{
-	return g_currentConsole;
-}
-int FiRemoveFile(const char* pText);
 
 void *WindowCall[] = {
 	// System Calls V1.0 -- 14/01/2022
@@ -304,16 +360,42 @@ void *WindowCall[] = {
 		ShellAbout,
 		InputBox,
 		ColorInputBox,
-		NULL,//TODO
+		FilePickerBox,
 		PopupWindow,
+		
+	// System Calls V1.4 - 20/04/2022
+		VidSetVBEData,
+		FiOpenDirD,
+		FiCloseDir,
+		FiReadDir,
+		FiSeekDir,
+		FiRewindDir,
+		FiTellDir,
+		FiStatAt,
+		FiStat,
+		FiGetCwd,
+		FiChangeDir,
+		GetWidgetOnEventFunction,
+		SetWidgetEventHandler,
+		SetImageCtlMode,
+		SetImageCtlColor,
+		SetImageCtlCurrentImage,
+		GetImageCtlCurrentImage,
+		ImageCtlZoomToFill,
+		SetFocusedControl,
+		PopupWindowEx,
+		GetErrNoString,
+		GetMousePos,
+		VidSetClipRectP,
+		CbClear,
+		CbCopyText,
+		CbCopyBlob,
+		CbGetCurrentVariant,
+		CbRelease,
 };
 
-int FiRemoveFile(UNUSED const char* pText)
-{
-	// TODO
-	return  -ENXIO;
-}
 
+// Other utils
 void UserCallStuffNotSupportedC(void)
 {
 	if (!VidIsAvailable())

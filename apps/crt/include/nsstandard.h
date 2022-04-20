@@ -52,13 +52,24 @@ void  fmemcpy32 (void* restrict dest, const void* restrict src, size_t size);
 void* fast_memset(void* bufptr, BYTE val, size_t size);
 
 // File management
-int    open  (const char* path, int oflag);
-int    close (int fd);
-size_t read  (int fd,       void* buf,    unsigned int nbyte);
-size_t write (int fd, const void* buf,    unsigned int nbyte);
-int    lseek (int fd,       int   offset,          int whence);
-int    tellf (int fd);
-int    tellsz(int fd);
+int     open  (const char* path, int oflag);
+int     close (int fd);
+size_t  read  (int fd,       void* buf,    unsigned int nbyte);
+size_t  write (int fd, const void* buf,    unsigned int nbyte);
+int     lseek (int fd,       int   offset,          int whence);
+int     tellf (int fd);
+int     tellsz(int fd);
+
+int     FiOpenDir  (const char* pFileName);
+int     FiCloseDir (int dd);
+DirEnt* FiReadDir  (int dd);
+int     FiSeekDir  (int dd,          int loc);
+int     FiRewindDir(int dd);
+int     FiTellDir  (int dd);
+int     FiStatAt   (int dd,         const char*pfn,  StatResult* pres);
+int     FiStat     (const char*pfn, StatResult* pres);
+const char* FiGetCwd();
+int     FiChDir    (const char*pfn);
 
 // C Standard I/O
 

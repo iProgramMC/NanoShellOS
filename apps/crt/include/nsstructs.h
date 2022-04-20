@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+//TODO
+
 typedef uint8_t BYTE;
 typedef uint8_t bool;
 #define false 0
@@ -76,6 +78,7 @@ typedef uint8_t bool;
 #define WF_NOMINIMZ 0x00000010//Disable minimize button
 #define WF_ALWRESIZ 0x00000020//Allow resize
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
+#define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 
 #define KEY_UNDEFINED_0 0
 #define KEY_ESC 1
@@ -391,6 +394,8 @@ enum CURSORTYPE
 	CURSOR_DEFAULT,
 	CURSOR_WAIT,
 	CURSOR_IBEAM,
+	CURSOR_CROSS,
+	CURSOR_PENCIL,
 	CURSOR_COUNT,
 };
 
@@ -417,6 +422,13 @@ enum
 	EVENT_UNMINIMIZE,
 	EVENT_UPDATE2,
 	EVENT_MENU_CLOSE,
+	EVENT_CLICK_CHAR,
+	EVENT_MAXIMIZE,
+	EVENT_UNMAXIMIZE,
+	EVENT_IMAGE_REFRESH,
+	EVENT_RIGHTCLICK,
+	EVENT_RIGHTCLICKRELEASE,
+	EVENT_CHECKBOX,
 	EVENT_MAX
 };
 
@@ -472,6 +484,10 @@ enum
 	CONTROL_BUTTON_ICON_BAR,
 	//A simple line control
 	CONTROL_SIMPLE_HLINE,
+	//Image control.  A _valid_ pointer to an Image structure must be passed into parm1.
+	//When creating the control, the image gets duplicated, so the caller may free/dispose of
+	//the old image.  The system will get rid of its own copy when the control gets destroyed.
+	CONTROL_IMAGE,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -547,6 +563,18 @@ enum
 	/*0x8D*/TIST_COUNT,
 };
 
+enum
+{
+	CLIPBOARD_DATA_NONE,
+	CLIPBOARD_DATA_INTEGER,
+	CLIPBOARD_DATA_BINARY,
+	CLIPBOARD_DATA_TEXT,
+	CLIPBOARD_DATA_LARGE_TEXT,
+	
+	// Add more clipboard data types here.  Unknown clipboard data types will be treated as generic binaries
+};
+
+
 typedef struct
 {
 	int seconds,
@@ -592,6 +620,7 @@ typedef struct
 		uint8_t * m_framebuffer8;
 	};
 	int m_pitch32, m_pitch16;      //uint32_t's and uint16_t's per row.
+	Rectangle m_clipRect;
 }
 VBEData;
 
@@ -743,6 +772,12 @@ typedef struct ControlStruct
 }
 Control;
 
+typedef struct
+{
+	bool  m_held;
+	void* m_task_owning_it;
+}
+SafeLock;
 
 typedef struct WindowStruct
 {
@@ -761,13 +796,11 @@ typedef struct WindowStruct
 	WindowProc m_callback;
 	Rectangle  m_rect;
 	Rectangle  m_rectBackup;
-	//uint32_t*  m_framebuffer;
-	//int        m_fbWidth, m_fbHeight;
 	VBEData    m_vbeData;
 	
 	int        m_iconID;
 	
-	bool       m_eventQueueLock;
+	bool       m_eventQueueLockUnused; // left to keep compatibity with old ELFs that modify the window structure directly
 	short      m_eventQueue[EVENT_QUEUE_MAX];
 	int        m_eventQueueParm1[EVENT_QUEUE_MAX];
 	int        m_eventQueueParm2[EVENT_QUEUE_MAX];
@@ -797,6 +830,10 @@ typedef struct WindowStruct
 	// Raw input buffer.
 	char m_inputBuffer[WIN_KB_BUF_SIZE];
 	int  m_inputBufferBeg, m_inputBufferEnd;
+	
+	bool       m_clickedInside;
+	
+	SafeLock   m_EventQueueLock;
 } Window;
 
 typedef Window* PWINDOW;
@@ -809,6 +846,43 @@ typedef struct {
     char*m_pReturnValue;
 } TokenState;
 
+
+typedef struct DirEntS
+{
+	char     m_name[128]; //+nullterm, so 127 concrete chars
+	uint32_t m_inode;     //device specific
+	uint32_t m_type;
+}
+DirEnt;
+
+typedef struct
+{
+	uint32_t m_type;
+	uint32_t m_size;
+	uint32_t m_blocks;
+	uint32_t m_inode;
+	
+	uint32_t m_perms;
+	uint32_t m_modifyTime;
+	uint32_t m_createTime;
+}
+StatResult;
+
+typedef struct
+{
+	SafeLock m_lock;
+	
+	int  m_type;
+	char m_short_str[256];
+	int  m_blob_size;
+	
+	union {
+		int   m_int_data;
+		void *m_generic_data_ptr;
+		char *m_char_str;
+	};
+}
+ClipboardVariant;
 
 typedef struct
 {

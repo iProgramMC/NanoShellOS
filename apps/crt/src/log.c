@@ -206,8 +206,9 @@ void sprintf(char*a, const char*c, ...)
 	vsprintf(a, c, list);
 	va_end(list);
 }
-void LogMsg(const char* fmt, ...)
+void LogMsg(UNUSED const char* fmt, ...)
 {
+#ifdef USE_CONSOLE
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
@@ -217,9 +218,11 @@ void LogMsg(const char* fmt, ...)
 	_I_PutString(cr);
 	
 	va_end(list);
+#endif
 }
-void LogMsgNoCr(const char* fmt, ...)
+void LogMsgNoCr(UNUSED const char* fmt, ...)
 {
+#ifdef USE_CONSOLE
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
@@ -228,5 +231,6 @@ void LogMsgNoCr(const char* fmt, ...)
 	_I_PutString(cr);
 	
 	va_end(list);
+#endif
 }
 

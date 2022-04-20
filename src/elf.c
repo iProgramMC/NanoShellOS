@@ -11,7 +11,7 @@
 #include <task.h>
 #include <process.h>
 
-#define ELF_DEBUG
+//#define ELF_DEBUG
 #ifdef ELF_DEBUG
 #define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
 #else

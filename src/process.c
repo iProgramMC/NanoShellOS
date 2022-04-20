@@ -32,9 +32,7 @@ void ExDisposeProcess(Process *pProc)
 	
 	// If the current heap is this process' heap (which we hope it isn't),
 	// disposing of this heap will automatically switch to the kernel heap :^)
-	SLogMsg("Freeing Heap %x from task %x...", pProc, KeGetRunningTask());
 	FreeHeapUnsafe (&pProc->sHeap);
-	SLogMsg("Freed   Heap...");
 	
 	// Deactivate this process
 	pProc->bActive = false;
@@ -97,14 +95,12 @@ void ExOnThreadExit (Process* pProc, Task* pTask)
 				// Let the process free its stuff first
 				if (pProc->OnDeath)
 				{
-					SLogMsg("Calling process' death function...");
 					UseHeap (&pProc->sHeap);
 					
 					pProc->OnDeath(pProc);
 					pProc->OnDeath = NULL;
 					
 					ResetToKernelHeap ();
-					SLogMsg("Calling process' death function done");
 				}
 				
 				

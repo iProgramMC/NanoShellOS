@@ -230,58 +230,11 @@ void ShellExecuteCommand(char* p)
 			LogMsg("Expected filename");
 		else
 		{
-			if (strcmp (fileName, PATH_THISDIR) == 0) return;
-			if (strcmp (fileName, "/") == 0)
+			int result = FiChangeDir(fileName);
+			if (result)
 			{
-				strcpy(g_cwd, "/");
-				g_pCwdNode = FsResolvePath(g_cwd);
+				LogMsg("cd: %s: %s", fileName, GetErrNoString(result) );
 			}
-			if (strcmp (fileName, PATH_PARENTDIR) == 0)
-			{
-				for (int i = PATH_MAX - 1; i >= 0; i--)
-				{
-					if (g_cwd[i] == PATH_SEP)
-					{
-						g_cwd[i+(i==0)] = 0;
-						g_pCwdNode = FsResolvePath(g_cwd);
-						if (!g_pCwdNode)
-						{
-							LogMsg("Fatal: could not find parent directory?!");
-							return;
-						}
-						break;
-					}
-				}
-				return;
-			}
-			if (strlen (g_cwd) + strlen (fileName) < PATH_MAX - 3)
-			{
-				char cwd_copy[sizeof(g_cwd)];
-				
-				memcpy(cwd_copy, g_cwd, sizeof(g_cwd));
-				if (g_cwd[1] != 0)
-					strcat (g_cwd, "/");
-				
-				strcat (g_cwd, fileName);
-				
-				FileNode *pPrev = g_pCwdNode;
-				g_pCwdNode = FsResolvePath(g_cwd);
-				
-				if (!g_pCwdNode)
-				{
-					memcpy(g_cwd, cwd_copy, sizeof(g_cwd));
-					g_pCwdNode = pPrev;
-					LogMsg("cd: %s: No such file or directory", fileName);
-				}
-				if (!(g_pCwdNode->m_type & FILE_TYPE_DIRECTORY))
-				{
-					memcpy(g_cwd, cwd_copy, sizeof(g_cwd));
-					g_pCwdNode = pPrev;
-					LogMsg("cd: %s: Not a directory", fileName);
-				}
-			}
-			else
-				LogMsg("Path would be too large");
 		}
 	}
 	else if (strcmp (token, "cm") == 0)
@@ -306,10 +259,6 @@ void ShellExecuteCommand(char* p)
 		else if (*fileName == 0)
 		{
 			LogMsg("Expected filename");
-		}
-		else if (!g_windowManagerRunning)
-		{
-			LogMsg("Running apps outside the window manager is broken for now, so don't.");
 		}
 		else
 		{
@@ -701,9 +650,7 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "sb") == 0)
 	{
-		SbSoundVolumeMaster(255);
-		SbSoundVolume (0, 255);
-		SbSoundNote (0, 5, 1);
+		LogMsg("Playing 1000 hz tone... (todo)");
 	}
 	else if (strcmp (token, "ver") == 0)
 	{

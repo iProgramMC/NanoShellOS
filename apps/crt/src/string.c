@@ -231,11 +231,15 @@ char* Tokenize (TokenState* pState, char* pString, char* separator) {
 }
 
 void *malloc (size_t size);
-char *strdup (const char *pText)
+char *strdup (UNUSED const char *pText)
 {
+#ifdef USE_MEMORY
 	size_t len = strlen (pText) + 1;
 	char *p = malloc (len);
 	if (p)
 		memcpy (p, pText, len);
 	return p;
+#else
+	return NULL;
+#endif
 }

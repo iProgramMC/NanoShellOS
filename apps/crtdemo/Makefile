@@ -11,7 +11,12 @@ CC=clang
 LD=ld
 AS=nasm
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
+FEATURES=\
+	-DUSE_CONSOLE    \
+	-DUSE_MEMORY     \
+	-DUSE_MISC
+	
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) $(FEATURES) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 

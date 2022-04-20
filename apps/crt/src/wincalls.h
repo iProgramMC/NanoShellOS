@@ -1,4 +1,5 @@
 
+#ifdef USE_VIDEO
 // Video Call Functions:
 CALL (GetScreenSizeX, VID_GET_SCREEN_WIDTH, int)
 	RARGS()
@@ -54,7 +55,9 @@ CALL_END
 CALL (VidFillRectVGradient, VID_FILL_RECT_V_GRADIENT, void, unsigned colorU, unsigned colorD, int left, int top, int right, int bottom)
 	SARGS(colorU,colorD,left,top,right,bottom)
 CALL_END
+#endif
 
+#ifdef USE_WINDOW
 // Window Call Functions:
 CALL (CreateWindow, WIN_CREATE, Window*, const char*pTitle, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 	RARGS(pTitle, xPos, yPos, xSize, ySize, proc, flags)
@@ -114,7 +117,9 @@ CALL_END
 CALL (ResetList, WIN_CLEAR_LIST, void, Window* pWindow, int comboID)
 	SARGS(pWindow, comboID)
 CALL_END
+#endif
 
+#ifdef USE_CONSOLE
 // Console I/O
 CALL (PutString, CON_PUTSTRING, void, const char* pText)
 	SARGS(pText)
@@ -125,7 +130,9 @@ CALL_END
 CALL (ReadString, CON_READSTR, void, char* pOutBuffer, int maxSize)
 	SARGS(pOutBuffer, maxSize)
 CALL_END
+#endif
 
+#ifdef USE_MEMORY
 // Memory allocation
 CALL (AllocateDebug, MM_ALLOCATE_D, void*, size_t size, const char* callerFile, int callerLine)
 	RARGS(size, callerFile, callerLine)
@@ -136,7 +143,9 @@ CALL_END
 CALL (MmDebugDump, MM_DEBUG_DUMP, void, void)
 	SARGS()
 CALL_END
+#endif
 
+#ifdef USE_FILE
 // File I/O
 CALL (FiOpenDebug, FI_OPEN_D, int /* file descriptor or errcode if negative */, const char* pFileName, int oFlag, const char* pSrcFile, int nSrcLine)
 	RARGS(pFileName, oFlag, pSrcFile, nSrcLine)
@@ -159,7 +168,9 @@ CALL_END
 CALL (FiSeek, FI_SEEK, int /* err code */, int fd, int offset, int whence)
 	RARGS(fd, offset, whence)
 CALL_END
+#endif
 
+#ifdef USE_WINDOW
 CALL (SetHugeLabelText, WIN_SET_HUGE_LABEL_TEXT, void, Window* pWindow, int comboID, const char* pText)
 	SARGS(pWindow, comboID, pText)
 CALL_END
@@ -172,6 +183,9 @@ CALL_END
 CALL (SetWindowTitle, WIN_SET_WINDOW_TITLE, void, Window* pWindow, const char* pText)
 	SARGS(pWindow, pText)
 CALL_END
+#endif
+
+#ifdef USE_MISC
 CALL (GetTickCount, TM_GET_TICK_COUNT, int, void)
 	RARGS()
 CALL_END
@@ -184,40 +198,58 @@ CALL_END
 CALL (GetCpuName, CPU_GET_NAME, const char*, void)
 	RARGS()
 CALL_END
+#endif
+
+#ifdef USE_CONSOLE
 CALL (GetConsole, CON_GET_CURRENT_CONSOLE, void*, void)
 	RARGS()
 CALL_END
+#endif
+
+#ifdef USE_WINDOW
 CALL (RegisterEvent, WIN_REGISTER_EVENT, void, Window* pWindow, short evType, int parm1, int parm2)
 	SARGS(pWindow, evType, parm1, parm2)
 CALL_END
 CALL (RegisterEventInsideWndProc, WIN_REGISTER_EVENT2, void, Window* pWindow, short evType, int parm1, int parm2)
 	SARGS(pWindow, evType, parm1, parm2)
 CALL_END
+#endif
 
+#ifdef USE_VIDEO
 CALL (VidBlitImageResize, VID_BLIT_IMAGE_RESIZE, void, Image*pImage, int x, int y, int width, int height)
 	SARGS(pImage,x,y, width, height)
 CALL_END
+#endif
 
+#ifdef USE_MISC
 CALL (TmSleep, TM_SLEEP, void, int ms)
 	SARGS(ms)
 CALL_END
+#endif
 
+#ifdef USE_WINDOW
 CALL (SetIcon, WIN_SET_ICON, void, Window* pWindow, int comboID, int icon)
 	SARGS(pWindow,comboID,icon)
 CALL_END
+#endif
 
+#ifdef USE_MISC
 CALL (NsGetVersion, NS_GET_VERSION, int, void)
 	RARGS()
 CALL_END
+#endif
 
+#ifdef USE_MISC
 CALL (GetThemingParameter, WIN_GET_THEME_PARM, uint32_t, int type)
 	RARGS(type)
 CALL_END
 CALL (SetThemingParameter, WIN_SET_THEME_PARM, void, int type, uint32_t parm)
 	SARGS(type, parm)
 CALL_END
+#endif
 
 // Calls V1.3
+#ifdef USE_MISC
 CALL (CheckboxSetChecked, WIN_CHECKBOX_SET_CHECKED, void, Window* pWindow, int comboID, bool checked)
 	SARGS(pWindow, comboID, checked)
 CALL_END
@@ -233,12 +265,21 @@ CALL_END
 CALL (TextInputGetRawText, WIN_TEXT_INPUT_GET_RAW_TEXT, const char*, Window* pWindow, int comboID)
 	RARGS(pWindow, comboID)
 CALL_END
+#endif
+
+#ifdef USE_CC
 CALL (CcRunCCode, CC_RUN_C_CODE, int, const char* pData, int length)
 	RARGS(pData, length)
 CALL_END
+#endif
+
+#ifdef USE_FILE
 CALL (FiRemoveFile, FI_REMOVE_FILE, int, const char* pName)
 	RARGS(pName)
 CALL_END
+#endif
+
+#ifdef USE_WINDOW
 CALL (AddControlEx, WIN_ADD_CONTROL_EX, int, Window* pWindow, int type, int amode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 	RARGS(pWindow, type, amode, rect, text, comboID, p1, p2)
 CALL_END
@@ -257,3 +298,107 @@ CALL_END
 CALL (PopupWindow, WIN_POPUP_WINDOW, void, Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
 	SARGS(pWindow, newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags)
 CALL_END
+#endif
+
+// Calls V1.4
+#ifdef USE_VIDEO
+CALL (VidSetVbeData, VID_SET_VBE_DATA, void, VBEData* pData)
+	SARGS(pData)
+CALL_END
+#endif
+
+#ifdef USE_FILE
+CALL (FiOpenDirD, FI_OPEN_DIR_D, int, const char* pFileName, const char* srcFile, int srcLine)
+	RARGS(pFileName, srcFile, srcLine)
+CALL_END
+CALL (FiCloseDir, FI_CLOSE_DIR, int, int dd)
+	RARGS(dd)
+CALL_END
+CALL (FiReadDir, FI_READ_DIR, DirEnt*, int dd)
+	RARGS(dd)
+CALL_END
+CALL (FiSeekDir, FI_SEEK_DIR, int, int dd, int loc)
+	RARGS(dd, loc)
+CALL_END
+CALL (FiRewindDir, FI_REWIND_DIR, int, int dd)
+	RARGS(dd)
+CALL_END
+CALL (FiTellDir, FI_TELL_DIR, int, int dd)
+	RARGS(dd)
+CALL_END
+CALL (FiStatAt, FI_STAT_AT, int, int dd, const char *pfn, StatResult* pres)
+	RARGS(dd, pfn, pres)
+CALL_END
+CALL (FiStat, FI_STAT, int, const char *pfn, StatResult* pres)
+	RARGS(pfn, pres)
+CALL_END
+CALL (FiGetCwd, FI_GET_CWD, const char*, void)
+	RARGS()
+CALL_END
+CALL (FiChDir, FI_CHANGE_DIR, int, const char* p)
+	RARGS(p)
+CALL_END
+#endif
+
+#ifdef USE_WINDOW
+CALL (GetWidgetEventHandler, WIN_GET_WIDGET_EVENT_HANDLER, WidgetEventHandler, int type)
+	RARGS(type)
+CALL_END
+CALL (SetWidgetEventHandler, WIN_SET_WIDGET_EVENT_HANDLER, void, Window *pWindow, int comboID, WidgetEventHandler handler)
+	SARGS(pWindow, comboID, handler)
+CALL_END
+CALL (SetImageCtlMode, WIN_SET_IMAGE_CTL_MODE, void, Window *pWindow, int comboID, int mode)
+	SARGS(pWindow, comboID, mode)
+CALL_END
+CALL (SetImageCtlColor, WIN_SET_IMAGE_CTL_COLOR, void, Window *pWindow, int comboID, uint32_t color)
+	SARGS(pWindow, comboID, color)
+CALL_END
+CALL (SetImageCtlCurrentImage, WIN_SET_IMAGE_CTL_IMAGE, void, Window *pWindow, int comboID, Image* pImage)
+	SARGS(pWindow, comboID, pImage)
+CALL_END
+CALL (GetImageCtlCurrentImage, WIN_GET_IMAGE_CTL_IMAGE, Image*, Window *pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL (ImageCtlZoomToFill, WIN_IMAGE_CTL_ZOOM_TO_FILL, void, Window *pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+CALL (SetFocusedControl, WIN_SET_FOCUSED_CONTROL, void, Window *pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+CALL (PopupWindowEx, WIN_POPUP_WINDOW_EX, void, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* newData)
+	SARGS(newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags, newData)
+CALL_END
+#endif
+
+#ifdef USE_FILE
+CALL (ErrNoStr, ERR_GET_STRING, const char*, int errno)
+	RARGS(errno)
+CALL_END
+#endif
+
+#ifdef USE_VIDEO
+CALL (GetMousePos, VID_GET_MOUSE_POS, Point, void)
+	RARGS()
+CALL_END
+CALL (VidSetClipRect, VID_SET_CLIP_RECT, void, Rectangle r)
+	SARGS(r)
+CALL_END
+#endif
+
+#ifdef USE_CLIP
+CALL (CbClear, CB_CLEAR, void, void)
+	SARGS()
+CALL_END
+CALL (CbCopyText, CB_COPY_TEXT, bool, const char *pText)
+	RARGS(pText)
+CALL_END
+CALL (CbCopyBlob, CB_COPY_BLOB, bool, void* pData, size_t sz)
+	RARGS(pData, sz)
+CALL_END
+CALL (CbGetCurrentVariant, CB_GET_CURRENT_VARIANT, ClipboardVariant*, void)
+	RARGS()
+CALL_END
+CALL (CbRelease, CB_RELEASE, void, ClipboardVariant* pVar)
+	SARGS(pVar)
+CALL_END
+#endif

@@ -125,7 +125,7 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 		KeStopSystem();
 	}
 
-	WindowCallDeinitialize();
+	WindowCallInitialize();
 
 	// Read the multiboot data:
 	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + BASE_ADDRESS);
@@ -339,8 +339,8 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 		VmwInit();
 	
 	extern Console* g_currentConsole;
-	CoClearScreen(g_currentConsole);
-	g_currentConsole->curX = g_currentConsole->curY = 0;
+	//CoClearScreen(g_currentConsole);
+	//g_currentConsole->curX = g_currentConsole->curY = 0;
 	
 	KePrintSystemVersion();
 

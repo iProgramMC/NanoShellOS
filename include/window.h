@@ -453,8 +453,6 @@ typedef struct WindowStruct
 	WindowProc m_callback;
 	Rectangle  m_rect;
 	Rectangle  m_rectBackup;
-	//uint32_t*  m_framebuffer;
-	//int        m_fbWidth, m_fbHeight;
 	VBEData    m_vbeData;
 	
 	int        m_iconID;

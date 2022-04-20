@@ -259,6 +259,9 @@ void EraseFileNode (FileNode* pFileNode);
 	// Retrieves information about a file.
 	int FiStat (const char *pFileName, StatResult* pOut);
 	
+	// Changes the current directory.
+	int FiChangeDir (const char *pfn);
+	
 #endif
 
 #endif//_VFS_H

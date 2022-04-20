@@ -219,7 +219,7 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	//LogMsg("Finished.");
 	
 	// Clear out the kernel, from 0x100000 to 0x600000
-	for (int i = 0x100; i < 0x600; i++)
+	for (int i = 0x100; i < 0x700; i++)
 	{
 		MmSetFrame(i); // Set frame as not allocatable
 	}

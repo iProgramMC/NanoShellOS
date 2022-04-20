@@ -3,7 +3,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 13
+#define WCALL_VERSION 14
 enum
 {
 	// System Calls V1.0
@@ -121,6 +121,43 @@ enum
 		WIN_FILE_CHOOSE_BOX,//TODO
 		WIN_POPUP_WINDOW,
 	#endif
+	
+	// System Calls V1.4
+	#if WCALL_VERSION >= 14
+		VID_SET_VBE_DATA,//dangerous!! be careful!!
+		
+		FI_OPEN_DIR_D,
+		FI_CLOSE_DIR,
+		FI_READ_DIR,
+		FI_SEEK_DIR,
+		FI_REWIND_DIR,
+		FI_TELL_DIR,
+		FI_STAT_AT,
+		FI_STAT,
+		FI_GET_CWD,
+		FI_CHANGE_DIR,
+		
+		WIN_GET_WIDGET_EVENT_HANDLER,
+		WIN_SET_WIDGET_EVENT_HANDLER,
+		WIN_SET_IMAGE_CTL_MODE,
+		WIN_SET_IMAGE_CTL_COLOR,
+		WIN_SET_IMAGE_CTL_IMAGE,
+		WIN_GET_IMAGE_CTL_IMAGE,
+		WIN_IMAGE_CTL_ZOOM_TO_FILL,
+		WIN_SET_FOCUSED_CONTROL,
+		WIN_POPUP_WINDOW_EX,
+		
+		ERR_GET_STRING,
+		
+		VID_GET_MOUSE_POS,
+		VID_SET_CLIP_RECT,
+		
+		CB_CLEAR,
+		CB_COPY_TEXT,
+		CB_COPY_BLOB,
+		CB_GET_CURRENT_VARIANT,//danger!!
+		CB_RELEASE,
+	#endif
 };
 
 int    memcmp     (const void* ap, const void* bp, size_t size);
@@ -139,6 +176,7 @@ size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
 char*  Tokenize   (TokenState* pState, char* pString, char* separator);
 
-void LogMsg ( const char *pfmt, ... );
+void LogMsg     ( const char *pfmt, ... );
+void LogMsgNoCr ( const char *pfmt, ... );
 
 #endif//_CRTLIB_H

@@ -16,6 +16,8 @@ apps/notepad/build/*
 apps/notepad/*.nse
 apps/clock/build/*
 apps/clock/*.nse
+apps/ls/build/*
+apps/ls/*.nse
 apps/dink/*
 
 apps/doomns/*

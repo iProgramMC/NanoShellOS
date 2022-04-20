@@ -548,7 +548,6 @@ DirEnt* FiReadDir (int dd)
 	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, pDesc->m_nStreamOffset);
 	if (!pDirEnt)
 	{
-		SLogMsg("No Dir ent");
 		LockFree (&g_FileSystemLock);
 		return NULL;
 	}
@@ -774,6 +773,74 @@ int FiTellSize (int fd)
 	int rv = g_FileNodeToDescriptor[fd].m_nFileEnd;
 	LockFree (&g_FileSystemLock);
 	return rv;
+}
+
+
+extern char g_cwd[PATH_MAX+2];
+int FiChangeDir (const char *pfn)
+{
+	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
+	
+	int slen = strlen (pfn);
+	if (slen >= PATH_MAX) return -EOVERFLOW;
+	
+	
+	if (pfn[0] == '/')
+	{
+		// Absolute Path
+		FileNode *pNode = FsResolvePath (pfn);
+		if (!pNode) return -EEXIST;
+		if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+		
+		//this should work!
+		strcpy (g_cwd, pfn);
+		return -ENOTHING;
+	}
+	
+	if (strcmp (pfn, PATH_THISDIR) == 0) return -ENOTHING;
+	
+	
+	char cwd_work [sizeof (g_cwd)];
+	memset (cwd_work, 0, sizeof cwd_work);
+	strcpy (cwd_work, g_cwd);
+	
+	//TODO FIXME: make composite paths like "../../test/file" work
+	
+	if (strcmp (pfn, PATH_PARENTDIR) == 0)
+	{
+		for (int i = PATH_MAX - 1; i >= 0; i--)
+		{
+			//get rid of the last segment
+			if (cwd_work[i] == PATH_SEP)
+			{
+				cwd_work[i + (i == 0)] = 0;
+				break;
+			}
+		}
+	}
+	else
+	{
+		if (strlen (cwd_work) + slen + 5 >= PATH_MAX)
+			return -EOVERFLOW;//path would be too large
+		
+		if (cwd_work[1] != 0) //i.e. not just a '/'
+		{
+			strcat (cwd_work, "/");
+		}
+		strcat (cwd_work, pfn);
+	}
+	
+	//resolve the path
+	FileNode *pNode = FsResolvePath (cwd_work);
+	if (!pNode)
+		return -ENOENT; //does not exist
+	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
+		return -ENOTDIR; //not a directory
+	
+	//this should work!
+	strcpy (g_cwd, cwd_work);
+	
+	return -ENOTHING;
 }
 
 #endif

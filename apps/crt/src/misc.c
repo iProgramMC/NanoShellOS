@@ -10,6 +10,7 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+#ifdef USE_VIDEO
 int GetScreenSizeX()
 {
 	return _I_GetScreenSizeX();
@@ -129,10 +130,11 @@ void SetMousePos (UNUSED unsigned pX, UNUSED unsigned pY)
 {
 	//TODO
 }
-
+#endif
 
 
 // Window API
+#ifdef USE_WINDOW
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
 	//TODO: Log windows to destroy
@@ -259,16 +261,23 @@ void SetThemingParameter(int type, uint32_t parm)
 	return _I_SetThemingParameter(type, parm);
 }
 
+#endif
+
+#ifdef USE_FILE
 int remove (const char* filename)
 {
 	return _I_FiRemoveFile(filename);
 }
+#endif
 
+#ifdef USE_CC
 int CcRunCCode(const char* data, int length)
 {
 	return _I_CcRunCCode (data, length);
 }
+#endif
 
+#ifdef USE_WINDOW
 int AddControlEx(Window* pWindow, int type, int anchor_mode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
 	return _I_AddControlEx (pWindow, type, anchor_mode, rect, text, comboID, p1, p2);
@@ -319,7 +328,9 @@ void ShellAbout (const char* pText, int icon)
 {
 	_I_ShellAbout (pText, icon);
 }
+#endif
 
+#ifdef USE_MISC
 TimeStruct* GetTime ()
 {
 	return _I_GetTime();
@@ -344,7 +355,6 @@ int GetTickCount()
 {
 	return _I_GetTickCount();
 }
-
 void sprintf(char*a, const char*c, ...);
 //futureproofing here:
 char g_VersionString[10] = "VX.XX";
@@ -368,4 +378,7 @@ int NsGetVersion ()
 {
 	return _I_NsGetVersion();
 }
+#endif
+
+
 

@@ -1201,6 +1201,9 @@ void NukeWindow (Window* pWindow)
 
 void DestroyWindow (Window* pWindow)
 {
+	if (!g_windowManagerRunning)
+		return;
+	
 	if (!pWindow)
 	{
 		SLogMsg("Tried to destroy nullptr window?");
@@ -1279,6 +1282,12 @@ int g_NewWindowX = 10, g_NewWindowY = 10;
 
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
+	if (!g_windowManagerRunning)
+	{
+		LogMsg("This program does not run in the command line.");
+		return NULL;
+	}
+	
 	LockAcquire (&g_CreateLock);
 	
 	if (xSize > GetScreenWidth())
@@ -2732,12 +2741,16 @@ int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int
 {
 	if ((eq != EVENT_CLICKCURSOR && eq != EVENT_RELEASECURSOR) || eqp2 != 1)
 	{
+		VidSetVBEData (&pWindow->m_vbeData);
 		pWindow->m_callback(pWindow, eq, eqp1, eqp2);
+		VidSetVBEData (&pWindow->m_vbeData);
 	}
 	
 	if (IsEventDestinedForControlsToo(eq))
 	{
+		VidSetVBEData (&pWindow->m_vbeData);
 		ControlProcessEvent(pWindow, eq, eqp1, eqp2);
+		VidSetVBEData (&pWindow->m_vbeData);
 	}
 	
 	return eq * eqp1 * eqp2;
@@ -3026,6 +3039,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 
 bool HandleMessages(Window* pWindow)
 {
+	if (!g_windowManagerRunning)
+		return false;
+	
 	// grab the lock
 	LockAcquire (&pWindow->m_EventQueueLock);
 	
@@ -3080,6 +3096,9 @@ bool HandleMessages(Window* pWindow)
 }
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
 {
+	if (!g_windowManagerRunning)
+		return;
+	
 	switch (messageType)
 	{
 		case EVENT_CREATE:
