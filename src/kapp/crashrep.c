@@ -141,8 +141,9 @@ void CrashReporterCheck()
 		// Kill the process
 		if (crashInfo.m_pTaskKilled->m_pProcess)
 		{
-			SLogMsg("Killing Process...");
-			ExKillProcess((Process*)crashInfo.m_pTaskKilled->m_pProcess);
+			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
+			SLogMsg("Killing Process %s...", p->sIdentifier);
+			ExKillProcess(p);
 		}
 	}
 	

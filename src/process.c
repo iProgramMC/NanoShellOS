@@ -8,6 +8,9 @@ void UseHeapUnsafe  (Heap* pHeap);
 void FreeHeapUnsafe (Heap* pHeap);
 void ResetToKernelHeapUnsafe();
 
+Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine);
+bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int callerLine);
+
 Process* ExMakeUpAProcess()
 {
 	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
@@ -123,11 +126,13 @@ Process* ExGetRunningProc()
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode)
 {
 	LockAcquire (&gProcessLock);
+	cli;
 	
 	Process* pProc = ExMakeUpAProcess();
 	if (!pProc)
 	{
 		*pErrCode = EX_PROC_TOO_MANY_PROCESSES;
+		sti;
 		LockFree (&gProcessLock);
 		return NULL;
 	}
@@ -138,7 +143,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	if (nHeapSize < 128)
 		nHeapSize = 128;
 	
-	if (!AllocateHeapD (&pProc->sHeap, nHeapSize, pIdent, 10000))
+	if (!AllocateHeapUnsafeD (&pProc->sHeap, nHeapSize, pIdent, 10000))
 	{
 		*pErrCode = EX_PROC_CANT_MAKE_HEAP;
 		LockFree (&gProcessLock);
@@ -147,13 +152,14 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	
 	// Use the heap, so that it can be used in the task
 	Heap* pBkp = g_pHeap;
-	UseHeap (&pProc->sHeap);
+	UseHeapUnsafe (&pProc->sHeap);
 	
 	// Create the task itself
-	Task* pTask = KeStartTaskExD(pTaskedFunc, nParm, pErrCode, pProc, pIdent, "--Process--", 1337);
+	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pIdent, "--Process--", 1337);
 	if (!pTask)
 	{
-		SLogMsg("shit");
+		SLogMsg("crap");
+		sti;
 		//error code was already set
 		LockFree (&gProcessLock);
 		return NULL;
@@ -166,9 +172,10 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->sTasks[0] = pTask;
 	strcpy (pProc->sIdentifier, pIdent);
 	
-	UseHeap (pBkp);
+	UseHeapUnsafe (pBkp);
 	
 	LockFree (&gProcessLock);
+	sti;
 	return pProc;
 }
 

@@ -168,9 +168,10 @@ void KeConstructTask (Task* pTask)
 	KeFxSave (pTask->m_fpuState);
 }
 
+void MmFreeUnsafeK(void *ptr);
 void ExOnThreadExit (Process* pProc, Task* pTask);
 
-Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
+Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	Process *pProc = (Process*)pProcVoid;
 	// Pre-allocate the stack, since it depends on interrupts being on
@@ -180,8 +181,6 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
 		return NULL;
 	}
-	
-	cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
 	
 	int i = 1;
 	for (; i < C_MAX_TASKS; i++)
@@ -195,11 +194,10 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 	if (i == C_MAX_TASKS)
 	{
 		*pErrorCodeOut = TASK_ERROR_TOO_MANY_TASKS;
-		sti;
 		
 		// Pre-free the pre-allocated stack. Don't need it lying around
 		if (pStack)
-			MmFreeK(pStack);
+			MmFreeUnsafeK(pStack);
 		
 		return NULL;
 	}
@@ -236,7 +234,6 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 		
 		if (pErrorCodeOut)
 			*pErrorCodeOut = TASK_SUCCESS;
-		sti;
 		
 		// Update last running task index. Makes task scheduling faster
 		KeFindLastRunningTaskIndex ();
@@ -246,16 +243,20 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 	else
 	{
 		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
-		sti;
 		return NULL;
 	}
+}
+Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
+{
+	cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
+	Task* pResult = KeStartTaskExUnsafeD (function, argument, pErrorCodeOut, pProcVoid, authorFile, authorFunc, authorLine);
+	sti;
+	return pResult;
 }
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
 }
-
-void MmFreeUnsafeK(void *ptr);
 
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
@@ -263,6 +264,12 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 	if (pTask == KeGetRunningTask())
 	{
 		pTask->m_bMarkedForDeletion = true;
+		if (!interrupt)
+		{
+			 LogMsg("KEResetTask: WTF?");
+			SLogMsg("KEResetTask: WTF?");
+			KeStopSystem ();
+		}
 		sti;//if we didn't restore interrupts here would be our death point
 		while (1) hlt;
 	}

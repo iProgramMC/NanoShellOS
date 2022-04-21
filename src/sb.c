@@ -125,7 +125,7 @@ static void DspWrite(u8 b) {
     WritePort(DSP_WRITE, b);
 }
 
-static void SbReset() {
+static bool SbReset() {
 	
     WritePort(DSP_RESET, 1);
 
@@ -154,9 +154,10 @@ static void SbReset() {
         goto fail;
     }
 
-    return;
+    return true;
 fail:
 	LogMsg("Failed to reset SB16: %d", status);
+	return false;
 }
 
 static void SbSetSampleRate(u16 hz) {
@@ -222,7 +223,7 @@ static void SbSetupIrq() {
 
 void SbInit() {
     //irq_install(MIXER_IRQ, sb16_irq_handler);
-    SbReset();
+    if (!SbReset()) return;
     SbSetupIrq();
 
     SbSetupDma((uintptr_t)gSoundBuffer - 0xc0000000, BUFFER_SIZE);

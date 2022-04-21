@@ -3039,6 +3039,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 
 bool HandleMessages(Window* pWindow)
 {
+	if (pWindow < g_windows || pWindow > g_windows + ARRAY_COUNT(g_windows))
+	{
+		SLogMsg("WARNING: Got Invalid Pointer %x", pWindow);
+		__asm__ volatile ("ud2");
+	}
 	if (!g_windowManagerRunning)
 		return false;
 	

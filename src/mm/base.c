@@ -448,13 +448,16 @@ static void MmSetupUserHeapPages(Heap* pHeap)
 	}
 }
 
-bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLine)
+void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uint32_t* physAddresses);
+void* MmAllocateSinglePageUnsafePhyD(uint32_t* pPhysOut, const char* callFile, int callLine);
+void *MmAllocateUnsafeD (size_t size, const char* callFile, int callLine);
+bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int callerLine)
 {
 	//PAGE_ENTRIES_PHYS_MAX_SIZE represents how many pagedirectories can we create at one time
 	if (size > PAGE_ENTRIES_PHYS_MAX_SIZE * 4096)
 	{
 		//can't:
-		LogMsg("Can't allocate a heap bigger than %d pages big.  That may change in a future update.", PAGE_ENTRIES_PHYS_MAX_SIZE * 4096);
+		SLogMsg("Can't allocate a heap bigger than %d pages big.  That may change in a future update.", PAGE_ENTRIES_PHYS_MAX_SIZE * 4096);
 		return false;
 	}
 	
@@ -467,15 +470,15 @@ bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLin
 	pHeap->m_memoryAllocSize       = NULL;
 	pHeap->m_pageDirectoryPhys     = 0;
 	
-	ResetToKernelHeap();
+	ResetToKernelHeapUnsafe();
 	
 	uint32_t phys;
 	pHeap->m_pageEntrySize         = size;
-	pHeap->m_pageEntries           = MmAllocatePhyD(sizeof (int) * size, callerFile, callerLine, pHeap->m_pageEntriesPhysical);
-	pHeap->m_pageDirectory         = MmAllocateSinglePagePhyD(&phys, callerFile, callerLine);
-	pHeap->m_memoryAllocAuthor     = MmAllocateD(sizeof (int) * size, callerFile, callerLine);
-	pHeap->m_memoryAllocAuthorLine = MmAllocateD(sizeof (int) * size, callerFile, callerLine);
-	pHeap->m_memoryAllocSize       = MmAllocateD(sizeof (int) * size, callerFile, callerLine);
+	pHeap->m_pageEntries           = MmAllocateUnsafePhyD(sizeof (int) * size, callerFile, callerLine, pHeap->m_pageEntriesPhysical);
+	pHeap->m_pageDirectory         = MmAllocateSinglePageUnsafePhyD(&phys, callerFile, callerLine);
+	pHeap->m_memoryAllocAuthor     = MmAllocateUnsafeD(sizeof (int) * size, callerFile, callerLine);
+	pHeap->m_memoryAllocAuthorLine = MmAllocateUnsafeD(sizeof (int) * size, callerFile, callerLine);
+	pHeap->m_memoryAllocSize       = MmAllocateUnsafeD(sizeof (int) * size, callerFile, callerLine);
 	pHeap->m_pageDirectoryPhys     = phys;
 	
 	// copy everything from the kernel heap:
@@ -484,9 +487,16 @@ bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLin
 	// initialize this heap's pageentries:
 	MmSetupUserHeapPages(pHeap);
 	
-	ResetToKernelHeap();
+	ResetToKernelHeapUnsafe();
 	
 	return true;
+}
+bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLine)
+{
+	cli;
+	bool b = AllocateHeapUnsafeD(pHeap, size, callerFile, callerLine);
+	sti;
+	return b;
 }
 
 #endif

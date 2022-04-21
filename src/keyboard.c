@@ -304,14 +304,14 @@ static void KbSetTypematicParmsByte(uint8_t status)
 	WritePort (0x60, status);
 	while (ReadPort (0x60) != 0xFA) asm("pause");
 }
-/*static void KbSetUseScanCodeSet(uint8_t scs)
+static void KbSetUseScanCodeSet(uint8_t scs)
 {
 	while (ReadPort (0x64)  &  0x2) asm("pause");
 	WritePort (0x60, 0xF0);
 	while (ReadPort (0x60) != 0xFA) asm("pause");
 	WritePort (0x60, scs);
 	while (ReadPort (0x60) != 0xFA) asm("pause");
-}*/
+}
 
 uint8_t g_typematicParms = 0b00110100;//default BIOS parms.
 uint8_t g_newTypematicRepeatRate, g_newTypematicRepeatDelay;
@@ -367,19 +367,19 @@ void KbInitialize()
 {
 	//setup keyboard
 	//this shows that everything is setup alright
-	KbSetLedStatus(7);
+	/*KbSetLedStatus(7);
 	
 	//enable scancodes.
 	//This is not necessary as the BIOS already does this for you, but
 	//what if it gets disabled before boot for whatever reason!?
 	KbEnableScanning();
 	
-	//KbSetUseScanCodeSet(2);//By default it's 1
+	KbSetUseScanCodeSet(1);//By default it's 1
 	//^^TODO this does not work as scancodes don't mess up
 	
 	KbSetTypematicParms(0x14, 0x1);//10.9 chars/sec, 500ms delay before repeat.
 	
-	KbSetLedStatus(0);
+	KbSetLedStatus(0);*/
 }
 
 //mappings: F11-Left Click, F12-Right Click, F9-make it slower, F10-make it faster

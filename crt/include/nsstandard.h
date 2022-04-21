@@ -110,6 +110,7 @@ void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, i
 void VidFillRectVGradient(unsigned colorU, unsigned colorD, int left, int top, int right, int bottom);
 void VidDrawRectangle(unsigned color, Rectangle rect);
 void SetMousePos (unsigned pX, unsigned pY);
+void VidSetVbeData (VBEData* pData);
 
 
 // Window API

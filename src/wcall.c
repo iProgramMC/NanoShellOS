@@ -256,7 +256,7 @@ enum
 		CB_RELEASE,
 };
 
-void *WindowCall[] = {
+const void *WindowCall[] = {
 	// System Calls V1.0 -- 14/01/2022
 		NULL,
 		//Video Driver calls:

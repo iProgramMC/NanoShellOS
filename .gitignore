@@ -17,6 +17,8 @@ apps/Notepad/build/*
 apps/Notepad/*.nse
 apps/WindowTest/build/*
 apps/WindowTest/*.nse
+apps/GameTest/build/*
+apps/GameTest/*.nse
 
 #apps I don't want out yet because I do not like embedding third party code into the OS
 apps/Dink/*

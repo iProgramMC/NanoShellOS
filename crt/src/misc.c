@@ -130,6 +130,11 @@ void SetMousePos (UNUSED unsigned pX, UNUSED unsigned pY)
 {
 	//TODO
 }
+
+void VidSetVbeData (VBEData* pData)
+{
+	_I_VidSetVbeData(pData);
+}
 #endif
 
 
