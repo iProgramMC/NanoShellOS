@@ -3,26 +3,26 @@
 
 #directories I don't want added
 limine
-application/*
 build/*
 keep/*
 tools/*
 
-apps/hellowindow/build/*
-apps/hellowindow/*.nse
-apps/crtdemo/build/*
-apps/crtdemo/*.nse
-apps/notepad/build/*
-apps/notepad/*.nse
-apps/clock/build/*
-apps/clock/*.nse
-apps/list/build/*
-apps/list/*.nse
-apps/dink/*
+apps/Clock/build/*
+apps/Clock/*.nse
+apps/CrtDemo/build/*
+apps/CrtDemo/*.nse
+apps/List/build/*
+apps/List/*.nse
+apps/Notepad/build/*
+apps/Notepad/*.nse
+apps/WindowTest/build/*
+apps/WindowTest/*.nse
 
-apps/doomns/*
-apps/nesemu/*
+#apps I don't want out yet because I do not like embedding third party code into the OS
+apps/Dink/*
+apps/NesEmu/*
 
+#files I don't want added because they're too big
 vdisk.vdi
 vdisk*.vdi
 
