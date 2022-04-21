@@ -51,6 +51,13 @@ IrqTaskA:
 	out dx, al
 	
 	push esp
+	
+	; Disable the direction flag, mandatory for C 32-bit SysV ABI if
+	; code relies on repeat instructions.
+	; The direction flag will be restored to the task, since it's part
+	; of the EFLAGS, and it's already saved.
+	cld
+	
 	; call the re-schedule function
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack
@@ -120,6 +127,13 @@ IrqTaskB:
 	out dx, al
 	
 	push esp
+	
+	; Disable the direction flag, mandatory for C 32-bit SysV ABI if
+	; code relies on repeat instructions.
+	; The direction flag will be restored to the task, since it's part
+	; of the EFLAGS, and it's already saved.
+	cld
+	
 	; call the re-schedule function
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack
