@@ -152,8 +152,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// grab the CPUID
 	KeCPUID();
 
-	KiFpuInit();
-
 	// Initialize eventual PCI devices.	This is useful to find the main BGA
 	// controller, if there's one.
 	PciInit();

@@ -101,15 +101,55 @@ GDTPostSetup:
 	push ebx
 	push eax
 	
+	; Before entering the high level kernel, setup SSE.
+	; This way, we can benefit from the performance improvements of SSE.
+	call KiSetupStuff
+	
 	; Enter the high-level kernel now.
 	; Please note that it's marked __attribute__((noreturn)), so 
 	; returning from this crashes the OS.
 	call KiStartupSystem
 	
 	cli
-.mmmm:
+.stop:
 	hlt
-	jmp .mmmm
+	jmp .stop
+	
+KiSetupStuff: ; enables FPU, SSE and Write Protect honoring in ring 0
+
+	clts ;clear task switched flag
+	
+	; load cr0
+	mov  eax, cr0
+	; check for the x87 FPU unit
+	test eax, (1 << 2)
+	; no FPU? :pleading_face:
+	jnz  .noFpuOrFinish
+	
+	; enable:
+	; - the MP bit (monitor co-processor), and
+	; - the WP bit (honor read-only restrictions in ring 0)
+	or   eax, (1 << 1) | (1 << 16)
+	; push the changes
+	mov  cr0, eax
+	
+	; load cr4
+	mov  eax, cr4
+	
+	; enable:
+	; - OSFXSR (enable SSE instructions and fast FPU save and restore), and
+	; - OSXMMEXCEPT (enable unmasked SSE exceptions)
+	or   eax, (1 << 9) | (1 << 10)
+	
+	; push our changes
+	mov  cr4, eax
+	
+	; initialize the FPU
+	fninit
+	
+.noFpuOrFinish:
+	ret
+	
 
 extern KeHandleSsFailureC
 KeHandleSsFailure:
