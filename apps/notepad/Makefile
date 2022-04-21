@@ -4,8 +4,8 @@
 SRC_DIR=src
 INC_DIR=include
 BLD_DIR=build
-LIS_DIR=../crt/src
-LII_DIR=../crt/include
+LIS_DIR=../../crt/src
+LII_DIR=../../crt/include
 
 CC=clang
 LD=ld
