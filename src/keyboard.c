@@ -304,6 +304,7 @@ static void KbSetTypematicParmsByte(uint8_t status)
 	WritePort (0x60, status);
 	while (ReadPort (0x60) != 0xFA) asm("pause");
 }
+/*
 static void KbSetUseScanCodeSet(uint8_t scs)
 {
 	while (ReadPort (0x64)  &  0x2) asm("pause");
@@ -312,7 +313,7 @@ static void KbSetUseScanCodeSet(uint8_t scs)
 	WritePort (0x60, scs);
 	while (ReadPort (0x60) != 0xFA) asm("pause");
 }
-
+*/
 uint8_t g_typematicParms = 0b00110100;//default BIOS parms.
 uint8_t g_newTypematicRepeatRate, g_newTypematicRepeatDelay;
 void KbSetTypematicParms(uint8_t repeat_rate, uint8_t key_repeat_delay)

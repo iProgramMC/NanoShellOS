@@ -94,6 +94,8 @@ typedef struct
 	int            m_reviveAt;
 	
 	void *         m_pProcess;
+	
+	uint32_t       m_sysCallNum;//backed up from 0xC0007CFC
 }
 Task;
 

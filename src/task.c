@@ -23,6 +23,9 @@ static int s_lastRunningTaskIndex = 1;
 
 static int s_currentRunningTask = -1;
 static CPUSaveState g_kernelSaveState;
+
+static Process*       g_pProcess = NULL;
+
 __attribute__((aligned(16)))
 static int            g_kernelFPUState[128];
 static VBEData*       g_kernelVBEContext = NULL;
@@ -30,7 +33,7 @@ static Heap*          g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
 static const uint8_t* g_kernelFontContext = NULL;
 static char           g_kernelCwd[PATH_MAX+2];
-static Process*       g_pProcess = NULL;
+static uint32_t       g_kernelSysCallNum; //honestly, kind of useless since the kernel task will never be an ELF trying to call into the system :^)
 
 extern Heap*          g_pHeap;
 extern Console*       g_currentConsole; //logmsg
@@ -145,7 +148,6 @@ void KeConstructTask (Task* pTask)
 	pTask->m_state.gs  = SEGMENT_KEDATA;
 	pTask->m_state.ss  = SEGMENT_KEDATA;
 	
-	
 	pTask->m_state.eflags = 0x297; //same as our own EFL register
 	pTask->m_state.cr3 = g_curPageDirP; //same as our own CR3 register
 	
@@ -206,6 +208,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 	{
 		//Setup our new task here:
 		Task* pTask = &g_runningTasks[i];
+		memset (pTask, 0, sizeof *pTask);
 		pTask->m_bExists = true;
 		pTask->m_pFunction = function;
 		pTask->m_pStack = pStack;
@@ -406,6 +409,9 @@ void KeCheckDyingTasks()
 void ResetToKernelHeapUnsafe();
 void UseHeapUnsafe (Heap* pHeap);
 void ExCheckDyingProcesses();
+
+uint32_t* const pSysCallNum = (uint32_t*)0xC0007CFC;//for easy reading; the pointer itself is constant
+
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	g_pProcess = NULL;
@@ -421,16 +427,18 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		pTask->m_pCurrentHeap    = g_pHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
 		pTask->m_pFontContext    = g_pCurrentFont;
+		pTask->m_sysCallNum      = *pSysCallNum;
 	}
 	else
 	{
 		memcpy (&g_kernelSaveState, pSaveState, sizeof(CPUSaveState));
 		memcpy   (g_kernelCwd,      g_cwd,      sizeof(g_cwd));
 		KeFxSave (g_kernelFPUState); //perhaps we won't use this.
-		g_kernelVBEContext = g_vbeData;
-		g_kernelHeapContext = g_pHeap;
+		g_kernelVBEContext     = g_vbeData;
+		g_kernelHeapContext    = g_pHeap;
 		g_kernelConsoleContext = g_currentConsole;
-		g_kernelFontContext = g_pCurrentFont;
+		g_kernelFontContext    = g_pCurrentFont;
+		g_kernelSysCallNum     = *pSysCallNum;
 	}
 	ResetToKernelHeapUnsafe();
 	
@@ -480,9 +488,10 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		//first, restore this task's FPU registers:
 		KeFxRestore(pNewTask->m_fpuState);
 		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
-		g_vbeData = pNewTask->m_pVBEContext;
+		g_vbeData        = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
-		g_pCurrentFont = pNewTask->m_pFontContext;
+		g_pCurrentFont   = pNewTask->m_pFontContext;
+		*pSysCallNum     = pNewTask->m_sysCallNum;
 		
 		g_pProcess = (Process*)pNewTask->m_pProcess;
 		
@@ -498,6 +507,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
 		g_pCurrentFont = g_kernelFontContext;
+		*pSysCallNum     = g_kernelSysCallNum;
 		
 		g_pProcess = NULL;
 		
