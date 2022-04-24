@@ -21,6 +21,8 @@ apps/GameTest/build/*
 apps/GameTest/*.nse
 apps/Tiny/build/*
 apps/Tiny/*.nse
+apps/StickyNotes/build/*
+apps/StickyNotes/*.nse
 
 #apps I don't want out yet because I do not like embedding third party code into the OS
 apps/Dink/*
