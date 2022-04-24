@@ -44,6 +44,7 @@ extern bool           g_interruptsAvailable;
 
 bool g_forceKernelTaskToRunNext = false;
 
+
 void ForceKernelTaskToRunNext(void)
 {
 	g_forceKernelTaskToRunNext = true;

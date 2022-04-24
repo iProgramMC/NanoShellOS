@@ -95,39 +95,59 @@ void RedrawEverything();
 	extern bool g_TaskListCompact;
 	void SetDefaultTheme();
 	void SetDarkTheme   ();
-	#define DESKTOP_POPUP_WIDTH 300
+	#define DESKTOP_POPUP_WIDTH 600
 	#define DESKTOP_POPUP_HEITE 400
+	void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, int iconID, bool selected);
+	void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 	{
 		switch (messageType)
 		{
+			case EVENT_PAINT:
+			{
+				Rectangle r;
+				RECT (r, DESKTOP_POPUP_WIDTH/2+10, TITLE_BAR_HEIGHT+3+10, DESKTOP_POPUP_WIDTH/2-20, 150+TITLE_BAR_HEIGHT);
+				RenderButtonShapeSmallInsideOut      (r, 0xBFBFBF, 0x808080, BACKGROUND_COLOR);
+				
+				RECT (r, DESKTOP_POPUP_WIDTH/2+20, TITLE_BAR_HEIGHT+3+20, 250-1, 100+TITLE_BAR_HEIGHT-1);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
+				r.right++, r.bottom++;
+				PaintWindowBorderStandard            (r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, ICON_APP_DEMO, false);
+				
+				RECT (r, DESKTOP_POPUP_WIDTH/2+30, TITLE_BAR_HEIGHT+3+50, 250-1, 100+TITLE_BAR_HEIGHT-1);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
+				r.right++, r.bottom++;
+				
+				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, ICON_APP_DEMO, true);
+				break;
+			}
 			case EVENT_CREATE:
 			{
 				pWindow->m_iconID = ICON_DESKTOP;//TODO
 				
 				//add a button
 				Rectangle r;
-				RECT(r,10, 15 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 150, 15);
+				RECT(r,10, 15 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 150, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", DESKTOP_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
-				RECT(r,DESKTOP_POPUP_WIDTH-80, 10 + TITLE_BAR_HEIGHT, 70, 20);
+				RECT(r,DESKTOP_POPUP_WIDTH/2-80, 10 + TITLE_BAR_HEIGHT, 70, 20);
 				AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
-				RECT(r,10, 35 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r,10, 35 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
-				RECT(r,10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r,10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make buttons glow when hovering over them", DESKTOP_GLOW_ON_HOVER, g_GlowOnHover, 0);
-				RECT(r,10, 75 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r,10, 75 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make task bar buttons compact", DESKTOP_TASKBAR_COMPACT, g_TaskListCompact, 0);
 				
-				RECT(r, 10, 95 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r, 10, 95 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
 				#define THEMES_PER_ROW 4
 				
 				#define ADD_THEME(themenum) \
 					RECT(r, \
-					     10 + ((DESKTOP_POPUP_WIDTH - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
+					     10 + ((DESKTOP_POPUP_WIDTH/2 - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
 						 115 + TITLE_BAR_HEIGHT + ((themenum) / THEMES_PER_ROW) * 25,\
-						 (DESKTOP_POPUP_WIDTH - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
+						 (DESKTOP_POPUP_WIDTH/2 - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
 						 20);\
 					AddControl(pWindow, CONTROL_BUTTON, r, GetThemeName(themenum), DESKTOP_THEME_DEFAULT + (themenum), 0, 0);
 				
@@ -141,12 +161,12 @@ void RedrawEverything();
 				ADD_THEME(TH_DESERT);
 				ADD_THEME(TH_RAINYDAY);
 				
-				RECT(r, 10, 195 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH - 20, 15);
+				RECT(r, 10, 195 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
-				RECT(r,(DESKTOP_POPUP_WIDTH-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH/2-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
-				RECT(r,(DESKTOP_POPUP_WIDTH-200)/2+95, DESKTOP_POPUP_HEITE - 30 ,95,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH/2-200)/2+95, DESKTOP_POPUP_HEITE - 30 ,95,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "OK",  DESKTOP_APPLY_CHANGES, 0, 0);
 				
 				break;

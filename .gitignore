@@ -19,10 +19,15 @@ apps/WindowTest/build/*
 apps/WindowTest/*.nse
 apps/GameTest/build/*
 apps/GameTest/*.nse
+apps/Tiny/build/*
+apps/Tiny/*.nse
 
 #apps I don't want out yet because I do not like embedding third party code into the OS
 apps/Dink/*
 apps/NesEmu/*
+
+#NES ROMs which I will not risk making public
+fs/Nes/*.nes
 
 #files I don't want added because they're too big
 vdisk.vdi

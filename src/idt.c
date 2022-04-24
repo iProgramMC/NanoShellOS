@@ -282,10 +282,11 @@ void KeTimerInit()
 	// set frequency
 	//int pitMaxFreq = 1193182;
 	
-	//note that the PIT frequency divider has been hardcoded to 65535
-	//for testing.
+	//formula: 1193182/<your desired frequency in hz>
 	
 	/*
+		 250 HZ: 4772
+		 500 HZ: 2386
 		1000 HZ: 1194
 		2000 HZ: 597
 		4000 HZ: 299
@@ -293,7 +294,9 @@ void KeTimerInit()
 	
 	*/
 	
-	int pit_frequency = 1194;//65536/4096;//~ 74.573875 KHz
+	int pit_frequency = 2386;
+	
+	//1194;//65536/4096;//~ 74.573875 KHz
 	WritePort(0x40, (uint8_t)( pit_frequency       & 0xff));
 	WritePort(0x40, (uint8_t)((pit_frequency >> 8) & 0xff));
 }

@@ -115,9 +115,9 @@ void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsig
 	VidDrawHLine(colorDark, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorDark, rectb.top,  rectb.bottom-1, rectb.left);
 	
-	rectb.left++;
-	rectb.top++;
-	rectb.right--;
+	rectb.left  ++;
+	rectb.top   ++;
+	rectb.right --;
 	rectb.bottom--;
 	
 	VidDrawHLine(colorLight, rectb.left, rectb.right-1,  rectb.bottom-1);
