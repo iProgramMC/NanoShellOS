@@ -25,6 +25,7 @@ enum
 	
 	N_MENU_BAR,//note menu bar
 	N_TEXT_VIEW,
+	N_MAINMENU_BTN,
 };
 
 void NoteOpen (NOTE* pNote);

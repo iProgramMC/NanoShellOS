@@ -53,7 +53,7 @@ static int          s_internal_action_queue_head,
                     s_internal_action_queue_tail;
 //
 
-bool ActionQueueIsOneMoreFromOverflowingQueue()
+bool ActionQueueWouldOverflow()
 {
 	if (s_internal_action_queue_tail == 0)
 		return s_internal_action_queue_head == 4095;
@@ -62,7 +62,7 @@ bool ActionQueueIsOneMoreFromOverflowingQueue()
 
 WindowAction* ActionQueueAdd(WindowAction action)
 {
-	while (ActionQueueIsOneMoreFromOverflowingQueue())
+	while (ActionQueueWouldOverflow())
 		KeTaskDone();
 	
 	WindowAction *pAct = &s_internal_action_queue[s_internal_action_queue_head];

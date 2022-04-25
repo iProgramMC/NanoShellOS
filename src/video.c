@@ -740,6 +740,19 @@ void VidBlitImage(Image* pImage, int x, int y)
 			fb++;
 		}
 }
+void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
+{
+	const uint32_t* fb = pImage->framebuffer;
+	
+	int ixe = x + pImage->width, iye = y + pImage->height;
+	for (int iy = y; iy < iye; iy++)
+		for (int ix = x; ix < ixe; ix++)
+		{
+			if (*fb != TRANSPARENT)
+				VidPlotPixelInline(ix, iy, color);
+			fb++;
+		}
+}
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
 	if (width == p->width && height == p->height)
@@ -757,6 +770,25 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 			uint32_t pixel = p->framebuffer[xgrab + p->width * ygrab];
 			if (pixel != TRANSPARENT)
 				VidPlotPixel (gx+x, gy+y, pixel);
+		}
+	}
+}
+void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, uint32_t outline)
+{
+	if (width == p->width && height == p->height)
+	{
+		VidBlitImageOutline (p, gx, gy, outline);
+		return;
+	}
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int xgrab = x * p->width / width;
+			int ygrab = y * p->height/ height;
+			
+			if (p->framebuffer[xgrab + p->width * ygrab] != TRANSPARENT)
+				VidPlotPixel (gx+x, gy+y, outline);
 		}
 	}
 }

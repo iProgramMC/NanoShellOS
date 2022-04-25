@@ -247,9 +247,20 @@ void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned c
 void VidBlitImage(Image* pImage, int x, int y);
 
 /**
+ * Blits an outline of PImage onto the screen, of the specified color.
+ */
+void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color);
+
+/**
  * Blits an image onto the screen, re-sizing it to widthXheight pixels.
  */
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height);
+
+/**
+ * Blits an outline of PImage onto the screen, of the specified color, resizing it to widthXheight pixels.
+ * This isn't actually an outline, rather a silhouette figure
+ */
+void VidBlitImageResizeOutline(Image* pImage, int x, int y, int width, int height, uint32_t color);
 
 /**
  * Prints a string in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).

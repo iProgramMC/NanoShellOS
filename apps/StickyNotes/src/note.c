@@ -7,6 +7,8 @@
 #define NOTE_WIDTH 240
 #define NOTE_HEIGHT 180 + TITLE_BAR_HEIGHT
 
+void OpenMainMenu();
+
 void NoteClose(NOTE* pNote, bool alsoRemWnd)
 {
 	Window *pWindow = pNote->m_pWindow;
@@ -61,6 +63,28 @@ void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 				pNote->m_pText = NULL;
 			}
 			
+			// Add a button right next to the close button
+			r.right  = pWindow->m_vbeData.m_width - 3 - 1;
+			r.left   = r.right - 18 + 2;
+			r.top    = 2;
+			r.bottom = r.top + TITLE_BAR_HEIGHT - 4;
+			
+			r.left  -= 18;
+			r.right -= 18;
+			
+			AddControlEx (pWindow, CONTROL_BUTTON, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT, r, "\x13", N_MAINMENU_BTN, 0, 0);
+			
+			break;
+		}
+		
+		case EVENT_COMMAND :
+		{
+			if (parm1 == N_MAINMENU_BTN)
+			{
+				//open main menu
+				OpenMainMenu ();
+			}
+			
 			break;
 		}
 		
@@ -85,7 +109,7 @@ void NoteOpen (NOTE* pNote)
 		//TODO: select that window
 		return;
 	
-	pNote->m_pWindow = CreateWindow (pNote->m_title, CW_AUTOPOSITION, CW_AUTOPOSITION, NOTE_WIDTH, NOTE_HEIGHT, NoteWindowProc, WF_FLATBORD | WF_ALWRESIZ);
+	pNote->m_pWindow = CreateWindow (pNote->m_title, CW_AUTOPOSITION, CW_AUTOPOSITION, NOTE_WIDTH, NOTE_HEIGHT, NoteWindowProc, WF_FLATBORD | WF_ALWRESIZ | WF_NOMINIMZ | WF_NOMAXIMZ);
 	
 	if (!pNote->m_pWindow)
 		return;

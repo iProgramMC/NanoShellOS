@@ -129,6 +129,12 @@ void CreateMainWindow()
 	SetWindowIcon (g_pMainWindow, ICON_BILLBOARD);	
 }
 
+void OpenMainMenu()
+{
+	if (!g_pMainWindow)
+		CreateMainWindow();
+}
+
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {
 	CreateMainWindow ();

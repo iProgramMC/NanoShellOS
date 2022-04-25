@@ -166,10 +166,12 @@ Image* GetIconImage(IconType type, int sz);
  * Renders an icon to the screen.
  */
 void RenderIcon(IconType type, int x, int y);
+void RenderIconOutline(IconType type, int x, int y, uint32_t outline);
 
 /**
  * Renders an icon to the screen, forcing it to be a certain size.
  */
 void RenderIconForceSize(IconType type, int x, int y, int size);
+void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t color);
 
 #endif//_ICON_H

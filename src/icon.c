@@ -333,6 +333,13 @@ void RenderIcon(IconType type, int x, int y)
 	Image* p = g_iconTable[type];
 	VidBlitImage(p, x, y);
 }
+void RenderIconOutline(IconType type, int x, int y, uint32_t color)
+{
+	if (type >= ICON_COUNT || type <= ICON_NULL) return;
+	
+	Image* p = g_iconTable[type];
+	VidBlitImageOutline(p, x, y, color);
+}
 void RenderThumbClock(int x, int y, int size);
 void RenderIconForceSize(IconType type, int x, int y, int size)
 {
@@ -344,5 +351,13 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 		{
 			RenderThumbClock(x, y, size);
 		}
+	}
+}
+void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t color)
+{
+	Image *p = GetIconImage(type, size);
+	if (p)
+	{
+		VidBlitImageResizeOutline(p, x, y, size, size, color);
 	}
 }

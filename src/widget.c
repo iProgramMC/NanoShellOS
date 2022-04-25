@@ -2618,6 +2618,28 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	}
 	return false;
 }
+#define DARKEN(color) \
+	((color >> 1) & 0xFF0000) | \
+	(((color & 0xFF00) >> 1) & 0xFF00) | \
+	(((color & 0xFF) >> 1) & 0xFF)
+	
+static __attribute__((always_inline)) inline uint32_t Blueify (uint32_t color)
+{
+	uint32_t red_component = color & 0xFF0000;
+	red_component >>= 1;
+	red_component &=  0xFF0000;
+	
+	uint32_t grn_component = color & 0xFF00;
+	//grn_component <<= 1;
+	//if (grn_component > 0xFF00) grn_component = 0xFF00;
+	
+	uint32_t blu_component = color & 0xFF;
+	//blu_component <<= 1;
+	//if (blu_component > 0xFF0000) blu_component = 0xFF;
+	
+	return red_component | grn_component | blu_component;
+}
+
 bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -2682,20 +2704,46 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
-				VidFillRectangle(0x7F, r);
-				r.left++; r.right++; r.bottom++; r.top++;
-				r.left += offs;
+				uint32_t bgc = WINDOW_BACKGD_COLOR;
+				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
+				uint32_t dabl = DARKEN(blue);
+				
+				
+				VidFillRectangle(blue, r);
+				VidDrawRectangle(dabl, r);
+				
+				
 				r.top += 1;
 				r.bottom += 1;
+				
+				if (this->m_parm1)
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+				
+				r.left++; r.right++; r.bottom++; r.top++;
+				
+				r.left += offs;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				VidFillRectangle(0x7F, r);
+				uint32_t bgc = WINDOW_BACKGD_COLOR;
+				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
+				uint32_t dabl = DARKEN(blue);
+				
+				
+				VidFillRectangle(blue, r);
+				VidDrawRectangle(dabl, r);
 				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+				
+				r.left -= offs;
+				if (this->m_parm1)
+				{
+					RenderIconForceSizeOutline (this->m_parm1, r.left + 5, r.top + (r.bottom - r.top - 16) / 2 + 1, 16, dabl);
+					RenderIconForceSize        (this->m_parm1, r.left + 3, r.top + (r.bottom - r.top - 16) / 2 - 1, 16);
+				}
 			}
 			else
 			{
@@ -2704,10 +2752,11 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r.top += 1;
 				r.bottom += 1;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				
+				r.left -= offs;
+				if (this->m_parm1)
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
 			}
-			r.left -= offs;
-			if (this->m_parm1)
-				RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
 			
 			break;
 		}

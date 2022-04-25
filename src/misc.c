@@ -150,6 +150,13 @@ void GetTimeStampCounter(int* high, int* low)
 	if (low ) *low  = eax;
 }
 
+uint64_t ReadTSC()
+{
+	int hi,lo;
+	GetTimeStampCounter(&hi, &lo);
+	return hi << 32L | lo;
+}
+
 int GetTickCount()
 {
 	return g_nRtcTicks * 1000 / RTC_TICKS_PER_SECOND;
