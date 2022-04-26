@@ -146,6 +146,20 @@
 #include <icons/keybrepspeed.h>
 #include <icons/keybrepdelay.h>
 #include <icons/monitor.h>
+//icons V1.6
+#include <icons/ns_ini.h>
+#include <icons/wmenu.h>
+#include <icons/wmenu16.h>
+#include <icons/file_image.h>
+#include <icons/file_image16.h>
+#include <icons/file_log.h>
+#include <icons/sticky_notes.h>
+#include <icons/sticky_notes16.h>
+#include <icons/note_yellow.h>
+#include <icons/note_blue.h>
+#include <icons/note_green.h>
+#include <icons/note_white.h>
+#include <icons/folder_open.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -277,6 +291,19 @@ Image * g_iconTable[] = {
 	&g_keybrepspeed_icon,
 	&g_keybrepdelay_icon,
 	&g_monitor_icon,
+	&g_ns_ini_icon,
+	&g_wmenu_icon,
+	&g_wmenu16_icon,
+	&g_file_image_icon,
+	&g_file_image16_icon,
+	&g_file_log_icon,
+	&g_sticky_notes_icon,
+	&g_sticky_notes16_icon,
+	&g_note_yellow_icon,
+	&g_note_blue_icon,
+	&g_note_green_icon,
+	&g_note_white_icon,
+	&g_folder_open_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");

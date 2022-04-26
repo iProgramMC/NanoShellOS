@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: hard_drive.png
- * Converted Date: 20/03/2022
+ * Converted File: icons/hard_drive.png
+ * Converted Date: 26/04/2022
  * Icon Last Mod:  12/03/2022
 *****************************************/
 

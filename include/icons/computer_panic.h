@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: computer_panic.png
- * Converted Date: 20/03/2022
+ * Converted File: icons/computer_panic.png
+ * Converted Date: 26/04/2022
  * Icon Last Mod:  05/03/2022
 *****************************************/
 

@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: nanoshell_shell.png
- * Converted Date: 20/03/2022
+ * Converted File: icons/nanoshell_shell.png
+ * Converted Date: 26/04/2022
  * Icon Last Mod:  06/01/2022
 *****************************************/
 

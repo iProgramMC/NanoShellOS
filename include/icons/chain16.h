@@ -4,8 +4,8 @@
 
   This is a converted icon to embed into
             the kernel image.
- * Converted File: chain16.png
- * Converted Date: 20/03/2022
+ * Converted File: icons/chain16.png
+ * Converted Date: 26/04/2022
  * Icon Last Mod:  27/02/2022
 *****************************************/
 
