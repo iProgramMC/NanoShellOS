@@ -2704,29 +2704,25 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
-				uint32_t bgc = WINDOW_BACKGD_COLOR;
 				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
 				uint32_t dabl = DARKEN(blue);
-				
 				
 				VidFillRectangle(blue, r);
 				VidDrawRectangle(dabl, r);
 				
-				
 				r.top += 1;
 				r.bottom += 1;
 				
+				r.left++; r.right++; r.bottom++; r.top++;
+				
 				if (this->m_parm1)
 					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
-				
-				r.left++; r.right++; r.bottom++; r.top++;
 				
 				r.left += offs;
 				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				uint32_t bgc = WINDOW_BACKGD_COLOR;
 				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
 				uint32_t dabl = DARKEN(blue);
 				
