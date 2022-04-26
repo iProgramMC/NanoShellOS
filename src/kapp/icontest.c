@@ -15,42 +15,6 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 {
 	switch (messageType)
 	{
-		case EVENT_CREATE:
-		{
-			//Rectangle r;
-			//RECT (r, 10, 10 + TITLE_BAR_HEIGHT, 520, 60);
-			
-			// a la C#'s  new Bitmap(320,200);
-			/*Image *pImage = BitmapAllocate(320, 200, 0x00FFFFFF);
-			
-			VBEData m_data;
-			// a la C#'s Graphics.FromBitmap
-			BuildGraphCtxBasedOnImage(&m_data, pImage);
-			
-			VidSetVBEData(&m_data);
-			
-			// Draw an example image.
-			VidBlitImage(GetIconImage (ICON_COMPUTER_PANIC, 96),2,2);
-			
-			VidSetVBEData(&pWindow->m_vbeData);
-			
-			
-			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_PAN | IMAGECTL_PEN);
-			
-			MmFree (pImage);//no leaks!!*/
-			
-			//ChangeCursor (pWindow, CURSOR_WAIT);
-			
-			break;
-		}
-		case EVENT_COMMAND:
-		{
-			if (parm1 == 1001)
-			{
-				//SLogMsg("Spawning menu");
-			}
-			break;
-		}
 		case EVENT_PAINT:
 		{
 			//draw until ICON_COUNT:
@@ -62,8 +26,6 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
 			}
 			
-			VidFillRect(0xCCDDEE, 100, 100, 900, 900);
-			/*RenderIcon(ICON_CABINET, 10, 20);*/
 			break;
 		}
 		default:
