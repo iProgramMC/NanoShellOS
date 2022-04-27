@@ -372,13 +372,16 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	ShellInit();
 
-	if (textMode)
-		ShellRun(0);
-	else
-	{
-		LogMsg("Please wait...");
-		WindowManagerTask(0);
-	}
-	LogMsg("Kernel ready to shutdown.");
-	KeStopSystem();
+	TaskedFunction func = textMode ? ShellRun : WindowManagerTask;
+	
+	int err_code = 0;
+	//TODO: spawn a process instead
+	Task* pTask = KeStartTask(func, 0, &err_code);
+	if (!pTask)
+		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);
+	
+	//TODO: Panic when this process dies.
+	
+	// Idle Loop
+	while (true) hlt;
 }

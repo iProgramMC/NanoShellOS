@@ -46,6 +46,9 @@ extern void KeTaskDone();
 #define UNUSED __attribute__((unused))
 #define ALWAYS_INLINE __attribute__((always_inline))
 
+//SAI = Static and Always Inlined
+#define SAI static ALWAYS_INLINE inline
+
 extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);
 extern void WritePortW(unsigned short port, unsigned short data);

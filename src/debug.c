@@ -66,9 +66,11 @@ const char* g_pBugCheckReasonText[] = {
 	/*Abort*/"Reserved",
 	
 	// miscellaneous failures you may encounter
-	/*Abort*/"INACCESSIBLE_INIT_DEVICE",
-	/*Abort*/"FILE_SYSTEM",
-	/*Abort*/"INACCESSIBLE_BOOT_DEVICE",
+	"INACCESSIBLE_INIT_DEVICE",
+	"FILE_SYSTEM",
+	"INACCESSIBLE_BOOT_DEVICE",
+	"INIT_NOT_SPAWNABLE",
+	"CRITICAL_PROCESS_DIED",
 };
 
 const char* GetBugCheckReasonText(BugCheckReason reason)

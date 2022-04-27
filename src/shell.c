@@ -492,11 +492,6 @@ void ShellExecuteCommand(char* p)
 	{
 		if (VidIsAvailable())
 		{
-			/*int errorCode = 0;
-			Task* pTask = KeStartTask (WindowManagerTask, 0, &errorCode);
-			LogMsg("TASK: %x %x", pTask, errorCode);
-			
-			while (1) hlt;*/
 			WindowManagerTask(0);
 		}
 		else

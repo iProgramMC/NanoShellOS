@@ -42,14 +42,6 @@ extern char           g_cwd[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
 
-bool g_forceKernelTaskToRunNext = false;
-
-
-void ForceKernelTaskToRunNext(void)
-{
-	g_forceKernelTaskToRunNext = true;
-}
-
 void KeKillThreadByPID (int proc)
 {
 	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return;
@@ -413,6 +405,41 @@ void ExCheckDyingProcesses();
 
 uint32_t* const pSysCallNum = (uint32_t*)0xC0007CFC;//for easy reading; the pointer itself is constant
 
+SAI int GetNextTask()
+{
+	int g_tick_count = GetTickCount();
+	
+	int i = s_currentRunningTask + 1;
+	int task = s_lastRunningTaskIndex;
+	
+	// look for a task we can switch to...
+	for (; i < task; i++)
+	{
+		Task* p = &g_runningTasks[i];
+		if (p->m_bExists)
+		{
+			// Is the task scheduled to come back online?
+			if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
+				return i;
+		}
+	}
+	
+	// haven't found any tasks there, back to the beginning...
+	for (i = 0; i < s_currentRunningTask; i++)
+	{
+		Task* p = &g_runningTasks[i];
+		if (p->m_bExists)
+		{
+			// Is the task scheduled to come back online?
+			if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
+				return i;
+		}
+	}
+	
+	// resort to running an idle task
+	return -1;
+}
+
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	g_pProcess = NULL;
@@ -449,39 +476,20 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		ExCheckDyingProcesses();
 	}
 	
-	int g_tick_count = GetTickCount();
 	
 	Task* pNewTask = NULL;
-	if (g_forceKernelTaskToRunNext)
+	
+	int i = GetNextTask();
+	
+	if (i > 0)
 	{
-		s_currentRunningTask = -1;
-		g_forceKernelTaskToRunNext = false;
+		pNewTask = g_runningTasks + i;
+		s_currentRunningTask = i;
 	}
 	else
 	{
-		int i = s_currentRunningTask + 1;
-		int task = s_lastRunningTaskIndex;
-		for (; i < task; i++)
-		{
-			Task* p = &g_runningTasks[i];
-			if (p->m_bExists)
-			{
-				// Is the task scheduled to come back online?
-				if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
-					break;
-			}
-		}
-		
-		if (i < task)
-		{
-			pNewTask = g_runningTasks + i;
-			s_currentRunningTask = i;
-		}
-		else
-		{
-			//kernel task will always come back no matter what
-			s_currentRunningTask = -1;
-		}
+		//kernel task will always come back no matter what
+		s_currentRunningTask = -1;
 	}
 	
 	if (pNewTask)
