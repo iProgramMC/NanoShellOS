@@ -1912,30 +1912,27 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			//into a window's input buffer and read that instead of doing this hacky method right here?
 			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{
-				if (updated)
+				//Also send an EVENT_MOVECURSOR
+				int posX = g_mouseX - pWindow->m_rect.left;
+				int posY = g_mouseY - pWindow->m_rect.top;
+				if (g_oldMouseX != posX || g_oldMouseY != posY)
 				{
-					//Also send an EVENT_MOVECURSOR
-					int posX = g_mouseX - pWindow->m_rect.left;
-					int posY = g_mouseY - pWindow->m_rect.top;
-					if (g_oldMouseX != posX || g_oldMouseY != posY)
+					if (posX < 0) posX = 0;
+					if (posY < 0) posY = 0;
+					if (posX >= (int)pWindow->m_vbeData.m_width)  posX = (int)pWindow->m_vbeData.m_width  - 1;
+					if (posY >= (int)pWindow->m_vbeData.m_height) posY = (int)pWindow->m_vbeData.m_height - 1;
+					
+					if (g_GlowOnHover)
 					{
-						if (posX < 0) posX = 0;
-						if (posY < 0) posY = 0;
-						if (posX >= (int)pWindow->m_vbeData.m_width)  posX = (int)pWindow->m_vbeData.m_width  - 1;
-						if (posY >= (int)pWindow->m_vbeData.m_height) posY = (int)pWindow->m_vbeData.m_height - 1;
-						
-						if (g_GlowOnHover)
-						{
-							WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
-						}
-						else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
-						{
-							WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
-						}
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
 					}
-					g_oldMouseX = g_mouseX;
-					g_oldMouseY = g_mouseY;
+					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
+					{
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+					}
 				}
+				g_oldMouseX = g_mouseX;
+				g_oldMouseY = g_mouseY;
 			}
 			
 			if (pWindow->m_bWindowManagerUpdated)
