@@ -67,7 +67,7 @@ int GetRandom();
 /**
  * Waits a specified number of milliseconds.
  */
-int WaitMS(int ms);
+void WaitMS(int ms);
 
 /**
  * Gets the CPU type string. (e.g. "GenuineIntel", "AuthenticAMD" etc)

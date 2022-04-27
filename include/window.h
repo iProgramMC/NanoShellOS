@@ -42,6 +42,8 @@
 #define DEFAULT_SYSTEM_FONT                     FONT_BASIC
 #define DEFAULT_TITLE_BAR_HEIGHT                18
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
+#define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
+#define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE
 
 //#define HARDCODE_EVERYTHING
 
@@ -59,6 +61,8 @@
 #define WINDOW_TITLE_TEXT_COLOR         DEFAULT_WINDOW_TITLE_TEXT_COLOR       
 #define WINDOW_TEXT_COLOR               DEFAULT_WINDOW_TEXT_COLOR       
 #define WINDOW_TEXT_COLOR_LIGHT         DEFAULT_WINDOW_TEXT_COLOR_LIGHT
+#define SELECTED_ITEM_COLOR             DEFAULT_SELECTED_ITEM_COLOR
+#define SELECTED_ITEM_COLOR_B           DEFAULT_SELECTED_ITEM_COLOR_B
 #define SYSTEM_FONT                     FONT_BASIC
 #define TITLE_BAR_HEIGHT 18
 #define TITLE_BAR_FONT   FONT_BASIC
@@ -82,6 +86,8 @@ P_WINDOW_TEXT_COLOR_LIGHT,
 P_SYSTEM_FONT,
 P_TITLE_BAR_HEIGHT,
 P_TITLE_BAR_FONT,
+P_SELECTED_ITEM_COLOR,
+P_SELECTED_ITEM_COLOR_B,
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
@@ -102,6 +108,8 @@ void     SetThemingParameter(int type, uint32_t);
 #define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT              ))
 #define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT         ))
 #define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
+#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR           ))
+#define SELECTED_ITEM_COLOR_B           (GetThemingParameter(P_SELECTED_ITEM_COLOR_B         ))
 
 #endif
 
