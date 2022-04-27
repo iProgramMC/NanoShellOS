@@ -102,6 +102,7 @@ void StopSound (void)
 
 void WaitMS (int ms)
 {
+	if (ms <= 0) return;
 	int tickCountToStop = GetTickCount() + ms;
 	while (GetTickCount() < tickCountToStop)
 	{

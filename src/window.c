@@ -41,6 +41,9 @@ void KeTaskDone(void);
 #define cli
 #define sti
 
+#define LOCK_MS 16 // roughly 60 hz
+#define LAG_DEBUG
+
 extern Window*  g_focusedOnWindow;
 
 extern bool     g_GlowOnHover;
@@ -1857,6 +1860,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	
 	while (true)
 	{
+		int tick_count_start = GetTickCount ();
+		
 		bool handled = false;
 		UpdateFPSCounter();
 		CrashReporterCheck();
@@ -2094,9 +2099,22 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 		}
 		
-		//for (int i = 0; i < 2; i++)
-		//hlt;
-		KeTaskDone();
+		int tick_count_end = GetTickCount();
+		
+		//how many ms did this take? add 1ms just to be safe
+		int ms_dur = tick_count_end - tick_count_start + 1;
+		
+		//how many ms are left of a 60 hz refresh?
+		int ms_left = LOCK_MS - ms_dur;
+		
+		if (ms_left >= 0)
+			WaitMS (ms_left);
+		
+		//if ms_left < 0, means we're lagging behind
+	#ifdef LAG_DEBUG
+		else
+			SLogMsg("Lagging behind! This cycle of the window manager took %d ms", ms_dur);
+	#endif
 	}
 	WindowCallDeinitialize ();
 	KillWindowDepthBuffer();
