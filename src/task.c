@@ -385,14 +385,14 @@ void KeFxRestore(int *fpstate)
 }
 #endif
 
-void KeCheckDyingTasks()
+void KeCheckDyingTasks(Task* pTaskToAvoid)
 {
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
-		if (g_runningTasks[i].m_bMarkedForDeletion)
-		{
+		//if it's a zombie, and we're not switching away from it (i.e. using its resources)...
+		if (g_runningTasks[i].m_bMarkedForDeletion && &g_runningTasks[i] != pTaskToAvoid)
+			//end it. end it good.
 			KeResetTask(&g_runningTasks[i], true, true);
-		}
 	}
 }	
 
@@ -440,6 +440,7 @@ SAI int GetNextTask()
 	return -1;
 }
 
+void ExCheckDyingProcesses(void* pProcToAvoid);
 void KeSwitchTask(CPUSaveState* pSaveState)
 {
 	g_pProcess = NULL;
@@ -470,11 +471,11 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 	}
 	ResetToKernelHeapUnsafe();
 	
-	if (!pTask) //switching away from kernel task?
-	{
-		KeCheckDyingTasks();
-		ExCheckDyingProcesses();
-	}
+	void *pProc = NULL;
+	if (pTask) pProc = pTask->m_pProcess;
+	
+	KeCheckDyingTasks(pTask);
+	ExCheckDyingProcesses(pProc);
 	
 	
 	Task* pNewTask = NULL;

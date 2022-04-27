@@ -41,10 +41,11 @@ void ExDisposeProcess(Process *pProc)
 	pProc->bActive = false;
 }
 
-void ExCheckDyingProcesses()
+void ExCheckDyingProcesses(Process *pProcToAvoid)
 {
 	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
 	{
+		if (&gProcesses[i] == pProcToAvoid) continue;
 		if (!gProcesses[i].bActive) continue;
 		if (!gProcesses[i].bWillDie) continue;
 		
