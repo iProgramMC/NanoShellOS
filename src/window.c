@@ -2714,23 +2714,24 @@ bool IsEventDestinedForControlsToo(int type)
 {
 	switch (type)
 	{
-		case EVENT_DESTROY:
-		case EVENT_IMAGE_REFRESH:
+		case EVENT_CREATE:
 		case EVENT_PAINT:
-		case EVENT_MOVECURSOR:
-		case EVENT_CLICKCURSOR:
-		case EVENT_RELEASECURSOR:
-		case EVENT_RIGHTCLICK:
-		case EVENT_RIGHTCLICKRELEASE:
-		case EVENT_KEYPRESS:
-		case EVENT_KEYRAW:
-		case EVENT_SIZE:
-		case EVENT_MENU_CLOSE:
-		case EVENT_SETFOCUS:
-		case EVENT_KILLFOCUS:
-			return true;
+		case EVENT_MOVE:
+		case EVENT_ACTIVATE:
+		case EVENT_UPDATE:
+		case EVENT_COMMAND:
+		case EVENT_CLOSE:
+		case EVENT_MINIMIZE:
+		case EVENT_UNMINIMIZE:
+		case EVENT_UPDATE2:
+		case EVENT_CLICK_CHAR:
+		case EVENT_MAXIMIZE:
+		case EVENT_UNMAXIMIZE:
+		case EVENT_CHECKBOX:
+		case EVENT_MAX:
+			return false;
 	}
-	return false;
+	return true;
 }
 
 //ugly hax to make calling window callback not need to preserve edi, esi, ebx
