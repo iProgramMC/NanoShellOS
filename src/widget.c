@@ -2427,7 +2427,8 @@ bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 	(((color & 0xFF00) >> 1) & 0xFF00) | \
 	(((color & 0xFF) >> 1) & 0xFF)
 	
-static __attribute__((always_inline)) inline uint32_t Blueify (uint32_t color)
+SAI UNUSED
+uint32_t Blueify (uint32_t color)
 {
 	uint32_t red_component = color & 0xFF0000;
 	red_component >>= 1;
@@ -2640,7 +2641,7 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 		}
 		case EVENT_PAINT:
 		{
-			uint32_t bgc = WINDOW_BACKGD_COLOR;
+			uint32_t blue = SELECTED_ITEM_COLOR_B;
 			
 			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
 			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
@@ -2650,20 +2651,15 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			if (this->m_buttonData.m_clicked)
 			{
-				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
-				uint32_t dabl = DARKEN(blue);
-				
-				VidFillRectangle(dabl, this->m_rect);
+				VidFillRectangle(SELECTED_ITEM_COLOR_B, this->m_rect);
+				VidDrawRectangle(SELECTED_ITEM_COLOR,   this->m_rect);
 				
 				x++, y++;
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
-				uint32_t dabl = DARKEN(blue);
-				
-				VidFillRectangle(blue, this->m_rect);
-				VidDrawRectangle(dabl, this->m_rect);
+				VidFillRectangle(SELECTED_ITEM_COLOR_B, this->m_rect);
+				VidDrawRectangle(SELECTED_ITEM_COLOR,   this->m_rect);
 				
 				x--, y--;
 				bRenderOutlineToo = true;
@@ -2671,11 +2667,11 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			}
 			else
 			{
-				VidFillRectangle(bgc, this->m_rect);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
 			}
 			
 			if (bRenderOutlineToo)
-				RenderIconForceSizeOutline (this->m_parm1, x + 2, y + 2, this->m_parm2, DARKEN(bgc));
+				RenderIconForceSizeOutline (this->m_parm1, x + 2, y + 2, this->m_parm2, DARKEN(blue));
 			
 			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
 			
@@ -2748,11 +2744,8 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
-				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
-				uint32_t dabl = DARKEN(blue);
-				
-				VidFillRectangle(blue, r);
-				VidDrawRectangle(dabl, r);
+				VidFillRectangle(SELECTED_ITEM_COLOR_B, r);
+				VidDrawRectangle(SELECTED_ITEM_COLOR,   r);
 				
 				r.top += 1;
 				r.bottom += 1;
@@ -2767,12 +2760,10 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
-				uint32_t dabl = DARKEN(blue);
+				uint32_t col = SELECTED_ITEM_COLOR_B;
+				VidFillRectangle(col, r);
+				VidDrawRectangle(SELECTED_ITEM_COLOR,   r);
 				
-				
-				VidFillRectangle(blue, r);
-				VidDrawRectangle(dabl, r);
 				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
@@ -2781,7 +2772,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r.left -= offs;
 				if (this->m_parm1)
 				{
-					RenderIconForceSizeOutline (this->m_parm1, r.left + 5, r.top + (r.bottom - r.top - 16) / 2 + 1, 16, dabl);
+					RenderIconForceSizeOutline (this->m_parm1, r.left + 5, r.top + (r.bottom - r.top - 16) / 2 + 1, 16, DARKEN(col));
 					RenderIconForceSize        (this->m_parm1, r.left + 3, r.top + (r.bottom - r.top - 16) / 2 - 1, 16);
 				}
 			}
