@@ -53,6 +53,8 @@ static int          s_internal_action_queue_head,
                     s_internal_action_queue_tail;
 //
 
+Task *g_pWindowMgrTask;
+
 bool ActionQueueWouldOverflow()
 {
 	if (s_internal_action_queue_tail == 0)
@@ -979,7 +981,7 @@ static void ShowWindowUnsafe (Window* pWindow)
 
 void HideWindow (Window* pWindow)
 {
-	if (!KeGetRunningTask())
+	if (KeGetRunningTask() == g_pWindowMgrTask)
 	{
 		// Automatically resort to unsafe versions because we're running in the wm task already
 		HideWindowUnsafe(pWindow);
@@ -999,7 +1001,7 @@ void HideWindow (Window* pWindow)
 
 void ShowWindow (Window* pWindow)
 {
-	if (!KeGetRunningTask())
+	if (KeGetRunningTask() == g_pWindowMgrTask)
 	{
 		// Automatically resort to unsafe versions because we're running in the wm task already
 		ShowWindowUnsafe(pWindow);
@@ -1091,7 +1093,7 @@ static void ResizeWindowUnsafe(Window* pWindow, int newPosX, int newPosY, int ne
 
 void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
-	if (!KeGetRunningTask())
+	if (KeGetRunningTask() == g_pWindowMgrTask)
 	{
 		// Automatically resort to unsafe versions because we're running in the wm task already
 		ResizeWindowUnsafe(pWindow, newPosX, newPosY, newWidth, newHeight);
@@ -1181,7 +1183,7 @@ void NukeWindowUnsafe (Window* pWindow)
 
 void NukeWindow (Window* pWindow)
 {
-	if (!KeGetRunningTask())
+	if (KeGetRunningTask() == g_pWindowMgrTask)
 	{
 		// Automatically resort to unsafe versions because we're running in the wm task already
 		NukeWindowUnsafe(pWindow);
@@ -1256,7 +1258,7 @@ void SelectWindowUnsafe(Window* pWindow)
 }
 void SelectWindow(Window* pWindow)
 {
-	if (!KeGetRunningTask())
+	if (KeGetRunningTask() == g_pWindowMgrTask)
 	{
 		// Automatically resort to unsafe versions because we're running in the wm task already
 		SelectWindowUnsafe(pWindow);
@@ -1846,6 +1848,8 @@ int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
 	SetupWindowManager();
+	
+	g_pWindowMgrTask = KeGetRunningTask ();
 	
 	int timeout = 10;
 	#define UPDATE_TIMEOUT 50
