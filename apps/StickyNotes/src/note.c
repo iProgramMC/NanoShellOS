@@ -31,6 +31,7 @@ void NoteClose(NOTE* pNote, bool alsoRemWnd)
 	}
 }
 
+#define EVENT_MAIN_MENU_THING 0x1000//there will never be 4096 events.
 void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 {
 	NOTE* pNote = (NOTE*)pWindow->m_data;
@@ -72,18 +73,15 @@ void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 			r.left  -= 18;
 			r.right -= 18;
 			
-			AddControlEx (pWindow, CONTROL_BUTTON, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT, r, "\x13", N_MAINMENU_BTN, 0, 0);
+			AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT, r, "\x13", N_MAINMENU_BTN, EVENT_MAIN_MENU_THING, 0);
 			
 			break;
 		}
 		
-		case EVENT_COMMAND :
+		case EVENT_MAIN_MENU_THING:
 		{
-			if (parm1 == N_MAINMENU_BTN)
-			{
-				//open main menu
-				OpenMainMenu ();
-			}
+			//open main menu
+			OpenMainMenu ();
 			
 			break;
 		}

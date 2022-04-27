@@ -2715,7 +2715,6 @@ bool IsEventDestinedForControlsToo(int type)
 	switch (type)
 	{
 		case EVENT_CREATE:
-		case EVENT_PAINT:
 		case EVENT_MOVE:
 		case EVENT_ACTIVATE:
 		case EVENT_UPDATE:
