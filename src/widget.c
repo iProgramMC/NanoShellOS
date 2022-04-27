@@ -2422,6 +2422,28 @@ bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 	}
 	return false;
 }
+#define DARKEN(color) \
+	((color >> 1) & 0xFF0000) | \
+	(((color & 0xFF00) >> 1) & 0xFF00) | \
+	(((color & 0xFF) >> 1) & 0xFF)
+	
+static __attribute__((always_inline)) inline uint32_t Blueify (uint32_t color)
+{
+	uint32_t red_component = color & 0xFF0000;
+	red_component >>= 1;
+	red_component &=  0xFF0000;
+	
+	uint32_t grn_component = color & 0xFF00;
+	//grn_component <<= 1;
+	//if (grn_component > 0xFF00) grn_component = 0xFF00;
+	
+	uint32_t blu_component = color & 0xFF;
+	//blu_component <<= 1;
+	//if (blu_component > 0xFF0000) blu_component = 0xFF;
+	
+	return red_component | grn_component | blu_component;
+}
+
 bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -2579,6 +2601,32 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
+		case EVENT_KILLFOCUS:
+			this->m_buttonData.m_hovered = false;
+			if (g_GlowOnHover)
+				WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		case EVENT_MOVECURSOR:
+		{
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p))
+			{
+				if (!this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = true;
+					if (g_GlowOnHover)
+						WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
+			}
+			else if (this->m_buttonData.m_hovered)
+			{
+				this->m_buttonData.m_hovered = false;
+				if (g_GlowOnHover)
+					WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			}
+			break;
+		}
 		case EVENT_CLICKCURSOR:
 		{
 			Rectangle r = this->m_rect;
@@ -2590,26 +2638,44 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			}
 			break;
 		}
-		case EVENT_MOVECURSOR:
-		{
-			break;
-		}
 		case EVENT_PAINT:
 		{
+			uint32_t bgc = WINDOW_BACKGD_COLOR;
+			
 			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
 			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
 			x++, y++;
 			
+			bool bRenderOutlineToo = false;
+			
 			if (this->m_buttonData.m_clicked)
 			{
+				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
+				uint32_t dabl = DARKEN(blue);
+				
+				VidFillRectangle(dabl, this->m_rect);
+				
 				x++, y++;
-				RenderButtonShapeSmall (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+			}
+			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
+			{
+				uint32_t blue = Blueify(WINDOW_BACKGD_COLOR);
+				uint32_t dabl = DARKEN(blue);
+				
+				VidFillRectangle(blue, this->m_rect);
+				VidDrawRectangle(dabl, this->m_rect);
+				
+				x--, y--;
+				bRenderOutlineToo = true;
+				//RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			}
 			else
 			{
-				//RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+				VidFillRectangle(bgc, this->m_rect);
 			}
+			
+			if (bRenderOutlineToo)
+				RenderIconForceSizeOutline (this->m_parm1, x + 2, y + 2, this->m_parm2, DARKEN(bgc));
 			
 			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
 			
@@ -2618,28 +2684,6 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	}
 	return false;
 }
-#define DARKEN(color) \
-	((color >> 1) & 0xFF0000) | \
-	(((color & 0xFF00) >> 1) & 0xFF00) | \
-	(((color & 0xFF) >> 1) & 0xFF)
-	
-static __attribute__((always_inline)) inline uint32_t Blueify (uint32_t color)
-{
-	uint32_t red_component = color & 0xFF0000;
-	red_component >>= 1;
-	red_component &=  0xFF0000;
-	
-	uint32_t grn_component = color & 0xFF00;
-	//grn_component <<= 1;
-	//if (grn_component > 0xFF00) grn_component = 0xFF00;
-	
-	uint32_t blu_component = color & 0xFF;
-	//blu_component <<= 1;
-	//if (blu_component > 0xFF0000) blu_component = 0xFF;
-	
-	return red_component | grn_component | blu_component;
-}
-
 bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
