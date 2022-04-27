@@ -5,18 +5,24 @@
 
 version|2
 
+// Essentials
 add_item|46|1|Command prompt|shell:cmdshell
 add_item|1|1|File cabinet|shell:cabinet
 add_item|96|1|Text editor|shell:notepad
 add_item|55|1|System monitor|shell:sysmon
 
+// Extra Tools
 add_item|118|0|Magnifier|shell:magnify
 add_item|93|0|Codename V-Builder|shell:vbuild
 add_item|38|0|Minesweeper|shell:mineswp
 
+// Pre-packaged applications that aren't built into the kernel
 add_item|65|0|Clock|exwindow:/Bin/Clock.nse
+add_item|135|0|Sticky Notes|exwindow:/Bin/StickyNotes.nse
 
+// Some testing applications
 add_item|23|0|Icon demo|shell:icontest
 add_item|7|0|Scribble!|shell:scribble
 
+// Help
 add_item|8|0|Help|shell:help
