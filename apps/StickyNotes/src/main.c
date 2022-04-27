@@ -26,7 +26,7 @@ static void RefreshList()
 	
 	for (int i = 0; i < g_noteCount; i++)
 	{
-		AddElementToList (g_pMainWindow, M_LIST_VIEW, g_notes[i].m_title, ICON_FILE);//TODO
+		AddElementToList (g_pMainWindow, M_LIST_VIEW, g_notes[i].m_title, ICON_NOTE_YELLOW + i % 4);//TODO
 	}
 	
 	//add an "Add Note" item
@@ -126,7 +126,7 @@ void CreateMainWindow()
 		return;
 	}
 	
-	SetWindowIcon (g_pMainWindow, ICON_BILLBOARD);	
+	SetWindowIcon (g_pMainWindow, ICON_STICKY_NOTES);	
 }
 
 void OpenMainMenu()
