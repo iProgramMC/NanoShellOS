@@ -387,6 +387,18 @@ int CountLinesInText (const char* pText);
 void OnUpdateMouse (uint8_t flags, uint8_t dx, uint8_t dy, uint8_t dz);
 
 /**
+ * Performs a bit block transfer from two VBEData/GraphCtx sources.
+ */
+enum {
+	BOP_BLACK,
+	BOP_CAPTURE,//TODO
+	BOP_SRCCOPY,
+	BOP_SRCINVERT,
+	BOP_WHITE,
+};
+void VidBitBlit(VBEData* pDest, int x, int y, int width, int height, VBEData* pSrc, int x1, int y1, uint32_t mode);
+
+/**
  * Gets the name of a font.
  */
 const char* VidGetFontName(unsigned fontType);

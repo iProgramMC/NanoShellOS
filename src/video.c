@@ -903,6 +903,60 @@ void VidShiftScreen (int howMuch)
 		;//unhandled
 	}
 }
+
+void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* pSrc, int x1, int y1, uint32_t mode)
+{
+	//SLogMsg("VidBitBlitU(%x, %d, %d, %d, %d, %x, %d, %d, %x)",pDest,cx,cy,width,height,pSrc,x1,y1,mode);
+	
+	//TODO: more safety checks??!
+	if (cx < 0) width  += cx, cx = 0;
+	if (cy < 0) height += cy, cy = 0;
+	if (x1 < 0) cx     -= x1, width  += x1, x1 = 0;
+	if (y1 < 0) cy     -= y1, height += x1, y1 = 0;
+	
+	if (width  > (int)pDest->m_width  - cx) width  = pDest->m_width  - cx;
+	if (height > (int)pDest->m_height - cy) height = pDest->m_height - cy;
+	
+	if (width  > (int)pSrc->m_width  - x1) width  = pSrc->m_width  - x1;
+	if (height > (int)pSrc->m_height - y1) height = pSrc->m_height - y1;
+	
+	if (width  < 0) return;
+	if (height < 0) return;
+	
+	//SLogMsg("VidBitBlitR(%x, %d, %d, %d, %d, %x, %d, %d, %x)",pDest,cx,cy,width,height,pSrc,x1,y1,mode);
+	
+	if (mode == BOP_SRCCOPY)
+	{
+		if (pDest->m_bitdepth != 2 || pSrc->m_bitdepth != 2) //assertion
+		{
+			//usually this is not a problem unless multiboot couldn't give us a proper video mode
+			//(86box is one notable example which gives me a 24-bit VBE instead of a 32-bit one)
+			SLogMsg("TODO: VidBitBlit to differing bitdepths!!");
+		}
+		
+		//basic bit copy:
+		for (int y = 0; y < height; y++)
+		{
+			//copy one scanline from cy to y1
+			int yDest = cy + y, ySrc = y1 + y;
+			
+			//determine the offset for each scanline:
+			uint32_t* pdoffset = pDest->m_framebuffer32 + (yDest * pDest->m_pitch32) + cx;
+			uint32_t* psoffset = pSrc ->m_framebuffer32 + (ySrc  * pSrc ->m_pitch32) + x1;
+			
+			memcpy_ints(pdoffset, psoffset, width);
+			if (pDest == &g_mainScreenVBEData)
+			{
+				// Hrm. Also draw to the copy, you never know.
+				pdoffset = g_framebufferCopy + (yDest * pDest->m_width) + cx;
+				memcpy_ints(pdoffset, psoffset, width);
+			}
+		}
+	}
+	else SLogMsg("TODO: VidBitBlit mode %x");
+}
+
+
 #endif
 
 // Stuff

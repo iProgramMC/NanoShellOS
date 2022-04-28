@@ -441,10 +441,12 @@ void RedrawBackground (Rectangle rect)
 {
 	if (g_BackgroundSolidColorActive)
 	{
+		rect.right--, rect.bottom--;
 		VidFillRectangle(GetThemingParameter(P_BACKGROUND_COLOR), rect);
 		return;
 	}
 	
+	rect.right--;//TODO
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
@@ -924,8 +926,9 @@ void UndrawWindow (Window* pWindow)
 	
 	LockAcquire (&g_BackgdLock);
 	
+	Rectangle r = pWindow->m_rect;
 	//redraw the background and all the things underneath:
-	RedrawBackground(pWindow->m_rect);
+	RedrawBackground(r);
 	
 	LockFree (&g_BackgdLock);
 	
@@ -960,8 +963,25 @@ void UndrawWindow (Window* pWindow)
 	{
 		//WindowRegisterEvent (windowDrawList[i], EVENT_PAINT, 0, 0);
 		//windowDrawList[i]->m_vbeData.m_dirty = true;
-		windowDrawList[i]->m_renderFinished = true;
+		//windowDrawList[i]->m_renderFinished = true;
+		if (windowDrawList[i]->m_hidden) continue;
+		
+		// Hrm... we should probably use the new VidBitBlit for this
+		
+		VidBitBlit (
+			g_vbeData,
+			pWindow->m_rect.left,
+			pWindow->m_rect.top,
+			pWindow->m_rect.right  - pWindow->m_rect.left,
+			pWindow->m_rect.bottom - pWindow->m_rect.top,
+			&windowDrawList[i]->m_vbeData,
+			pWindow->m_rect.left - windowDrawList[i]->m_rect.left,
+			pWindow->m_rect.top  - windowDrawList[i]->m_rect.top,
+			BOP_SRCCOPY
+		);
 	}
+	
+	
 	
 	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 	g_vbeData = backup;
