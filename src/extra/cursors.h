@@ -23,17 +23,15 @@ uint32_t ImageDefaultCursor[] =
 	B B S S B X X B S o o o
 	B S S o o B X X B o o o
 	o S o o o B X X B S o o
-	o o o o o o B X X B o o
-	o o o o o o B X X B S o
-	o o o o o o o B B S S o
-	o o o o o o o o S S o o
+	o o o o o o B B S S o o
+	o o o o o o o S S o o o
 };
 
 Cursor g_defaultCursor = {
-	12, 20, 0, 0, 
+	12, 18, 0, 0, 
 	ImageDefaultCursor,
 	true,
-	false, 12, 20
+	false, 12, 18
 };
 
 uint32_t ImageWaitingCursor[] = 
