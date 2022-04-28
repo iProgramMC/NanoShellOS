@@ -30,7 +30,7 @@ static void RefreshList()
 	}
 	
 	//add an "Add Note" item
-	AddElementToList (g_pMainWindow, M_LIST_VIEW, "Add New Note...", ICON_TODO);//TODO: + icon
+	AddElementToList (g_pMainWindow, M_LIST_VIEW, "Add New Note...", ICON_PLUS);//TODO: + icon
 }
 static int AddNote()
 {
