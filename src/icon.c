@@ -160,6 +160,13 @@
 #include <icons/note_green.h>
 #include <icons/note_white.h>
 #include <icons/folder_open.h>
+//icons V1.61
+#include <icons/experiment2.h>
+#include <icons/floppy.h>
+#include <icons/action_save16.h>
+#include <icons/action_open.h>
+#include <icons/action_open16.h>
+#include <icons/plus.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -304,6 +311,12 @@ Image * g_iconTable[] = {
 	&g_note_green_icon,
 	&g_note_white_icon,
 	&g_folder_open_icon,
+	&g_experiment2_icon,
+	&g_floppy_icon,
+	&g_action_save16_icon,
+	&g_action_open_icon,
+	&g_action_open16_icon,
+	&g_plus_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -347,6 +360,8 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(MAGNIFY)
 			CASE(BOMB_SPIKEY)
 			CASE(COMPUTER_SHUTDOWN)
+			CASE(ACTION_SAVE)
+			CASE(ACTION_OPEN)
 			#undef CASE
 		}
 	}
