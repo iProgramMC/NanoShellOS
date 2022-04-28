@@ -167,6 +167,43 @@
 #include <icons/action_open.h>
 #include <icons/action_open16.h>
 #include <icons/plus.h>
+//icons V1.7
+#include <icons/paste.h>
+#include <icons/paste16.h>
+#include <icons/delete.h>
+#include <icons/delete16.h>
+#include <icons/copy.h>
+#include <icons/copy16.h>
+#include <icons/back.h>
+#include <icons/back16.h>
+#include <icons/forward.h>
+#include <icons/forward16.h>
+#include <icons/undo.h>
+#include <icons/undo16.h>
+#include <icons/redo.h>
+#include <icons/redo16.h>
+#include <icons/file_search.h>
+#include <icons/file_search16.h>
+#include <icons/file_properties.h>
+#include <icons/file_properties16.h>
+#include <icons/properties.h>
+#include <icons/properties16.h>
+#include <icons/whats_this.h>
+#include <icons/whats_this16.h>
+#include <icons/view_icon.h>
+#include <icons/view_icon16.h>
+#include <icons/view_list.h>
+#include <icons/view_list16.h>
+#include <icons/view_table.h>
+#include <icons/view_table16.h>
+#include <icons/sort_alpha.h>
+#include <icons/sort_alpha16.h>
+#include <icons/form.h>
+#include <icons/form16.h>
+#include <icons/journal.h>
+#include <icons/journal16.h>
+#include <icons/packager.h>
+#include <icons/packager16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -317,6 +354,42 @@ Image * g_iconTable[] = {
 	&g_action_open_icon,
 	&g_action_open16_icon,
 	&g_plus_icon,
+	&g_paste_icon,
+	&g_paste16_icon,
+	&g_delete_icon,
+	&g_delete16_icon,
+	&g_copy_icon,
+	&g_copy16_icon,
+	&g_back_icon,
+	&g_back16_icon,
+	&g_forward_icon,
+	&g_forward16_icon,
+	&g_undo_icon,
+	&g_undo16_icon,
+	&g_redo_icon,
+	&g_redo16_icon,
+	&g_file_search_icon,
+	&g_file_search16_icon,
+	&g_file_properties_icon,
+	&g_file_properties16_icon,
+	&g_properties_icon,
+	&g_properties16_icon,
+	&g_whats_this_icon,
+	&g_whats_this16_icon,
+	&g_view_icon_icon,
+	&g_view_icon16_icon,
+	&g_view_list_icon,
+	&g_view_list16_icon,
+	&g_view_table_icon,
+	&g_view_table16_icon,
+	&g_sort_alpha_icon,
+	&g_sort_alpha16_icon,
+	&g_form_icon,
+	&g_form16_icon,
+	&g_journal_icon,
+	&g_journal16_icon,
+	&g_packager_icon,
+	&g_packager16_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -362,6 +435,24 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(COMPUTER_SHUTDOWN)
 			CASE(ACTION_SAVE)
 			CASE(ACTION_OPEN)
+			CASE(PASTE)
+			CASE(DELETE)
+			CASE(COPY)
+			CASE(BACK)
+			CASE(FORWARD)
+			CASE(UNDO)
+			CASE(REDO)
+			CASE(FILE_SEARCH)
+			CASE(FILE_PROPERTIES)
+			CASE(PROPERTIES)
+			CASE(WHATS_THIS)
+			CASE(VIEW_ICON)
+			CASE(VIEW_LIST)
+			CASE(VIEW_TABLE)
+			CASE(SORT_ALPHA)
+			CASE(FORM)
+			CASE(JOURNAL)
+			CASE(PACKAGER)
 			#undef CASE
 		}
 	}

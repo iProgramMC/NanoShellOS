@@ -36,7 +36,7 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 void IconTestTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("Icon test", 300, 200, 540, 400, IconTestProc, WF_ALWRESIZ);
+	Window* pWindow = CreateWindow ("Icon test", 300, 200, 540, 540, IconTestProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_INFO;
 	
 	if (!pWindow)
