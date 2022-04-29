@@ -145,6 +145,11 @@ void CrashReporterCheck()
 			SLogMsg("Killing Process %s...", p->sIdentifier);
 			ExKillProcess(p);
 		}
+		else
+		{
+			// Just kill the task.
+			KeKillTask(crashInfo.m_pTaskKilled);
+		}
 	}
 	
 	// Check for low memory

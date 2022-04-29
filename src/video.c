@@ -718,14 +718,30 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 {
 	//TODO: memcpy method.
-	const uint32_t* fb = pImage->framebuffer;
+	/*const uint32_t* fb = pImage->framebuffer;
 	
 	int ixe = x + pImage->width, iye = y + pImage->height;
 	for (int iy = y; iy < iye; iy++)
 		for (int ix = x; ix < ixe; ix++)
 		{
 			VidPlotPixelInline(ix, iy, *(fb++));
-		}
+		}*/
+	
+	// TODO: More complete fill-in of the VBEData structure
+	VBEData data;
+	data.m_bitdepth = 2;
+	data.m_width    = data.m_pitch32 = pImage->width;
+	data.m_height   = pImage->height;
+	data.m_framebuffer32 = (uint32_t*)pImage->framebuffer;
+	
+	VidBitBlit(
+		g_vbeData,
+		x, y,
+		pImage->width, pImage->height,
+		&data,
+		0, 0,
+		BOP_SRCCOPY
+	);
 }
 void VidBlitImage(Image* pImage, int x, int y)
 {
@@ -911,14 +927,21 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 	//TODO: more safety checks??!
 	if (cx < 0) width  += cx, cx = 0;
 	if (cy < 0) height += cy, cy = 0;
-	if (x1 < 0) cx     -= x1, width  += x1, x1 = 0;
-	if (y1 < 0) cy     -= y1, height += x1, y1 = 0;
+	
+	if (mode == BOP_SRCCOPY)
+	{
+		if (x1 < 0) cx     -= x1, width  += x1, x1 = 0;
+		if (y1 < 0) cy     -= y1, height += x1, y1 = 0;
+	}
 	
 	if (width  > (int)pDest->m_width  - cx) width  = pDest->m_width  - cx;
 	if (height > (int)pDest->m_height - cy) height = pDest->m_height - cy;
 	
-	if (width  > (int)pSrc->m_width  - x1) width  = pSrc->m_width  - x1;
-	if (height > (int)pSrc->m_height - y1) height = pSrc->m_height - y1;
+	if (pSrc)
+	{
+		if (width  > (int)pSrc->m_width  - x1) width  = pSrc->m_width  - x1;
+		if (height > (int)pSrc->m_height - y1) height = pSrc->m_height - y1;
+	}
 	
 	if (width  < 0) return;
 	if (height < 0) return;
@@ -950,6 +973,25 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 				// Hrm. Also draw to the copy, you never know.
 				pdoffset = g_framebufferCopy + (yDest * pDest->m_width) + cx;
 				memcpy_ints(pdoffset, psoffset, width);
+			}
+		}
+	}
+	else if (mode == BOP_DSTFILL)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			//copy one scanline from cy to y1
+			int yDest = cy + y;
+			
+			//determine the offset for each scanline:
+			uint32_t* pdoffset = pDest->m_framebuffer32 + (yDest * pDest->m_pitch32) + cx;
+			
+			memset_ints(pdoffset, x1, width);
+			if (pDest == &g_mainScreenVBEData)
+			{
+				// Hrm. Also draw to the copy, you never know.
+				pdoffset = g_framebufferCopy + (yDest * pDest->m_width) + cx;
+				memset_ints(pdoffset, x1, width);
 			}
 		}
 	}

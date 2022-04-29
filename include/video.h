@@ -394,6 +394,7 @@ enum {
 	BOP_CAPTURE,//TODO
 	BOP_SRCCOPY,
 	BOP_SRCINVERT,
+	BOP_DSTFILL,       //<-- x1 will be the color to fill in.
 	BOP_WHITE,
 };
 void VidBitBlit(VBEData* pDest, int x, int y, int width, int height, VBEData* pSrc, int x1, int y1, uint32_t mode);

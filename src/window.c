@@ -441,30 +441,52 @@ void RedrawBackground (Rectangle rect)
 {
 	if (g_BackgroundSolidColorActive)
 	{
-		rect.right--, rect.bottom--;
-		VidFillRectangle(GetThemingParameter(P_BACKGROUND_COLOR), rect);
+		/*rect.right--, rect.bottom--;
+		VidFillRectangle(GetThemingParameter(P_BACKGROUND_COLOR), rect);*/
+		
+		VidBitBlit(
+			g_vbeData,
+			rect.left, rect.top,
+			rect.right  - rect.left,
+			rect.bottom - rect.top,
+			NULL,
+			(int)GetThemingParameter(P_BACKGROUND_COLOR),
+			0,
+			BOP_DSTFILL
+		);
+		
 		return;
 	}
 	
-	rect.right--;//TODO
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
-	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ()-1;
+	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ();
 	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight();
 	// if the rectangle is FULLY inside the 0,0 tile:
 	// (TODO: Make this work on any tile)
 	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
 	//  and call RedrawBackground on them)
-	int rlc = rect.left / g_background->width,  rrc = rect.right  / g_background->width;
-	int rtc = rect.top  / g_background->height, rbc = rect.bottom / g_background->height;
+	int rlc =  rect.left    / g_background->width,  rrc =  rect.right     / g_background->width;
+	int rtc = (rect.top-1)  / g_background->height, rbc = (rect.bottom-1) / g_background->height;
 	if (rlc == rrc && rtc == rbc && rlc == 0 && rtc == 0)
 	{
 		//just draw the clipped portion
-		for (int y = rect.top; y < rect.bottom; y++)
-		{
-			memcpy_ints (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left+1);
-			memcpy_ints (&g_framebufferCopy         [y * g_vbeData->m_width   + rect.left], &g_background->framebuffer[y * g_background->width + rect.left], rect.right-rect.left+1);
-		}
+		
+		// TODO: More complete fill-in of the VBEData structure
+		VBEData data;
+		data.m_bitdepth = 2;
+		data.m_width    = data.m_pitch32 = g_background->width;
+		data.m_height   = g_background->height;
+		data.m_framebuffer32 = (uint32_t*)g_background->framebuffer;
+		
+		VidBitBlit(g_vbeData,
+			rect.left, rect.top,
+			rect.right  - rect.left,
+			rect.bottom - rect.top,
+			&data,
+			rect.left, rect.top,
+			BOP_SRCCOPY
+		);
 		
 		return;
 	}
@@ -2482,6 +2504,43 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 	}
 }
 
+SAI bool IsForemostWindow(Window* pWindow)
+{
+	if (pWindow->m_isSelected) return true;//yeah
+	int sx = GetScreenWidth(), sy = GetScreenHeight();
+	
+	int windIndex = pWindow - g_windows;
+	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
+	int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
+	
+	int x2 = x + tw, y2 = y + th;
+	
+	for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
+	{
+		if (j >= sy) break;
+		for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+		{
+			short n = GetWindowIndexInDepthBuffer (i, j);
+			if (n != windIndex)
+				return false;
+		}
+		short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
+		if (n != windIndex)
+			return false;
+	}
+	for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+	{
+		short n = GetWindowIndexInDepthBuffer (i, y2 - 1);
+		if (n != windIndex)
+			return false;
+	}
+	short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
+	if (n != windIndex)
+		return false;
+	
+	return true;
+}
+
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
@@ -2496,7 +2555,6 @@ void RenderWindow (Window* pWindow)
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
 	int sx = GetScreenWidth(), sy = GetScreenHeight();
-	
 	int windIndex = pWindow - g_windows;
 	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
 	int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
@@ -2505,68 +2563,27 @@ void RenderWindow (Window* pWindow)
 	int o = 0;
 	int x2 = x + tw, y2 = y + th;
 	
-	/*while (y <= -1)
-	{
-		o += pWindow->m_vbeData.m_width;
-		y++;
-	}*/
 	if (y < 0)
 	{
 		o += -y * pWindow->m_vbeData.m_width;
 		y = 0;
 	}
+	
 	short n = GetWindowIndexInDepthBuffer (x, y);
 	if (n == -1)
 	{
+		SLogMsg("Updating during RenderWindow()? Why?");
 		UpdateDepthBuffer();
 	}
-	bool isAboveEverything = true;
 	
-	// we still gotta decide...
-	if (!pWindow->m_isSelected)
-	{
-		for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
-		{
-			if (j >= sy) break;
-			for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
-			{
-				short n = GetWindowIndexInDepthBuffer (i, j);
-				if (n != windIndex)
-				{
-					isAboveEverything = false;
-					break;
-				}
-			}
-			short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
-			if (n != windIndex)
-			{
-				isAboveEverything = false;
-			}
-		}
-		for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
-		{
-			short n = GetWindowIndexInDepthBuffer (i, y2 - 1);
-			if (n != windIndex)
-			{
-				isAboveEverything = false;
-				break;
-			}
-		}
-		short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
-		if (n != windIndex)
-		{
-			isAboveEverything = false;
-		}
-	}
-	
-	if (isAboveEverything)
+	if (IsForemostWindow(pWindow))
 	{
 		//optimization
 		//TODO FIXME: Crash when placing at the top right of the screen so that:
 		//1) The y top position < 0
 		//2) The x right position > ScreenWidth.
 		//The crappy fix I did "for the moment" is just to disallow placement of the window at y<0.
-		int ys = pWindow->m_rect.top;
+		/*int ys = pWindow->m_rect.top;
 		int ye = ys + pWindow->m_vbeData.m_height;
 		int kys = 0, kzs = 0;
 		if (ys < 0)
@@ -2599,7 +2616,18 @@ void RenderWindow (Window* pWindow)
 			memcpy_ints(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
 			oms += g_mainScreenVBEData.m_pitch32;
 			omc += g_mainScreenVBEData.m_width;
-		}
+		}*/
+		
+		VidBitBlit(
+			g_vbeData,
+			pWindow->m_rect.left,
+			pWindow->m_rect.top,
+			pWindow->m_vbeData.m_width,
+			pWindow->m_vbeData.m_height,
+			&pWindow->m_vbeData,
+			0, 0,
+			BOP_SRCCOPY
+		);
 	}
 	else
 	{
