@@ -233,7 +233,9 @@ void CfgLoadFromParms(const char* parms)
         if (!key || !val)
         {
             LogMsg("CfgLoadFromParms invalid parm string %s", p);
-            return;
+			
+			p = Tokenize (&state, NULL, " ");
+            continue;
         }
 
         ConfigEntry entry;
