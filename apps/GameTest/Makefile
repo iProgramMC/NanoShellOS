@@ -10,6 +10,7 @@ LII_DIR=../../crt/include
 CC=clang
 LD=ld
 AS=nasm
+STRIP=strip
 
 FEATURES=\
 	-DUSE_WINDOW  \
@@ -19,7 +20,7 @@ FEATURES=\
 	-DUSE_FILE    \
 	-DUSE_VIDEO
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -I $(SRC_DIR) $(FEATURES) -ffreestanding -target i686-elf -O2 -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -I $(SRC_DIR) $(FEATURES) -ffreestanding -target i686-elf -O2 -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 
@@ -42,6 +43,7 @@ $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES)
 	@echo "linking: $@"
 	@echo $(APP_O_FILES) $(LIB_O_FILES)
 	@$(LD) $(LDFLAGS) -o $@ $^
+	@$(STRIP) $@
 
 # Build Library
 $(BLD_DIR)/%.asm.o: $(LIS_DIR)/%.asm

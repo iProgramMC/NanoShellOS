@@ -10,6 +10,7 @@ LII_DIR=../../crt/include
 CC=clang
 LD=ld
 AS=nasm
+STRIP=strip
 
 FEATURES=\
 	-DUSE_CONSOLE    \
@@ -41,6 +42,7 @@ $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES)
 	@echo "linking: $@"
 	@echo $(APP_O_FILES) $(LIB_O_FILES)
 	@$(LD) $(LDFLAGS) -o $@ $^
+	@$(STRIP) $@
 
 # Build Library
 $(BLD_DIR)/%.asm.o: $(LIS_DIR)/%.asm
