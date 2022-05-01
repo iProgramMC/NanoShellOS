@@ -621,21 +621,24 @@ void ShellExecuteCommand(char* p)
 				as_bytes = true;
 		}
 		
-		int nAddr = atoi (secNum);
+		int nAddr = atoihex (secNum);
 		int nBytes= atoi (nBytesS);
 		
-		DumpBytesAsHex ((void*)nAddr, nBytes, as_bytes);
+		uint32_t* pAddr = (uint32_t*)((uintptr_t)nAddr);
+		
+		extern bool MmIsMapped(uintptr_t addr);
+		
+		DumpBytesAsHex ((void*)pAddr, nBytes, as_bytes);
 		
 		goto dont_print_usage;
 	print_usage:
 		LogMsg("Virtual Memory Spy (TM)");
-		LogMsg("Usage: mspy <page number> <numBytes> [/b]");
+		LogMsg("Usage: mspy <address hex> <numBytes> [/b]");
 		LogMsg("- bytes will be printed as groups of 4 unless [/b] is specified");
 		LogMsg("- numBytes will be capped off at 4096 and rounded down to 32");
-		LogMsg("- pageNumber must be a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");
+		LogMsg("- pageNumber must represent a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");
 		LogMsg("- if it's not valid or mapped then the system may CRASH or HANG!");
-		LogMsg("- pageNumber is in\x01\x0C DECIMAL\x01\x0F");
-		LogMsg("- note: cut off the last 3 digits of an address in hex and turn it to decimal to get a pageNumber");
+		LogMsg("- pageNumber is in\x01\x0C HEXADECIMAL\x01\x0F");
 	dont_print_usage:;
 	}
 	else if (strcmp (token, "cls") == 0)

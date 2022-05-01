@@ -209,8 +209,8 @@ void DumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)
 	if (ints > 1024) ints = 1024;
 	if (ints < 4) ints = 4;
 	
-	uint32_t* pAddr = (uint32_t*)((uintptr_t)nAddr << 12);
-	uint8_t* pAddrB = (uint8_t*) ((uintptr_t)nAddr << 12);
+	uint32_t *pAddr  = (uint32_t*)nAddr;
+	uint8_t  *pAddrB = (uint8_t*) nAddr;
 	for (int i = 0; i < ints; i += (8 >> as_bytes))
 	{
 		for (int j = 0; j < (8 >> as_bytes); j++)

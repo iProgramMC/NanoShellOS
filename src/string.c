@@ -136,6 +136,31 @@ int atoi(const char* str)
 	
 	return s * f;
 }
+int atoihex(const char* str) 
+{
+	int f = 0;
+	int s = 1;
+	int i = 0;
+	if (str[0] == '-')
+	{
+		i++;
+		s = -1;
+	}
+	for (; str[i] != '\0'; i++)
+	{
+		f = f * 16;
+		char c = str[i];
+		
+		if (c >= '0' && c <= '9')
+			f += c - '0';
+		else if (c >= 'A' && c <= 'F')
+			f += c - 'A' + 0xA;
+		else if (c >= 'a' && c <= 'f')
+			f += c - 'a' + 0xA;
+	}
+	
+	return s * f;
+}
 size_t strlen(const char* str) 
 {
 	size_t len = 0;
