@@ -30,6 +30,7 @@
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
 
+void MemorySpy();
 void ShellTaskTest(int arg)
 {
 	while (1)	
@@ -603,6 +604,12 @@ void ShellExecuteCommand(char* p)
 			goto print_usage;
 		}
 		
+		if (strcmp (secNum, "/f") == 0)
+		{
+			MemorySpy();
+			return;
+		}
+		
 		char* nBytesS = Tokenize(&state, NULL, " ");
 		if (!nBytesS)
 		{
@@ -634,6 +641,8 @@ void ShellExecuteCommand(char* p)
 	print_usage:
 		LogMsg("Virtual Memory Spy (TM)");
 		LogMsg("Usage: mspy <address hex> <numBytes> [/b]");
+		LogMsg("  OR   mspy /f");
+		LogMsg("- If [/f] is specified, a full-screen menu will popup");
 		LogMsg("- bytes will be printed as groups of 4 unless [/b] is specified");
 		LogMsg("- numBytes will be capped off at 4096 and rounded down to 32");
 		LogMsg("- pageNumber must represent a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");

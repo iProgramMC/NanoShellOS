@@ -20,6 +20,7 @@ void* fast_memset(void* bufptr, BYTE val, size_t size);
 // String functions
 size_t strgetlento(const char* str, char chr);
 int atoi(const char* str) ;
+int atoihex(const char* str) ;
 size_t strlen(const char* str) ;
 void* strcpy(const char* ds, const char* ss);
 void strtolower(char* as);

@@ -619,6 +619,22 @@ void MmFreePageUnsafe(void* pAddr)
 	g_pageEntries[addr].m_bPresent = false;
 	g_memoryAllocationSize[addr] = 0;
 }
+bool MmIsPageMapped(uint32_t pageAddr)
+{
+	uint32_t pageTableNum = (pageAddr >> 22);
+	uint32_t pageEntryNum = (pageAddr >> 12) & 0x3FF;
+	
+	if (pageAddr >= 0xC0000000 && pageAddr < 0xC0700000)
+		return true;
+	
+	if (pageAddr >= 0x80000000 && pageAddr < 0x80000000 + (PAGE_ENTRY_TOTAL << 12))
+	{
+		return (g_kernelPageEntries[((pageAddr - 0x80000000) >> 12)].m_bPresent);
+	}
+	
+	//TODO
+	return false;
+}
 //be sure to provide a decently sized physAddresses, or NULL
 void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uint32_t* physAddresses)
 {
