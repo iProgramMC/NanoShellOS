@@ -71,6 +71,7 @@ const char* g_pBugCheckReasonText[] = {
 	"INACCESSIBLE_BOOT_DEVICE",
 	"INIT_NOT_SPAWNABLE",
 	"CRITICAL_PROCESS_DIED",
+	"KERNEL_ASSERTION_FAILED",
 };
 
 const char* GetBugCheckReasonText(BugCheckReason reason)
@@ -94,10 +95,36 @@ const char* TransformTag(const char* tag, uint32_t range)
 	return tag;
 }
 
+bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, int nLine)
+{
+	Registers regs;
+	regs.eax = (uint32_t)pStr;
+	regs.ebx = (uint32_t)pFile;
+	regs.ecx = (uint32_t)pFunc;
+	regs.edx = (uint32_t)nLine;
+	
+	KeBugCheck(BC_EX_ASSERTION_FAILED, &regs);
+	
+	return false;
+}
+
 #define MAX_FRAMES 10
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 {
 	LogMsg("*** STOP: %x", reason);
+	
+	if (reason == BC_EX_ASSERTION_FAILED)
+	{
+		const char *pAssertionMsg  = (const char*)pRegs->eax;
+		const char *pAssertionFile = (const char*)pRegs->ebx;
+		const char *pAssertionFunc = (const char*)pRegs->ecx;
+		int         pAssertionLine =              pRegs->edx;
+		
+		LogMsg("Assertion failed:");
+		LogMsg("'%s' at %s:%d [%s]", pAssertionMsg,pAssertionFile,pAssertionLine,pAssertionFunc);
+		
+		return;
+	}
 	
 	if (pRegs)
 		DumpRegisters(pRegs);

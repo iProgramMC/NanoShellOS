@@ -13,6 +13,7 @@
 #include<stdbool.h>
 
 //#define EXPERIMENTAL
+//#define EXPERIMENTAL_RSDPTR
 #define EXPERIMENTAL_VMWARE
 
 typedef char byte;
@@ -48,6 +49,9 @@ extern void KeTaskDone();
 
 //SAI = Static and Always Inlined
 #define SAI static ALWAYS_INLINE inline
+
+bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, int nLine);
+#define ASSERT(condition) ((condition) || OnAssertionFail(#condition, __FILE__, __FUNCTION__, __LINE__))
 
 extern void WritePort(unsigned short port, unsigned char data);
 extern unsigned char ReadPort(unsigned short port);

@@ -47,6 +47,7 @@ enum {
 	BC_EX_INACCESSIBLE_BOOT_DEVICE,
 	BC_EX_INIT_NOT_SPAWNABLE,
 	BC_EX_CRITICAL_PROCESS_DIED,
+	BC_EX_ASSERTION_FAILED,
 };
 
 /* Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble. */
