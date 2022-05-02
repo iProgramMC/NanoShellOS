@@ -100,8 +100,6 @@ void RsdpAnalyze(RsdpDesc* pDesc)
 {
 	ASSERT(g_pRSDTTable == NULL);
 	
-	LogMsg("RSDT Address: %x", pDesc->m_rsdtAddress);
-	
 	//map it to some high memory address (like 0x3FFFF000)
 	
 	RsdtTable* pMem = (RsdtTable*)MmMapPhysMemFast(pDesc->m_rsdtAddress);
