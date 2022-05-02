@@ -154,3 +154,41 @@ void CrashReporterCheck()
 	
 	// Check for low memory
 }
+
+extern bool g_windowManagerRunning;
+void CrashReporterCheckNoWindow()
+{
+	if (g_windowManagerRunning) return;
+	
+	if (KeDidATaskCrash())
+	{
+		// OMG! A task died? Call the ambulance!!!
+		
+		// Allocate the registers so we can pass them onto the new task.
+		CrashInfo* pCrashInfo, crashInfo = *KeGetCrashedTaskInfo();
+		pCrashInfo = &crashInfo;
+		
+		
+		// Let the kernel know that we have processed its crash report.
+		KeAcknowledgeTaskCrash();
+		
+		// Print the crash output
+		LogMsg("Task %x (tag: '%s') has crashed, here're its details:", pCrashInfo->m_pTaskKilled, pCrashInfo->m_tag);
+		KeLogExceptionDetails(BC_EX_DEBUG, &pCrashInfo->m_regs);
+		
+		// Kill the process
+		if (crashInfo.m_pTaskKilled->m_pProcess)
+		{
+			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
+			SLogMsg("Killing Process %s...", p->sIdentifier);
+			ExKillProcess(p);
+		}
+		else
+		{
+			// Just kill the task.
+			KeKillTask(crashInfo.m_pTaskKilled);
+		}
+	}
+	
+	// Check for low memory
+}

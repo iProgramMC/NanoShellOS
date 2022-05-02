@@ -119,7 +119,41 @@ void MmFreeK (void* pAddr)
 	sti;
 }
 
-
 #endif
 
+
+// MMIO wrappers
+#if 1
+
+void *MmMapPhysMemFastUnsafe(uint32_t page);
+void *MmMapPhysMemFast(uint32_t page)
+{
+	cli;
+	void* ptr = MmMapPhysMemFastUnsafe(page);
+	sti;
+	return ptr;
+}
+void MmUnmapPhysMemFastUnsafe(void* pMem);
+void MmUnmapPhysMemFast(void* pMem)
+{
+	cli;
+	MmUnmapPhysMemFastUnsafe(pMem);
+	sti;
+}
+uint32_t MmMapPhysicalMemoryRWUnsafe(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
+uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
+{
+	cli;
+	uint32_t result = MmMapPhysicalMemoryRWUnsafe(hint, phys_start, phys_end, bReadWrite);
+	sti;
+	return result;
+}
+uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end)
+{
+	return MmMapPhysicalMemoryRW(hint, phys_start, phys_end, false);
+}
+
+
+
+#endif
 

@@ -61,5 +61,6 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs);
 void DumpRegisters (Registers*);
 //WORK: make sure the string you pass in here is large enough!!!
 void DumpRegistersToString (char* pStr, Registers* pRegs);
+void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs);
 
 #endif//_DEBUG_H

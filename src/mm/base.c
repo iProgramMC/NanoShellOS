@@ -66,9 +66,62 @@ int GetNumPhysPages()
 	//return e_frameBitsetSize;
 }
 
-/**
- * Kernel heap.
- */
+/* Quick memory map one page trick */
+#if 1
+
+/* This maps addresses to addresses in the high 0xFFs (i.e. 0xFFC00000 or higher) */
+PageEntry g_LastPageTable [1024] __attribute__((aligned(4096)));
+
+void MmInvalidateSinglePage(UNUSED uintptr_t add);
+void *MmMapPhysMemFastUnsafe(uint32_t page)
+{
+	int free_spot = -1;
+	for (int i = 0; i < 1024; i++)
+	{
+		if (!g_LastPageTable[i].m_bPresent)
+		{
+			free_spot = i;
+			break;
+		}
+	}
+	
+	if (free_spot == -1)
+		return NULL; // Too many memory mappings, try to free up some
+	
+	PageEntry *pEntry = &g_LastPageTable[free_spot];
+	
+	pEntry->m_pAddress = page >> 12;
+	
+	pEntry->m_bPresent       =
+	pEntry->m_bWriteThrough  =
+	pEntry->m_bCacheDisabled =
+	pEntry->m_bUserSuper     =
+	pEntry->m_bReadWrite     = 1;
+	
+	pEntry->m_bAccessed      =
+	pEntry->m_bDirty         = 0;
+	
+	void *pAddr =  (void*)(0xFFC00000 | (free_spot << 12) | (page & 0xFFF));
+	
+	MmInvalidateSinglePage( (uintptr_t) pAddr );
+	
+	return pAddr;
+}
+void MmUnmapPhysMemFastUnsafe(void* pMem)
+{
+	uintptr_t mem = (uintptr_t)pMem;
+	if (mem < 0xFFC00000) return;
+	
+	int i = (mem >> 12) & 0x3FF;
+	
+	g_LastPageTable[i].m_bPresent = false;
+	
+	MmInvalidateSinglePage (pMem);
+}
+
+#endif
+
+/* Kernel heap. */
  
 #if 1
 // Can allocate up to 256 MB of RAM.  No need for more I think,
@@ -227,7 +280,7 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	g_numPagesAvailable = GetNumFreePhysPages();
 }
 
-uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
+uint32_t MmMapPhysicalMemoryRWUnsafe(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
 {
 	// Get the hint offset in the page tables we should start out at
 	int page_table_offset = (int)((hint >> 12) & 0xFFF);
@@ -314,11 +367,6 @@ uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys
 	
 	return hint + (phys_start & 0xFFF);
 }
-uint32_t MmMapPhysicalMemory(uint32_t hint, uint32_t phys_start, uint32_t phys_end)
-{
-	return MmMapPhysicalMemoryRW(hint, phys_start, phys_end, false);
-}
-
 #endif
 
 
@@ -425,6 +473,9 @@ static void MmSetupKernelHeapPages()
 		index++;
 	}
 	
+	//set the last entry of the page directory to use our mmio focused page table:
+	g_curPageDir[1023] = ((int)g_LastPageTable - BASE_ADDRESS) | PAGE_BITS;
+	
 	MmTlbInvalidate();
 }
 
@@ -519,8 +570,8 @@ void MmInit(multiboot_info_t* pInfo)
 
 void MmInvalidateSinglePage(UNUSED uintptr_t add)
 {
-	//__asm__ volatile ("invlpg (%0)\n\t"::"r"(add));
-	add += 0;
+	//__asm__ volatile ("invlpg (%0)\n\t"::"r"(add):"memory");
+	(void)add;
 	MmTlbInvalidate();
 }
 

@@ -13,7 +13,7 @@
 #include<stdbool.h>
 
 //#define EXPERIMENTAL
-//#define EXPERIMENTAL_RSDPTR
+#define EXPERIMENTAL_RSDPTR
 #define EXPERIMENTAL_VMWARE
 
 typedef char byte;

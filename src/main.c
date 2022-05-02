@@ -104,7 +104,8 @@ bool VmwInit();
 
 bool gInitializeVB;
 extern void KiIdtInit2();
-	
+extern void AttemptLocateRsdPtr();
+extern void CrashReporterCheckNoWindow();
 __attribute__((noreturn))
 void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 {
@@ -179,6 +180,8 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	// Initialize the configuration system
 	CfgInitialize();
 	
+	KePrintSystemVersion();
+	
 	if (!VidIsAvailable())
 	{
 		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
@@ -214,8 +217,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	
 	// Allow task switching
 	KiPermitTaskSwitching();
-
-	LogMsg("NanoShell is initializing... please wait");
 	
 	// Initialize the sound blaster device
 	SbInit();
@@ -243,12 +244,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 
 	//Precalculate an address we can use
 	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
-	
-	/*if (initRdModule->mod_start >= 0x100000 && initRdModule->mod_start <= 0x500000)
-	{
-		LogMsg("OS State not supported.  Initrd module start: %x", initRdModule->mod_start);
-		KeStopSystem();
-	}*/
 	
 	// We should no longer have the problem of it hitting our frame bitset.
 	
@@ -308,12 +303,14 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	
 	FiClose (fd);
 
-	// This is a hack, because VirtualBox does not emulate RTC update_finished interrupts
-	LogMsg("(waiting to get time...)");
-	/*while (!g_gotTime)
+	#ifdef EXPERIMENTAL_RSDPTR
+	pEntry = CfgGetEntry ("Driver::Acpi");
+	if (pEntry)
 	{
-		hlt;
-	}*/
+		if (strcmp (pEntry->value, "on") == 0)
+			AttemptLocateRsdPtr();
+	}
+	#endif
 	
 	#ifdef EXPERIMENTAL
 	pEntry = CfgGetEntry ("Driver::VirtualBox");
@@ -333,14 +330,16 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	//MouseInit ();
 	
 	MouseInit();
-	if (VmwDetect())
-		VmwInit();
 	
-	extern Console* g_currentConsole;
-	//CoClearScreen(g_currentConsole);
-	//g_currentConsole->curX = g_currentConsole->curY = 0;
+	pEntry = CfgGetEntry ("Driver::VMware");
+	if (pEntry)
+	{
+		if (strcmp (pEntry->value, "on") == 0)
+			if (VmwDetect())
+				VmwInit();
+	}
 	
-	KePrintSystemVersion();
+	LogMsg("System ready to roll!");
 
 	// print the hello text, to see if the OS booted ok
 	if (!VidIsAvailable())
@@ -379,9 +378,14 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	Task* pTask = KeStartTask(func, 0, &err_code);
 	if (!pTask)
 		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);
+	KeTaskAssignTag(pTask, "init");
 	
 	//TODO: Panic when this process dies.
 	
 	// Idle Loop
-	while (true) hlt;
+	while (true)
+	{
+		CrashReporterCheckNoWindow();
+		hlt;
+	}
 }
