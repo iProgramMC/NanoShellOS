@@ -251,3 +251,20 @@ void CfgLoadFromParms(const char* parms)
 
     MmFreeK (work);
 }
+
+const char *CfgGetEntryValue(const char *pKey)
+{
+	ConfigEntry* pEntry = CfgGetEntry(pKey);
+	
+	if (!pEntry) return NULL;
+	
+	return pEntry->value;
+}
+
+bool CfgEntryMatches(const char *pKey, const char *pValueCmp)
+{
+	const char *pValue = CfgGetEntryValue (pKey);
+	if (!pValue) return false;
+	return strcmp (pValue, pValueCmp) == 0;
+}
+

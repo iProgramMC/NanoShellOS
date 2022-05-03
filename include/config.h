@@ -36,4 +36,7 @@ void CfgLoadFromParms(const char* parms);
 ConfigEntry* CfgAddEntry(ConfigEntry *pEntry);
 ConfigEntry* CfgGetEntry(const char* key);
 
+const char *CfgGetEntryValue(const char *pKey);
+bool CfgEntryMatches(const char *pKey, const char *pValueCmp);
+
 #endif//_CONFIG_H

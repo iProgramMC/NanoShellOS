@@ -872,8 +872,32 @@ void ShellInit()
 	g_pCwdNode = FsResolvePath (g_cwd);
 }
 
+void ShellPrintMotd()
+{
+	if (!CfgEntryMatches("Shell::ShowMotd", "yes")) return;
+	
+	//TODO: Hmm, maybe we should allow multiline MOTD
+	const char *pValue = CfgGetEntryValue("Shell::Motd");
+	
+	bool bCenter = CfgEntryMatches ("Shell::MotdCenter", "yes");
+	
+	if (bCenter)
+	{
+		int slen = strlen (pValue);
+		if (slen <= g_currentConsole->width)
+		{
+			//output a number of spaces until the motd itself
+			int up_to = (g_currentConsole->width - slen) / 2;
+			for (int i = 0; i < up_to; i++) LogMsgNoCr(" ");
+		}
+	}
+	LogMsg("%s", pValue);
+}
+
 void ShellRun(UNUSED int unused_arg)
 {
+	ShellPrintMotd();
+	
 	while (1) 
 	{
 		LogMsgNoCr("%s>", g_cwd);
