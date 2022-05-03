@@ -46,7 +46,7 @@ int g_nKbExtRam = 0;
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), April 2022 - " VersionString);
+	LogMsg("NanoShell (TM), May 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam,
 				 GetNumPhysPages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);

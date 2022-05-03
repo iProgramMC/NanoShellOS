@@ -6,6 +6,7 @@
 ******************************************/
 #include <wterm.h>
 #include <icon.h>
+#include <wbuiltin.h>
 #include <misc.h>
 
 int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
@@ -15,6 +16,7 @@ extern Console *g_currentConsole, *g_focusedOnConsole, g_debugConsole, g_debugSe
 extern uint32_t g_vgaColorsToRGB[];
 void ShellExecuteCommand(char* p);
 void CoRefreshChar (Console *this, int x, int y);
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	Console* pConsole = (Console*)pWindow->m_data;
@@ -58,8 +60,17 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			if (pConsole)
 			{
 				pConsole->m_dirty = true;
+				
+				// Draw the rectangle around the console window.
+				Rectangle r;
+				
+				VidSetFont(g_TerminalFont);//we like this font right here
+				int charWidth = GetCharWidth('W'), charHeite = GetLineHeight();
+				VidSetFont(SYSTEM_FONT);
+				RECT (r, 3, 3 + TITLE_BAR_HEIGHT, pConsole->width * charWidth + 3, pConsole->height * charHeite + 4);
+				
+				RenderButtonShapeSmallInsideOut (r, 0xBFBFBF, 0x808080, TRANSPARENT);
 			}
-			
 		case EVENT_UPDATE:
 		{
 			if (pConsole)
@@ -152,8 +163,8 @@ void TerminalHostTask(int arg)
 	Window *pWindow = CreateWindow(
 		hookDebugConsole ? "NanoShell debug console" : "NanoShell Terminal", 
 		array[0], array[1], 
-		array[2] *  charWidth + 8 + WINDOW_RIGHT_SIDE_THICKNESS, 
-		array[3] *  charHeite + 9 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
+		array[2] *  charWidth + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS, 
+		array[3] *  charHeite + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
 		TerminalHostProc,
 		0);
 	if (!pWindow)
@@ -181,8 +192,8 @@ void TerminalHostTask(int arg)
 		g_debugSerialConsole.width  = array[2];
 		g_debugSerialConsole.height = array[3];
 		g_debugSerialConsole.font = g_TerminalFont;
-		g_debugSerialConsole.offX = 4;
-		g_debugSerialConsole.offY = 5 + TITLE_BAR_HEIGHT;
+		g_debugSerialConsole.offX = 3 + 2;
+		g_debugSerialConsole.offY = 3 + 2 + TITLE_BAR_HEIGHT;
 		g_debugSerialConsole.color = DefaultConsoleColor;//green background
 		g_debugSerialConsole.curX = basic_console.curY = 0;
 		g_debugSerialConsole.pushOrWrap = 0; //wrap for now
@@ -207,8 +218,8 @@ void TerminalHostTask(int arg)
 		basic_console.width  = array[2];
 		basic_console.height = array[3];
 		basic_console.font = g_TerminalFont;
-		basic_console.offX = 4;
-		basic_console.offY = 5 + TITLE_BAR_HEIGHT;
+		basic_console.offX = 3 + 2;
+		basic_console.offY = 3 + 2 + TITLE_BAR_HEIGHT;
 		basic_console.color = DefaultConsoleColor;//green background
 		basic_console.curX = basic_console.curY = 0;
 		basic_console.pushOrWrap = 0; //wrap for now
@@ -270,7 +281,7 @@ void TerminalHostTask(int arg)
 		timeout--;
 		if (timeout == 0)
 		{
-			timeout = 20;
+			timeout = 10;
 			if (pWindow->m_isSelected || basic_console.m_dirty)
 			{
 				WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
