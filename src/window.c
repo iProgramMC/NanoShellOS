@@ -1801,12 +1801,6 @@ void WindowManagerOnShutdown(void)
 }
 void SetupWindowManager()
 {
-	if (g_windowManagerRunning)
-	{
-		LogMsg("Cannot start up window manager again.");
-		return;
-	}
-	
 	LogMsg("Please wait...");
 	
 	memset (&g_windows, 0, sizeof (g_windows));
@@ -1892,6 +1886,12 @@ void HandleKeypressOnWindow(unsigned char key)
 int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
+	if (g_windowManagerRunning)
+	{
+		LogMsg("Cannot start up window manager again.");
+		return;
+	}
+	
 	SetupWindowManager();
 	
 	g_pWindowMgrTask = KeGetRunningTask ();

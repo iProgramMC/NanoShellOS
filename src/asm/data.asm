@@ -4,6 +4,7 @@
 ; 
 ;    Assembly global variables module
 ;
+
 section .data
 	
 global g_kernelPageDirectory
