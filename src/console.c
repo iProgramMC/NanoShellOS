@@ -74,164 +74,168 @@ void SetConsole(Console* pConsole) {
 void ResetConsole() {
 	g_currentConsole = &g_debugConsole;
 }
-void CoClearScreen(Console *this) {
-	if (this->type == CONSOLE_TYPE_TEXT) {
-		uint16_t lolo = TextModeMakeChar(this->color, ' ');
-		for (int i = 0; i < this->width*this->height; i++) this->textBuffer[i] = lolo;
-	}
-	else if (this->type == CONSOLE_TYPE_FRAMEBUFFER)
-	{
-		VidFillScreen (g_vgaColorsToRGB[this->color >> 4]);
-	}
-	else if (this->type == CONSOLE_TYPE_WINDOW)
-	{
-		//VidFillScreen (g_vgaColorsToRGB[this->color >> 4]);
-		for (int y = 0; y < this->height; y++)
-			for (int x = 0; x < this->width; x++)
-				CoPlotChar(this, x, y, 0);
-	}
-	else
-	{
-		//print <height> newlines as a last resort:
-		for (int i = 0; i < this->height; i++)
-		{
-			CoPrintChar(this, '\n');
-		}
-	}
-}
-void CoInitAsText(Console *this) {
-	this->curX = this->curY = 0;
-	this->width  = g_textWidth;
-	this->height = g_textHeight;
-	this->type = CONSOLE_TYPE_TEXT;
-	this->textBuffer = g_pBufferBase;
-	this->pushOrWrap = 0;//push
-	uint16_t lolo = TextModeMakeChar(this->color, ' ');
-	for (int i = 0; i < this->width*this->height; i++) this->textBuffer[i] = lolo;
-}
-void CoInitAsE9Hack(Console *this) {
-	this->curX = this->curY = 0;
-	this->width  = 0;
-	this->height = 0;
-	this->type = CONSOLE_TYPE_E9HACK;
-	this->textBuffer = NULL;
-	this->pushOrWrap = 0;//push
-	uint16_t lolo = TextModeMakeChar(this->color, ' ');
-	for (int i = 0; i < this->width*this->height; i++) this->textBuffer[i] = lolo;
-}
-void CoInitAsGraphics(Console *this) {
-	this->curX = this->curY = 0;
-	this->width = GetScreenSizeX() / 8;
-	this->height = GetScreenSizeY() / (g_uses8by16Font ? 16 : 8);
-	this->type = CONSOLE_TYPE_FRAMEBUFFER;
-	this->color = DefaultConsoleColor;//default
-	this->pushOrWrap = 0;//push
-	CoClearScreen (this);
-}
-void CoMoveCursor(Console* this) {
-	if (this->type != CONSOLE_TYPE_TEXT) return; // Not Initialized
-	if (this->textBuffer == g_pBufferBase) {
-		uint16_t cursorLocation = this->curY * this->width + this->curX;
-		WritePort(0x3d4, 14);
-		WritePort(0x3d5, cursorLocation >> 8);
-		WritePort(0x3d4, 15);
-		WritePort(0x3d5, cursorLocation);
-	}
-}
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-void CoPlotChar (Console *this, int x, int y, char c) {
-	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
-	this->m_dirty = true;
-	VBEData* backup = g_vbeData;
-	if (this->type == CONSOLE_TYPE_WINDOW)
-		g_vbeData = this->m_vbeData;
-	else if (this->type == CONSOLE_TYPE_FRAMEBUFFER)
-	{
-		g_vbeData = &g_mainScreenVBEData;
-		this->offX = this->offY = 0;
-	}
-		
+
+// The mess that goes into generalizing the console implementation to support any console device ever invented. Ever.
+#if 1
 	
-	if (this->type == CONSOLE_TYPE_TEXT || this->type == CONSOLE_TYPE_WINDOW)
+	// Function forward definitions
+	#if 1
+		void CoE9xClearScreen  (Console *this);
+		void CoSerClearScreen  (Console *this);
+		void CoVbeClearScreen  (Console *this);
+		void CoVgaClearScreen  (Console *this);
+		void CoWndClearScreen  (Console *this);
+		void CoE9xInit         (Console *this);
+		void CoSerInit         (Console *this);
+		void CoVbeInit         (Console *this);
+		void CoVgaInit         (Console *this);
+		void CoWndInit         (Console *this);
+		void CoE9xPlotChar     (Console *this, int,  int,  char);
+		void CoSerPlotChar     (Console *this, int,  int,  char);
+		void CoVbePlotChar     (Console *this, int,  int,  char);
+		void CoVgaPlotChar     (Console *this, int,  int,  char);
+		void CoWndPlotChar     (Console *this, int,  int,  char);
+		bool CoE9xPrintCharInt (Console *this, char, char, bool);
+		bool CoSerPrintCharInt (Console *this, char, char, bool);
+		bool CoVisComPrnChrInt (Console *this, char, char, bool);//common for visual consoles
+		void CoE9xRefreshChar  (Console *this, int,  int);
+		void CoSerRefreshChar  (Console *this, int,  int);
+		void CoVbeRefreshChar  (Console *this, int,  int);
+		void CoVgaRefreshChar  (Console *this, int,  int);
+		void CoWndRefreshChar  (Console *this, int,  int);
+		void CoE9xUpdateCursor (Console *this);
+		void CoSerUpdateCursor (Console *this);
+		void CoVbeUpdateCursor (Console *this);
+		void CoVgaUpdateCursor (Console *this);
+		void CoWndUpdateCursor (Console *this);
+		void CoE9xScrollUpByOne(Console *this);
+		void CoSerScrollUpByOne(Console *this);
+		void CoVbeScrollUpByOne(Console *this);
+		void CoVgaScrollUpByOne(Console *this);
+		void CoWndScrollUpByOne(Console *this);
+	#endif
+	
+	// Type definitions
+	#if 1
+		typedef void (*tCoClearScreen)  (Console *this);
+		typedef void (*tCoInit)         (Console *this);
+		typedef void (*tCoPlotChar)     (Console *this, int,  int,  char);
+		typedef bool (*tCoPrintCharInt) (Console *this, char, char, bool);
+		typedef void (*tCoRefreshChar)  (Console *this, int,  int);
+		typedef void (*tCoUpdateCursor) (Console *this);
+		typedef void (*tCoScrollUpByOne)(Console *this);
+	#endif
+	
+	// Array definitions
+	#if 1
+		static tCoClearScreen g_clear_screen[] = {
+			NULL,
+			CoVgaClearScreen,
+			CoVbeClearScreen,
+			CoSerClearScreen,
+			CoE9xClearScreen,
+			CoWndClearScreen,
+		};
+		static tCoInit g_init[] = {
+			NULL,
+			CoVgaInit,
+			CoVbeInit,
+			CoSerInit,
+			CoE9xInit,
+			CoWndInit,
+		};
+		static tCoPlotChar g_plot_char[] = {
+			NULL,
+			CoVgaPlotChar,
+			CoVbePlotChar,
+			CoSerPlotChar,
+			CoE9xPlotChar,
+			CoWndPlotChar,
+		};
+		static tCoPrintCharInt g_print_char_int[] = {
+			NULL,
+			CoVisComPrnChrInt,
+			CoVisComPrnChrInt,
+			CoSerPrintCharInt,
+			CoE9xPrintCharInt,
+			CoVisComPrnChrInt,
+		};
+		static tCoRefreshChar g_refresh_char[] = {
+			NULL,
+			CoVgaRefreshChar,
+			CoVbeRefreshChar,
+			CoSerRefreshChar,
+			CoE9xRefreshChar,
+			CoWndRefreshChar,
+		};
+		static tCoUpdateCursor g_update_cursor[] = {
+			NULL,
+			CoVgaUpdateCursor,
+			CoVbeUpdateCursor,
+			CoSerUpdateCursor,
+			CoE9xUpdateCursor,
+			CoWndUpdateCursor,
+		};
+		static tCoUpdateCursor g_scroll_up_by_one[] = {
+			NULL,
+			CoVgaScrollUpByOne,
+			CoVbeScrollUpByOne,
+			CoSerScrollUpByOne,
+			CoE9xScrollUpByOne,
+			CoWndScrollUpByOne,
+		};
+	#endif
+	
+	// The functions themselves.
+	void CoClearScreen(Console *this)
 	{
-		uint16_t chara = TextModeMakeChar (this->color, c);
-		this->textBuffer [x + y * this->width] = chara;
+		g_clear_screen[this->type](this);
 	}
-	if (this->type == CONSOLE_TYPE_FRAMEBUFFER)
+	void CoInit(Console *this)
 	{
-		VidPlotChar (c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
-		g_vbeData = backup;
+		g_init[this->type](this);
 	}
-	/*if (this->type == CONSOLE_TYPE_WINDOW)
+	void CoInitAsText(Console *this)
 	{
-		VidPlotChar (c, this->offX + x * this->cwidth, this->offY + y  * this->cheight, g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
-		g_vbeData = backup;
-	}*/
-}
-void CoRefreshChar (Console *this, int x, int y) {
-	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
-	VBEData* backup = g_vbeData;
-	if (this->type == CONSOLE_TYPE_WINDOW)
+		this->type = CONSOLE_TYPE_TEXT;
+		CoInit(this);
+	}
+	void CoInitAsE9Hack(Console *this)
 	{
-		g_vbeData = this->m_vbeData;
-		uint16_t cd = this->textBuffer[y * this->width + x];
-		
-		VidPlotChar (cd & 0xFF, this->offX + x * this->cwidth, this->offY + y  * this->cheight, g_vgaColorsToRGB[(cd>>8) & 0xF], g_vgaColorsToRGB[cd >> 12]);
-		g_vbeData = backup;
+		this->type = CONSOLE_TYPE_E9HACK;
+		CoInit(this);
 	}
-}
-void CoScrollUpByOne(Console *this) {
-	this->m_dirty = true;
-	if (this->type == CONSOLE_TYPE_WINDOW) {
-		if (this->pushOrWrap) {
-			//CoClearScreen(this);
-			this->curX = this->curY = 0;
-			return;
-		}
-		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
-		for (int i = 0; i < this->width; i++)
-		{
-			CoPlotChar (this, i, this->height - 1, 0);
-		}
-	}
-	else if (this->type == CONSOLE_TYPE_TEXT) {
-		if (this->pushOrWrap) {
-			//CoClearScreen(this);
-			this->curX = this->curY = 0;
-			return;
-		}
-		memcpy (this->textBuffer, &this->textBuffer[this->width], this->width * (this->height - 1) * sizeof(short));
-		for (int i=0; i<this->width; i++)
-		{
-			CoPlotChar (this, i, this->height - 1, 0);
-		}
-	}
-	else if (this->type != CONSOLE_TYPE_E9HACK)
+	void CoInitAsGraphics(Console *this)
 	{
-		if (this->pushOrWrap)
-		{
-			CoClearScreen(this);
-			this->curX = this->curY = 0;
-		}
-		else
-		{
-			int htChar = 1 << (3 + g_uses8by16Font);
-			VidShiftScreen (htChar);
-			VidFillRect (g_vgaColorsToRGB[this->color >> 4], 0, (this->height - 1) * htChar, GetScreenSizeX() - 1, GetScreenSizeY() - 1);
-		}
+		this->type = CONSOLE_TYPE_FRAMEBUFFER;
+		CoInit(this);
 	}
-}
-bool g_shouldntUpdateCursor = false;
+	void CoMoveCursor(Console* this)
+	{
+		g_update_cursor[this->type](this);
+	}
+	void CoPlotChar (Console *this, int x, int y, char c)
+	{
+		g_plot_char[this->type](this,x,y,c);
+	}
+	void CoRefreshChar (Console *this, int x, int y)
+	{
+		g_refresh_char[this->type](this,x,y);
+	}
+	void CoScrollUpByOne(Console *this)
+	{
+		g_scroll_up_by_one[this->type](this);
+	}
+	bool CoPrintCharInternal (Console* this, char c, char next, bool bDontUpdateCursor)
+	{
+		return g_print_char_int[this->type](this,c,next,bDontUpdateCursor);
+	}
+#endif
 //returns a bool, if it's a true, we need to skip the next character.
-bool CoPrintCharInternal (Console* this, char c, char next) {
-	if (this->type == CONSOLE_TYPE_E9HACK) 
+bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor)
+{
+	switch (c)
 	{
-		WritePort(0xE9, c);
-		//return; // Not Initialized
-		return false;
-	}
-	if (this->type == CONSOLE_TYPE_NONE) return false; // Not Initialized
-	switch (c) {
 		case '\x01':
 			//allow foreground color switching.
 			//To use this, just type `\x01\x0B`, for example, to switch to bright cyan
@@ -295,21 +299,25 @@ bool CoPrintCharInternal (Console* this, char c, char next) {
 			break;
 		}
 	}
-	if (!g_shouldntUpdateCursor) CoMoveCursor(this);
+	if (!bDontUpdateCursor) CoMoveCursor(this);
 	return false;
 }
+
 void CoPrintChar (Console* this, char c)
 {
-	CoPrintCharInternal(this, c, 0);
+	CoPrintCharInternal(this, c, '\0', true);
 }
-void CoPrintString (Console* this, const char *c) {
+void CoPrintString (Console* this, const char *c)
+{
 	if (this->type == CONSOLE_TYPE_NONE) return; // Not Initialized
-	g_shouldntUpdateCursor = true;
-	while (*c) {
-		if (CoPrintCharInternal(this, *c, *(c+1))) c++;
+	while (*c)
+	{
+		// if we need to advance 2 characters instead of 1:
+		if (CoPrintCharInternal(this, *c, *(c + 1), false))
+			c++;
+		// advance the one we would've anyways
 		c++;
 	}
-	g_shouldntUpdateCursor = false;
 	CoMoveCursor(this);
 }
 
