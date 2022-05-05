@@ -41,6 +41,7 @@ void KeTaskDone(void);
 #define cli
 #define sti
 
+#define LOCK_FPS
 #define LOCK_MS 16 // roughly 60 hz
 #define LAG_DEBUG
 
@@ -644,6 +645,10 @@ bool RectangleContains(Rectangle*r, Point*p)
 {
 	return (r->left <= p->x && r->right >= p->x && r->top <= p->y && r->bottom >= p->y);
 }
+bool RectangleOverlap(Rectangle *r1, Rectangle *r2)
+{
+	return (r1->left <= r2->right && r1->right >= r2->left && r1->top <= r2->bottom && r1->bottom >= r2->top);
+}
 
 Window g_windows [WINDOWS_MAX];
 
@@ -689,6 +694,11 @@ void ResetWindowDrawOrder()
 
 void AddWindowToDrawOrder(short windowIndex)
 {
+	for (size_t i = 0; i < ARRAY_COUNT (g_windowDrawOrder); i++)
+	{
+		if (g_windowDrawOrder [i] == windowIndex)
+			g_windowDrawOrder [i] =  -1;
+	}
 	memcpy (g_windowDrawOrder, g_windowDrawOrder+1, sizeof(g_windowDrawOrder)-sizeof(short));
 	g_windowDrawOrder[WINDOWS_MAX-1] = windowIndex;
 }
@@ -727,6 +737,8 @@ void InitWindowDepthBuffer ()
 	
 	g_windowDepthBufferSzBytes = sizeof (short) * GetScreenSizeX() * GetScreenSizeY();
 	g_windowDepthBuffer = MmAllocateK(g_windowDepthBufferSzBytes);
+	
+	ResetWindowDrawOrder ();
 }
 void SetWindowDepthBuffer (int windowIndex, int x, int y)
 {
@@ -939,7 +951,7 @@ void WindowManagerShutdown(bool wants_restart_too)
 	g_shutdownWantReb = wants_restart_too;
 }
 
-void UndrawWindow (Window* pWindow)
+void UndrawWindow (Window* pWnd)
 {
 	VBEData* backup = g_vbeData;
 	VidSetVBEData(NULL);
@@ -948,64 +960,50 @@ void UndrawWindow (Window* pWindow)
 	
 	LockAcquire (&g_BackgdLock);
 	
-	Rectangle r = pWindow->m_rect;
+	Rectangle r = pWnd->m_rect;
 	//redraw the background and all the things underneath:
 	RedrawBackground(r);
 	
 	LockFree (&g_BackgdLock);
 	
-	// draw the windows below it
-	int sz=0; Window* windowDrawList[WINDOWS_MAX];
+	// draw the windows below it, in their z-order.
+	int sz = 0;
+	Window* windowDrawList[WINDOWS_MAX];
 	
-	//higher = faster, but may miss some smaller windows
-	for (int y = pWindow->m_rect.top; y < pWindow->m_rect.bottom; y += 1) {
-		for (int x = pWindow->m_rect.left; x <= pWindow->m_rect.right; x += 1) {
-			short h = GetWindowIndexInDepthBuffer(x,y);
-			if (h == -1) continue;
-			//check if it's present in the windowDrawList
-			Window* pWindowToCheck = GetWindowFromIndex(h);
-			bool exists = false;
-			for (int i = 0; i < sz; i++) {
-				if (windowDrawList[i] == pWindowToCheck) {
-					exists = true; break;
-				}
-			}
-			if (!exists) 
-			{
-				windowDrawList[sz++] = pWindowToCheck;
-			}
-		}
+	sz = 0;
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	{
+		int drawOrder = g_windowDrawOrder[i];
+		if (drawOrder < 0) continue;
+		
+		Window* pWindow = &g_windows[drawOrder];
+		
+		if (RectangleOverlap (&pWindow->m_rect, &pWnd->m_rect))
+			windowDrawList[sz++] = pWindow;
 	}
 	
 	// We've added the windows to the list, so draw them. We don't need to worry
 	// about windows above them, as the way we're drawing them makes it so pixels
 	// over the window aren't overwritten.
 	//DebugLogMsg("Drawing %d windows below this one", sz);
-	for (int i=0; i<sz; i++) 
+	for (int i = sz - 1; i >= 0; i--) 
 	{
-		//WindowRegisterEvent (windowDrawList[i], EVENT_PAINT, 0, 0);
-		//windowDrawList[i]->m_vbeData.m_dirty = true;
-		//windowDrawList[i]->m_renderFinished = true;
 		if (windowDrawList[i]->m_hidden) continue;
-		
 		// Hrm... we should probably use the new VidBitBlit for this
 		
 		VidBitBlit (
 			g_vbeData,
-			pWindow->m_rect.left,
-			pWindow->m_rect.top,
-			pWindow->m_rect.right  - pWindow->m_rect.left,
-			pWindow->m_rect.bottom - pWindow->m_rect.top,
+			pWnd->m_rect.left,
+			pWnd->m_rect.top,
+			pWnd->m_rect.right  - pWnd->m_rect.left,
+			pWnd->m_rect.bottom - pWnd->m_rect.top,
 			&windowDrawList[i]->m_vbeData,
-			pWindow->m_rect.left - windowDrawList[i]->m_rect.left,
-			pWindow->m_rect.top  - windowDrawList[i]->m_rect.top,
+			pWnd->m_rect.left - windowDrawList[i]->m_rect.left,
+			pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
 			BOP_SRCCOPY
 		);
 	}
 	
-	
-	
-	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
 	g_vbeData = backup;
 }
 
@@ -1020,8 +1018,20 @@ static void ShowWindowUnsafe (Window* pWindow)
 	pWindow->m_hidden = false;
 	UpdateDepthBuffer();
 	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
-	pWindow->m_vbeData.m_dirty = true;
-	pWindow->m_renderFinished = true;
+	//pWindow->m_vbeData.m_dirty = true;
+	//pWindow->m_renderFinished = true;
+	
+	// Render it to the vbeData:
+	VidBitBlit (
+		g_vbeData,
+		pWindow->m_rect.left,
+		pWindow->m_rect.top,
+		pWindow->m_vbeData.m_width,
+		pWindow->m_vbeData.m_height,
+		&pWindow->m_vbeData,
+		0, 0,
+		BOP_SRCCOPY
+	);
 }
 
 void HideWindow (Window* pWindow)
@@ -1632,14 +1642,11 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	if (!g_windowManagerRunning) return;
 	if (g_currentlyClickedWindow == -1) return;
 	
-	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
 	mouseX = g_mouseX;
 	mouseY = g_mouseY;
 	
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
-	
-//	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
 	
 	Window* pWindow = GetWindowFromIndex(g_currentlyClickedWindow);
 	if (pWindow->m_isBeingDragged)
@@ -1674,7 +1681,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		}
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
-		pWindow->m_renderFinished = true;
+		pWindow->m_renderFinished = false;
 		pWindow->m_isBeingDragged = false;
 		ShowWindowUnsafe(pWindow);
 	}
@@ -1999,11 +2006,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					pWindow->m_renderFinished = false;
 					
 					//ACQUIRE_LOCK(g_backgdLock);
-					cli;
-					
 					RenderWindow(pWindow);
-					
-					sti;
 					
 					//FREE_LOCK(g_backgdLock);
 					
@@ -2052,11 +2055,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			HandleKeypressOnWindow(key);
 		}
 		UpdateAltTabWindow();
-		//cli;
+		
 		LockAcquire (&g_ClickQueueLock);
 		
 		RefreshMouse();
-		//ACQUIRE_LOCK (g_screenLock);
+		
 		for (int i = 0; i < g_clickQueueSize; i++)
 		{
 			switch (g_clickQueue[i].clickType)
@@ -2069,9 +2072,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 		}
 		g_clickQueueSize = 0;
-		//FREE_LOCK (g_screenLock);
 		LockFree (&g_ClickQueueLock);
-		//sti;
 		
 		timeout--;
 		
@@ -2146,6 +2147,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		//how many ms are left of a 60 hz refresh?
 		int ms_left = LOCK_MS - ms_dur;
 		
+	#ifdef LOCK_FPS
 		if (ms_left >= 0)
 			WaitMS (ms_left);
 		
@@ -2153,6 +2155,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	#ifdef LAG_DEBUG
 		else
 			SLogMsg("Lagging behind! This cycle of the window manager took %d ms", ms_dur);
+	#endif
 	#endif
 	}
 	WindowCallDeinitialize ();
@@ -2573,7 +2576,8 @@ void RenderWindow (Window* pWindow)
 	if (n == -1)
 	{
 		SLogMsg("Updating during RenderWindow()? Why?");
-		UpdateDepthBuffer();
+		if (x >= 0 && y >= 0 && x < GetScreenWidth() && y < GetScreenHeight())
+			UpdateDepthBuffer();
 	}
 	
 	if (IsForemostWindow(pWindow))

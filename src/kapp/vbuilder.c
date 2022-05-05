@@ -210,21 +210,6 @@ void VbAddControl(Window *pWindow, int L, int T, int R, int B)
 	MessageBox(pWindow, "There are too many controls in this form, delete some.", "Codename V-Builder", MB_OK | ICON_WARNING << 16);
 }
 
-bool VbRectangleOverlap(Rectangle* r1, Rectangle* r2)
-{
-	//quick hack
-	Point p1 = { r2->left,  r2->top };
-	Point p2 = { r2->left,  r2->bottom };
-	Point p3 = { r2->right, r2->top };
-	Point p4 = { r2->right, r2->bottom };
-	
-	if (RectangleContains(r1, &p1)) return true;
-	if (RectangleContains(r1, &p2)) return true;
-	if (RectangleContains(r1, &p3)) return true;
-	if (RectangleContains(r1, &p4)) return true;
-	return false;
-}
-
 void VbDelControl(Window *pWindow, int i)
 {
 	if (!V->m_controls[i].m_used) return;
@@ -240,7 +225,7 @@ void VbSelect(Window* pWindow, int L, int T, int R, int B)
 	{
 		if (!V->m_controls[i].m_used) continue;
 		
-		V->m_controls[i].m_sele = VbRectangleOverlap (&rect, &V->m_controls[i].m_rect);
+		V->m_controls[i].m_sele = RectangleOverlap (&rect, &V->m_controls[i].m_rect);
 	}
 }
 

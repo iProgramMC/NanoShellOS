@@ -925,13 +925,25 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 	//SLogMsg("VidBitBlitU(%x, %d, %d, %d, %d, %x, %d, %d, %x)",pDest,cx,cy,width,height,pSrc,x1,y1,mode);
 	
 	//TODO: more safety checks??!
-	if (cx < 0) width  += cx, cx = 0;
-	if (cy < 0) height += cy, cy = 0;
+	if (cx < 0)
+	{
+		width  += cx;
+		if (mode == BOP_SRCCOPY)
+			x1 -= cx;
+		cx = 0;
+	}
+	if (cy < 0)
+	{
+		height += cy;
+		if (mode == BOP_SRCCOPY)
+			y1 -= cy;
+		cy = 0;
+	}
 	
 	if (mode == BOP_SRCCOPY)
 	{
 		if (x1 < 0) cx     -= x1, width  += x1, x1 = 0;
-		if (y1 < 0) cy     -= y1, height += x1, y1 = 0;
+		if (y1 < 0) cy     -= y1, height += y1, y1 = 0;
 	}
 	
 	if (width  > (int)pDest->m_width  - cx) width  = pDest->m_width  - cx;

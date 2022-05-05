@@ -544,7 +544,12 @@ WindowAction;
 /**
  * Check if a rectangle contains a point.
  */
-bool RectangleContains(Rectangle*r, Point*p);
+bool RectangleContains(Rectangle *r, Point *p);
+
+/**
+ * Check if a rectangle overlaps another rectangle.
+ */
+bool RectangleOverlap(Rectangle *r1, Rectangle *r2);
 
 /**
  * Register an event to a certain window.
