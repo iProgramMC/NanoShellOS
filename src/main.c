@@ -105,6 +105,7 @@ bool VmwInit();
 bool gInitializeVB;
 extern void KiIdtInit2();
 extern void AttemptLocateRsdPtr();
+extern void ApicTimerInit();
 extern void CrashReporterCheckNoWindow();
 __attribute__((noreturn))
 void KiStartupSystem(unsigned long check, unsigned long mbaddr)
@@ -165,11 +166,18 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	
 	KiSetupPic();
 	
+	// Initialize the Memory Management Subsystem
+	MmInit(mbi);
+	
+	// Enable interrupts
+	sti;
+	
 	// Tell the OS that interrupts are now available. :)
 	g_interruptsAvailable = true;
 	
-	// Initialize the Memory Management Subsystem
-	MmInit(mbi);
+	#ifdef EXPERIMENTAL_APICTIMER
+	ApicTimerInit();
+	#endif
 	
 	// Initialize the video subsystem
 	VidInitialize(mbi);
@@ -214,9 +222,6 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	}
 
 	CfgLoadFromParms (g_cmdline);
-	
-	// Allow task switching
-	KiPermitTaskSwitching();
 	
 	// Initialize the sound blaster device
 	SbInit();
@@ -323,9 +328,12 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 	if (gInitializeVB)
 		VbGuestInit();
 	#endif
+	
+	KiPrintInitPicTicks();
+	// Allow task switching
+	KiPermitTaskSwitching();
 
 	// Initialize the mouse driver too
-	sti;
 	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//MouseInit ();
 	

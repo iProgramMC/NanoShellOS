@@ -309,9 +309,12 @@ int GetRandom()
 // CPUIDFeatureBits
 #if 1
 extern uint32_t g_cpuidLastLeaf;
+extern uint32_t g_cpuidFeatureBitsEdx;
+
+extern CPUIDFeatureBits g_cpuidFeatureBits;
+
 extern char g_cpuidNameEBX[];
 extern char g_cpuidBrandingInfo[];
-extern CPUIDFeatureBits g_cpuidFeatureBits;
 
 const char* GetCPUType()
 {
@@ -324,6 +327,10 @@ const char* GetCPUName()
 CPUIDFeatureBits GetCPUFeatureBits()
 {
 	return g_cpuidFeatureBits;
+}
+uint32_t GetCPUFeatureBitsEdx()
+{
+	return g_cpuidFeatureBitsEdx;
 }
 #endif
 

@@ -15,6 +15,7 @@
 //#define EXPERIMENTAL
 #define EXPERIMENTAL_RSDPTR
 #define EXPERIMENTAL_VMWARE
+#define EXPERIMENTAL_APICTIMER
 
 typedef char byte;
 typedef char BYTE;

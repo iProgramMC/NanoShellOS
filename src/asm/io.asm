@@ -211,6 +211,7 @@ global g_cpuidNameECX
 global g_cpuidNameEDX
 global g_cpuidNameNUL
 global g_cpuidFeatureBits
+global g_cpuidFeatureBitsEdx
 global g_cpuidBrandingInfo
 	
 global KeCPUID
@@ -229,7 +230,8 @@ KeCPUID:
 	
 	MOV EAX, 1 ; Second leaf of CPUID
 	CPUID
-	MOV [g_cpuidFeatureBits], EAX
+	MOV [g_cpuidFeatureBits   ], EAX
+	MOV [g_cpuidFeatureBitsEdx], EDX
 	
 	; get processor brand string
 	
@@ -377,3 +379,5 @@ g_cpuidBrandingInfo resd 13
 
 ; eax=1, eax's value:
 g_cpuidFeatureBits resd 1
+; edx
+g_cpuidFeatureBitsEdx resd 1

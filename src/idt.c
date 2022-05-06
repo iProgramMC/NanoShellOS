@@ -273,9 +273,8 @@ extern void IsrStub30();
 extern void IsrStub31();
 #endif
 
-/**
- * PIT initializer routine.
- */
+#define PIT_REAL_FREQUENCY 1193182
+#define PIT_TICK_DIVIDER   2386
 void KeTimerInit() 
 {
 	WritePort(0x43, 0x34); // generate frequency
@@ -295,25 +294,43 @@ void KeTimerInit()
 	
 	*/
 	
-	int pit_frequency = 2386;
+	int pit_frequency = PIT_TICK_DIVIDER;
 	
 	//1194;//65536/4096;//~ 74.573875 KHz
 	WritePort(0x40, (uint8_t)( pit_frequency       & 0xff));
 	WritePort(0x40, (uint8_t)((pit_frequency >> 8) & 0xff));
 }
-/**
- * PIT interrupt routine
- */
+
+volatile int g_picTimer = 0;
 void IrqTimer()
 {
 	//LogMsg("Timer!");
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
+	
+	g_picTimer++;
+	SLogMsg("PicTimer:%d",g_picTimer);
 }
+
+//note: does not work after init
+int KiGetPitTickCnt()
+{
+	int pit_frequency = PIT_REAL_FREQUENCY / PIT_TICK_DIVIDER;
+	__asm__ volatile ("" ::: "memory");
+	return g_picTimer * 1000 / pit_frequency;
+}
+
+void KiPrintInitPicTicks()
+{
+	LogMsg("Seconds taken to init: %d", KiGetPitTickCnt());
+}
+
 unsigned long idtPtr[2];
 
 // some forward declarations
-extern void IrqTaskA();
+extern void IrqTaskPitA();
+extern void IrqTaskLapicA();
+extern void IrqTaskSoftA();
 extern void IrqClockA();
 extern void IrqMouseA();
 extern void IrqSb16A();
@@ -387,7 +404,7 @@ void KiIdtInit()
 #endif
 	
 	SetupSoftInterrupt (0x80, OnSyscallReceivedA);
-	SetupSoftInterrupt (0x81, IrqTaskA);
+	SetupSoftInterrupt (0x81, IrqTaskSoftA);
 	
 	// SPECIAL CASE: Vbox Guest driver
 #ifdef EXPERIMENTAL
@@ -397,9 +414,19 @@ void KiIdtInit()
 #endif
 }
 
+bool g_bUseLapicInstead;
 void KiPermitTaskSwitching()
 {
-	SetupPicInterrupt (0x0, IrqTaskA);
+	if (g_bUseLapicInstead)
+		SetupSoftInterrupt (0x20, IrqTaskLapicA);
+	else
+		SetupPicInterrupt  (0x00, IrqTaskPitA);
+}
+
+void i8259UpdateMasks()
+{
+	WritePort (0x21, gPicMask1);
+	WritePort (0xA1, gPicMask2);
 }
 
 void KiSetupPic()
@@ -424,8 +451,7 @@ void KiSetupPic()
 	WritePort (0x21, 0x01);
 	WritePort (0xA1, 0x01);
 	
-	WritePort (0x21, gPicMask1);
-	WritePort (0xA1, gPicMask2);
+	i8259UpdateMasks();
 	
 	// Load the IDT
 	

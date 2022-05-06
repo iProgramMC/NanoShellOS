@@ -5,6 +5,7 @@
 #include <memory.h>
 #ifdef EXPERIMENTAL_RSDPTR
 
+
 typedef struct
 {
 	char     m_signature[8];
@@ -91,7 +92,7 @@ void RsdtAnalyze (RsdtTable *pTable)
 		
 		SLogMsg("SDT found: %c%c%c%c", pMem->m_signature[0], pMem->m_signature[1],
 				 pMem->m_signature[2], pMem->m_signature[3]);
-		
+		//
 		MmUnmapPhysMemFast(pMem);
 	}
 }
@@ -115,6 +116,7 @@ void RsdpAnalyze(RsdpDesc* pDesc)
 	RsdtAnalyze(g_pRSDTTable);
 }
 
+uint32_t GetCPUFeatureBitsEdx();
 void AttemptLocateRsdPtr()
 {
 	if (g_pRSDTTable)
