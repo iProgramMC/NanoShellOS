@@ -991,17 +991,24 @@ void UndrawWindow (Window* pWnd)
 		if (windowDrawList[i]->m_hidden) continue;
 		// Hrm... we should probably use the new VidBitBlit for this
 		
-		VidBitBlit (
-			g_vbeData,
-			pWnd->m_rect.left,
-			pWnd->m_rect.top,
-			pWnd->m_rect.right  - pWnd->m_rect.left,
-			pWnd->m_rect.bottom - pWnd->m_rect.top,
-			&windowDrawList[i]->m_vbeData,
-			pWnd->m_rect.left - windowDrawList[i]->m_rect.left,
-			pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
-			BOP_SRCCOPY
-		);
+		if (windowDrawList[i]->m_minimized)
+		{
+			//TODO?
+		}
+		else
+		{
+			VidBitBlit (
+				g_vbeData,
+				pWnd->m_rect.left,
+				pWnd->m_rect.top,
+				pWnd->m_rect.right  - pWnd->m_rect.left,
+				pWnd->m_rect.bottom - pWnd->m_rect.top,
+				&windowDrawList[i]->m_vbeData,
+				pWnd->m_rect.left - windowDrawList[i]->m_rect.left,
+				pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
+				BOP_SRCCOPY
+			);
+		}
 	}
 	
 	g_vbeData = backup;
@@ -1022,16 +1029,21 @@ static void ShowWindowUnsafe (Window* pWindow)
 	//pWindow->m_renderFinished = true;
 	
 	// Render it to the vbeData:
-	VidBitBlit (
-		g_vbeData,
-		pWindow->m_rect.left,
-		pWindow->m_rect.top,
-		pWindow->m_vbeData.m_width,
-		pWindow->m_vbeData.m_height,
-		&pWindow->m_vbeData,
-		0, 0,
-		BOP_SRCCOPY
-	);
+	if (pWindow->m_minimized)
+	{
+		//TODO?
+	}
+	else
+		VidBitBlit (
+			g_vbeData,
+			pWindow->m_rect.left,
+			pWindow->m_rect.top,
+			pWindow->m_vbeData.m_width,
+			pWindow->m_vbeData.m_height,
+			&pWindow->m_vbeData,
+			0, 0,
+			BOP_SRCCOPY
+		);
 }
 
 void HideWindow (Window* pWindow)
