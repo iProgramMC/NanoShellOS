@@ -2952,7 +2952,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		UpdateDepthBuffer();
 		VidSetVBEData (&pWindow->m_vbeData);
-		PaintWindowBackgroundAndBorder(pWindow);
+		PaintWindowBorderNoBackgroundOverpaint(pWindow);
 		
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
 		
@@ -3235,7 +3235,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			break;
 		case EVENT_SETFOCUS:
 		case EVENT_KILLFOCUS:
-			PaintWindowBorder(pWindow);
+			PaintWindowBorderNoBackgroundOverpaint(pWindow);
 			break;
 		case EVENT_CLOSE:
 			DestroyWindow(pWindow);
