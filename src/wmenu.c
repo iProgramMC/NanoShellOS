@@ -143,6 +143,33 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			}
 			
 			break;
+		case EVENT_PAINT:
+		{
+			if (pWindow->m_data)
+			{
+				WindowMenu* pData = (WindowMenu*)pWindow->m_data;
+				Rectangle re = pWindow->m_rect;
+				re.right  -= re.left;
+				re.bottom -= re.top;
+				re.left = re.top = 0;
+				
+				re.left += 2;
+				re.top  += 2;
+				re.right  -= 3;
+				re.bottom -= 3;
+				
+				int offs = 16;
+				if (pData->bHasIcons) offs += 8;
+				
+				Rectangle re2 = re;
+				re2.right = re2.left + offs;
+				re.left = re2.right;
+				
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, re);
+				VidFillRectangle(WINDOW_BACKGD_COLOR,     re2);
+			}
+			break;
+		}
 		case EVENT_KILLFOCUS:
 		{
 			if (!pWindow->m_data) break;

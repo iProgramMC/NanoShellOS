@@ -2723,14 +2723,14 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				{
 					this->m_buttonData.m_hovered = true;
 					if (g_GlowOnHover)
-						WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+						WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 1, pWindow);
 				}
 			}
 			else if (this->m_buttonData.m_hovered)
 			{
 				this->m_buttonData.m_hovered = false;
 				if (g_GlowOnHover)
-					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 1, pWindow);
 			}
 			break;
 		}
@@ -2738,8 +2738,16 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		{
 			Rectangle r = this->m_rect;
 			
+			int offs1 = 16;
 			int offs = 20;
-			if (this->m_parm1) offs += 10;
+			if (this->m_parm1)
+			{
+				offs1 += 8;
+				offs  += 10;
+			}
+			
+			Rectangle r1 = this->m_rect;
+			r1.right = r1.left + offs1;
 			
 			if (this->m_buttonData.m_clicked)
 			{
@@ -2753,21 +2761,23 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r.left++; r.right++; r.bottom++; r.top++;
 				
 				if (this->m_parm1)
+				{
 					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+				}
 				
 				r.left += offs;
-				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
 				uint32_t col = SELECTED_ITEM_COLOR_B;
 				VidFillRectangle(col, r);
-				VidDrawRectangle(SELECTED_ITEM_COLOR,   r);
+				VidDrawRectangle(SELECTED_ITEM_COLOR, r);
 				
 				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
-				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 				
 				r.left -= offs;
 				if (this->m_parm1)
@@ -2778,7 +2788,13 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			else
 			{
-				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
+				Rectangle r2 = r;
+				r2.left = r1.right;
+				if (parm2)
+				{
+					VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, r);
+					VidFillRectangle(WINDOW_BACKGD_COLOR, r1);
+				}
 				r.left += offs;
 				r.top += 1;
 				r.bottom += 1;
