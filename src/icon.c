@@ -204,6 +204,10 @@
 #include <icons/journal16.h>
 #include <icons/packager.h>
 #include <icons/packager16.h>
+//icons V1.71
+#include <icons/box_check.h>
+#include <icons/box_uncheck.h>
+#include <icons/folder_settings16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -390,6 +394,9 @@ Image * g_iconTable[] = {
 	&g_journal16_icon,
 	&g_packager_icon,
 	&g_packager16_icon,
+	&g_box_check_icon,
+	&g_box_uncheck_icon,
+	&g_folder_settings16_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -453,6 +460,7 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(FORM)
 			CASE(JOURNAL)
 			CASE(PACKAGER)
+			CASE(FOLDER_SETTINGS)
 			#undef CASE
 		}
 	}
