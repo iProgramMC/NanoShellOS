@@ -119,9 +119,23 @@ void NotepadOnSave(UNUSED Window* pWindow)
 			return;//don't bof
 		}
 		
+		// does the file exist?
+		int fd = FiOpen(data, O_RDONLY);
+		if (fd >= 0)
+		{
+			// yeah, popup a dialog asking user if they want to overwrite the file
+			char buffer[1024];
+			sprintf(buffer, "The file '%s' already exists.\n\nWould you like to replace it?", data);
+			if (MessageBox(pWindow, buffer, "Notepad", ICON_WARNING << 16 | MB_YESNO) == MBID_NO)
+			{
+				MmFreeK(data);
+				return;
+			}
+		}
+		
 		strcpy (NOTEPDATA(pWindow)->m_filename, data);
 		NOTEPDATA(pWindow)->m_untitled = false;
-			
+		MmFreeK(data);
 		NotepadUpdateTitle(pWindow);
 	}
 	
@@ -144,7 +158,6 @@ void NotepadOnSave(UNUSED Window* pWindow)
 	}
 	FiWrite(fd, (void*)p, strlen (p));
 	FiClose(fd);
-	
 	NOTEPDATA(pWindow)->m_ackChanges = false;
 	TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
 	NotepadUpdateTitle(pWindow);
