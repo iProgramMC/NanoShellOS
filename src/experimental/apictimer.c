@@ -26,6 +26,12 @@
 
 #define APIC_LVT_INT_MASKED          0x10000
 #define APIC_LVT_TIMER_MODE_PERIODIC 0x20000
+#define APIC_SPURIOUS_ENABLE         0x00100
+
+#define APIC_TIMER_DIVIDER           0x00004
+
+#define PIT_CHANNEL2_TIMER           1
+#define PIT_CHANNEL2_SPEAKER         2
 
 extern uint8_t gPicMask1;
 extern bool    g_bUseLapicInstead;
@@ -74,62 +80,101 @@ void ApicEoi()
 {
 	LapicWrite(APIC_REGISTER_EOI, 0x00);
 }
+#define NUM_CALIBS          10
+#define PIT_CALIBRATE_TICKS 11931
 __attribute__((optnone))
-void ApicCalibrate()
+uint32_t ApicTimerCalibrateOnce()
 {
-	// Tell APIC to use divider 16
-	LapicWrite(APIC_REGISTER_TIMER_DIV, 0x3);
+	// Configure APIC timer in one shot mode to prep for calibration
+	LapicWrite(APIC_REGISTER_LVT_TIMER,  0x20);
+	LapicWrite(APIC_REGISTER_TIMER_DIV,  APIC_TIMER_DIVIDER);
 	
-	// Prepare the PIT to sleep for 50 ms
-	int tc = KiGetPitTickCnt() + 50;
+	// Enable PIT channel 2 timer gate, and disable speaker output
+	uint8_t c2val = (ReadPort(0x61) & ~PIT_CHANNEL2_SPEAKER) | PIT_CHANNEL2_TIMER;
 	
-	// Set APIC init counter to -1
+	WritePort (0x61, c2val);
+	
+	// initialize PIT in one-shot mode on Channel 2
+	WritePort (0x43, (2 << 6) | (3 << 4) | (2 << 0));//TODO: document this
+	
+	// Disable interrupts while calibrating
+	cli;
+	
+	// Set PIT reload value
+	uint32_t pit_ticks = PIT_CALIBRATE_TICKS;
+	
+	WritePort(0x42, (uint8_t)( pit_ticks       & 0xff));
+	WritePort(0x42, (uint8_t)((pit_ticks >> 8) & 0xff));
+	
+	// Restart PIT by disabling gated input and re-enabling it
+	c2val &= ~1;
+	WritePort (0x43, c2val);
+	c2val |= 1;
+	WritePort (0x43, c2val);
+	
+	// Start countdown!
 	LapicWrite(APIC_REGISTER_TIMER_INITCNT, 0xFFFFFFFF);
 	
-	// Perform PIT-supported sleep.
-	while (KiGetPitTickCnt() < tc)
+	uint16_t pitTicks = 0;
+	while (pitTicks <= PIT_CALIBRATE_TICKS)
 	{
-		__asm__ volatile ("hlt" ::: "memory");
+		WritePort (0x43, 2 << 6);
+		
+		pitTicks  = ReadPort(0x42);
+		pitTicks |= ReadPort(0x42) << 8;
 	}
 	
-	uint32_t old_config = LapicRead(APIC_REGISTER_LVT_TIMER);
+	uint32_t apicCurrent = LapicRead(APIC_REGISTER_TIMER_CURRCNT);
 	
-	// Stop the APIC timer
-	LapicWrite(APIC_REGISTER_LVT_TIMER, old_config | APIC_LVT_INT_MASKED);
+	LogMsg("PIT stopped at %d ticks", pit_ticks);
 	
-	uint32_t ticks_per_50ms = 0xFFFFFFFF - LapicRead(APIC_REGISTER_TIMER_CURRCNT);
+	// Stop APIC timer
+	LapicWrite(APIC_REGISTER_LVT_TIMER, APIC_LVT_INT_MASKED);
 	
-	LogMsg("Ticks per 50 ms: %d", ticks_per_50ms);
+	// Get counts passed
+	uint32_t apicTicksPerSec = 0xFFFFFFFF - apicCurrent;
 	
-	// Mask IRQ 0
-	gPicMask1 |= 0x01;
-	i8259UpdateMasks();
+	LogMsg("APIC ticks passed in 1/%d of a second: %d", 1193182/PIT_CALIBRATE_TICKS,
+		apicTicksPerSec);
 	
-	g_bUseLapicInstead = true;
+	sti;
 	
-	// Start timer as periodic on IRQ 0, divider 16, with the tickNum we counted:
-	LapicWrite(APIC_REGISTER_LVT_TIMER,  0x20 | APIC_LVT_TIMER_MODE_PERIODIC);
-	LapicWrite(APIC_REGISTER_TIMER_DIV,  0x3);
-	LapicWrite(APIC_REGISTER_LVT_TIMER,  ticks_per_50ms / 5); // 10 millis instead. Used 50 to make it maybe more accurate
+	// Stop the PIT
+	c2val &= ~1;
+	WritePort (0x43, c2val);
 	
-	// Acknowledge any interrupts that you need to acknowledge
-	g_pLapic[APIC_REGISTER_EOI] = 0;
+	return apicTicksPerSec;
+}
+void ApicTimerInitialize(uint32_t desired_freq_hz)
+{
+	uint32_t ticks_total = 0;
+	for (int i = 0; i < NUM_CALIBS; i++)
+	{
+		ticks_total += ApicTimerCalibrateOnce();
+	}
 	
-	// Re-start the APIC timer
-	LapicWrite(APIC_REGISTER_LVT_TIMER, old_config & ~APIC_LVT_INT_MASKED);
+	ticks_total /= NUM_CALIBS;
+	
+	LogMsg("Average time: %d ticks/s", ticks_total);
+	
+	uint32_t reload_value = ticks_total / desired_freq_hz;
+	
+	LapicWrite(APIC_REGISTER_LVT_TIMER,     0x20 | APIC_LVT_TIMER_MODE_PERIODIC);
+	LapicWrite(APIC_REGISTER_TIMER_DIV,     APIC_TIMER_DIVIDER);
+	LapicWrite(APIC_REGISTER_TIMER_INITCNT, reload_value);
 }
 void ApicEnable()
 {
-	// Hardware enable the LAPIC if not enabled already
+	// Hardware enable the APIC if not enabled already
 	uintptr_t p = GetCpuApicBase();
 	g_pLapic = MmMapPhysMemFast (p);
 	
 	SetCpuApicBase(p);
 	
-	// set the spurious interrupt to 0x7
-	LapicWrite (APIC_REGISTER_SPURIOUS, 0x100 | 0x07);
+	// Software enable the APIC by setting enable bit and the spurious IRQ vector (0xFF)
+	LapicWrite(APIC_REGISTER_SPURIOUS, APIC_SPURIOUS_ENABLE | 0xFF);
 	
-	ApicCalibrate();
+	ApicTimerInitialize(1000);
 }
 void ApicTimerInit()
 {

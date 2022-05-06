@@ -18,25 +18,15 @@ helloText:
 extern KeSwitchTask
 extern SLogMsg
 extern g_pLapic
+extern IrqSpurious
 global IrqTaskPitA
 global IrqTaskLapicA
 global IrqTaskSoftA
 global IrqSpuriousA
-extern ApicEoi
 IrqSpuriousA:
-	push eax
-	push edx
-	mov dword [g_pLapic + 0xB0], 0x00
-	
-	; acknowledge the interrupt the PIC way
-	mov al, 0x20
-	mov dx, 0x20
-	out dx, al
-	mov dx, 0xA0
-	out dx, al
-	
-	pop edx
-	pop eax
+	pusha
+	call IrqSpurious
+	popa
 	iretd
 IrqTaskLapicA:
 	cli
@@ -79,10 +69,11 @@ IrqTaskLapicA:
 	
 	push helloText
 	call SLogMsg
+	add  esp, 4
 	
 	; call the re-schedule function
 	call KeSwitchTask
-	add esp, 4 ; get rid of what we had on the stack
+	add  esp, 4 ; get rid of what we had on the stack
 	
 	; Restore the seg registers
 	pop eax

@@ -274,7 +274,7 @@ extern void IsrStub31();
 #endif
 
 #define PIT_REAL_FREQUENCY 1193182
-#define PIT_TICK_DIVIDER   2386
+#define PIT_TICK_DIVIDER   1194
 void KeTimerInit() 
 {
 	WritePort(0x43, 0x34); // generate frequency
@@ -302,9 +302,13 @@ void KeTimerInit()
 }
 
 volatile int g_picTimer = 0;
+void IrqSpurious()
+{
+	SLogMsg("Spurrrrr!");
+}
 void IrqTimer()
 {
-	//LogMsg("Timer!");
+	SLogMsg("Timer!");
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
 	
@@ -362,8 +366,6 @@ void KiIdtInit()
 	SetupPicInterrupt (0x3, IrqSerialCom2A);
 	SetupPicInterrupt (0x4, IrqSerialCom1A);
 	SetupPicInterrupt (0x5, IrqSb16A);
-	SetupPicInterrupt (0x7, IrqSpuriousA);
-	SetupPicInterrupt (0xF, IrqSpuriousA);
 	SetupPicInterrupt (0x8, IrqClockA);
 	SetupPicInterrupt (0xC, IrqMouseA);
 	//prim and sec IDE drives.  Enable IRQs to avoid spending all the
@@ -408,6 +410,7 @@ void KiIdtInit()
 	
 	SetupSoftInterrupt (0x80, OnSyscallReceivedA);
 	SetupSoftInterrupt (0x81, IrqTaskSoftA);
+	SetupSoftInterrupt (0xFF, IrqSpuriousA);
 	
 	// SPECIAL CASE: Vbox Guest driver
 #ifdef EXPERIMENTAL
