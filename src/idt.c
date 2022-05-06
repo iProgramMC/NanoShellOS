@@ -331,6 +331,7 @@ unsigned long idtPtr[2];
 extern void IrqTaskPitA();
 extern void IrqTaskLapicA();
 extern void IrqTaskSoftA();
+extern void IrqSpuriousA();
 extern void IrqClockA();
 extern void IrqMouseA();
 extern void IrqSb16A();
@@ -361,6 +362,8 @@ void KiIdtInit()
 	SetupPicInterrupt (0x3, IrqSerialCom2A);
 	SetupPicInterrupt (0x4, IrqSerialCom1A);
 	SetupPicInterrupt (0x5, IrqSb16A);
+	SetupPicInterrupt (0x7, IrqSpuriousA);
+	SetupPicInterrupt (0xF, IrqSpuriousA);
 	SetupPicInterrupt (0x8, IrqClockA);
 	SetupPicInterrupt (0xC, IrqMouseA);
 	//prim and sec IDE drives.  Enable IRQs to avoid spending all the

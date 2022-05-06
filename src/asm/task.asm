@@ -21,7 +21,23 @@ extern g_pLapic
 global IrqTaskPitA
 global IrqTaskLapicA
 global IrqTaskSoftA
+global IrqSpuriousA
 extern ApicEoi
+IrqSpuriousA:
+	push eax
+	push edx
+	mov dword [g_pLapic + 0xB0], 0x00
+	
+	; acknowledge the interrupt the PIC way
+	mov al, 0x20
+	mov dx, 0x20
+	out dx, al
+	mov dx, 0xA0
+	out dx, al
+	
+	pop edx
+	pop eax
+	iretd
 IrqTaskLapicA:
 	cli
 	; Preserve basic registers
@@ -59,8 +75,7 @@ IrqTaskLapicA:
 	cld
 	
 	; acknowledge the interrupt
-	mov  eax, g_pLapic
-	mov  dword [eax + 0x20], 0
+	mov dword [g_pLapic + 0xB0], 0x00
 	
 	push helloText
 	call SLogMsg
