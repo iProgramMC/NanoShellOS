@@ -8,6 +8,7 @@
 #include <video.h>
 #include <image.h>
 #include <icon.h>
+#include <clip.h>
 #include <print.h>
 #include <misc.h>
 #include <keyboard.h>
@@ -675,6 +676,47 @@ void CtlAppendCharToAnywhere(Control* this, Window* pWindow, char charToAppend, 
 	this->m_textInputData.m_dirty = true;
 }
 
+int CtlAppendTextToAnywhere(Control* this, Window* pWindow, const char* textToAppend, int indexToAppendTo)
+{
+	if (indexToAppendTo < 0)
+		return 0;
+	if (indexToAppendTo > this->m_textInputData.m_textLength)
+		return 0;
+	
+	int sl = strlen (textToAppend);
+	
+	if (this->m_textInputData.m_textLength >= this->m_textInputData.m_textCapacity-1)
+	{
+		//can't fit, need to expand
+		int newCapacity = this->m_textInputData.m_textCapacity * 2, oldCapacity = this->m_textInputData.m_textCapacity;
+		if (newCapacity < this->m_textInputData.m_textCapacity + sl)
+			newCapacity = this->m_textInputData.m_textCapacity + sl + 2;
+		if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
+		
+		char* pText = (char*)MmAllocateK(newCapacity);
+		if (!pText)
+			return 0;
+		
+		memcpy (pText, this->m_textInputData.m_pText, oldCapacity);
+		
+		MmFreeK(this->m_textInputData.m_pText);
+		this->m_textInputData.m_pText = pText;
+		this->m_textInputData.m_textCapacity = newCapacity;
+	}
+	
+	this->m_textInputData.m_textLength += sl;
+	this->m_textInputData.m_pText[this->m_textInputData.m_textLength  ] = 0;
+	memmove (&this->m_textInputData.m_pText[indexToAppendTo + sl], &this->m_textInputData.m_pText[indexToAppendTo], this->m_textInputData.m_textLength - sl - indexToAppendTo);
+	
+	memcpy (this->m_textInputData.m_pText + indexToAppendTo, textToAppend, sl);
+	
+	CtlTextInputUpdateScrollSize (this, pWindow);
+	
+	this->m_textInputData.m_dirty = true;
+	
+	return sl;
+}
+
 void CtlRemoveCharFromAnywhere(Control* this, Window* pWindow, int indexToRemoveFrom)
 {
 	if (indexToRemoveFrom < 0)
@@ -1196,6 +1238,28 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 						else
 							LogMsg("Move not implemented?");
 					}
+					break;
+				}
+				case KEY_F1:
+				{
+					ClipboardVariant* pVariant = CbGetCurrentVariant();
+					if (!pVariant) break;
+					if (pVariant->m_type == CLIPBOARD_DATA_TEXT)
+					{
+						this->m_textInputData.m_textCursorIndex += 
+							CtlAppendTextToAnywhere(this, pWindow, pVariant->m_short_str, this->m_textInputData.m_textCursorIndex);
+					}
+					else if (pVariant->m_type == CLIPBOARD_DATA_LARGE_TEXT)
+					{
+						this->m_textInputData.m_textCursorIndex += 
+							CtlAppendTextToAnywhere(this, pWindow, pVariant->m_char_str,  this->m_textInputData.m_textCursorIndex);
+					}
+					CbRelease(pVariant);
+					break;
+				}
+				case KEY_F2:
+				{
+					SLogMsg("TODO: copy");
 					break;
 				}
 				case KEY_ARROW_LEFT:
