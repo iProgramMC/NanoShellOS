@@ -2957,17 +2957,25 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		//pWindow->m_hidden = false;
 		//UpdateDepthBuffer();
 		
-		ShowWindow (pWindow);
+		//if taskbar is not running -> ???
+		
+		//ShowWindow (pWindow);
+		
 		
 		VidSetVBEData (&pWindow->m_vbeData);
 		
 		Rectangle new_title_rect = pWindow->m_rect;
+		
+		//if a taskbar is running:
+		new_title_rect = pWindow->m_taskbarRect;
 		
 		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMINIMIZE)
 	{
 		Rectangle old_title_rect = pWindow->m_rect;
+		//if a taskbar is running:
+		old_title_rect = pWindow->m_taskbarRect;
 		
 		VidSetVBEData (NULL);
 		HideWindow (pWindow);

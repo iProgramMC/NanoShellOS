@@ -3347,7 +3347,6 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				bool hovered = this->m_taskListData.m_hovered[i];
 				
 				uint32_t flgs = 0;
-				
 				if (g_windows[i].m_isSelected)
 				{
 					RenderButtonShape(r, BUTTONLITE, BUTTONDARK, BUTTONMIDD);
@@ -3368,6 +3367,8 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				}
 				else
 					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				
+				g_windows[i].m_taskbarRect = r;
 				
 				Window *pWnd = &g_windows[i];
 				
@@ -3448,7 +3449,16 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 						for (int j = 0; j < WINDOWS_MAX; j++)
 							this->m_taskListData.m_clicked[j] = false;
 						
-						SelectWindow (&g_windows[i]);
+						Window* pWindow = &g_windows[i];
+						if (pWindow->m_hidden && pWindow->m_minimized) //TODO
+						{
+							//Unhide and unminimize
+							WindowRegisterEvent (pWindow, EVENT_UNMINIMIZE, 0, 0);
+							//TODO: wait for the animation to finish :)
+							ShowWindow(pWindow);
+						}
+						
+						SelectWindow (pWindow);
 					}
 					
 					if (eventType != EVENT_MOVECURSOR || g_GlowOnHover)
