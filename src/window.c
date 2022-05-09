@@ -251,18 +251,22 @@ void SaveThemingParmsToFile(const char* pString)
 #endif
 
 // Window effects when you maximize/minimize a window
+#define EFFECT_PRECISION 1024
+
 bool g_EffectRunning;
+int  g_NextEffectUpdateIn = 0;
+char g_EffectText[1000];
+
 Rectangle g_EffectDest, g_EffectSrc;
 Rectangle g_EffectStep;
-int g_NextEffectUpdateIn = 0;
+
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-char g_EffectText[1000];
 
 void RefreshPixels(int oldX, int oldY, int oldWidth, int oldHeight);
 void KillEffect()
 {
 	if (!g_EffectRunning) return;
-	RefreshPixels (g_EffectSrc.left, g_EffectSrc.top, g_EffectSrc.right - g_EffectSrc.left, g_EffectSrc.bottom - g_EffectSrc.top);
+	RefreshPixels (g_EffectSrc.left / EFFECT_PRECISION, g_EffectSrc.top / EFFECT_PRECISION, (g_EffectSrc.right - g_EffectSrc.left) / EFFECT_PRECISION + 1, (g_EffectSrc.bottom - g_EffectSrc.top) / EFFECT_PRECISION + 1);
 	g_EffectRunning = false;
 }
 void RunOneEffectFrame()
@@ -276,9 +280,12 @@ void RunOneEffectFrame()
 		g_NextEffectUpdateIn += 10;
 		
 		int l,t,w,h;
-		l = g_EffectSrc.left, t = g_EffectSrc.top, w = g_EffectSrc.right - g_EffectSrc.left, h = g_EffectSrc.bottom - g_EffectSrc.top;
+		l = g_EffectSrc.left / EFFECT_PRECISION,
+		t = g_EffectSrc.top  / EFFECT_PRECISION,
+		w = (g_EffectSrc.right - g_EffectSrc.left) / EFFECT_PRECISION,
+		h = (g_EffectSrc.bottom - g_EffectSrc.top) / EFFECT_PRECISION;
 		
-		RefreshPixels (l,t,w,h);
+		RefreshPixels (l,t,w + 2,h + 2);
 		
 		// Update
 		g_EffectSrc.left    += g_EffectStep.left;
@@ -318,19 +325,24 @@ void RunOneEffectFrame()
 		}
 		
 		// Render the effect now
-		VidSetClipRect(&g_EffectSrc);
+		Rectangle effectSrc = g_EffectSrc;
+		effectSrc.left   /= EFFECT_PRECISION;
+		effectSrc.top    /= EFFECT_PRECISION;
+		effectSrc.right  /= EFFECT_PRECISION;
+		effectSrc.bottom /= EFFECT_PRECISION;
+		VidSetClipRect(&effectSrc);
 		
 		VidFillRectHGradient(
 			WINDOW_TITLE_ACTIVE_COLOR,
 			WINDOW_TITLE_ACTIVE_COLOR_B,
-			g_EffectSrc.left,
-			g_EffectSrc.top,
-			g_EffectSrc.right,
-			g_EffectSrc.bottom
+			g_EffectSrc.left   / EFFECT_PRECISION,
+			g_EffectSrc.top    / EFFECT_PRECISION,
+			g_EffectSrc.right  / EFFECT_PRECISION - 1,
+			g_EffectSrc.bottom / EFFECT_PRECISION - 1
 		);
 		
 		VidSetFont(TITLE_BAR_FONT);
-		VidDrawText(g_EffectText, g_EffectSrc, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR), TRANSPARENT);
+		VidDrawText(g_EffectText, effectSrc, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED, FLAGS_TOO(TEXT_RENDER_BOLD, WINDOW_TITLE_TEXT_COLOR), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
 		VidSetVBEData(NULL);
@@ -341,13 +353,21 @@ void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text
 	KillEffect();
 	g_EffectRunning = true;
 	g_EffectDest = dest;
+	g_EffectDest.left   *= EFFECT_PRECISION;
+	g_EffectDest.top    *= EFFECT_PRECISION;
+	g_EffectDest.right  *= EFFECT_PRECISION;
+	g_EffectDest.bottom *= EFFECT_PRECISION;
 	g_EffectSrc  = src;
+	g_EffectSrc.left   *= EFFECT_PRECISION;
+	g_EffectSrc.top    *= EFFECT_PRECISION;
+	g_EffectSrc.right  *= EFFECT_PRECISION;
+	g_EffectSrc.bottom *= EFFECT_PRECISION;
 	
 	// Decide on what stepping variables we should have
-	g_EffectStep.left   = (dest.left   - src.left  ) / 16;
-	g_EffectStep.top    = (dest.top    - src.top   ) / 16;
-	g_EffectStep.right  = (dest.right  - src.right ) / 16;
-	g_EffectStep.bottom = (dest.bottom - src.bottom) / 16;
+	g_EffectStep.left   = (dest.left   - src.left  ) * EFFECT_PRECISION / 16;
+	g_EffectStep.top    = (dest.top    - src.top   ) * EFFECT_PRECISION / 16;
+	g_EffectStep.right  = (dest.right  - src.right ) * EFFECT_PRECISION / 16;
+	g_EffectStep.bottom = (dest.bottom - src.bottom) * EFFECT_PRECISION / 16;
 	
 	g_NextEffectUpdateIn = GetTickCount();
 	
@@ -2673,7 +2693,7 @@ void RenderWindow (Window* pWindow)
 	}
 }
 extern const unsigned char* g_pCurrentFont;
-void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, int iconID, bool selected)
+void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, int iconID, bool selected, bool maximized)
 {
 	Rectangle rectb = windowRect;
 	
@@ -2681,11 +2701,18 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 	{
 		if (flags & WF_FLATBORD)
 		{
-			VidDrawRect(WINDOW_TEXT_COLOR, rectb.left, rectb.top, rectb.right - 1, rectb.bottom - 1);
-			/*rectb.left++;
-			rectb.top++;
-			rectb.right--;
-			rectb.bottom--;*/
+			if (maximized)
+			{
+				//done so the thing would cancel out
+				rectb.left--;
+				rectb.top--;
+				rectb.right++;
+				rectb.bottom++;
+			}
+			else
+			{
+				VidDrawRect(WINDOW_TEXT_COLOR, rectb.left, rectb.top, rectb.right - 1, rectb.bottom - 1);
+			}
 		}
 		else
 		{
@@ -2766,7 +2793,7 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
-	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected);
+	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 void PaintWindowBorder(Window* pWindow)
 {
@@ -2779,7 +2806,7 @@ void PaintWindowBorder(Window* pWindow)
 	//recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
 	
 	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
-	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected);
+	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 void PaintWindowBackgroundAndBorder(Window* pWindow)
 {
@@ -2976,8 +3003,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		if (!pWindow->m_maximized)
 			pWindow->m_rectBackup = pWindow->m_rect;
 		pWindow->m_maximized  = true;
-		pWindow->m_rect.left = -2;
-		pWindow->m_rect.top  = -2;//+g_TaskbarHeight;
+		
+		pWindow->m_rect.left = 0;
+		pWindow->m_rect.top  = g_TaskbarHeight - 1;
 		
 		if (!(pWindow->m_flags & WF_FLATBORD))
 			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
@@ -2988,29 +3016,30 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 2;
-			pControl->m_triedRect.top    -= 2;
-			pControl->m_triedRect.right  += 2;
-			pControl->m_triedRect.bottom -= 2;
+			pControl->m_triedRect.left   += 3;
+			pControl->m_triedRect.top    -= 3;
+			pControl->m_triedRect.right  += 3;
+			pControl->m_triedRect.bottom -= 3;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 2;
-			pControl->m_triedRect.top    -= 2;
-			pControl->m_triedRect.right  += 2;
-			pControl->m_triedRect.bottom -= 2;
+			pControl->m_triedRect.left   += 3;
+			pControl->m_triedRect.top    -= 3;
+			pControl->m_triedRect.right  += 3;
+			pControl->m_triedRect.bottom -= 3;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 2;
-			pControl->m_triedRect.top    -= 2;
-			pControl->m_triedRect.right  += 2;
-			pControl->m_triedRect.bottom -= 2;
+			pControl->m_triedRect.left   += 3;
+			pControl->m_triedRect.top    -= 3;
+			pControl->m_triedRect.right  += 3;
+			pControl->m_triedRect.bottom -= 3;
 		}
 		
-		ResizeWindow(pWindow, 0, 0, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
+		
+		ResizeWindow(pWindow, 0, g_TaskbarHeight - 1, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
@@ -3039,26 +3068,26 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 2;
-			pControl->m_triedRect.top    += 2;
-			pControl->m_triedRect.right  -= 2;
-			pControl->m_triedRect.bottom += 2;
+			pControl->m_triedRect.left   -= 3;
+			pControl->m_triedRect.top    += 3;
+			pControl->m_triedRect.right  -= 3;
+			pControl->m_triedRect.bottom += 3;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 2;
-			pControl->m_triedRect.top    += 2;
-			pControl->m_triedRect.right  -= 2;
-			pControl->m_triedRect.bottom += 2;
+			pControl->m_triedRect.left   -= 3;
+			pControl->m_triedRect.top    += 3;
+			pControl->m_triedRect.right  -= 3;
+			pControl->m_triedRect.bottom += 3;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 2;
-			pControl->m_triedRect.top    += 2;
-			pControl->m_triedRect.right  -= 2;
-			pControl->m_triedRect.bottom += 2;
+			pControl->m_triedRect.left   -= 3;
+			pControl->m_triedRect.top    += 3;
+			pControl->m_triedRect.right  -= 3;
+			pControl->m_triedRect.bottom += 3;
 		}
 		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		

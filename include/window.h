@@ -16,12 +16,12 @@
 
 #define THREADING_ENABLED 1 //0
 
-#define WINDOWS_MAX 256
+#define WINDOWS_MAX 64
 #define WINDOW_TITLE_MAX 250
 #define EVENT_QUEUE_MAX 256
 
 //TODO
-//#define ENABLE_MAXIMIZE
+#define ENABLE_MAXIMIZE
 
 //Optional window border.  Was going to have a 3D effect, but I scrapped it.
 #define WINDOW_RIGHT_SIDE_THICKNESS 0
@@ -349,7 +349,7 @@ typedef struct
 	int   m_textCapacity, m_textLength;//The text length needs to be 1 less than the text capacity.
 	                                   //If the text capacity is 65, for example, the textLength may not be bigger than 64.
 	int   m_textCursorIndex, m_textCursorSelStart, m_textCursorSelEnd,
-	      m_scrollY;
+	      m_scrollX, m_scrollY, m_textCursorX, m_textCursorY;
 	char* m_pText;
 	bool  m_readOnly;
 	bool  m_enableStyling, m_enableSyntaxHilite;

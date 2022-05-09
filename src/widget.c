@@ -363,7 +363,7 @@ go_back:;
 			
 			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-			//VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			break;
 		}
 	}
@@ -507,12 +507,37 @@ go_back:;
 void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 {
 	int c = CountLinesInText(this->m_textInputData.m_pText);
-	SetScrollBarMax (pWindow, -this->m_comboID, c);
+	
+	VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
+	
+	SetScrollBarMax (pWindow, -this->m_comboID, c * GetLineHeight());
+	
+	//TODO: optimize this!
+	const char *text = this->m_textInputData.m_pText;
+	int nLengthCur = 0, nLengthMax = 0;
+	while (*text)
+	{
+		if (*text == '\n')
+		{
+			if (nLengthMax < nLengthCur)
+				nLengthMax = nLengthCur;
+			
+			nLengthCur = 0;
+		}
+		else nLengthCur++;
+		text++;
+	}
+	if (nLengthMax < nLengthCur)
+		nLengthMax = nLengthCur;
+	
+	int cw = GetCharWidth('W');
+	SetScrollBarMax (pWindow, 0x70000000 - this->m_comboID, nLengthMax * cw);
+	
+	VidSetFont(SYSTEM_FONT);
 }
 
 void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 {
-	
 	int slen = strlen (pText);
 	int newCapacity = slen + 1;
 	if (newCapacity < 4096) newCapacity = 4096;//paradoxically, a smaller allocation occupies the same space as a 4096 byte alloc
@@ -531,7 +556,11 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	this->m_textInputData.m_textCursorIndex = 0;
 	this->m_textInputData.m_textCursorSelStart = -1;
 	this->m_textInputData.m_textCursorSelEnd   = -1;
-	this->m_textInputData.m_textCursorIndex    = this->m_textInputData.m_textLength;
+	this->m_textInputData.m_textCursorIndex    = 0;
+	this->m_textInputData.m_textCursorX        = 0;
+	this->m_textInputData.m_textCursorY        = 0;
+	this->m_textInputData.m_scrollX            = 0;
+	this->m_textInputData.m_scrollY            = 0;
 	
 	CtlTextInputUpdateScrollSize (this, pWindow);
 }
@@ -947,6 +976,95 @@ void CtlTextInputDoSyntaxHighlight (Control *this, uint32_t* color, int *chars_c
 	}
 }
 
+//TODO: only do relative movement
+void CtlTextEditUpdateScrollXY(Control *this)
+{
+	VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
+	int wChar = GetCharWidth('W'), hChar = GetLineHeight();
+	VidSetFont(SYSTEM_FONT);
+	
+	int cx = this->m_textInputData.m_textCursorX * wChar;
+	int cy = this->m_textInputData.m_textCursorY * hChar;
+	
+	if (this->m_textInputData.m_scrollX > cx)
+		this->m_textInputData.m_scrollX = cx;
+	if (this->m_textInputData.m_scrollY > cy)
+		this->m_textInputData.m_scrollY = cy;
+	
+	int sizeX = this->m_rect.right  - this->m_rect.left - 26;
+	int sizeY = this->m_rect.bottom - this->m_rect.top  - 26;
+	if (this->m_textInputData.m_scrollX < cx - sizeX - wChar - 1)
+		this->m_textInputData.m_scrollX = cx - sizeX - wChar - 1;
+	if (this->m_textInputData.m_scrollY < cy - sizeY - wChar - 1)
+		this->m_textInputData.m_scrollY = cy - sizeY - wChar - 1;
+}
+void CtlTextEditRecalcCurXY(Control *this)
+{
+	int xPos = 0, yPos = 0;
+	const char *text = this->m_textInputData.m_pText;
+	int index = 0;
+	while (*text)
+	{
+		if (index == this->m_textInputData.m_textCursorIndex)
+		{
+			this->m_textInputData.m_textCursorX = xPos;
+			this->m_textInputData.m_textCursorY = yPos;
+			return;
+		}
+		
+		if (*text == '\n')
+		{
+			xPos = 0;
+			yPos++;
+			text++;
+			index++;
+			continue;
+		}
+		
+		xPos++;
+		text++;
+		index++;
+	}
+	this->m_textInputData.m_textCursorX = xPos;
+	this->m_textInputData.m_textCursorY = yPos;
+}
+// Recalculate the index based on the requested X/Y position
+void CtlTextEditRecalcIndex(Control *this)
+{
+	int xPos = 0, yPos = 0;
+	const char *text = this->m_textInputData.m_pText;
+	int index = 0;
+	while (*text)
+	{
+		if (*text == '\n')
+		{
+			if (this->m_textInputData.m_textCursorY == yPos && this->m_textInputData.m_textCursorX >= xPos)
+			{
+				this->m_textInputData.m_textCursorX = xPos;
+				this->m_textInputData.m_textCursorIndex = index;
+				return;
+			}
+			
+			xPos = 0;
+			yPos++;
+			text++;
+			index++;
+			continue;
+		}
+		if (this->m_textInputData.m_textCursorY == yPos && this->m_textInputData.m_textCursorX == xPos)
+		{
+			this->m_textInputData.m_textCursorIndex = index;
+			return;
+		}
+		
+		xPos++;
+		text++;
+		index++;
+	}
+	this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
+	this->m_textInputData.m_textCursorX = xPos;
+	this->m_textInputData.m_textCursorY = yPos;
+}
 bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
 	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
@@ -965,11 +1083,15 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			//TODO: Allow change of cursor via click.
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
-				int pos = GetScrollBarPos(pWindow, -this->m_comboID);
+				int
+				pos = GetScrollBarPos(pWindow, -this->m_comboID);
 				if (this->m_textInputData.m_scrollY != pos)
-				{
 					this->m_textInputData.m_scrollY  = pos;
-				}
+				
+				pos = GetScrollBarPos(pWindow, 0x70000000 - this->m_comboID);
+				if (this->m_textInputData.m_scrollX != pos)
+					this->m_textInputData.m_scrollX  = pos;
+				
 				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			
@@ -978,105 +1100,88 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			
 			SetFocusedControl(pWindow, this->m_comboID);
 			
-			if (this->m_textInputData.m_enableStyling && eventType == EVENT_RELEASECURSOR)
+			if (this->m_textInputData.m_enableStyling && this->m_textInputData.m_pText && !this->m_textInputData.m_onlyOneLine)
 			{
-				if (this->m_textInputData.m_pText)
+				Rectangle rectAroundMouse;
+				rectAroundMouse.left   = mouseClickPos.x - 10;
+				rectAroundMouse.top    = mouseClickPos.y - 10;
+				rectAroundMouse.right  = mouseClickPos.x + 10;
+				rectAroundMouse.bottom = mouseClickPos.y + 10;
+				
+				VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
+				// Hit test
+				Rectangle rk = this->m_rect;
+				rk.left   += 2;
+				rk.top    += 2;
+				rk.right  -= 2;
+				rk.bottom -= 2;
+				if (this->m_textInputData.m_showLineNumbers)
+					rk.left += LINE_NUM_GAP;
+				
+				int xPos = rk.left + 2 - this->m_textInputData.m_scrollX;
+				int yPos = rk.top  + 2 - this->m_textInputData.m_scrollY;
+				
+				int xiPos = xPos, yiPos = yPos;
+				int wChar, hChar;
+				wChar = GetCharWidth ('W');
+				hChar = GetLineHeight();
+				
+				//go through the characters:
+				const char *text = this->m_textInputData.m_pText;
+				int charsConsumed = 0;
+				bool bLink = false, bBold = false;
+				
+				while (*text)
 				{
-					//HACK
-					//No need to change fonts.  m_enableStyling assumes FONT_BASIC.
-					
-					const char*text = this->m_textInputData.m_pText;
-					int lineHeight = GetLineHeight();
-					int xPos = this->m_rect.left + 4,
-						yPos = this->m_rect.top  + 4;// - lineHeight * this->m_textInputData.m_scrollY;
-					if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+					if (*text == '\n')
 					{
-						xPos += LINE_NUM_GAP;
-					}
-					
-					if (this->m_textInputData.m_onlyOneLine)
-					{
-						xPos = this->m_rect.left + 4 - 8 * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
-					}
-					
-					int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY;// linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
-					if (this->m_textInputData.m_onlyOneLine)
-					{
-						//linesPerScreen = 1;
-						scrollLine     = 0;
-					}
-					int offset  = 0;
-					
-					
-					bool bold = false, link = false;
-					while (*text)
-					{
-						//word wrap
-						if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
-						{
-							if (this->m_textInputData.m_onlyOneLine)
-								//Don't actually word-wrap if we hit the edge on a one-line textbox.
-								break;
-							xPos = this->m_rect.left + 4;
-							
-							if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
-								xPos += LINE_NUM_GAP;
-							
-							if (curLine2 >= scrollLine)
-								yPos += lineHeight;
-							
-							if (*text == '\n')
-							{
-								if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in checking anymore.
-							}
-							curLine ++;
-						}
-						if (*text != '\n')
-						{
-							// If character should be rendered
-							if (!this->m_textInputData.m_enableStyling || !((unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT))
-							{
-								// render this character:
-								if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
-								if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
-								{
-									//VidPlotChar(*text, xPos, yPos, color, TRANSPARENT);
-									
-									
-									//If it's a link character, check if the mouse cursor intersects it; if it does, trigger the proper link.
-									
-									Rectangle rect;
-									RECT(rect, xPos, yPos, GetCharWidth(*text), GetLineHeight());
-									
-									if (link && RectangleContains(&rect, &mouseClickPos))
-									{
-										CallWindowCallbackAndControls(pWindow, EVENT_CLICK_CHAR, this->m_comboID, offset);
-										break;
-									}
-								}
-									
-								// Increment the X,Y positions
-								xPos += GetCharWidth (*text) + bold;
-							}
-							//TODO cleanup
-							else if (*text == TIST_LINK)
-								link = true;
-							else if (*text == TIST_UNLINK)
-								link = false;
-							else if (*text == TIST_BOLD)
-								bold = true;
-							else if (*text == TIST_UNBOLD)
-								bold = false;
-						}
-						
+						xPos = xiPos;
+						yPos += hChar;
 						text++;
-						offset++;
+						continue;
+					}
+					// Styling. Only need to care about this if measuring text
+					else
+					{
+						if (this->m_textInputData.m_enableStyling && (unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT)
+						{
+							switch (*text) {
+								case TIST_BOLD:   bBold = true;  break;
+								case TIST_UNBOLD: bBold = false; break;
+								case TIST_LINK:   bLink = true;  break;
+								case TIST_UNLINK: bLink = false; break;
+							}
+							
+							text++;
+							continue;
+						}
 					}
 					
-					//Revert the font back if you decide to change stuff.
+					//if we need to bother checking
+					if (xPos + wChar <  rectAroundMouse.left)   goto dont_bother;
+					if (yPos + hChar <  rectAroundMouse.top)    goto dont_bother;
+					if (xPos         >= rectAroundMouse.right)  goto dont_bother;
+					if (yPos         >= rectAroundMouse.bottom) break;
+					
+					// Perform the real hit test here
+					Rectangle rr;
+					RECT(rr, xPos, yPos, GetCharWidth(*text), GetLineHeight());
+					
+					if (RectangleContains (&rr, &mouseClickPos) && bLink)
+					{
+						CallWindowCallbackAndControls(pWindow, EVENT_CLICK_CHAR, this->m_comboID, text - this->m_textInputData.m_pText);
+						break;
+					}
+					
+				dont_bother:
+					//still increase xPos/yPos
+					xPos +=  GetCharWidth (*text);
+					if (bBold) xPos++;
+					text++;
 				}
+				VidSetFont(SYSTEM_FONT);
 			}
-			//RequestRepaint (pWindow);
+			
 			break;
 		}
 		case EVENT_SIZE:
@@ -1086,220 +1191,62 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		{
 			if (!this->m_bFocused) break;
 			if (this->m_textInputData.m_readOnly) break;
+			VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
 			bool repaint = true;
 			switch (parm1)
 			{
 				case KEY_ARROW_UP:
+					this->m_textInputData.m_textCursorY--;
+					if (this->m_textInputData.m_textCursorY < 0)
+						this->m_textInputData.m_textCursorY = 0;
+					CtlTextEditRecalcIndex(this);
+					CtlTextEditUpdateScrollXY(this);
+					break;
 				case KEY_ARROW_DOWN:
-				case KEY_HOME:
-				case KEY_END:
-				{
-					if (this->m_textInputData.m_onlyOneLine)
-					{
-						if (parm1 == KEY_ARROW_UP || parm1 == KEY_ARROW_DOWN)
-							break;
-					}
-					if (this->m_textInputData.m_pText)
-					{
-						const char*text = this->m_textInputData.m_pText;
-						int lastRowStartIdx = -1, lastRowEndIdx = -1, curRowStartIdx = 0, newEndIndex;
-						int xPos = this->m_rect.left + 4;
-						if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
-						{
-							xPos += LINE_NUM_GAP;
-						}
-						int offset  = 0;
-						int offsetInsideLine = -1, offsetInsideLineCur = 0;
-						int curLine = 0;
-						
-						if (parm1 != KEY_END)
-						{
-							while (*text)
-							{
-								if (offset == this->m_textInputData.m_textCursorIndex)
-								{
-									offsetInsideLine = offsetInsideLineCur;
-									if (parm1 == KEY_ARROW_UP || parm1 == KEY_HOME)
-										break;
-								}
-								//word wrap
-								if (xPos + 7 >= this->m_rect.right - 4 || *text == '\n')
-								{
-									xPos = this->m_rect.left + 4;
-									if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
-									{
-										xPos += LINE_NUM_GAP;
-									}
-									offsetInsideLineCur = 0;
-									curLine ++;
-									
-									//TODO make this better?
-									if (parm1 == KEY_ARROW_DOWN)
-									{
-										if (offsetInsideLine != -1)
-										{
-											if (lastRowStartIdx == -1)
-											{
-												lastRowStartIdx  = offset + 1;
-											}
-											else
-											{
-												lastRowEndIdx    = offset;
-												break;
-											}
-										}
-									}
-									else if (parm1 == KEY_HOME)
-									{
-										curRowStartIdx = offset + 1;
-									}
-									else
-									{
-										lastRowStartIdx = curRowStartIdx;
-										lastRowEndIdx   = offset;
-										curRowStartIdx  = offset + 1;
-									}
-								}
-								if (*text != '\n')
-								{
-									// Increment the X,Y positions
-									xPos += 7;
-									offsetInsideLineCur++;
-								}
-								
-								text++;
-								offset++;
-							}
-							if (parm1 == KEY_ARROW_DOWN)
-							{
-								if (offsetInsideLine != -1)
-								{
-									if (lastRowStartIdx == -1)
-									{
-										lastRowStartIdx  = offset + 1;
-									}
-									else
-									{
-										lastRowEndIdx    = offset;
-									}
-								}
-							}
-						}
-						else
-						{
-							//END: special case.
-							int index = this->m_textInputData.m_textCursorIndex;
-							while (this->m_textInputData.m_pText[index] != '\n' && index < this->m_textInputData.m_textLength)
-								index++;
-							newEndIndex = index;
-							
-							if (this->m_textInputData.m_onlyOneLine)
-							{
-								this->m_textInputData.m_textCursorIndex = 0;
-								this->m_textInputData.m_scrollY = index - charsPerLine + 5;
-								if (this->m_textInputData.m_scrollY < 0)
-									this->m_textInputData.m_scrollY = 0;
-							}
-						}
-						
-						if (offsetInsideLine > lastRowEndIdx-lastRowStartIdx)
-							offsetInsideLine = lastRowEndIdx-lastRowStartIdx;
-						int newIndex = -1;
-						if (parm1 == KEY_ARROW_UP)
-						{
-							if (lastRowEndIdx >= lastRowStartIdx)
-								newIndex = lastRowStartIdx + offsetInsideLine;
-							else
-								newIndex = 0;
-						}
-						else if (parm1 == KEY_ARROW_DOWN)
-						{
-							if (lastRowEndIdx >= lastRowStartIdx)
-								newIndex = lastRowStartIdx + offsetInsideLine;
-							else
-								newIndex = this->m_textInputData.m_textLength;
-						}
-						else if (parm1 == KEY_HOME)
-						{
-							newIndex = curRowStartIdx;
-							if (this->m_textInputData.m_onlyOneLine)
-							{
-								this->m_textInputData.m_scrollY = 0;
-								newIndex = 0;
-							}
-						}
-						else if (parm1 == KEY_END)
-						{
-							newIndex = newEndIndex;
-						}
-						
-						if (newIndex >= 0)
-							this->m_textInputData.m_textCursorIndex = newIndex;
-						else
-							LogMsg("Move not implemented?");
-					}
+					this->m_textInputData.m_textCursorY++;
+					//limit checks will be done here
+					CtlTextEditRecalcIndex(this);
+					CtlTextEditUpdateScrollXY(this);
 					break;
-				}
-				case KEY_F1:
-				{
-					ClipboardVariant* pVariant = CbGetCurrentVariant();
-					if (!pVariant) break;
-					if (pVariant->m_type == CLIPBOARD_DATA_TEXT)
-					{
-						this->m_textInputData.m_textCursorIndex += 
-							CtlAppendTextToAnywhere(this, pWindow, pVariant->m_short_str, this->m_textInputData.m_textCursorIndex);
-					}
-					else if (pVariant->m_type == CLIPBOARD_DATA_LARGE_TEXT)
-					{
-						this->m_textInputData.m_textCursorIndex += 
-							CtlAppendTextToAnywhere(this, pWindow, pVariant->m_char_str,  this->m_textInputData.m_textCursorIndex);
-					}
-					CbRelease(pVariant);
-					break;
-				}
-				case KEY_F2:
-				{
-					SLogMsg("TODO: copy");
-					break;
-				}
 				case KEY_ARROW_LEFT:
 					this->m_textInputData.m_textCursorIndex--;
 					if (this->m_textInputData.m_textCursorIndex < 0)
 						this->m_textInputData.m_textCursorIndex = 0;
-					
-					if (this->m_textInputData.m_onlyOneLine)
-					{
-						if (this->m_textInputData.m_scrollY > this->m_textInputData.m_textCursorIndex)
-						{
-							this->m_textInputData.m_scrollY -= 10;
-							if (this->m_textInputData.m_scrollY < 0)
-								this->m_textInputData.m_scrollY = 0;
-						}
-					}
-					
+					CtlTextEditRecalcCurXY(this);
+					CtlTextEditUpdateScrollXY(this);
 					break;
 				case KEY_ARROW_RIGHT:
 					this->m_textInputData.m_textCursorIndex++;
-					if (this->m_textInputData.m_textCursorIndex > this->m_textInputData.m_textLength)
-						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
-					
-					if (this->m_textInputData.m_onlyOneLine)
-					{
-						if (this->m_textInputData.m_scrollY + charsPerLine +2 <= this->m_textInputData.m_textCursorIndex)
-						{
-							this->m_textInputData.m_scrollY += 10;
-						}
-					}
-					
+					if (this->m_textInputData.m_textCursorIndex >= this->m_textInputData.m_textLength)
+						this->m_textInputData.m_textCursorIndex  = this->m_textInputData.m_textLength - 1;
+					CtlTextEditRecalcCurXY(this);
+					CtlTextEditUpdateScrollXY(this);
 					break;
+				case KEY_HOME:
+					this->m_textInputData.m_textCursorX = 0;
+					//limit checks will be done here
+					CtlTextEditRecalcIndex(this);
+					CtlTextEditUpdateScrollXY(this);
+					break;
+				case KEY_END:
+					//hack
+					this->m_textInputData.m_textCursorX = 2147483647;
+					//limit checks will be done here
+					CtlTextEditRecalcIndex(this);
+					CtlTextEditUpdateScrollXY(this);
+					break;
+				case KEY_F1:
+				case KEY_F2:
 				case KEY_DELETE:
 					if (this->m_textInputData.m_textLength   >   this->m_textInputData.m_textCursorIndex)
 						CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
-					break;
 				default:
 					repaint = false;
 					break;
 			}
+			
+			VidSetFont(SYSTEM_FONT);
+			
 			if (repaint)
 				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 				//RequestRepaint(pWindow);
@@ -1314,38 +1261,19 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			if ((char)parm1 == '\b')
 			{
 				CtlRemoveCharFromAnywhere(this, pWindow, --this->m_textInputData.m_textCursorIndex);
+				CtlTextEditRecalcCurXY(this);
+				CtlTextEditUpdateScrollXY(this);
 				if (this->m_textInputData.m_textCursorIndex < 0)
 					this->m_textInputData.m_textCursorIndex = 0;
-				
-				if (this->m_textInputData.m_onlyOneLine)
-				{
-					//while (this->m_textInputData.m_scrollY >= this->m_textInputData.m_textCursorIndex)
-					{
-						this->m_textInputData.m_scrollY--;
-						if (this->m_textInputData.m_scrollY < 0)
-						{
-							this->m_textInputData.m_scrollY = 0;
-						}
-					}
-				}
 			}
 			else
 			{
 				CtlAppendCharToAnywhere(this, pWindow, (char)parm1, this->m_textInputData.m_textCursorIndex++);
-				
-				if (this->m_textInputData.m_onlyOneLine)
-				{
-					while (this->m_textInputData.m_scrollY + charsPerLine <= this->m_textInputData.m_textCursorIndex)
-					{
-						this->m_textInputData.m_scrollY++;
-					}
-				}
+				CtlTextEditRecalcCurXY(this);
+				CtlTextEditUpdateScrollXY(this);
 			}
-			//RequestRepaintNew (pWindow);
-			//WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			
 			RequestRepaint (pWindow);
-			//pWindow->m_vbeData.m_dirty = true;
-			//pWindow->m_renderFinished  = true;
 			break;
 		}
 		case EVENT_CREATE:
@@ -1355,11 +1283,12 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
+				// Add the vertical scroll bar
 				Rectangle r;
 				r.right = this->m_rect.right, 
 				r.top   = this->m_rect.top, 
-				r.bottom= this->m_rect.bottom, 
-				r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+				r.bottom= this->m_rect.bottom - SCROLL_BAR_WIDTH, 
+				r.left  = this->m_rect.right  - SCROLL_BAR_WIDTH;
 				
 				int flags = 0;
 				if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
@@ -1368,9 +1297,18 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					flags |= ANCHOR_BOTTOM_TO_BOTTOM;
 				
 				AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, 1, 1);
+				
+				r.right = this->m_rect.right  - SCROLL_BAR_WIDTH, 
+				r.top   = this->m_rect.bottom - SCROLL_BAR_WIDTH, 
+				r.bottom= this->m_rect.bottom, 
+				r.left  = this->m_rect.left;
+				
+				//no one will use combo IDs that large I hope :^)
+				AddControlEx (pWindow, CONTROL_HSCROLLBAR, flags, r, NULL, 0x70000000 - this->m_comboID, 1, 1);
 			
 				//shrink our rectangle:
-				this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+				this->m_rect.right  -= SCROLL_BAR_WIDTH + 2;
+				this->m_rect.bottom -= SCROLL_BAR_WIDTH + 2;
 			}
 			
 			if (this->m_textInputData.m_onlyOneLine)
@@ -1421,138 +1359,112 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			
 			if (this->m_textInputData.m_pText)
 			{
-				//HACK
 				VidSetFont(this->m_textInputData.m_enableStyling ? SYSTEM_FONT : FONT_TAMSYN_MED_REGULAR);
+				Rectangle cr = rk;
+				cr.left += 2;
+				cr.top  += 2;
+				cr.right  -= 4;
+				cr.bottom -= 4;
+				VidSetClipRect(&this->m_rect);
 				
-				const char*text = this->m_textInputData.m_pText;
-				int lineHeight = GetLineHeight();
-				int xPos = this->m_rect.left + 4,
-					yPos = this->m_rect.top  + 4;// - lineHeight * this->m_textInputData.m_scrollY;
-				if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
-				{
-					xPos += LINE_NUM_GAP;
-				}
+				int xPos = rk.left + 2 - this->m_textInputData.m_scrollX;
+				int yPos = rk.top  + 2 - this->m_textInputData.m_scrollY;
+				int nLine = 1;
 				
-				if (this->m_textInputData.m_onlyOneLine)
-				{
-					xPos = this->m_rect.left + 4 - GetCharWidth('W') * this->m_textInputData.m_scrollY;//scrollY is scrollX for now in single line mode.
-				}
+				int xiPos = xPos, yiPos = yPos;
+				int wChar, hChar;
+				wChar = GetCharWidth ('W');
+				hChar = GetLineHeight();
 				
-				int curLine = 0, curLine2 = 0, scrollLine = this->m_textInputData.m_scrollY;// linesPerScreen = (this->m_rect.bottom - this->m_rect.top) / lineHeight;
-				if (this->m_textInputData.m_onlyOneLine)
-				{
-					//linesPerScreen = 1;
-					scrollLine     = 0;
-				}
-				int offset  = 0;
+				//go through the characters:
+				const char *text = this->m_textInputData.m_pText;
 				
-				char line_string[10];
-				curLine2 ++;
-				if (curLine2 >= scrollLine && xPos >= this->m_rect.left && this->m_textInputData.m_showLineNumbers)
+				int charsConsumed = 0;
+				
+				//write Line 1 text, if needed
+				if (this->m_textInputData.m_showLineNumbers && (yPos + hChar >= this->m_rect.top))
 				{
-					sprintf   (line_string, "%5d", curLine2);
-					VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+					char buffer[12];
+					sprintf(buffer, "%6d", nLine);
+					VidTextOut(buffer, this->m_rect.left + 2, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 				}
-				int chars_consumed = 0;
 				
 				while (*text)
 				{
-					if (!this->m_textInputData.m_readOnly)
-						if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly)
-						{
-							VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
-						}
-					//word wrap
-					if (xPos + GetCharWidth(*text) >= this->m_rect.right - 4 || *text == '\n')
+					if (*text == '\n')
 					{
-						if (this->m_textInputData.m_onlyOneLine)
-							//Don't actually word-wrap if we hit the edge on a one-line textbox.
-							break;
-						xPos = this->m_rect.left + 4;
-						if (this->m_textInputData.m_showLineNumbers && !this->m_textInputData.m_onlyOneLine)
+						xPos = xiPos;
+						yPos += hChar;
+						text++;
+						nLine++;
+						if (this->m_textInputData.m_showLineNumbers && (yPos + hChar >= this->m_rect.top))
 						{
-							xPos += LINE_NUM_GAP;
+							char buffer[12];
+							sprintf(buffer, "%6d", nLine);
+							VidTextOut(buffer, this->m_rect.left + 2, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 						}
-						if (curLine2 >= scrollLine)
-						{
-							yPos += lineHeight;
-						}
-						if (*text == '\n')
-						{
-							curLine2 ++;
-							if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
-							if (curLine2 >= scrollLine && xPos >= this->m_rect.left && this->m_textInputData.m_showLineNumbers)
-							{
-								sprintf   (line_string, "%5d", curLine2);
-								VidTextOut(line_string, this->m_rect.left + 6, yPos, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
-							}
-						}
-						curLine ++;
+						continue;
 					}
-					if (*text != '\n')
+					// Styling. Only need to care about this if measuring text
+					else
 					{
 						if (this->m_textInputData.m_enableSyntaxHilite)
 						{
-							if (chars_consumed == 0)
-							{
-								chars_consumed = 1;
-								CtlTextInputDoSyntaxHighlight (this, &color, &chars_consumed, text - this->m_textInputData.m_pText);
+							if (charsConsumed == 0) {
+								charsConsumed = 1;
+								CtlTextInputDoSyntaxHighlight (this, &color, &charsConsumed, text - this->m_textInputData.m_pText);
 							}
-							chars_consumed--;
+							charsConsumed--;
 						}
 						if (this->m_textInputData.m_enableStyling && (unsigned char)(*text) >= (unsigned char)TIST_BOLD && (unsigned char)(*text) < (unsigned char)TIST_COUNT)
 						{
-							//bool link = false;
-							switch (*text)
-							{
-								case TIST_BOLD:
-									color |= 0x01000000;
-									break;
-								case TIST_UNBOLD:
-									color &= ~0x01000000;
-									break;
-								case TIST_UNFORMAT:
-									color =  color_default;//Remove formatting
-									break;
-								case TIST_RED:
-									color =  (color & 0xFF000000) | 0xFF0000;
-									break;
-								case TIST_GREEN:
-									color =  (color & 0xFF000000) | 0x00FF00;
-									break;
-									
-							//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-								case TIST_LINK:
-									//link = true;
-								case TIST_BLUE:
-									color =  (color & 0xFF000000) | 0x0000FF;
-									break;
-									
-								case TIST_UNLINK:
-									//link = false;
-								case TIST_UNCOLOR:
-									color =  (color & 0xFF000000) | color_default;
-									break;
-							//#pragma GCC diagnostic pop
+							switch (*text) {
+								case TIST_BOLD:                       color |=  0x01000000;        break;
+								case TIST_UNBOLD:                     color &= ~0x01000000;        break;
+								case TIST_UNFORMAT:                   color =  color_default;      break;
+								case TIST_RED:                        color =  color | 0x00FF0000; break;
+								case TIST_GREEN:                      color =  color | 0x0000FF00; break;
+								case TIST_LINK:    case TIST_BLUE:    color =  color | 0x000000FF; break;
+								case TIST_UNLINK:  case TIST_UNCOLOR: color =  (color & 0xFF000000) | color_default; break;
 							}
-						}
-						else
-						{
-							// render this character:
-							if (yPos >= this->m_rect.bottom - lineHeight) break;//no point in drawing anymore.
-							if (curLine2 >= scrollLine && xPos >= this->m_rect.left)
-								VidPlotChar(*text, xPos, yPos, color, TRANSPARENT);
-							// Increment the X,Y positions
-							xPos += GetCharWidth (*text) + ((color & 0x01000000) != 0);
+							
+							text++;
+							continue;
 						}
 					}
 					
+					//if we need to bother drawing
+					if (xPos + wChar <  this->m_rect.left)   goto dont_draw;
+					if (yPos + hChar <  this->m_rect.top)    goto dont_draw;
+					if (xPos         >= this->m_rect.right)  goto dont_draw;
+					if (yPos         >= this->m_rect.bottom) break;
+					
+					VidPlotChar (*text, xPos, yPos, color, TRANSPARENT);
+					
+				dont_draw:
+					//still increase xPos/yPos
+					xPos +=  GetCharWidth (*text);
+					if (color & 0x01000000) xPos++;
 					text++;
-					offset++;
 				}
-				if (offset == this->m_textInputData.m_textCursorIndex && !this->m_textInputData.m_readOnly && this->m_bFocused)
-					VidDrawVLine(0xFF, yPos, yPos + lineHeight, xPos);
 				
+				// draw cursor
+				if (this->m_bFocused)
+				{
+					int cx = xiPos + this->m_textInputData.m_textCursorX * wChar;
+					int cy = yiPos + this->m_textInputData.m_textCursorY * hChar;
+					
+					if (cx <  this->m_rect.left)   goto dont_draw_cur;
+					if (cy <  this->m_rect.top)    goto dont_draw_cur;
+					if (cx >= this->m_rect.right)  goto dont_draw_cur;
+					if (cy >= this->m_rect.bottom) goto dont_draw_cur;
+				
+					//draw the cursor:
+					VidDrawVLine(0xFF, cy, cy + hChar, cx);
+					
+					dont_draw_cur:;
+				}
+				VidSetClipRect(NULL);
 				VidSetFont(SYSTEM_FONT);
 			}
 			else
