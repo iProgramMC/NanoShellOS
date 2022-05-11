@@ -20,6 +20,18 @@
 #define IMAGECTL_PEN  (4)
 #define IMAGECTL_FILL (8)
 
+#define BUTTONDARK 0x808080
+#define BUTTONMIDD BUTTON_MIDDLE_COLOR
+#define BUTTONLITE 0xFFFFFF
+#define BUTTONMIDC WINDOW_BACKGD_COLOR
+
+#define SCROLL_BAR_WIDTH 16
+
+#define LINE_NUM_GAP 56
+#define RECT(rect,x,y,w,h) do {\
+	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
+} while (0)
+
 /**
  * Gets the OnEvent function corresponding to the widget type.
  */
@@ -189,5 +201,8 @@ void ImageCtlZoomToFill (Window *pWindow, int comboID);
  * Sets the focused control to the one with this comboid.
  */
 void SetFocusedControl(Window *pWindow, int comboId);
+
+void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
+void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 
 #endif//_WIDGET_H
