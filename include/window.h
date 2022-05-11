@@ -214,6 +214,8 @@ enum {
 	CONTROL_IMAGE,
 	//Task list control
 	CONTROL_TASKLIST,
+	//Same as CONTROL_ICONVIEW but with draggable icons.
+	CONTROL_ICONVIEWDRAG,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -251,6 +253,7 @@ typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
 typedef struct
 {
 	int  m_icon;//can be blank
+	int  m_posX, m_posY; //used for CONTROL_ICONVIEWDRAG
 	char m_contents [128];
 }
 ListItem;
@@ -266,6 +269,7 @@ typedef struct
 	int  m_scrollY;
 	int  m_highlightedElementIdx;
 	ListItem *m_pItems;
+	int  m_trackedListItem;
 }
 ListViewData;
 

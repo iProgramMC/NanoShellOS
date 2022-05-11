@@ -1951,6 +1951,11 @@ go_back:
 	}
 	return false;//Fall through to other controls.
 }
+
+bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	return false;
+}
 #endif
 
 // List view modifiers
@@ -3503,6 +3508,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetSimpleLine_OnEvent,
 	WidgetImage_OnEvent,
 	WidgetTaskList_OnEvent,
+	WidgetIconViewDrag_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");
