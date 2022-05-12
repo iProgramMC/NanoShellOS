@@ -581,23 +581,29 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		// -- Uncomment this if you want to get smooth scrolling through text.
 		// I like to keep it on
 		case EVENT_CLICKCURSOR:
-		case EVENT_RELEASECURSOR:
 		{
 			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			//TODO: Allow change of cursor via click.
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
+				bool bUpdate = false;
 				int
 				pos = GetScrollBarPos(pWindow, -this->m_comboID);
 				if (this->m_textInputData.m_scrollY != pos)
-					this->m_textInputData.m_scrollY  = pos;
+					this->m_textInputData.m_scrollY  = pos, bUpdate = true;
 				
 				pos = GetScrollBarPos(pWindow, 0x70000000 - this->m_comboID);
 				if (this->m_textInputData.m_scrollX != pos)
-					this->m_textInputData.m_scrollX  = pos;
+					this->m_textInputData.m_scrollX  = pos, bUpdate = true;
 				
-				WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+				if (bUpdate)
+					WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			}
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			
 			if (!RectangleContains (&this->m_rect, &mouseClickPos))
 				break;
@@ -806,6 +812,12 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				r.top   = this->m_rect.bottom - SCROLL_BAR_WIDTH, 
 				r.bottom= this->m_rect.bottom, 
 				r.left  = this->m_rect.left;
+				
+				flags = 0;
+				if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+					flags |= ANCHOR_RIGHT_TO_RIGHT;
+				if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+					flags |= ANCHOR_TOP_TO_BOTTOM | ANCHOR_BOTTOM_TO_BOTTOM;
 				
 				//no one will use combo IDs that large I hope :^)
 				AddControlEx (pWindow, CONTROL_HSCROLLBAR, flags, r, NULL, 0x70000000 - this->m_comboID, 1, 1);

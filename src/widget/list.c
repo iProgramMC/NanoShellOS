@@ -74,6 +74,9 @@ static void CtlResetList (Control* pCtl, Window* pWindow)
 	pData->m_highlightedElementIdx = -1;
 	pData->m_elementCount = 0;
 	pData->m_capacity     = 10;
+	
+	pData->m_trackedListItem = -1;
+	pData->m_bIsDraggingIt   = false;
 	int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 	pData->m_pItems       = MmAllocateK (itemsSize);
 	if (!pData->m_pItems)
@@ -485,9 +488,407 @@ go_back:
 	return false;//Fall through to other controls.
 }
 
+#endif
+
+// Icon list drag view
+#if 1
+static void CtlIconDragUpdateScrollBarSize(Control* pCtlIcon, Window* pWindow)
+{
+	//also update the scroll bar.
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	int c = pData->m_extentY;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+}
+void WidgetIconViewDrag_ArrangeIcons (Control *this);
+void CtlIconDragRecalculateExtents (Control *this)
+{
+	ListViewData* pData = &this->m_listViewData;
+	
+	pData->m_extentX = pData->m_extentY = 0;
+	for (int i = 0; i < pData->m_elementCount; i++)
+	{
+		if (pData->m_extentX < pData->m_pItems[i].m_posX + ICON_ITEM_WIDTH)
+			pData->m_extentX = pData->m_pItems[i].m_posX + ICON_ITEM_WIDTH;
+		if (pData->m_extentY < pData->m_pItems[i].m_posY + ICON_ITEM_HEIGHT)
+			pData->m_extentY = pData->m_pItems[i].m_posY + ICON_ITEM_HEIGHT;
+	}
+}
+static void CtlIconDragAddElementToList (Control* pCtlIcon, const char* pText, int optionalIcon, Window* pWindow)
+{
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	if (pData->m_elementCount == pData->m_capacity)
+	{
+		//have to expand first
+		int oldSize = sizeof (ListItem) * pData->m_capacity;
+		int newSize = oldSize * 2;
+		ListItem* pNewItems = MmAllocateK(newSize);
+		if (!pNewItems)
+			return;
+		
+		ZeroMemory(pNewItems, newSize);
+		memcpy (pNewItems, pData->m_pItems, oldSize);
+		MmFreeK (pData->m_pItems);
+		pData->m_pItems = pNewItems;
+		pData->m_capacity *= 2;
+		
+		//then can add
+	}
+	ListItem *pItem = &pData->m_pItems[pData->m_elementCount];
+	pData->m_elementCount++;
+	pData->m_highlightedElementIdx = -1;
+	
+	pItem->m_icon = optionalIcon;
+	strcpy(pItem->m_contents, pText);
+	
+	//TODO!
+	//WidgetIconViewDrag_ArrangeIcons(pCtlIcon);
+	
+	int elemIndex = pData->m_elementCount - 1;
+	int elementColsPerScreen = (pCtlIcon->m_rect.right  - pCtlIcon->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+	int x = 4, y = 4 + 2;
+	x += ICON_ITEM_WIDTH  * (elemIndex % elementColsPerScreen);
+	y += ICON_ITEM_HEIGHT * (elemIndex / elementColsPerScreen);
+	pItem->m_posX = x;
+	pItem->m_posY = y;
+	
+	pData->m_trackedListItem = -1;
+	pData->m_bIsDraggingIt   = false;
+	
+	CtlIconDragRecalculateExtents (pCtlIcon);
+	CtlIconDragUpdateScrollBarSize(pCtlIcon, pWindow);
+	
+	//WrapText(pItem->m_contents, pText, ICON_ITEM_WIDTH);
+}
+static void CtlIconDragRemoveElementFromList(Control* pCtlIcon, int index, Window* pWindow)
+{
+	ListViewData* pData = &pCtlIcon->m_listViewData;
+	memcpy (pData->m_pItems + index, pData->m_pItems + index + 1, sizeof(ListItem) * (pData->m_elementCount - index - 1));
+	pData->m_elementCount--;
+	pData->m_highlightedElementIdx = -1;
+	
+	pData->m_trackedListItem = -1;
+	pData->m_bIsDraggingIt   = false;
+	
+	//also update the scroll bar.
+	CtlIconDragUpdateScrollBarSize(pCtlIcon, pWindow);
+}
+void WidgetIconViewDrag_ArrangeIcons (Control *this)
+{
+	ListViewData* pData = &this->m_listViewData;
+	
+	int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+	int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+	
+	int elementStart =   0;
+	int elementEnd   =   pData->m_elementCount - 1;
+	
+	int elementX = 0;
+	
+	for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
+	{
+		int x = 4 + elementX, y = 4 + 2 + j * ICON_ITEM_HEIGHT;
+		uint32_t color = WINDOW_TEXT_COLOR;
+		
+		ListItem* pItem = &pData->m_pItems[i];
+		
+		pItem->m_posX = x;
+		pItem->m_posY = y;
+		
+		elementX += ICON_ITEM_WIDTH;
+		k++;
+		if (k >= elementColsPerScreen)
+		{
+			elementX = 0;
+			k = 0;
+			j++;
+		}
+	}
+	
+	CtlIconDragRecalculateExtents (this);
+}
+
+SAI int _Abs(int i)
+{
+	if (i < 0) return -i;
+	else return i;
+}
+
+//extern VBEData*g_vbeData,g_mainScreenVBEData;
 bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
-	return false;
+go_back:
+	switch (eventType)
+	{
+		case EVENT_SIZE:
+		{
+			CtlIconDragUpdateScrollBarSize (this, pWindow);
+			break;
+		}
+		//fallthrough intentional
+		case EVENT_CLICKCURSOR:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
+			bool bUpdate = false;
+			if (pData->m_scrollY != pos)
+			{
+				pData->m_scrollY  = pos;
+				bUpdate = true;
+			}
+			
+			// For each icon, see if it needs to be selected
+			int nSelectedIcon = -1;
+			
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&this->m_rect, &pt))
+			{
+				for (int i = 0; i < pData->m_elementCount; i++)
+				{
+					ListItem *pItem = &pData->m_pItems[i];
+					
+					int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+					Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
+					
+					if (RectangleContains (&br, &pt))
+					{
+						nSelectedIcon = i;
+						break;
+					}
+				}
+			
+				if (pData->m_trackedListItem == -1)
+				{
+					// Start tracking it.
+					pData->m_trackedListItem = nSelectedIcon;
+					pData->m_bIsDraggingIt   = false;
+					pData->m_startDragX      = pt.x;
+					pData->m_startDragY      = pt.y;
+					bUpdate = true;
+				}
+				else if (_Abs(pData->m_startDragX - pt.x) > 4 || _Abs(pData->m_startDragY - pt.y) > 4)
+				{
+					// Start dragging it.
+					Image* pImg = GetIconImage(pData->m_pItems[pData->m_trackedListItem].m_icon, 32);
+					
+					//prepare custom cursor info
+					pWindow->m_customCursor.width  = pImg->width;
+					pWindow->m_customCursor.height = pImg->height;
+					pWindow->m_customCursor.boundsWidth  = pImg->width;
+					pWindow->m_customCursor.boundsHeight = pImg->height;
+					pWindow->m_customCursor.leftOffs = pImg->width  / 2;
+					pWindow->m_customCursor.topOffs  = ICON_ITEM_HEIGHT / 2;
+					pWindow->m_customCursor.bitmap   = pImg->framebuffer;
+					pWindow->m_customCursor.m_transparency = true;
+					pWindow->m_customCursor.m_resizeMode = false;
+					
+					ChangeCursor (pWindow, CURSOR_CUSTOM); // for testing
+					pData->m_bIsDraggingIt = true;
+					bUpdate = true;
+				}
+			}
+			
+			if (bUpdate)
+				goto paint_already;
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			bool bUpdate = false;
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			
+			if (pData->m_trackedListItem != -1 && pData->m_bIsDraggingIt)
+			{
+				// Release the tracked item at some position
+				int newX = pt.x - this->m_rect.left - (ICON_ITEM_WIDTH / 2);
+				int newY = pt.y - this->m_rect.top + pData->m_scrollY - (ICON_ITEM_HEIGHT / 2);
+				if (newX < 0) newX = 0;
+				if (newY < 0) newY = 0;
+				if (newX > (this->m_rect.right - this->m_rect.left))
+					newX = (this->m_rect.right - this->m_rect.left);
+				
+				// Place the icon there.
+				ListItem *pItem = &pData->m_pItems[pData->m_trackedListItem];
+				pItem->m_posX = newX;
+				pItem->m_posY = newY;
+				
+				CtlIconDragRecalculateExtents  (this);
+				
+				CtlIconDragUpdateScrollBarSize (this, pWindow);
+				
+				bUpdate = true;
+				
+				ChangeCursor (pWindow, CURSOR_DEFAULT);
+			}
+			else
+			{
+				// For each icon, see if it needs to be selected
+				int nSelectedIcon = -1;
+				
+				if (RectangleContains (&this->m_rect, &pt))
+				{
+					for (int i = 0; i < pData->m_elementCount; i++)
+					{
+						ListItem *pItem = &pData->m_pItems[i];
+						
+						int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+						Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
+						
+						if (RectangleContains (&br, &pt))
+						{
+							nSelectedIcon = i;
+							break;
+						}
+					}
+				}
+				
+				if (pData->m_highlightedElementIdx != nSelectedIcon)
+				{
+					pData->m_highlightedElementIdx = nSelectedIcon;
+					bUpdate = true;
+				}
+				else if (nSelectedIcon != -1)
+				{
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, nSelectedIcon);
+				}
+			}
+			
+			pData->m_trackedListItem = -1;
+			pData->m_bIsDraggingIt   = false;
+			
+			if (!bUpdate)
+				break;
+		}
+	//#pragma GCC diagnostic pop
+		case EVENT_PAINT:
+		{
+		paint_already:
+			VidSetClipRect(&this->m_rect);
+			
+			//draw a green rectangle:
+			Rectangle rk = this->m_rect;
+			rk.left   += 2;
+			rk.top    += 2;
+			rk.right  -= 2;
+			rk.bottom -= 2;
+			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
+			ListViewData* pData = &this->m_listViewData;
+			
+			int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
+			int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+			
+			int elementStart =   pData->m_scrollY * elementColsPerScreen;
+			int elementEnd   =   pData->m_scrollY * elementColsPerScreen + elementRowsPerScreen * elementColsPerScreen-1;
+			
+			if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
+			if (elementStart < 0) elementStart = 0;
+			
+			if (elementEnd < 0) elementEnd = 0;
+			if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
+			
+			if (elementStart > elementEnd)
+				VidDrawText ("(Empty)", rk, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0x7F7F7F, TRANSPARENT);
+			
+			int elementX = 0;
+			
+			for (int i = 0; i < pData->m_elementCount; i++)
+			{
+				ListItem *pItem = &pData->m_pItems[i];
+				
+				int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+				/*
+				if (x - ICON_ITEM_WIDTH  < this->m_rect.left) continue;
+				if (y - ICON_ITEM_HEIGHT < this->m_rect.top)  continue;
+				if (x >= this->m_rect.right)  continue;
+				if (y >= this->m_rect.bottom) continue;
+				*/
+				
+				uint32_t color = WINDOW_TEXT_COLOR;
+				Rectangle br = { x, y + 36 * pData->m_hasIcons, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
+				
+				if (pData->m_bIsDraggingIt && pData->m_trackedListItem == i)
+					continue;
+				
+				if (pData->m_highlightedElementIdx == i || pData->m_trackedListItem == i)
+				{
+					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
+					
+					int w, h;
+					VidTextOutInternal(pData->m_pItems[i].m_contents, 0, 0, 0, 0, true, &w, &h);
+					
+					int mid = (br.left + br.right) / 2;
+					
+					VidFillRect(0x7F, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
+				}
+				if (pData->m_hasIcons)
+				{
+					if (pData->m_pItems[i].m_icon)
+						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, y, 32);
+				}
+				
+				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
+			}
+			
+			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			VidSetClipRect(NULL);
+			
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			// Start out with an initial size of 10 elements.
+			ListViewData* pData = &this->m_listViewData;
+			pData->m_elementCount = 0;
+			pData->m_capacity     = 10;
+			pData->m_scrollY      = 0;
+			pData->m_hasIcons     = true;
+			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
+			pData->m_pItems       = MmAllocateK (itemsSize);
+			if (!pData->m_pItems)
+				return false;
+			
+			memset (pData->m_pItems, 0, itemsSize);
+			
+			// Add a vertical scroll bar to its right.
+			Rectangle r;
+			r.right = this->m_rect.right, 
+			r.top   = this->m_rect.top, 
+			r.bottom= this->m_rect.bottom, 
+			r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+			
+			int c = pData->m_elementCount;
+			if (c <= 0)
+				c  = 1; 
+			
+			int flags = 0;
+			if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				flags |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
+			if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				flags |= ANCHOR_BOTTOM_TO_BOTTOM;
+			
+			AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, c, 1);
+			
+			//shrink our rectangle:
+			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			ListViewData* pData = &this->m_listViewData;
+			//free the items first
+			if (pData->m_pItems)
+			{
+				MmFreeK (pData->m_pItems);
+				pData->m_pItems = NULL;
+			}
+			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			break;
+		}
+	}
+	return false;//Fall through to other controls.
 }
 #endif
 
@@ -502,6 +903,8 @@ void AddElementToList (Window* pWindow, int comboID, const char* pText, int opti
 		{
 			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
 				CtlIconAddElementToList (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
+			else if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEWDRAG)
+				CtlIconDragAddElementToList (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
 			else
 				CtlAddElementToList     (&pWindow->m_pControlArray[i], pText, optionalIcon, pWindow);
 			return;
@@ -527,6 +930,8 @@ void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
 		{
 			if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEW)
 				CtlIconRemoveElementFromList (&pWindow->m_pControlArray[i], elementIndex, pWindow);
+			else if (pWindow->m_pControlArray[i].m_type == CONTROL_ICONVIEWDRAG)
+				CtlIconDragRemoveElementFromList (&pWindow->m_pControlArray[i], elementIndex, pWindow);
 			else
 				CtlRemoveElementFromList     (&pWindow->m_pControlArray[i], elementIndex, pWindow);
 			return;

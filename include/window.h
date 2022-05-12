@@ -270,6 +270,9 @@ typedef struct
 	int  m_highlightedElementIdx;
 	ListItem *m_pItems;
 	int  m_trackedListItem;
+	bool m_bIsDraggingIt;
+	int  m_extentX, m_extentY;
+	int  m_startDragX, m_startDragY;
 }
 ListViewData;
 
@@ -428,6 +431,7 @@ enum CURSORTYPE
 	CURSOR_CROSS,
 	CURSOR_PENCIL,
 	CURSOR_COUNT,
+	CURSOR_CUSTOM,
 };
 
 #define WF_NOCLOSE  0x00000001//Disable close button
@@ -503,6 +507,8 @@ typedef struct WindowStruct
 	SafeLock   m_EventQueueLock;
 	
 	Rectangle  m_taskbarRect;
+	
+	Cursor     m_customCursor;
 } Window;
 
 /**

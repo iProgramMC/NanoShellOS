@@ -953,8 +953,16 @@ Cursor* const g_CursorLUT[] =
 	&g_pencilCursor,
 };
 
-Cursor* GetCursorBasedOnID(int m_cursorID)
+Cursor* GetCursorBasedOnID(int m_cursorID, Window *pWindow)
 {
+	if (m_cursorID == CURSOR_CUSTOM)
+	{
+		if (pWindow)
+			return &pWindow->m_customCursor;
+		else
+			return &g_defaultCursor;
+	}
+	
 	if (m_cursorID < CURSOR_DEFAULT || m_cursorID >= CURSOR_COUNT) return &g_defaultCursor;
 	
 	return g_CursorLUT[m_cursorID];
@@ -2075,8 +2083,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		if (windowOver >= 0)
 		{
 			Window* pWindow = &g_windows [windowOver];
-			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindow->m_cursorID))
-				SetCursor(GetCursorBasedOnID(pWindow->m_cursorID));
+			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindow->m_cursorID, pWindow))
+				SetCursor(GetCursorBasedOnID(pWindow->m_cursorID, pWindow));
 		}
 		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != &g_defaultCursor)
 			SetCursor(&g_defaultCursor);

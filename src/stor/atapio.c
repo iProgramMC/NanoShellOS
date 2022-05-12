@@ -6,6 +6,7 @@
 ******************************************/
 
 #include <storabs.h>
+#include <task.h>
 
 
 #define CMD_READ  0x20
@@ -15,6 +16,8 @@
 #define BSY_FLAG 0x80
 #define DRQ_FLAG 0x08
 #define ERR_FLAG 0x01
+
+SafeLock g_ideDriveLocks[4];
 
 bool g_ideDriveAvailable[] = { false, false, false, false };//the 4 IDE drives
 
@@ -50,11 +53,15 @@ DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t n
 		case 3: base = 0x0170; break;
 		default: return DEVERR_HARDWARE_ERROR;
 	}
+	// Lock this
+	LockAcquire(&g_ideDriveLocks[driveID]);
+	
 	if (driveID % 2) driveType |= 0x10;
 	
 	if (!StIdeWaitBusy(base))
 	{
 		g_ideDriveAvailable[driveID] = false;
+		LockFree(&g_ideDriveLocks[driveID]);
 		return DEVERR_HARDWARE_ERROR;
 	}
 	
@@ -75,6 +82,7 @@ DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t n
 		{
 			LogMsg("Drive %d is not responding? Marking drive as unavailable!", driveID);
 			g_ideDriveAvailable[driveID] = false;
+			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_HARDWARE_ERROR;
 		}
 		
@@ -82,6 +90,7 @@ DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t n
 			*(pDestW++) = ReadPortW (base);
 	}
 	
+	LockFree(&g_ideDriveLocks[driveID]);
 	return DEVERR_SUCCESS;
 }
 
@@ -101,10 +110,12 @@ DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, ui
 	}
 	if (driveID % 2) driveType |= 0x10;
 	
+	LockAcquire(&g_ideDriveLocks[driveID]);
 	if (!StIdeWaitBusy(base))
 	{
 		LogMsg("Before sending Write command: drive %d is not responding? Marking drive as unavailable!", driveID);
 		g_ideDriveAvailable[driveID] = false;
+		LockFree(&g_ideDriveLocks[driveID]);
 		return DEVERR_HARDWARE_ERROR;
 	}
 	
@@ -124,6 +135,7 @@ DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, ui
 		{
 			LogMsg("Drive %d is not responding? Marking drive as unavailable!", driveID);
 			g_ideDriveAvailable[driveID] = false;
+			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_HARDWARE_ERROR;
 		}
 		
@@ -140,9 +152,11 @@ DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, ui
 	{
 		LogMsg("FLUSH CACHE: Drive %d is not responding? Marking drive as unavailable!", driveID);
 		g_ideDriveAvailable[driveID] = false;
+		LockFree(&g_ideDriveLocks[driveID]);
 		return DEVERR_HARDWARE_ERROR;
 	}
 	
+	LockFree(&g_ideDriveLocks[driveID]);
 	return DEVERR_SUCCESS;
 }
 
@@ -177,6 +191,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		default: return DEVERR_HARDWARE_ERROR;
 	}
 	if (driveID % 2) driveType |= 0x10;
+	LockAcquire(&g_ideDriveLocks[driveID]);
 	
 	WritePort (base + 6, driveType);
 	WritePort (base + 2, 0);
@@ -185,7 +200,10 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 	WritePort (base + 5, 0);
 	WritePort (base + 7, CMD_GETID);
 	if (ReadPort(base + 7) == 0)
+	{
+		LockFree(&g_ideDriveLocks[driveID]);
 		return DEVERR_NOTFOUND;
+	}
 	
 	int timeout = 200;
 	while (ReadPort(base + 7) & BSY_FLAG)
@@ -194,6 +212,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		if (timeout <= 0)
 		{
 			LogMsg("Trying to find drive %d, timeout reached, assuming not found", driveID);
+			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_NOTFOUND;
 		}
 		//KeTaskDone();
@@ -208,6 +227,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		if (timeout <= 0)
 		{
 			LogMsg("Trying to find drive %d, timeout reached, assuming not found");
+			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_NOTFOUND;
 		}
 	}
@@ -221,8 +241,10 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		{
 			*ids++ = ReadPortW(base);
 		}
+		LockFree(&g_ideDriveLocks[driveID]);
 		return DEVERR_SUCCESS;
 	}
+	LockFree(&g_ideDriveLocks[driveID]);
 	return DEVERR_NOTFOUND;
 }
 
