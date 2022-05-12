@@ -379,6 +379,44 @@ void ShellExecuteCommand(char* p)
 			LogMsg("");
 		}
 	}
+	else if (strcmp (token, "rm") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			char s[1024];
+			s[0] = 0;
+			if (*fileName != '/')
+			{
+				strcpy (s, g_cwd);
+				if (g_cwd[1] != 0) //not just a '/'
+					strcat(s, "/");
+			}
+			strcat (s, fileName);
+			
+			int fd = FiOpen (s, O_WRONLY);
+			if (fd < 0)
+			{
+				LogMsg("rm: %s: %s", fileName, GetErrNoString(fd));
+				return;
+			}
+			
+			FiClose (fd);
+			
+			// Get rid of the file.
+			FiRemoveFile (s);
+			
+			LogMsg("Done");
+		}
+	}
 	else if (strcmp (token, "ft") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");

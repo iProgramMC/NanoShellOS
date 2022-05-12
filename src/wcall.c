@@ -64,7 +64,7 @@ Console* GetCurrentConsole()
 {
 	return g_currentConsole;
 }
-int FiRemoveFile(const char* pText);
+int FiRemoveFile2(const char* pText);
 
 void VidSetClipRectP (Rectangle rect)
 {
@@ -83,7 +83,7 @@ void LogString(const char* pText)
 {
 	LogMsgNoCr("%s", pText);
 }
-int FiRemoveFile(UNUSED const char* pText)
+int FiRemoveFile2(UNUSED const char* pText)
 {
 	// TODO
 	return  -ENXIO;
@@ -355,7 +355,7 @@ const void *WindowCall[] = {
 		CheckboxGetChecked,
 		CheckboxSetChecked,
 		CcRunCCode,
-		FiRemoveFile,
+		FiRemoveFile2,
 		RequestRepaintNew,
 		ShellAbout,
 		InputBox,

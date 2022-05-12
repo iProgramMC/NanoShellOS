@@ -46,6 +46,8 @@ typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t);
 typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
 typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
+typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
+typedef bool            (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
 
 typedef struct FSNodeS
 {
@@ -70,12 +72,27 @@ typedef struct FSNodeS
 	FileWriteFunc      Write;
 	FileOpenFunc       Open;
 	FileCloseFunc      Close;
+	// Opens a directory, and loads it into the file system structure.
 	FileOpenDirFunc    OpenDir;
-	FileReadDirFunc    ReadDir;      //returns the n-th child of a directory
-	FileFindDirFunc    FindDir;      //try to find a child in a directory by name
+	// Returns the N-th child of a directory.
+	FileReadDirFunc    ReadDir;
+	// Tries to find a child with a name in a directory.
+	FileFindDirFunc    FindDir;
+	// Closes a directory.
 	FileCloseDirFunc   CloseDir;
+	// Creates an empty file and sets it up inside the file system. On FAT32, this does not allocate another cluster
+	// to store the file in. Windows does not, in fact, do this, so a zero-byte file only occupies its entry's worth
+	// of space.
 	FileCreateFileFunc CreateFile;
+	// Removes all the contents of a file.
 	FileEmptyFileFunc  EmptyFile;
+	// Creates an empty directory and sets up all the necessary stuff.  On FAT32, also creates the '.' and '..' links.
+	FileCreateDirFunc  CreateDir;
+	// Addendum: This will only remove EMPTY directories. Any directory with a file in it needs to be traversed first
+	// On FAT32, the . and .. directories won't count to the 'empty' directory limitation.
+	// This is exactly how most OSes implement remove(dir) anyway, so don't worry.
+	// The reason it works this way instead of deleting the whole directory is because 
+	FileRemoveFileFunc RemoveFile;
 }
 FileNode;
 
@@ -106,6 +123,7 @@ bool     FsOpenDir (FileNode* pNode);
 void     FsCloseDir(FileNode* pNode);
 DirEnt*  FsReadDir (FileNode* pNode, uint32_t index);
 FileNode*FsFindDir (FileNode* pNode, const char* pName);
+bool     FsRemoveFile(FileNode* pNode);
 
 
 FileNode*FsResolvePath (const char* pPath);
@@ -261,6 +279,9 @@ void EraseFileNode (FileNode* pFileNode);
 	
 	// Changes the current directory.
 	int FiChangeDir (const char *pfn);
+	
+	// Removes a file or an empty directory.
+	int FiRemoveFile (const char *pfn);
 	
 #endif
 

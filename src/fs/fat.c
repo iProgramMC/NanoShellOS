@@ -5,8 +5,9 @@
         FILE SYSTEM: FAT 32 module
 ******************************************/
 
-//NOTE: The driver is still at an experimental state
-//Notable issues include LFN support
+// TODO: We should probably include some garbage collection in this.
+// Right now, it's quite possible to browse yourself to OoM using the cabinet
+// if you have a sufficiently intricate directory structure.
 
 // Structure definitions.
 #include <fat.h>
@@ -572,7 +573,8 @@ uint8_t* FatReadDirEntry (UNUSED FatFileSystem* pFS, uint8_t* pStart, uint8_t* p
     return entry + 32;
 }
 
-void FatNextDirEntry (
+void
+FatNextDirEntry (
 	FatFileSystem *pFS,
 	uint8_t       *pRootCluster,
 	uint8_t       *pEntry,
@@ -1245,7 +1247,7 @@ static bool FatUpdateFileEntry(FileNode *pFileNode, uint32_t newSize, uint32_t c
 	return didSomething;
 }
 
-static bool FatUpdateFileEntryNotOpened(FileNode *pFileNode, uint32_t newSize, uint32_t newCluster)
+static bool FatUpdateFileEntryNotOpened(FileNode *pFileNode, uint32_t newSize, uint32_t newCluster, bool bDeleted)
 {
 	pFileNode->m_length = newSize;
 	FatFileSystem *pOpenedIn = (FatFileSystem*) pFileNode->m_implData;
@@ -1280,9 +1282,23 @@ static bool FatUpdateFileEntryNotOpened(FileNode *pFileNode, uint32_t newSize, u
 			
 			if (strcmp(targetDirEnt.m_pName, pFileNode->m_name) == 0)
 			{
+				//while we have a LFN entry ready:
+				while (entry[11] == FAT_LFN)
+				{
+					if (bDeleted)
+						entry[0] = 0xE5;
+					
+					//skip it, we're looking for the juicy sfn entry
+					entry += 32;
+				}
+				
+				bool bEntryInSecondClusterToo = (entry > (root_cluster + pOpenedIn->m_clusSize));
+				
 				//Found it!
 				//Write stuff to it.
 				*((uint32_t*)(entry + 28)) = newSize;
+				if (bDeleted)
+					entry[0] = 0xE5;
 				
 				if (newCluster != 0)
 				{
@@ -1293,9 +1309,13 @@ static bool FatUpdateFileEntryNotOpened(FileNode *pFileNode, uint32_t newSize, u
 					entry[26] = (newCluster >>  0) & 0xff;
 					entry[27] = (newCluster >>  8) & 0xff;
 				}
+				
+				
 				FatWriteCurrentTimeToEntry (entry, false);
 				
 				FatPutCluster(pOpenedIn, root_cluster, cluster);
+				if (bEntryInSecondClusterToo)
+					FatPutCluster(pOpenedIn, root_cluster + pOpenedIn->m_clusSize, cluster + 1);
 				
 				didSomething = true;
 				break;
@@ -1320,10 +1340,30 @@ void FatEmptyExistingFile(FileNode* pFileNode)
 	FatFileSystem* pSystem = (FatFileSystem*)pFileNode->m_implData;
 	
 	FatZeroFatChain (pSystem, pFileNode->m_inode);
-	FatUpdateFileEntryNotOpened (pFileNode, 0, 0xF0000000);
+	FatUpdateFileEntryNotOpened (pFileNode, 0, 0xF0000000, false);
 	
-	//Since we added a new cluster...
+	//Since we zeroed out a chain...
 	FatFlushFat(pSystem);
+}
+
+bool FatDeleteExistingFile(FileNode* pFileNode)
+{
+	//TODO: What if this is a directory
+	if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
+	{
+		LogMsg("FatDeleteExistingFile: %s is a directory. Uh oh!", pFileNode->m_name);
+		
+		return false;
+	}
+	FatFileSystem* pSystem = (FatFileSystem*)pFileNode->m_implData;
+	
+	FatZeroFatChain (pSystem, pFileNode->m_inode);
+	bool b = FatUpdateFileEntryNotOpened (pFileNode, 0, 0xF0000000, true);
+	
+	//Since we zeroed out a chain...
+	FatFlushFat(pSystem);
+	
+	return b;
 }
 
 void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName)
@@ -1335,7 +1375,7 @@ void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName)
 	{
 		DebugLogMsg("Found! pFN: %x", (FatFileSystem*)pFN->m_implData);
 		FatZeroFatChain    (pSystem,   pFN->m_inode);//TODO
-		FatUpdateFileEntryNotOpened (pFN, 0, FatAllocateCluster(pSystem));
+		FatUpdateFileEntryNotOpened (pFN, 0, FatAllocateCluster(pSystem), false);
 		FatFlushFat(pSystem);//Since we allocated a new cluster
 	}
 	else
@@ -1562,7 +1602,8 @@ static void FsFatReadDirectoryContents(FatFileSystem* pSystem, FileNode* pDirNod
 				pCurrent->Write = FsFatWrite;
 				pCurrent->Open  = FsFatOpen;
 				pCurrent->Close = FsFatClose;
-				pCurrent->EmptyFile = FatEmptyExistingFile;
+				pCurrent->EmptyFile  = FatEmptyExistingFile;
+				pCurrent->RemoveFile = FatDeleteExistingFile;
 			}
 			else
 			{
@@ -1777,7 +1818,8 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 					pCurrent->Write = FsFatWrite;
 					pCurrent->Open  = FsFatOpen;
 					pCurrent->Close = FsFatClose;
-					pCurrent->EmptyFile = FatEmptyExistingFile;
+					pCurrent->EmptyFile  = FatEmptyExistingFile;
+					pCurrent->RemoveFile = FatDeleteExistingFile;
 				}
 				else
 				{

@@ -107,6 +107,20 @@ void FsClearFile(FileNode* pNode)
 			pNode->EmptyFile(pNode);
 	}
 }
+bool FsRemoveFile(FileNode* pNode)
+{
+	if (!pNode) return false;
+	
+	if (!pNode->RemoveFile) return false;
+	if (pNode->m_type & FILE_TYPE_DIRECTORY) return false;
+	
+	if (pNode->RemoveFile(pNode))
+	{
+		EraseFileNode (pNode);
+		return true;
+	}
+	return false;
+}
 FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
 	if (pDirNode)
@@ -777,6 +791,13 @@ int FiTellSize (int fd)
 
 
 extern char g_cwd[PATH_MAX+2];
+int FiRemoveFile (const char *pfn)
+{
+	FileNode *p = FsResolvePath (pfn);
+	if (!p) return -ENOENT;
+	
+	FsRemoveFile (p); // Node no longer valid : )
+}
 int FiChangeDir (const char *pfn)
 {
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
