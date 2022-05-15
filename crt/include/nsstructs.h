@@ -50,6 +50,10 @@ typedef uint8_t bool;
 // Mark your system callbacks with this anyway!!!
 #define CALLBACK
 
+#define MAKE_MOUSE_PARM(x, y) ((x)<<16|(y))
+#define GET_X_PARM(parm1)  (parm1>>16)
+#define GET_Y_PARM(parm1)  (parm1&0xFFFF)
+
 #define TEXTEDIT_MULTILINE (1)
 #define TEXTEDIT_LINENUMS  (2)
 #define TEXTEDIT_READONLY  (4)

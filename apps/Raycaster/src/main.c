@@ -5,6 +5,8 @@ Window* g_pWindow = NULL;
 
 void RequestRepaint(Window* pWindow);
 
+int ScreenWidth = 640, ScreenHeight = 240;
+
 uint32_t* g_screenBitmap = NULL;
 Image   g_GameImage;
 VBEData g_GameData;
@@ -31,14 +33,64 @@ double cos(double x)
 {
     return sin(x + PI / 2.0);
 }
-
+bool SetupGameVbeData()
+{
+	//create a framebuffer object
+	g_screenBitmap = malloc (sizeof (uint32_t) * ScreenWidth * ScreenHeight);
+	if (!g_screenBitmap)
+	{
+		LogMsg ("Cannot allocate screen framebuffer!");
+		return false;
+	}
+	
+	// setup the game VBEData
+	g_GameData.m_available = true;
+	g_GameData.m_width     = ScreenWidth;
+	g_GameData.m_height    = ScreenHeight;
+	g_GameData.m_bitdepth  = 2;
+	g_GameData.m_pitch     = ScreenWidth * sizeof (uint32_t);
+	g_GameData.m_pitch16   = ScreenWidth * sizeof (uint32_t) / 2;
+	g_GameData.m_pitch32   = ScreenWidth;
+	g_GameData.m_framebuffer32 = g_screenBitmap;
+	g_GameData.m_clipRect.left = 
+	g_GameData.m_clipRect.top  = 0;
+	g_GameData.m_clipRect.right  = ScreenWidth;
+	g_GameData.m_clipRect.bottom = ScreenHeight;
+	
+	// setup the game image s.t. we can draw it easily
+	g_GameImage.width       = ScreenWidth;
+	g_GameImage.height      = ScreenHeight;
+	g_GameImage.framebuffer = g_screenBitmap;
+	
+	return true;
+}
 void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		case EVENT_CREATE:
+		{
+			Init();
+			break;
+		}
 		case EVENT_PAINT:
 		{
-			VidBlitImageResize(&g_GameImage, 3, 2 + TITLE_BAR_HEIGHT, SCREEN_WIDTH,SCREEN_HEIGHT);
+			VidBlitImageResize(&g_GameImage, 3, 2 + TITLE_BAR_HEIGHT, ScreenWidth,ScreenHeight);
+			break;
+		}
+		case EVENT_SIZE:
+		{
+			if (g_GameImage.framebuffer)
+				free((void*)g_GameImage.framebuffer);
+			
+			ScreenWidth  = GET_X_PARM(parm1) - 6;
+			ScreenHeight = GET_Y_PARM(parm1) - 6 - TITLE_BAR_HEIGHT;
+			
+			if (!SetupGameVbeData())
+				// Bye!
+				DefaultWindowProc(pWindow, EVENT_DESTROY, 0, 0);
+			
+			OnSize (ScreenWidth, ScreenHeight);
 			break;
 		}
 		case EVENT_KEYRAW:
@@ -59,39 +111,15 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 static bool SetupWindow (const char* TITLE)
 {
-	Window* pWindow = CreateWindow (TITLE, 200,200, SCREEN_WIDTH+6, SCREEN_HEIGHT + 6 + TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow (TITLE, 200,200, ScreenWidth+6, ScreenHeight + 6 + TITLE_BAR_HEIGHT, WndProc, WF_ALWRESIZ);
 	if (!pWindow)
 	{
 		LogMsg ("Could not create window");
 		return false;
 	}
 	
-	//create a framebuffer object
-	g_screenBitmap = malloc (sizeof (uint32_t) * SCREEN_WIDTH * SCREEN_HEIGHT);
-	if (!g_screenBitmap)
-	{
-		LogMsg ("Cannot allocate screen framebuffer!");
+	if (!SetupGameVbeData())
 		return false;
-	}
-	
-	// setup the game VBEData
-	g_GameData.m_available = true;
-	g_GameData.m_width     = SCREEN_WIDTH;
-	g_GameData.m_height    = SCREEN_HEIGHT;
-	g_GameData.m_bitdepth  = 2;
-	g_GameData.m_pitch     = SCREEN_WIDTH * sizeof (uint32_t);
-	g_GameData.m_pitch16   = SCREEN_WIDTH * sizeof (uint32_t) / 2;
-	g_GameData.m_pitch32   = SCREEN_WIDTH;
-	g_GameData.m_framebuffer32 = g_screenBitmap;
-	g_GameData.m_clipRect.left = 
-	g_GameData.m_clipRect.top  = 0;
-	g_GameData.m_clipRect.right  = SCREEN_WIDTH;
-	g_GameData.m_clipRect.bottom = SCREEN_HEIGHT;
-	
-	// setup the game image s.t. we can draw it easily
-	g_GameImage.width       = SCREEN_WIDTH;
-	g_GameImage.height      = SCREEN_HEIGHT;
-	g_GameImage.framebuffer = g_screenBitmap;
 	
 	g_pWindow = pWindow;
 	

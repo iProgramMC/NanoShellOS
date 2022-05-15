@@ -3,8 +3,8 @@
 
 #define PI 3.14159265358979323846264338327950
 
-#define SCREEN_WIDTH  640
-#define SCREEN_HEIGHT 240
+extern int ScreenWidth;
+extern int ScreenHeight;
 
 // from game engine:
 double sin(double x);
@@ -20,5 +20,6 @@ const char* GetGameName();
 void Update (int deltaTime);
 void Render (int deltaTime);
 void Init   ();
+void OnSize (int width, int height);
 
 #endif//GAME_H

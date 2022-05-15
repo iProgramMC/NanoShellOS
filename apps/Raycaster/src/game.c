@@ -4,7 +4,7 @@
 
 //include sprites
 
-#define ASPECT_RATIO ((double)SCREEN_WIDTH / SCREEN_HEIGHT)
+#define ASPECT_RATIO ((double)ScreenWidth / ScreenHeight)
 
 #define MAP_WIDTH  16
 #define MAP_HEIGHT 16
@@ -34,7 +34,7 @@ char map[MAP_WIDTH * MAP_HEIGHT] =
 	"################";
 
 double playerX = 12.0, playerY = 11.0, playerAngle = 0.0;
-double fov = PI / ASPECT_RATIO;
+double fov = PI;
 double farPlane = MAP_WIDTH * 1.414; // approx. sqrt(2)
 
 //WORK: the bigger this is, the more coarse the result will be, and the faster the game will run.
@@ -61,11 +61,11 @@ bool IsRender (char c)
 
 void DrawColumn (int x)
 {
-	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)SCREEN_WIDTH) * fov;
+	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)ScreenWidth) * fov;
 	double distToWall  = 0.0;
 	bool   hitWall = false;
 	char   wallHit = '.';
-	bool   boundary = false;
+	//bool   boundary = false;
 	double eyeX = sin (rayAngle), eyeY = cos (rayAngle);
 	double sampleX = 0;
 	int    project = 0;
@@ -130,13 +130,13 @@ void DrawColumn (int x)
 	if (rd >= 2 * PI) rd -= 2 * PI;
 	distToWall *= cos(rd);
 	
-	int ceiling = (int)((double)(SCREEN_HEIGHT / 2.0) - SCREEN_HEIGHT / distToWall);
-	int floor = SCREEN_HEIGHT - ceiling;
+	int ceiling = (int)((double)(ScreenHeight / 2.0) - ScreenHeight / distToWall);
+	int floor = ScreenHeight - ceiling;
 	
 	uint32_t colors[4] = { 0x000000, 0x0000FF, 0x00FF00, 0xFF0000 };
 	VidDrawVLine(0x8080,          0,       ceiling,       x);
 	VidDrawVLine(colors[project], ceiling, floor,         x);
-	VidDrawVLine(0x808000,        floor,   SCREEN_HEIGHT, x);
+	VidDrawVLine(0x808000,        floor,   ScreenHeight, x);
 }
 
 
@@ -153,8 +153,16 @@ void DisplayDebug(int deltaTime)
 }
 void Init()
 {
+	LogMsg("Init!");
+	fov = PI / ASPECT_RATIO;
 }
-void Update (int deltaTime)
+void OnSize(UNUSED int width, UNUSED int height)
+{
+	//TODO: Why are you stretching out the walls
+	LogMsg("Size!");
+	fov = PI / ASPECT_RATIO;
+}
+void Update (UNUSED int deltaTime)
 {
 	double mx = sin (playerAngle) / 10;
 	double my = cos (playerAngle) / 10;
@@ -193,9 +201,7 @@ void Update (int deltaTime)
 }
 void Render (int deltaTime)
 {
-	//VidFillScreen (0x81CBFF); //clear screen
-	
-	for (int x = 0; x < SCREEN_WIDTH; x++)
+	for (int x = 0; x < ScreenWidth; x++)
 		DrawColumn (x);
 	
 	// show FPS
