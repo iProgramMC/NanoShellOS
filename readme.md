@@ -1,26 +1,20 @@
-# NanoShell
-NanoShell 3rd Edition is a preemptively multi-tasked 32-bit operating system with a windowed GUI.
+<h1 align="center"> The NanoShell Operating System </h1>
 
-#### Be advised that this is UNFINISHED/beta-ware software and you should not expect any stability from this software.
+<p align="center">
+	<img src="images/13_03_2022_22_17_48.png"/>
+</p>
 
-Copyright (C) 2022 iProgramInCpp
+NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed GUI.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, version 3 of the License only.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see [the GNU licenses](https://www.gnu.org/licenses/).
+#### Be advised that this is beta-level software and you should not expect any stability from it.
 
 This software is licensed under the GNU General Public License V3 only.
 
-<img src="images/13_03_2022_22_17_48.png"/>
-<img src="images/demoshot050.png"/>
+## Demo Screenshots
+
+<img src="images/2022_05_15_16_56_35.png"/>
+<img src="images/2022_04_20_12_28_00.png"/>
+[More images...](https://github.com/iProgramMC/NanoShellOS/images)
 
 ## Goals
 
@@ -45,7 +39,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] EGA Text mode
 - [x] VBE Graphics mode (fast)
 - [x] Bochs/QEMU debugcon (E9 hack)
-- [ ] Serial port
+- [X] Serial port
 - [ ] PCI
 - [X] VirtualBox/QEMU/Bochs graphics device (*not* VBE)
 - [ ] VMware SVGA device
