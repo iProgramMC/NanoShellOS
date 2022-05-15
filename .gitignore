@@ -24,6 +24,8 @@ apps/Tiny/*.nse
 apps/StickyNotes/build/*
 apps/StickyNotes/*.nse
 apps/ArduNS/*
+apps/Raycaster/build/*
+apps/Raycaster/*.nse
 apps/WorldMap/build/*
 apps/WorldMap/*.nse
 

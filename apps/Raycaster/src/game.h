@@ -1,0 +1,24 @@
+#ifndef GAME_H
+#define GAME_H
+
+#define PI 3.14159265358979323846264338327950
+
+#define SCREEN_WIDTH  640
+#define SCREEN_HEIGHT 240
+
+// from game engine:
+double sin(double x);
+double cos(double x);
+
+double atan2l(double y, double x);
+float  atan2f(float  y, float  x);
+
+bool IsKeyDown (int keyCode);
+
+// from game:
+const char* GetGameName();
+void Update (int deltaTime);
+void Render (int deltaTime);
+void Init   ();
+
+#endif//GAME_H
