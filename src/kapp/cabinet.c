@@ -442,7 +442,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControl (pWindow, CONTROL_ICONVIEWDRAG, r, NULL, MAIN_LISTVIEW, 0, 0);
+			AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
 			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
 			
 			// Initialize the menu-bar
@@ -494,12 +494,13 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	// create ourself a window:
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - CABINET_HEIGHT) / 2;
-	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, 0);
+	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_CABINET;
 	
 	if (!pWindow)
 	{
-		MessageBox(NULL, "Hey, the window couldn't be created. File " __FILE__ ".", "Cabinet", MB_OK | ICON_STOP << 16);
+		// if you can't create the main window, what makes you think you can create a messagebox?!
+		SLogMsg("The window could not be created");
 		return;
 	}
 	

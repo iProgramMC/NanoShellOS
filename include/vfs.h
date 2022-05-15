@@ -47,7 +47,7 @@ typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pNam
 typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
-typedef bool            (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
+typedef int             (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
 
 typedef struct FSNodeS
 {
@@ -115,15 +115,15 @@ FileNode* FsGetRootNode();
 //Remember the definitions above.
 
 //These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
-uint32_t FsRead    (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-uint32_t FsWrite   (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-bool     FsOpen    (FileNode* pNode, bool read, bool write);
-void     FsClose   (FileNode* pNode);
-bool     FsOpenDir (FileNode* pNode);
-void     FsCloseDir(FileNode* pNode);
-DirEnt*  FsReadDir (FileNode* pNode, uint32_t index);
-FileNode*FsFindDir (FileNode* pNode, const char* pName);
-bool     FsRemoveFile(FileNode* pNode);
+uint32_t FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+uint32_t FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+bool     FsOpen      (FileNode* pNode, bool read, bool write);
+void     FsClose     (FileNode* pNode);
+bool     FsOpenDir   (FileNode* pNode);
+void     FsCloseDir  (FileNode* pNode);
+DirEnt*  FsReadDir   (FileNode* pNode, uint32_t index);
+FileNode*FsFindDir   (FileNode* pNode, const char* pName);
+int      FsRemoveFile(FileNode* pNode);
 
 
 FileNode*FsResolvePath (const char* pPath);

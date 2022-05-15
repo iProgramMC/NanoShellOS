@@ -107,19 +107,20 @@ void FsClearFile(FileNode* pNode)
 			pNode->EmptyFile(pNode);
 	}
 }
-bool FsRemoveFile(FileNode* pNode)
+int FsRemoveFile(FileNode* pNode)
 {
-	if (!pNode) return false;
+	if (!pNode) return -ENOENT;
 	
-	if (!pNode->RemoveFile) return false;
-	if (pNode->m_type & FILE_TYPE_DIRECTORY) return false;
+	if (!pNode->RemoveFile) return -ENOMEM;
+	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -ENOMEM;
 	
-	if (pNode->RemoveFile(pNode))
+	int e;
+	if (!(e = pNode->RemoveFile(pNode)))
 	{
 		EraseFileNode (pNode);
-		return true;
+		return e;
 	}
-	return false;
+	return e;
 }
 FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
@@ -796,7 +797,7 @@ int FiRemoveFile (const char *pfn)
 	FileNode *p = FsResolvePath (pfn);
 	if (!p) return -ENOENT;
 	
-	FsRemoveFile (p); // Node no longer valid : )
+	return FsRemoveFile (p); // Node no longer valid : )
 }
 int FiChangeDir (const char *pfn)
 {

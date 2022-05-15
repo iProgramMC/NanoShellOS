@@ -177,7 +177,6 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			break;
 		}
-		//case EVENT_CLICKCURSOR:
 		case EVENT_RELEASECURSOR:
 		{
 			Point p = {GET_X_PARM(parm1), GET_Y_PARM(parm1)};
@@ -255,19 +254,6 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			}
 			break;
 		}
-		/*case EVENT_RELEASECURSOR:
-		{
-			// Unopen all the controls. TODO
-			if (this->m_menuBarData.m_root.m_childrenArray)
-			{
-				bool check = WidgetMenuBar_CheckOpenChildrenAndSendCommandEvent(&this->m_menuBarData.m_root, this, pWindow);
-				
-				CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
-				
-				return check;
-			}
-			break;
-		}*/
 	}
 	return false;//Fall through to other controls.
 }

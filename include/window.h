@@ -266,7 +266,7 @@ typedef struct
 {
 	bool m_hasIcons;
 	int  m_elementCount, m_capacity;
-	int  m_scrollY;
+	int  m_scrollX, m_scrollY;
 	int  m_highlightedElementIdx;
 	ListItem *m_pItems;
 	int  m_trackedListItem;

@@ -40,6 +40,7 @@ typedef uint8_t bool;
 //#define TITLE_BAR_HEIGHT 18
 
 #define WINDOW_BACKGD_COLOR (GetThemingParameter(P_WINDOW_BACKGD_COLOR))
+#define WINDOW_TEXT_COLOR   (GetThemingParameter(P_WINDOW_TEXT_COLOR))
 #define TITLE_BAR_HEIGHT    (GetThemingParameter(P_TITLE_BAR_HEIGHT))
 
 #define RECT(rect,x,y,w,h) do {\

@@ -1346,14 +1346,14 @@ void FatEmptyExistingFile(FileNode* pFileNode)
 	FatFlushFat(pSystem);
 }
 
-bool FatDeleteExistingFile(FileNode* pFileNode)
+int FatDeleteExistingFile(FileNode* pFileNode)
 {
 	//TODO: What if this is a directory
 	if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
 	{
 		LogMsg("FatDeleteExistingFile: %s is a directory. Uh oh!", pFileNode->m_name);
 		
-		return false;
+		return -EINVAL;
 	}
 	FatFileSystem* pSystem = (FatFileSystem*)pFileNode->m_implData;
 	
@@ -1363,7 +1363,7 @@ bool FatDeleteExistingFile(FileNode* pFileNode)
 	//Since we zeroed out a chain...
 	FatFlushFat(pSystem);
 	
-	return b;
+	return b ? -ENOTHING : -EIO;
 }
 
 void FatZeroOutFile(FileNode *pDirectoryNode, char* pFileName)

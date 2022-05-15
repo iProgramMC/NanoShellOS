@@ -440,6 +440,7 @@ go_back:
 			pData->m_elementCount = 0;
 			pData->m_capacity     = 10;
 			pData->m_scrollY      = 0;
+			pData->m_scrollX      = 0;
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 			pData->m_pItems       = MmAllocateK (itemsSize);
@@ -494,12 +495,20 @@ go_back:
 #if 1
 static void CtlIconDragUpdateScrollBarSize(Control* pCtlIcon, Window* pWindow)
 {
+	int screenw = (pCtlIcon->m_rect.right  - pCtlIcon->m_rect.left);
+	int screenh = (pCtlIcon->m_rect.bottom - pCtlIcon->m_rect.top );
+	
 	//also update the scroll bar.
 	ListViewData* pData = &pCtlIcon->m_listViewData;
-	int c = pData->m_extentY;
+	int c = pData->m_extentY - screenh;
 	if (c <= 0)
 		c  = 1;
 	SetScrollBarMax (pWindow, -pCtlIcon->m_comboID, c);
+	
+	c = pData->m_extentX - screenw;
+	if (c <= 0)
+		c  = 1;
+	SetScrollBarMax (pWindow, 0x70000000 - pCtlIcon->m_comboID, c);
 }
 void WidgetIconViewDrag_ArrangeIcons (Control *this);
 void CtlIconDragRecalculateExtents (Control *this)
@@ -630,11 +639,18 @@ go_back:
 		case EVENT_CLICKCURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
-			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
 			bool bUpdate = false;
+			int
+			pos = GetScrollBarPos(pWindow, -this->m_comboID);
 			if (pData->m_scrollY != pos)
 			{
 				pData->m_scrollY  = pos;
+				bUpdate = true;
+			}
+			pos = GetScrollBarPos(pWindow, 0x70000000 - this->m_comboID);
+			if (pData->m_scrollX != pos)
+			{
+				pData->m_scrollX  = pos;
 				bUpdate = true;
 			}
 			
@@ -642,13 +658,13 @@ go_back:
 			int nSelectedIcon = -1;
 			
 			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&this->m_rect, &pt))
+			if (!bUpdate && RectangleContains (&this->m_rect, &pt))
 			{
 				for (int i = 0; i < pData->m_elementCount; i++)
 				{
 					ListItem *pItem = &pData->m_pItems[i];
 					
-					int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+					int x = this->m_rect.left + pItem->m_posX - pData->m_scrollX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
 					Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 					
 					if (RectangleContains (&br, &pt))
@@ -684,8 +700,11 @@ go_back:
 					pWindow->m_customCursor.m_resizeMode = false;
 					
 					ChangeCursor (pWindow, CURSOR_CUSTOM); // for testing
+					
+					// only update if we were not dragging it before :^)
+					bUpdate = !(pData->m_bIsDraggingIt);
+					
 					pData->m_bIsDraggingIt = true;
-					bUpdate = true;
 				}
 			}
 			
@@ -702,12 +721,14 @@ go_back:
 			if (pData->m_trackedListItem != -1 && pData->m_bIsDraggingIt)
 			{
 				// Release the tracked item at some position
-				int newX = pt.x - this->m_rect.left - (ICON_ITEM_WIDTH / 2);
-				int newY = pt.y - this->m_rect.top + pData->m_scrollY - (ICON_ITEM_HEIGHT / 2);
+				int newX = pt.x - this->m_rect.left + pData->m_scrollX - (ICON_ITEM_WIDTH  / 2);
+				int newY = pt.y - this->m_rect.top  + pData->m_scrollY - (ICON_ITEM_HEIGHT / 2);
 				if (newX < 0) newX = 0;
 				if (newY < 0) newY = 0;
-				if (newX > (this->m_rect.right - this->m_rect.left))
-					newX = (this->m_rect.right - this->m_rect.left);
+				// don't do any extent restrictions, the extent will be extended automatically
+				// instead, do a restriction on some random imaginary board size
+				if (newX > 4096) newX = 4096;
+				if (newY > 4096) newY = 4096;
 				
 				// Place the icon there.
 				ListItem *pItem = &pData->m_pItems[pData->m_trackedListItem];
@@ -733,7 +754,7 @@ go_back:
 					{
 						ListItem *pItem = &pData->m_pItems[i];
 						
-						int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+						int x = this->m_rect.left + pItem->m_posX - pData->m_scrollX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
 						Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 						
 						if (RectangleContains (&br, &pt))
@@ -797,7 +818,7 @@ go_back:
 			{
 				ListItem *pItem = &pData->m_pItems[i];
 				
-				int x = this->m_rect.left + pItem->m_posX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
+				int x = this->m_rect.left + pItem->m_posX - pData->m_scrollX, y = this->m_rect.top + pItem->m_posY - pData->m_scrollY;
 				/*
 				if (x - ICON_ITEM_WIDTH  < this->m_rect.left) continue;
 				if (y - ICON_ITEM_HEIGHT < this->m_rect.top)  continue;
@@ -843,6 +864,7 @@ go_back:
 			pData->m_elementCount = 0;
 			pData->m_capacity     = 10;
 			pData->m_scrollY      = 0;
+			pData->m_scrollX      = 0;
 			pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 			pData->m_pItems       = MmAllocateK (itemsSize);
@@ -854,9 +876,9 @@ go_back:
 			// Add a vertical scroll bar to its right.
 			Rectangle r;
 			r.right = this->m_rect.right, 
-			r.top   = this->m_rect.top, 
-			r.bottom= this->m_rect.bottom, 
-			r.left  = this->m_rect.right - SCROLL_BAR_WIDTH;
+			r.top   = this->m_rect.top,
+			r.bottom= this->m_rect.bottom - SCROLL_BAR_WIDTH, 
+			r.left  = this->m_rect.right  - SCROLL_BAR_WIDTH;
 			
 			int c = pData->m_elementCount;
 			if (c <= 0)
@@ -870,8 +892,23 @@ go_back:
 			
 			AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, c, 1);
 			
+			r.right = this->m_rect.right  - SCROLL_BAR_WIDTH, 
+			r.top   = this->m_rect.bottom - SCROLL_BAR_WIDTH, 
+			r.bottom= this->m_rect.bottom, 
+			r.left  = this->m_rect.left;
+			
+			flags = 0;
+			if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				flags |= ANCHOR_RIGHT_TO_RIGHT;
+			if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				flags |= ANCHOR_TOP_TO_BOTTOM | ANCHOR_BOTTOM_TO_BOTTOM;
+			
+			//no one will use combo IDs that large I hope :^)
+			AddControlEx (pWindow, CONTROL_HSCROLLBAR, flags, r, NULL, 0x70000000 - this->m_comboID, 1, 1);
+			
 			//shrink our rectangle:
-			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			this->m_rect.right  -= SCROLL_BAR_WIDTH + 2;
+			this->m_rect.bottom -= SCROLL_BAR_WIDTH + 2;
 			
 			break;
 		}

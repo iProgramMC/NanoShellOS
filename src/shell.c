@@ -402,17 +402,13 @@ void ShellExecuteCommand(char* p)
 			}
 			strcat (s, fileName);
 			
-			int fd = FiOpen (s, O_WRONLY);
-			if (fd < 0)
+			// Get rid of the file.
+			int io = FiRemoveFile (s);
+			if (io < 0)
 			{
-				LogMsg("rm: %s: %s", fileName, GetErrNoString(fd));
+				LogMsg("rm: %s: %s", fileName, GetErrNoString(io));
 				return;
 			}
-			
-			FiClose (fd);
-			
-			// Get rid of the file.
-			FiRemoveFile (s);
 			
 			LogMsg("Done");
 		}
