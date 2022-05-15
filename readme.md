@@ -1,5 +1,9 @@
 <h1 align="center"> The NanoShell Operating System </h1>
 
+<p align="center">
+	<img src="images/nanoshell_halfheight.png"/>
+</p>
+
 NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed GUI.
 
 #### Be advised that this is beta-level software and you should not expect any stability from it.
