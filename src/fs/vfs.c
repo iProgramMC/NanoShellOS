@@ -135,6 +135,8 @@ FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 
 FileNode* FsResolvePath (const char* pPath)
 {
+	SLogMsg("Resolving %s", pPath);
+	
 	char path_copy[PATH_MAX]; //max path
 	if (strlen (pPath) >= PATH_MAX-1) return NULL;
 	strcpy (path_copy, pPath);
@@ -172,8 +174,20 @@ FileNode* FsResolvePath (const char* pPath)
 	}
 	else
 	{
-		//TODO- Not an absolute path
-		return NULL;
+		// Not an absolute path. Append the CD
+		char path_copy[PATH_MAX * 2 + 5]; //max path
+		path_copy[0] = 0;
+		strcpy (path_copy, g_cwd);
+		if (g_cwd[1] != 0) // there's not just /
+			strcat (path_copy, "/");
+		strcat (path_copy, pPath);
+		
+		if (strlen (path_copy) >= PATH_MAX - 5)
+			// Errno: ENAMETOOLONG
+			return NULL;
+		
+		// try to resolve this as a standard path
+		return FsResolvePath (path_copy);
 	}
 }
 

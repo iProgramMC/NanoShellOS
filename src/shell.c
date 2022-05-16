@@ -263,22 +263,12 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
 			int er = 0;
-			int ec = ElfRunProgram(s, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, &er);
+			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, &er);
 			
 			if (ec != ELF_ERROR_NONE)
 			{
-				LogMsg(ElfGetErrorMsg(ec), s);
+				LogMsg(ElfGetErrorMsg(ec), fileName);
 			}
 			
 			LogMsg("");
@@ -297,17 +287,7 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
+			int fd = FiOpen (fileName, O_RDONLY);
 			if (fd < 0)
 			{
 				LogMsg("ec: %s: %s", fileName, GetErrNoString(fd));
@@ -346,27 +326,13 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
+			int fd = FiOpen (fileName, O_RDONLY);
 			if (fd < 0)
 			{
 				LogMsg("cat: %s: %s", fileName, GetErrNoString(fd));
 				return;
 			}
 			
-			/*int length = FiTellSize (fd);
-			char* pData = (char*)MmAllocate(length + 1);
-			pData[length] = 0;
-			*/
 			FiSeek(fd, 0, SEEK_SET);
 			
 			int result; char data[2];
@@ -392,18 +358,8 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
 			// Get rid of the file.
-			int io = FiRemoveFile (s);
+			int io = FiRemoveFile (fileName);
 			if (io < 0)
 			{
 				LogMsg("rm: %s: %s", fileName, GetErrNoString(io));
@@ -426,17 +382,7 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_WRONLY);
+			int fd = FiOpen (fileName, O_WRONLY);
 			if (fd < 0)
 			{
 				LogMsg("ft: %s: %s", fileName, GetErrNoString(fd));
@@ -545,17 +491,7 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			char s[1024];
-			s[0] = 0;
-			if (*fileName != '/')
-			{
-				strcpy (s, g_cwd);
-				if (g_cwd[1] != 0) //not just a '/'
-					strcat(s, "/");
-			}
-			strcat (s, fileName);
-			
-			int fd = FiOpen (s, O_RDONLY);
+			int fd = FiOpen (fileName, O_RDONLY);
 			if (fd < 0)
 			{
 				LogMsg("Got error code %d when opening file", fd);
