@@ -136,6 +136,7 @@ FileNode* g_pCwdNode = NULL;
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
+uint64_t ReadTSC();
 
 void ShellExecuteCommand(char* p)
 {
@@ -708,7 +709,7 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "time") == 0)
 	{
-		int hi, lo;
+		uint32_t  hi, lo;
 		GetTimeStampCounter(&hi, &lo);
 		LogMsg("Timestamp counter: %x%x (%d, %d)", hi, lo, hi, lo);
 		

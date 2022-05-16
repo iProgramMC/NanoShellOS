@@ -185,9 +185,14 @@ void KeKillThreadByPID (int proc);
 void WaitMS (int ms);
 
 /***********************************************************
-    Waits until a task dies.
+    Waits until a task gets terminated.
 ***********************************************************/
 void WaitTask (Task* pTask);
+
+/***********************************************************
+    Waits until a process gets terminated.
+***********************************************************/
+void WaitProcess(void* pProcess);
 
 /***********************************************************
     Waits a certain number of milliseconds.

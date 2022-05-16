@@ -141,7 +141,7 @@ void TmPrintTimeFormatted(char* buffer, TimeStruct* pStruct) {
 extern multiboot_info_t* g_pMultibootInfo;//main.c
 
 int g_nRtcTicks = 0;
-void GetTimeStampCounter(int* high, int* low)
+void GetTimeStampCounter(uint32_t* high, uint32_t* low)
 {
 	if (!high && !low) return; //! What's the point?
 	int edx, eax;
@@ -152,18 +152,37 @@ void GetTimeStampCounter(int* high, int* low)
 
 uint64_t ReadTSC()
 {
-	int hi,lo;
+	uint32_t hi, lo;
 	GetTimeStampCounter(&hi, &lo);
-	return hi << 32L | lo;
+	return ((uint64_t)hi << 32LL) | (uint64_t)(lo);
 }
 
-int GetTickCount()
+//not accurate at all, use GetTickCount() instead.
+int GetRtcBasedTickCount()
 {
 	return g_nRtcTicks * 1000 / RTC_TICKS_PER_SECOND;
 }
 int GetRawTickCount()
 {
 	return g_nRtcTicks;
+}
+
+extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
+extern int g_nSeconds;
+int GetTickCount()
+{
+	uint64_t tscNow     = ReadTSC();
+	uint64_t difference = tscNow - g_tscOneSecondAgo;             // the difference
+	uint64_t tscPerSec  = g_tscOneSecondAgo - g_tscTwoSecondsAgo; // a full complete second has passed
+	
+	//SLogMsg("TSC per second: %q   Difference: %q   Tsc Now: %q", tscPerSec, difference, tscNow);
+	
+	int ms_count = 0;
+	
+	if (tscPerSec)
+		ms_count = difference * 1000 / tscPerSec;
+	
+	return g_nSeconds * 1000 + ms_count;
 }
 #endif
 
@@ -284,7 +303,7 @@ int random_seed_thing[] = {
 int GetRandom()
 {
 	//read the tsc:
-	int hi, lo;
+	uint32_t hi, lo;
 	GetTimeStampCounter(&hi, &lo);
 	//combine the high and low numbers:
 	
@@ -302,7 +321,7 @@ int GetRandom()
 	hi &= 2147483647;
 	
 	//lastly, return.
-	return hi;
+	return (int) hi;
 }
 #endif
 

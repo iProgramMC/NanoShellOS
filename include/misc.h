@@ -7,7 +7,7 @@
 #ifndef _MISC_H
 #define _MISC_H
 
-#define RTC_TICKS_PER_SECOND 512
+#define RTC_TICKS_PER_SECOND 8
 
 #define C_UPDATE_IN_PROGRESS_FLAG  0X80
 
@@ -47,7 +47,7 @@ CPUIDFeatureBits;
  * through after the last reset, in "high" and "low".
  * The "high" or "low" pointers can be NULL, but if you pass in both as NULL, this does not use rdtsc.
  */
-void GetTimeStampCounter(int* high, int* low);
+void GetTimeStampCounter(uint32_t* high, uint32_t* low);
 
 /**
  * Gets the number of milliseconds since boot.

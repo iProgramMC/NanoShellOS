@@ -467,8 +467,9 @@ void WaitTask (Task* pTaskToWait)
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
-void WaitProcess (Process* pProcessToWait)
+void WaitProcess (void* pProcessToWait1)
 {
+	Process* pProcessToWait = (Process*)pProcessToWait1;
 	if (!pProcessToWait) return;
 	Task *pTask = KeGetRunningTask();
 	

@@ -135,8 +135,6 @@ FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 
 FileNode* FsResolvePath (const char* pPath)
 {
-	SLogMsg("Resolving %s", pPath);
-	
 	char path_copy[PATH_MAX]; //max path
 	if (strlen (pPath) >= PATH_MAX-1) return NULL;
 	strcpy (path_copy, pPath);

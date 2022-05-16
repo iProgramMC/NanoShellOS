@@ -55,6 +55,78 @@ void vsprintf(char* memory, const char* format, va_list list) {
 					*memory++ = chrToPrint;
 					continue;
 				}
+				case 'q': {
+					uint64_t num = va_arg (list, uint64_t);
+					char str[40] = { 0, };
+					int i = 0;
+					if (num == 0)
+					{
+						str[i++] = '0';
+					}
+					
+					while (num != 0)
+					{
+						int rem = num % 16;
+						str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+						num = num / 16;
+					}
+					
+					// add padding:
+					for (; i < padding_info; )
+						str[i++] = padding_char;
+					
+					str[i] = '\0'; // Append string terminator 
+					
+					int start = 0; 
+					int end = i - 1; 
+					while (start < end) 
+					{ 
+						___swap((str+start), (str+end)); 
+						start++; 
+						end--; 
+					}
+					int length = i;
+					memcpy(memory, str, length);
+					memory += length;
+					
+					break;
+				}
+				case 'Q': {
+					uint64_t num = va_arg (list, uint64_t);
+					char str[40] = { 0, };
+					int i = 0;
+					if (num == 0)
+					{
+						str[i++] = '0';
+					}
+					
+					while (num != 0)
+					{
+						int rem = num % 10;
+						str[i++] = rem + '0';
+						num = num / 10;
+					}
+					
+					// add padding:
+					for (; i < padding_info; )
+						str[i++] = padding_char;
+					
+					str[i] = '\0'; // Append string terminator 
+					
+					int start = 0; 
+					int end = i - 1; 
+					while (start < end) 
+					{ 
+						___swap((str+start), (str+end)); 
+						start++; 
+						end--; 
+					}
+					int length = i;
+					memcpy(memory, str, length);
+					memory += length;
+					
+					break;
+				}
 				case 'd':case'i': {
 					int32_t num = va_arg(list, int32_t);
 					char str[17] = {0, };

@@ -431,8 +431,6 @@ void KiSetupPic()
 		WritePort(0x20, 0x20);
 		WritePort(0xA0, 0x20);
 	}
-	
-	//sti;
 }
 
 /**
@@ -449,9 +447,9 @@ void KeClockInit()
 	WritePort(0x70, 0x8B);
 	WritePort(0x71, flags | 0x40);
 	
-	//32768>>(5-1) = 2048 hz.  The fastest you can pick is a division rate of
-	//3, which gets you a 8192Hz interrupt rate.
-	int divisionRate = 7;
+	//32768>>(14-1) = 4 hz.
+	//I'll enable this in order to get second-periodic interrupts
+	int divisionRate = 13;
 	WritePort(0x70, 0x8A);
 	flags = ReadPort(0x71);
 	WritePort(0x70, 0x8A);
@@ -464,12 +462,14 @@ void KeClockInit()
 }
 
 extern int g_nRtcTicks;//misc.c
-static int s_nSeconds;
+int  g_nSeconds;
 bool g_gotTime = false;
 
 /**
  * RTC interrupt routine.
  */
+uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
+uint64_t ReadTSC();
 bool g_trustRtcUpdateFinishFlag;
 void IrqClock()
 {
@@ -479,26 +479,14 @@ void IrqClock()
 	//also read register C, may be useful later:
 	WritePort(0x70, 0x0C);
 	
-	char flags = ReadPort(0x71);
-	if (flags & (1 << 4))
-	{
-		g_trustRtcUpdateFinishFlag = true;//yeah, trust me from now on.
-		//HACK: Done so that it wouldn't drift anymore.
-		s_nSeconds++;
-		g_nRtcTicks = s_nSeconds * RTC_TICKS_PER_SECOND + (g_nRtcTicks % RTC_TICKS_PER_SECOND);
-		g_gotTime = true;
-		TmGetTime(TmReadTime());
-	}
-	int oldTicks = g_nRtcTicks;
+	UNUSED char flags = ReadPort(0x71);
+	
 	g_nRtcTicks++;
-	// if 4 seconds have passed and we STILL didn't get a update finished interrupt
-	// don't hesitate to update the time every 250 ms (just to be sure)
-	if (!g_trustRtcUpdateFinishFlag && GetTickCount() > 2000)
+	if (g_nRtcTicks % RTC_TICKS_PER_SECOND == 0)
 	{
-		if (oldTicks / (RTC_TICKS_PER_SECOND/4) != g_nRtcTicks / (RTC_TICKS_PER_SECOND/4))//second changed?
-		{
-			g_gotTime = true;
-			TmGetTime(TmReadTime());
-		}
+		g_nSeconds++;
+		g_tscTwoSecondsAgo = g_tscOneSecondAgo;
+		g_tscOneSecondAgo  = ReadTSC();
+		SLogMsg("TSC difference: %Q", g_tscOneSecondAgo - g_tscTwoSecondsAgo);
 	}
 }
