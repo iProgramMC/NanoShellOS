@@ -69,7 +69,6 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_
 	uint32_t pdIndex =  (uint32_t)virt >> 22;
 	uint32_t ptIndex = ((uint32_t)virt >> 12) & 0x3FF;
 	uint32_t piIndex = ((uint32_t)virt      ) & 0xFFF;
-	uint32_t size1 = size;
 	
 	// A page table maps 4 MB of memory, or (1 << 22) bytes.
 	//uint32_t pageTablesNecessary = ((size1 - 1) >> 22) + 1;
@@ -280,7 +279,8 @@ typedef struct
 	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
 	char   sArgs[1024];
 	char   sFileName[PATH_MAX+5];
-	int*   pElfErrorCodeOut; // The error code that the ELF file will return.
+	int    nElfErrorCode;     // The error code that the ELF executive returns if the ELF file didn't run
+	int    nElfErrorCodeExec; // The error code that the ELF file itself returns.
 }
 ElfLoaderBlock;
 
@@ -296,7 +296,7 @@ static void ElfExecThread(int pnLoaderBlock)
 	block.pFileData = pMem;
 	
 	// Try to load the ELF in
-	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, block.pElfErrorCodeOut);
+	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, &block.nElfErrorCodeExec);
 	
 	if (erc != ELF_ERROR_NONE)
 	{
@@ -314,7 +314,9 @@ static void ElfExecThread(int pnLoaderBlock)
 	else
 	{
 		ExGetRunningProc()->pDetail = NULL; // the runner will handle us anyway.
-		((ElfLoaderBlock*)pnLoaderBlock)->bExecDone = true;
+		((ElfLoaderBlock*)pnLoaderBlock)->bExecDone         = true;
+		((ElfLoaderBlock*)pnLoaderBlock)->nElfErrorCode     = erc;
+		((ElfLoaderBlock*)pnLoaderBlock)->nElfErrorCodeExec = block.nElfErrorCodeExec;
 		KeExit ();
 	}
 }
@@ -332,7 +334,8 @@ void ElfOnDeath(Process* pProc)
 		else
 		{
 			pBlk->bExecDone = true;
-			*(pBlk->pElfErrorCodeOut) = ELF_KILLED;
+			pBlk->nElfErrorCode     = ELF_KILLED;
+			pBlk->nElfErrorCodeExec = 0;
 		}
 	}
 }
@@ -385,18 +388,19 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	pBlock->nHeapSize = nHeapSize;
 	pBlock->pFileData = pData;
 	pBlock->nFileSize = nActualFileSz;
-	pBlock->pElfErrorCodeOut = pElfErrorCodeOut;
+	pBlock->nElfErrorCode     = 0;
+	pBlock->nElfErrorCodeExec = 0;
 	
 	// Create a new process
 	int erc = 0;
 	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc);
-	pProc->pDetail = pBlock;
-	pProc->OnDeath = ElfOnDeath;
 	if (!pProc)
 	{
 		MmFreeK (pBlock);
 		return ELF_PROCESS_ERROR;
 	}
+	pProc->pDetail = pBlock;
+	pProc->OnDeath = ElfOnDeath;
 	
 	// If this is an async execution, our job is done, and the KeExecThread will continue.
 	if (bAsync) return ELF_ERROR_NONE;
@@ -408,8 +412,10 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	}
 	
 	// Ok, execution is complete. Free all related data
+	int error_code_obtained = pBlock->nElfErrorCode;
+	*pElfErrorCodeOut = pBlock->nElfErrorCodeExec;
 	
 	MmFreeK (pBlock);
 	
-	return ELF_ERROR_NONE;
+	return error_code_obtained;
 }
