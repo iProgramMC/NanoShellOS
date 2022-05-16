@@ -79,6 +79,7 @@ void SetupExcepTaskInterrupt (int intNum)
 	pEntry->selector = KEFTSSSEG;
 }
 
+void WaitMS(int ms);
 void PlaySound (uint32_t frequency)
 {
 	uint32_t divisor; uint8_t tmp;
@@ -98,20 +99,6 @@ void PlaySound (uint32_t frequency)
 void StopSound (void)
 {
 	WritePort (0x61, ReadPort (0x61) & 0xFC);
-}
-
-void WaitMS (int ms)
-{
-	if (ms <= 0) return;
-	int tickCountToStop = GetTickCount() + ms;
-	while (GetTickCount() < tickCountToStop)
-	{
-		Task* pTask = KeGetRunningTask();
-		if (pTask)
-			pTask->m_reviveAt = tickCountToStop;
-		
-		KeTaskDone();
-	}
 }
 
 void PerformBeep()

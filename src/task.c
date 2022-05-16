@@ -42,6 +42,12 @@ extern char           g_cwd[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
 
+SAI void KeReviveTask (Task *pTask)
+{
+	pTask->m_bSuspended     = false;
+	pTask->m_suspensionType = SUSPENSION_NONE;
+}
+
 void KeKillThreadByPID (int proc)
 {
 	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return;
@@ -254,9 +260,44 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
 }
 
+void KeUnsuspendTasksWaitingForProc(void *pProc)
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_PROCESS_EXPIRY) continue;
+		
+		if (pCurTask->m_pWaitedTaskOrProcess == pProc)
+		{
+			// Unsuspend this process, they're done waiting!
+			KeReviveTask(pCurTask);
+		}
+	}
+}
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt) cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
+	
+	// let everyone know that this task is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_TASK_EXPIRY) continue;
+		
+		if (pCurTask->m_pWaitedTaskOrProcess == pTask)
+		{
+			// Unsuspend this process, they're done waiting!
+			KeReviveTask(pCurTask);
+		}
+	}
+	
 	if (pTask == KeGetRunningTask())
 	{
 		pTask->m_bMarkedForDeletion = true;
@@ -267,11 +308,11 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 			KeStopSystem ();
 		}
 		sti;//if we didn't restore interrupts here would be our death point
+		KeTaskDone();
 		while (1) hlt;
 	}
 	else
 	{
-		//SLogMsg("Deleting task %x (KeResetTask, killing:%d)", pTask, killing);
 		if (killing && pTask->m_pStack)
 		{
 			MmFreeUnsafeK(pTask->m_pStack);
@@ -402,8 +443,88 @@ void KeCheckDyingTasks(Task* pTaskToAvoid)
 void ResetToKernelHeapUnsafe();
 void UseHeapUnsafe (Heap* pHeap);
 void ExCheckDyingProcesses();
+Process* ExGetRunningProc();
 
 uint32_t* const pSysCallNum = (uint32_t*)0xC0007CFC;//for easy reading; the pointer itself is constant
+
+void WaitTask (Task* pTaskToWait)
+{
+	if (!pTaskToWait) return;
+	Task *pTask = KeGetRunningTask();
+	
+	if (pTask == pTaskToWait)
+	{
+		// No point in waiting like this.
+		
+		// TODO: Kill the task instead. There's no point in running it further if it
+		// waits for itself, consumes a task spot other tasks could occupy for no reason
+		return;
+	}
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_TASK_EXPIRY;
+	pTask->m_pWaitedTaskOrProcess = pTaskToWait;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+void WaitProcess (Process* pProcessToWait)
+{
+	if (!pProcessToWait) return;
+	Task *pTask = KeGetRunningTask();
+	
+	if (ExGetRunningProc() == pProcessToWait)
+	{
+		// No point in waiting like this.
+		
+		// TODO: Kill the process instead
+		return;
+	}
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PROCESS_EXPIRY;
+	pTask->m_pWaitedTaskOrProcess = pProcessToWait;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+void WaitMS (int ms)
+{
+	if (ms <= 0) return;
+	int tickCountToStop = GetTickCount() + ms;
+	
+	Task* pTask = KeGetRunningTask();
+	if (pTask)
+	{
+		pTask->m_suspensionType = SUSPENSION_UNTIL_TIMER_EXPIRY;
+		pTask->m_bSuspended     = true;
+		pTask->m_reviveAt       = tickCountToStop;
+	}
+	while (GetTickCount() < tickCountToStop)
+	{
+		KeTaskDone();
+	}
+}
+SAI bool IsTaskSuspended(Task *pTask, int tick_count)
+{
+	switch (pTask->m_suspensionType)
+	{
+		case SUSPENSION_NONE: // No Suspension
+			return false;
+		case SUSPENSION_UNTIL_TIMER_EXPIRY:
+			if (tick_count > pTask->m_reviveAt)
+			{
+				KeReviveTask(pTask);
+				return false;
+			}
+			return true;
+		default:
+			if (!pTask->m_bSuspended)
+			{
+				KeReviveTask(pTask);
+				return false;
+			}
+			return true;
+	}
+}
 
 SAI int GetNextTask()
 {
@@ -419,7 +540,7 @@ SAI int GetNextTask()
 		if (p->m_bExists)
 		{
 			// Is the task scheduled to come back online?
-			if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
+			if (!IsTaskSuspended (p, g_tick_count))
 				return i;
 		}
 	}
@@ -431,7 +552,7 @@ SAI int GetNextTask()
 		if (p->m_bExists)
 		{
 			// Is the task scheduled to come back online?
-			if (p->m_reviveAt < g_tick_count && !p->m_bSuspended)
+			if (!IsTaskSuspended (p, g_tick_count))
 				return i;
 		}
 	}

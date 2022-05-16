@@ -39,6 +39,9 @@ void ExDisposeProcess(Process *pProc)
 	
 	// Deactivate this process
 	pProc->bActive = false;
+	
+	// If there are any tasks waiting for us to terminate, unsuspend those now
+	KeUnsuspendTasksWaitingForProc(pProc);
 }
 
 void ExCheckDyingProcesses(Process *pProcToAvoid)

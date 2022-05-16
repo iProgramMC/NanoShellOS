@@ -406,10 +406,11 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	if (bAsync) return ELF_ERROR_NONE;
 	
 	// Otherwise, wait until you're done.
-	while (!pBlock->bExecDone)
+	/*while (!pBlock->bExecDone)
 	{
 		KeTaskDone();
-	}
+	}*/
+	WaitProcess (pProc);
 	
 	// Ok, execution is complete. Free all related data
 	int error_code_obtained = pBlock->nElfErrorCode;

@@ -56,6 +56,15 @@ enum
 	SEGMENT_USDATA = 0x0020,
 };
 
+enum
+{
+	SUSPENSION_NONE,                 // No suspension (i.e. the program can run)
+	SUSPENSION_TOTAL,                // Total suspension, such as when a program crashes
+	SUSPENSION_UNTIL_PROCESS_EXPIRY, // Suspension until a process expires (for example, running an ELF)
+	SUSPENSION_UNTIL_TASK_EXPIRY,    // Suspension until a task expires (for example, waiting for a worker task to finish)
+	SUSPENSION_UNTIL_TIMER_EXPIRY,   // Suspension until the timer expires
+};
+
 // Task structure definition:
 typedef struct
 {
@@ -78,7 +87,6 @@ typedef struct
 	int            m_argument;
 	bool           m_bFirstTime;
 	bool           m_bMarkedForDeletion;
-	bool           m_bSuspended;
 	
 	const char*    m_authorFile, 
 	          *    m_authorFunc;
@@ -90,12 +98,14 @@ typedef struct
 	const uint8_t* m_pFontContext;
 	
 	char 		   m_tag[33];
-	
-	int            m_reviveAt;
-	
 	void *         m_pProcess;
 	
 	uint32_t       m_sysCallNum;//backed up from 0xC0007CFC
+	
+	int            m_suspensionType;
+	bool           m_bSuspended;
+	int            m_reviveAt;
+	void *         m_pWaitedTaskOrProcess;
 }
 Task;
 
@@ -165,6 +175,26 @@ __attribute__((noreturn))
 void KeExit();
 
 /***********************************************************
+    Kills a task by process index.
+***********************************************************/
+void KeKillThreadByPID (int proc);
+
+/***********************************************************
+    Waits a certain number of milliseconds.
+***********************************************************/
+void WaitMS (int ms);
+
+/***********************************************************
+    Waits until a task dies.
+***********************************************************/
+void WaitTask (Task* pTask);
+
+/***********************************************************
+    Waits a certain number of milliseconds.
+***********************************************************/
+void WaitMS (int ms);
+
+/***********************************************************
     Internal function to initialize the task scheduler.
 ***********************************************************/
 void KiTaskSystemInitialize();
@@ -175,9 +205,10 @@ void KiTaskSystemInitialize();
 void KeTaskDebugDump();
 
 /***********************************************************
-    Kills a task by process index.
+    Internal function to unsuspend all tasks waiting
+	for a certain process handle
 ***********************************************************/
-void KeKillThreadByPID (int proc);
+void KeUnsuspendTasksWaitingForProc(void *pProc);
 
 typedef struct
 {
