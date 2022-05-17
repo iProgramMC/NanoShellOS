@@ -955,8 +955,8 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 		if (height > (int)pSrc->m_height - y1) height = pSrc->m_height - y1;
 	}
 	
-	if (width  < 0) return;
-	if (height < 0) return;
+	if (width  <= 0) return;
+	if (height <= 0) return;
 	
 	//SLogMsg("VidBitBlitR(%x, %d, %d, %d, %d, %x, %d, %d, %x)",pDest,cx,cy,width,height,pSrc,x1,y1,mode);
 	

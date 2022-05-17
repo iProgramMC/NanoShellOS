@@ -139,12 +139,16 @@ memset_ints:
 	mov edi, [ebp + 08h]
 	mov ecx, [ebp + 10h]
 	
+	cmp ecx, 0
+	je  .done
+	
 	.some_loop:
 		mov [edi], esi
 		add edi, 4
 		dec ecx
 		jnz .some_loop
 	
+.done:
 	pop edi
 	pop esi
 	pop ebx
@@ -166,12 +170,16 @@ memset_shorts:
 	mov edi, [ebp + 08h]
 	mov ecx, [ebp + 10h]
 	
+	cmp ecx, 0
+	je  .done
+	
 	.some_loop:
 		mov [edi], si
 		add edi, 2
 		dec ecx
 		jnz .some_loop
 	
+.done:
 	pop edi
 	pop esi
 	pop ebx
