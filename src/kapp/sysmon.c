@@ -149,16 +149,15 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	
 	// event loop:
 #if THREADING_ENABLED
-	int timeout = 0;
+	int next_tick_in = GetTickCount() + 1000;
 	while (HandleMessages (pWindow))
 	{
-		if (timeout == 0)
+		if (GetTickCount() > next_tick_in)
 		{
+			next_tick_in += 1000;
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
 			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
-			timeout = 100;
 		}
-		timeout--;
 	}
 #endif
 }

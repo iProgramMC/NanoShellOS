@@ -206,8 +206,8 @@ static uint32_t MmFindFreeFrame()
 		//no, continue
 	}
 	//what
-	LogMsg("WARNING: No more free memory?!  This can result in bad stuff!!");
-	return 0xffffffffu/*ck you*/;
+	SLogMsg("WARNING: No more free memory?!  This can result in bad stuff!!");
+	return 0xffffffffu;
 }
 int GetNumFreePhysPages()
 {
@@ -578,7 +578,7 @@ void MmInvalidateSinglePage(UNUSED uintptr_t add)
 static void* MmSetupPage(int i, uint32_t* pPhysOut, const char* callFile, int callLine)
 {
 	uint32_t frame = MmFindFreeFrame();
-	if (frame == 0xffffffffu/*ck you*/)
+	if (frame == 0xffffffffu)
 	{
 		return NULL;
 	}
@@ -627,7 +627,7 @@ void* MmAllocateSinglePageUnsafePhyD(uint32_t* pPhysOut, const char* callFile, i
 		}
 	}
 	// No more page frames?!
-	LogMsg("WARNING: No more page entries");
+	SLogMsg("WARNING: No more page entries");
 	
 	return NULL;
 }
@@ -641,17 +641,17 @@ void MmFreePageUnsafe(void* pAddr)
 	//safety measures:
 	if (addr >= 0xC0000000)
 	{
-		LogMsg("Can't free kernel memory!");
+		SLogMsg("Can't free kernel memory!");
 		return;
 	}
 	if (g_pHeap && addr >= 0x80000000)
 	{
-		LogMsg("Can't free from the kernel heap while you're using a user heap!");
+		SLogMsg("Can't free from the kernel heap while you're using a user heap!");
 		return;
 	}
 	if (!g_pHeap && addr < 0x80000000)
 	{
-		LogMsg("You aren't using a user heap!");
+		SLogMsg("You aren't using a user heap!");
 		return;
 	}
 	
@@ -660,7 +660,7 @@ void MmFreePageUnsafe(void* pAddr)
 	
 	if (!g_pageEntries[addr].m_bPresent)
 	{
-		//lol?
+		SLogMsg("Double free attempt on %x", pAddr);
 		return;
 	}
 	
@@ -723,6 +723,12 @@ void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uin
 				uint32_t* pPhysOut = physAddresses;
 				
 				void* pointer = MmSetupPage(i, pPhysOut, callFile, callLine);
+				if (!pointer)
+				{
+					// Uh oh!  This ain't good, but thankfully, we failed on the first page, so just gracefully return.
+					return NULL;
+				}
+				
 				// if not null, increment by 4.
 				// if it WERE null and we DID increment by four, it would throw a pagefault
 				if (pPhysOut)
@@ -731,10 +737,24 @@ void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uin
 				// Not to forget, set the memory allocation size below:
 				g_memoryAllocationSize[i] = numPagesNeeded - 1;
 				
-				for (int j = i+1; j < jfinal; j++)
+				int nPagesToFree = 1;
+				for (int j = i + 1; j < jfinal; j++)
 				{
-					MmSetupPage (j, pPhysOut, callFile, callLine);
+					void *ptr = MmSetupPage (j, pPhysOut, callFile, callLine);
+					
 					// if not null, increment by 4.
+					if (!ptr)
+					{
+						// All, hell naw
+						// We don't fit in physical memory!!! Let's roll back and return
+						for (int npage = 0; npage < nPagesToFree; npage++)
+						{
+							MmFreePageUnsafe((uint8_t*)pointer + 4096 * npage);
+						}
+						return NULL;
+					}
+					
+					nPagesToFree++;
 					if (pPhysOut)
 						pPhysOut++;
 				}

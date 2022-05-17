@@ -134,7 +134,7 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int *pErrorCodeOut, 
 
 Task* KeStartTaskD(TaskedFunction function, int argument, int *pErrorCodeOut, const char* a, const char* b, int c);
 #define KeStartTask(function, argument, errorPtr) \
-        KeStartTaskD(function, argument, errorPtr, __FILE__, __FUNCTION__, __LINE__)
+        KeStartTaskD(function, argument, errorPtr, __FILE__, #function, __LINE__)
 
 /***********************************************************
     Allows you to kill the task passed into itself.

@@ -727,8 +727,8 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					break;
 				case KEY_ARROW_RIGHT:
 					this->m_textInputData.m_textCursorIndex++;
-					if (this->m_textInputData.m_textCursorIndex >= this->m_textInputData.m_textLength)
-						this->m_textInputData.m_textCursorIndex  = this->m_textInputData.m_textLength - 1;
+					if (this->m_textInputData.m_textCursorIndex > this->m_textInputData.m_textLength)
+						this->m_textInputData.m_textCursorIndex = this->m_textInputData.m_textLength;
 					CtlTextEditRecalcCurXY(this);
 					CtlTextEditUpdateScrollXY(this);
 					break;
@@ -745,11 +745,12 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					CtlTextEditRecalcIndex(this);
 					CtlTextEditUpdateScrollXY(this);
 					break;
-				case KEY_F1:
-				case KEY_F2:
+				//case KEY_F1:
+				//case KEY_F2:
 				case KEY_DELETE:
 					if (this->m_textInputData.m_textLength   >   this->m_textInputData.m_textCursorIndex)
 						CtlRemoveCharFromAnywhere(this, pWindow, this->m_textInputData.m_textCursorIndex);
+					break;
 				default:
 					repaint = false;
 					break;

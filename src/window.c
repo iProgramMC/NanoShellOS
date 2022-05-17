@@ -1908,14 +1908,6 @@ void SetupWindowManager()
 	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
-	/*
-	//create the debug monitor task.
-	errorCode = 0;
-	char* pb = MmAllocate(512);
-	strcpy(pb, "--HookDebugConsole");
-	pTask = KeStartTask(TerminalHostTask, (int)pb, &errorCode);
-	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
-	*/
 #endif
 }
 
