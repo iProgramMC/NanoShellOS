@@ -529,7 +529,7 @@ SAI bool IsTaskSuspended(Task *pTask, int tick_count)
 
 SAI int GetNextTask()
 {
-	int g_tick_count = GetTickCount();
+	int g_tick_count = GetTickCountUnsafe();
 	
 	int i = s_currentRunningTask + 1;
 	int task = s_lastRunningTaskIndex;

@@ -489,4 +489,22 @@ void IrqClock()
 		g_tscOneSecondAgo  = ReadTSC();
 		SLogMsg("TSC difference: %Q", g_tscOneSecondAgo - g_tscTwoSecondsAgo);
 	}
+	
+	// 1 real second passed. Don't count on it, as some emulators don't send this flag
+	// VirtualBox comes to mind...
+	if (flags & (1 << 4))
+	{
+		g_trustRtcUpdateFinishFlag = true; // yeah, trust me from now on
+		
+		TmGetTime(TmReadTime());
+	}
+	//(temporarily) load time like so, until (and if) a flag UPDATE_FINISHED interrupt comes
+	if (!g_trustRtcUpdateFinishFlag)
+	{
+		//1 second passed!
+		if (g_nRtcTicks % RTC_TICKS_PER_SECOND == 0)
+		{
+			TmGetTime(TmReadTime());
+		}
+	}
 }

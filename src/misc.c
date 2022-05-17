@@ -169,11 +169,16 @@ int GetRawTickCount()
 
 extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
 extern int g_nSeconds;
-int GetTickCount()
+int gEarliestTickCount;
+bool g_bRtcInitialized = false;
+
+// Only call this if you have interrupts disabled!!!
+int GetTickCountUnsafe()
 {
 	uint64_t tscNow     = ReadTSC();
 	uint64_t difference = tscNow - g_tscOneSecondAgo;             // the difference
 	uint64_t tscPerSec  = g_tscOneSecondAgo - g_tscTwoSecondsAgo; // a full complete second has passed
+	int nSeconds = g_nSeconds;
 	
 	//SLogMsg("TSC per second: %q   Difference: %q   Tsc Now: %q", tscPerSec, difference, tscNow);
 	
@@ -182,7 +187,20 @@ int GetTickCount()
 	if (tscPerSec)
 		ms_count = difference * 1000 / tscPerSec;
 	
-	return g_nSeconds * 1000 + ms_count;
+	int newTickCount = nSeconds * 1000 + ms_count;
+	if (gEarliestTickCount < newTickCount)
+		gEarliestTickCount = newTickCount;
+	return gEarliestTickCount;
+}
+int GetTickCount()
+{
+	if (!g_bRtcInitialized)
+		return 0;
+	
+	cli;
+	int tc = GetTickCountUnsafe();
+	sti;
+	return tc;
 }
 #endif
 

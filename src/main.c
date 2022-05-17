@@ -91,6 +91,7 @@ extern bool g_IsBGADevicePresent; // pci.c
 multiboot_info_t *g_pMultibootInfo;
 
 extern bool g_gotTime; // idt.c
+extern bool g_bRtcInitialized; // misc.c
 
 extern uint32_t e_temporary1, e_temporary2;
 extern uint32_t g_BGADeviceBAR0;
@@ -101,7 +102,6 @@ extern void VbGuestInit();
 
 bool VmwDetect();
 bool VmwInit();
-
 bool gInitializeVB;
 extern void KiIdtInit2();
 extern void AttemptLocateRsdPtr();
@@ -324,8 +324,10 @@ void KiStartupSystem(unsigned long check, unsigned long mbaddr)
 		VbGuestInit();
 	#endif
 
-	// Initialize the mouse driver too
 	sti;
+	g_bRtcInitialized = true;
+	// Initialize the mouse driver too
+	
 	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//MouseInit ();
 	

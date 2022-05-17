@@ -50,7 +50,12 @@ CPUIDFeatureBits;
 void GetTimeStampCounter(uint32_t* high, uint32_t* low);
 
 /**
- * Gets the number of milliseconds since boot.
+ * Gets the number of milliseconds since boot, assuming interrupts are disabled.
+ */
+int GetTickCountUnsafe();
+
+/**
+ * Gets the number of milliseconds since boot, assuming interrupts are enabled.
  */
 int GetTickCount();
 
