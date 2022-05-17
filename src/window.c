@@ -615,12 +615,17 @@ void SetDefaultBackground()
 	}
 	
 	//Try to open a file now.
-	//WORK: Change the file name here.  Should work
-	int fd = FiOpen("/Fat0/penile.bmp", O_RDONLY);
+	if (!pFileName)
+	{
+		SLogMsg("There is no wallpaper. Using default one!");
+		GenerateBackground();
+	}
+	
+	
+	int fd = FiOpen(pFileName, O_RDONLY);
 	if (fd < 0)
 	{
 		SLogMsg("Could not open wallpaper. Using default one!");
-		//g_BackgroundSolidColorActive = true;
 		GenerateBackground();
 		return;
 	}
@@ -631,7 +636,6 @@ void SetDefaultBackground()
 	if (!pData)
 	{
 		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
-		//g_BackgroundSolidColorActive = true;
 		GenerateBackground();
 		return;
 	}
@@ -652,7 +656,6 @@ void SetDefaultBackground()
 	else
 	{
 		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
-		//g_BackgroundSolidColorActive = true;
 		GenerateBackground();
 	}
 }
