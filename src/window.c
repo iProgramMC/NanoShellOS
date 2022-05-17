@@ -619,6 +619,7 @@ void SetDefaultBackground()
 	{
 		SLogMsg("There is no wallpaper. Using default one!");
 		GenerateBackground();
+		return;
 	}
 	
 	

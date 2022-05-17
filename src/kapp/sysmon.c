@@ -24,6 +24,18 @@ enum
 	UPTIME_LABEL,
 };
 
+const char *GetTaskSuspendStateStr (int susp_type)
+{
+	switch (susp_type)
+	{
+		case SUSPENSION_NONE:  return "Active";
+		case SUSPENSION_TOTAL: return "Suspended";
+		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Waiting for task";
+		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Waiting for some time";
+		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Waiting for process";
+	}
+}
+
 extern Task g_runningTasks[];
 
 int GetNumPhysPages(void);
@@ -50,9 +62,9 @@ void UpdateSystemMonitorLists(Window* pWindow)
 				pTask->m_pFunction
 			);
 			if (strlen(pTask->m_tag) == 0)
-				sprintf (buffer, "%s[%s:%d]", pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
+				sprintf (buffer, "[%s]  %s [%s:%d]", GetTaskSuspendStateStr (pTask->m_suspensionType), pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
 			else
-				sprintf (buffer, "%s", pTask->m_tag);
+				sprintf (buffer, "[%s]  %s",         GetTaskSuspendStateStr (pTask->m_suspensionType), pTask->m_tag);
 			AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
 		}
 	}
