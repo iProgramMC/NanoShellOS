@@ -443,13 +443,16 @@ enum CURSORTYPE
 #define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
+#define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 
 #define WF_SYSPOPUP 0x10000000//Internal flag: System Popup (omit from taskbar)
 #define WF_MENUITEM 0x20000000//Internal flag: Menu Item
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
-
 #define WI_INITGOOD 0x40000000//If the initialization process succeeded
+
+// (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
+
 
 #define WIN_KB_BUF_SIZE  512
 typedef struct WindowStruct
@@ -509,7 +512,10 @@ typedef struct WindowStruct
 	
 	Rectangle  m_taskbarRect;
 	
-	Cursor     m_customCursor;
+	Cursor     m_customCursor, m_backupCursor;
+	
+	int        m_frequentWindowRenders;
+	int        m_lastSentPaintEventExternallyWhen;
 } Window;
 
 /**

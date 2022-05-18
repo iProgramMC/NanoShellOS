@@ -30,6 +30,7 @@ const char *GetTaskSuspendStateStr (int susp_type)
 	{
 		case SUSPENSION_NONE:  return "Active";
 		case SUSPENSION_TOTAL: return "Suspended";
+		case SUSPENSION_UNTIL_WM_UPDATE: return "Wait WM";
 		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Wait Task";
 		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Sleeping";
 		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Wait Process";

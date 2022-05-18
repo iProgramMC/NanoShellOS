@@ -909,6 +909,27 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 		pWindow->m_eventQueueParm2[pWindow->m_eventQueueSize] = parm2;
 		
 		pWindow->m_eventQueueSize++;
+		
+		if (eventType == EVENT_PAINT && !(pWindow->m_flags & WF_NOWAITWM))
+		{
+			if (pWindow->m_lastSentPaintEventExternallyWhen + 40 < GetTickCount()) // 40 ms delay
+			{
+				// Sent a paint request in more than 40 milliseconds since the
+				// last one, I would wager we don't need turbo mode
+				pWindow->m_frequentWindowRenders = 0;
+			}
+			else
+			{
+				pWindow->m_frequentWindowRenders++;
+				if (pWindow->m_frequentWindowRenders > 50)
+				{
+					LogMsg("[WindowRegisterEventUnsafe] Potential game detected, allowing acceleration");
+					pWindow->m_flags |= WF_NOWAITWM;
+				}
+			}
+			
+			pWindow->m_lastSentPaintEventExternallyWhen = GetTickCount();
+		}
 	}
 	else
 		DebugLogMsg("Could not register event %d for window %x", eventType, pWindow);
@@ -1951,6 +1972,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		UpdateFPSCounter();
 		CrashReporterCheck();
 		bool updated = false;
+		
+		KeUnsuspendTasksWaitingForWM();
 		
 		while (!ActionQueueEmpty())
 		{
@@ -3172,6 +3195,8 @@ bool HandleMessages(Window* pWindow)
 	// grab the lock
 	LockAcquire (&pWindow->m_EventQueueLock);
 	
+	bool have_handled_events = false;
+	
 	// If the window manager was being asked to redraw the window, but it did not
 	// Withdraw the statement, so you can draw another frame
 	//bool bkp = pWindow->m_renderFinished;
@@ -3182,6 +3207,7 @@ bool HandleMessages(Window* pWindow)
 	int et = 0, p1 = 0, p2 = 0;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
+		have_handled_events = true;
 		if (!OnProcessOneEvent(pWindow, et, p1, p2))
 			return false;
 	}
@@ -3189,6 +3215,7 @@ bool HandleMessages(Window* pWindow)
 	// While we have events in our own queue...
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
+		have_handled_events = true;
 		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]))
 			return false;
 	}
@@ -3198,6 +3225,8 @@ bool HandleMessages(Window* pWindow)
 
 	while (WinAnythingOnInputQueue(pWindow))
 	{
+		have_handled_events = true;
+		
 		unsigned char out = WinReadFromInputQueue(pWindow);
 		
 		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0);
@@ -3213,12 +3242,22 @@ bool HandleMessages(Window* pWindow)
 		}
 	}
 	
-	// If handling this event did nothing, just restore the old state
-	//if (!pWindow->m_renderFinished)
-	//	pWindow->m_renderFinished = bkp;
-	
 	LockFree (&pWindow->m_EventQueueLock);
-	KeTaskDone(); // give it a good halt
+	
+	bool bIsWM = KeGetRunningTask() != g_pWindowMgrTask;
+	if (!have_handled_events)
+	{
+		// suspend until the window manager has updated itself.
+		// if this IS the window manager handling events for us, we'd basically be waiting forever, so don't
+		if (bIsWM && !(pWindow->m_flags & WF_NOWAITWM))
+		{
+			WaitUntilWMUpdate();
+		}
+	}
+	
+	// if this is the window manager, let it handle everything else first
+	if (!bIsWM)
+		KeTaskDone(); // give it a good halt
 	return true;
 }
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)

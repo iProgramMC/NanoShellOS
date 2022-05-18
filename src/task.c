@@ -284,6 +284,21 @@ void KeUnsuspendTasksWaitingForProc(void *pProc)
 		}
 	}
 }
+void KeUnsuspendTasksWaitingForWM()
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_WM_UPDATE) continue;
+		
+		// Unsuspend this process, they're done waiting!
+		KeReviveTask(pCurTask);
+	}
+}
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt) cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
@@ -509,6 +524,17 @@ void WaitMS (int ms)
 	{
 		KeTaskDone();
 	}
+}
+void WaitUntilWMUpdate()
+{
+	Task *pTask = KeGetRunningTask();
+	
+	//TODO: What if the Window Manager calls this?
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_WM_UPDATE;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
 }
 SAI bool IsTaskSuspended(Task *pTask, int tick_count)
 {

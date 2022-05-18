@@ -63,6 +63,7 @@ enum
 	SUSPENSION_UNTIL_PROCESS_EXPIRY, // Suspension until a process expires (for example, running an ELF)
 	SUSPENSION_UNTIL_TASK_EXPIRY,    // Suspension until a task expires (for example, waiting for a worker task to finish)
 	SUSPENSION_UNTIL_TIMER_EXPIRY,   // Suspension until the timer expires
+	SUSPENSION_UNTIL_WM_UPDATE,      // Suspension until the window manager updates
 };
 
 // Task structure definition:
@@ -203,6 +204,11 @@ void WaitProcess(void* pProcess);
 void WaitMS (int ms);
 
 /***********************************************************
+    Waits until the window manager refreshes again.
+***********************************************************/
+void WaitUntilWMUpdate ();
+
+/***********************************************************
     Internal function to initialize the task scheduler.
 ***********************************************************/
 void KiTaskSystemInitialize();
@@ -217,6 +223,12 @@ void KeTaskDebugDump();
 	for a certain process handle
 ***********************************************************/
 void KeUnsuspendTasksWaitingForProc(void *pProc);
+
+/***********************************************************
+    Internal function to unsuspend all tasks waiting
+	for the window manager
+***********************************************************/
+void KeUnsuspendTasksWaitingForWM();
 
 typedef struct
 {
