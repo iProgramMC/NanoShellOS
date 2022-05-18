@@ -58,6 +58,8 @@ IrqTaskA:
 	; of the EFLAGS, and it's already saved.
 	cld
 	
+	; push a 1, because this came from the PIT
+	push 1
 	; call the re-schedule function
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack
@@ -91,6 +93,7 @@ IrqTaskA:
 	; There is actually no need to call "sti", iretd 
 	; reloads the EFLAGS, which automatically does that.
 	iretd
+
 IrqTaskB:
 	cli
 	; Preserve basic registers
@@ -119,12 +122,7 @@ IrqTaskB:
 	mov eax, ss
 	push eax
 	
-	; acknowledge the interrupt
-	mov al, 0x20
-	mov dx, 0x20
-	out dx, al
-	mov dx, 0xA0
-	out dx, al
+	; this came from software, no need to acknowledge anything :)
 	
 	push esp
 	
@@ -134,6 +132,8 @@ IrqTaskB:
 	; of the EFLAGS, and it's already saved.
 	cld
 	
+	; push a 0, because this came from software, rather than the PIT itself.
+	push 0
 	; call the re-schedule function
 	call KeSwitchTask
 	add esp, 4 ; get rid of what we had on the stack

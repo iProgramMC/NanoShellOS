@@ -42,6 +42,10 @@ void vsprintf(char* memory, const char* format, va_list list) {
 				if (!m) return;
 			}
 			switch (m) {
+				case '%': {
+					*memory++ = m;
+					break;
+				}
 				case 's': {
 					char* stringToPrint = va_arg(list, char*);
 					if (stringToPrint == NULL) stringToPrint = "(null)";

@@ -17,6 +17,9 @@
 __attribute__((aligned(16)))
 Task g_runningTasks[C_MAX_TASKS];
 
+// Let it be accessible from sysmon
+uint64_t g_kernelCpuTimeTotal;
+
 extern bool g_interruptsAvailable;
 
 static int s_lastRunningTaskIndex = 1;
@@ -26,6 +29,7 @@ static CPUSaveState g_kernelSaveState;
 
 static Process*       g_pProcess = NULL;
 
+static uint64_t       g_kernelLastSwitchTime;
 __attribute__((aligned(16)))
 static int            g_kernelFPUState[128];
 static VBEData*       g_kernelVBEContext = NULL;
@@ -41,6 +45,8 @@ extern const uint8_t* g_pCurrentFont;
 extern char           g_cwd[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
+
+uint64_t g_onePitIntAgo, g_twoPitIntsAgo;
 
 SAI void KeReviveTask (Task *pTask)
 {
@@ -563,8 +569,14 @@ SAI int GetNextTask()
 }
 
 void ExCheckDyingProcesses(void* pProcToAvoid);
-void KeSwitchTask(CPUSaveState* pSaveState)
+void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 {
+	register uint64_t tsc = ReadTSC();
+	if (bCameFromPIT)
+	{
+		g_twoPitIntsAgo = g_onePitIntAgo;
+		g_onePitIntAgo  = tsc;
+	}
 	g_pProcess = NULL;
 	
 	Task* pTask = KeGetRunningTask();
@@ -615,8 +627,22 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 		s_currentRunningTask = -1;
 	}
 	
+	if (pTask)
+	{
+		// Before switching, log the amount of time passed
+		uint64_t totalTime = tsc - pTask->m_lastSwitchTime;
+		pTask->m_cpuTimeTotal += totalTime;
+	}
+	else
+	{
+		uint64_t totalTime = tsc - g_kernelLastSwitchTime;
+		g_kernelCpuTimeTotal += totalTime;
+	}
+	
 	if (pNewTask)
 	{
+		pNewTask->m_lastSwitchTime = tsc;
+		
 		//first, restore this task's FPU registers:
 		KeFxRestore(pNewTask->m_fpuState);
 		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
@@ -632,6 +658,7 @@ void KeSwitchTask(CPUSaveState* pSaveState)
 	}
 	else
 	{
+		g_kernelLastSwitchTime = tsc;
 		//Kernel task
 		//first, restore the kernel task's FPU registers:
 		KeFxRestore(g_kernelFPUState);

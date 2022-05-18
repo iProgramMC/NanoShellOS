@@ -106,6 +106,9 @@ typedef struct
 	bool           m_bSuspended;
 	int            m_reviveAt;
 	void *         m_pWaitedTaskOrProcess;
+	
+	uint64_t       m_lastSwitchTime; // in TSC ticks
+	uint32_t       m_cpuTimeTotal, m_cpuTimeFull; //the CPU time actually used, the CPU time used at full speed
 }
 Task;
 

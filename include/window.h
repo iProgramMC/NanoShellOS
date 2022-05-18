@@ -443,6 +443,7 @@ enum CURSORTYPE
 #define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
+
 #define WF_SYSPOPUP 0x10000000//Internal flag: System Popup (omit from taskbar)
 #define WF_MENUITEM 0x20000000//Internal flag: Menu Item
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization

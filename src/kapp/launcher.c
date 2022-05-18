@@ -825,16 +825,15 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	// event loop:
 #if THREADING_ENABLED
-	int timeout = 0;
+	int timeout = GetTickCount();
 	while (HandleMessages (pWindow))
 	{
-		if (timeout == 0)
+		if (GetTickCount() > timeout)
 		{
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
 			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
-			timeout = 100;
+			timeout += 1000;
 		}
-		timeout--;
 	}
 #endif
 }

@@ -202,6 +202,36 @@ int GetTickCount()
 	sti;
 	return tc;
 }
+uint64_t gEarliestUsecCount;
+uint64_t GetUsecCountUnsafe()
+{
+	uint64_t tscNow     = ReadTSC();
+	uint64_t difference = tscNow - g_tscOneSecondAgo;             // the difference
+	uint64_t tscPerSec  = g_tscOneSecondAgo - g_tscTwoSecondsAgo; // a full complete second has passed
+	uint64_t nSeconds = g_nSeconds;
+	
+	//SLogMsg("TSC per second: %q   Difference: %q   Tsc Now: %q", tscPerSec, difference, tscNow);
+	
+	uint64_t us_count = 0;
+	
+	if (tscPerSec)
+		us_count = difference * 1000000 / tscPerSec;// I hope this works :)
+	
+	uint64_t newUsecCount = nSeconds * 1000000ULL + us_count;
+	if (gEarliestUsecCount < newUsecCount)
+		gEarliestUsecCount = newUsecCount;
+	return gEarliestUsecCount;
+}
+uint64_t GetUsecCount()
+{
+	if (!g_bRtcInitialized)
+		return 0;
+	
+	cli;
+	int tc = GetUsecCount();
+	sti;
+	return tc;
+}
 #endif
 
 // Kernel shutdown and restart

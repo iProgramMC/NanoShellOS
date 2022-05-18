@@ -65,6 +65,21 @@ int GetTickCount();
 int GetRawTickCount();
 
 /**
+ * Gets the number of microseconds since boot, assuming interrupts are disabled.
+ */
+uint64_t GetUsecCountUnsafe();
+
+/**
+ * Gets the number of microseconds since boot, assuming interrupts are enabled.
+ */
+uint64_t GetUsecCount();
+
+/**
+ * Gets the number of CPU ticks since boot.
+ */
+uint64_t ReadTSC();
+
+/**
  * Returns a random number between 0 and 2147483647.
  */
 int GetRandom();

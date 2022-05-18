@@ -68,22 +68,6 @@ void KiPerformRamCheck()
 extern void KeCPUID();			 // io.asm
 extern void ShellInit(void); // shell.c
 
-#define VERBOSE_START 1
-#if VERBOSE_START
-#define VerboseLogMsg LogMsg
-#else
-#define VerboseLogMsg
-#endif
-
-void OnInaccessibleInitrdModule(uint32_t mods_addr)
-{
-	LogMsg("The initrd module is located above 1M! (Specifically at %x)  This is currently not supported by NanoShell.  Tips to avoid this error:\n"
-	       "- Reduce the initrd size.  Some things may bloat it\n"
-		   "- Use a different bootloader.  This may or may not fix the issue\n"
-	       "- Change the kernel code so that the initrd is always mapped at, for example, 0x10000000", mods_addr);
-	KeStopSystem();
-}
-
 extern VBEData *g_vbeData;
 
 extern bool g_IsBGADevicePresent; // pci.c

@@ -30,13 +30,35 @@ const char *GetTaskSuspendStateStr (int susp_type)
 	{
 		case SUSPENSION_NONE:  return "Active";
 		case SUSPENSION_TOTAL: return "Suspended";
-		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Waiting for task";
-		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Waiting for some time";
-		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Waiting for process";
+		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Wait Task";
+		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Sleeping";
+		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Wait Process";
 	}
+	return "Unknown";
 }
 
 extern Task g_runningTasks[];
+extern uint64_t g_kernelCpuTimeTotal;
+
+static uint64_t s_cpu_time[C_MAX_TASKS], s_cpu_time_total = 0, s_idle_time_total;
+
+// This allows multiple instances of SystemMonitor to run at the same time.
+void MonitorSystem()
+{
+	//pause everything while we get timing information from these tasks
+	cli;
+	s_cpu_time_total = s_idle_time_total = g_kernelCpuTimeTotal;
+	
+	g_kernelCpuTimeTotal = 0;
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		s_cpu_time[i] = g_runningTasks[i].m_cpuTimeTotal;
+		g_runningTasks[i].m_cpuTimeTotal = 0;
+		if (g_runningTasks[i].m_bExists)
+			s_cpu_time_total += s_cpu_time[i];
+	}
+	sti;
+}
 
 int GetNumPhysPages(void);
 int GetNumFreePhysPages(void);
@@ -46,25 +68,28 @@ void UpdateSystemMonitorLists(Window* pWindow)
 	ResetList(pWindow, PROCESS_LISTVIEW);
 	
 	char buffer [1024];
-	sprintf (buffer, "System");
-	AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
+	// update kernel idle process
+	{
+		uint64_t cpu_usage_percent_64 = s_idle_time_total * 100 / s_cpu_time_total;
+		int cpu_usage_percent = (int)cpu_usage_percent_64;
+		sprintf (buffer, "[Idle]  [%d%%] System idle", cpu_usage_percent);
+		AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
+	}
+	
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
 		Task* pTask = g_runningTasks + i;
 		if (pTask->m_bExists)
 		{
-			sprintf (buffer, "%s / %s",
-				/*"THREAD '%s': %s:%d (%s) : F:0x%x",*/ /* V:0x%x H:0x%x S:0x%x A:0x%x", */
-				pTask->m_tag,
-				//pTask->m_authorFile,
-				//pTask->m_authorLine,
-				//pTask->m_authorFunc,
-				pTask->m_pFunction
-			);
+			uint64_t time1 = s_cpu_time[i];
+			
+			uint64_t cpu_usage_percent_64 = time1 * 100 / s_cpu_time_total;
+			int cpu_usage_percent = (int)cpu_usage_percent_64;
+			
 			if (strlen(pTask->m_tag) == 0)
-				sprintf (buffer, "[%s]  %s [%s:%d]", GetTaskSuspendStateStr (pTask->m_suspensionType), pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
+				sprintf (buffer, "[%s]  [%d%%] %s [%s:%d]", GetTaskSuspendStateStr (pTask->m_suspensionType), cpu_usage_percent, pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
 			else
-				sprintf (buffer, "[%s]  %s",         GetTaskSuspendStateStr (pTask->m_suspensionType), pTask->m_tag);
+				sprintf (buffer, "[%s]  [%d%%] %s",         GetTaskSuspendStateStr (pTask->m_suspensionType), cpu_usage_percent, pTask->m_tag);
 			AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
 		}
 	}
@@ -149,10 +174,10 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	
 	// event loop:
 #if THREADING_ENABLED
-	int next_tick_in = GetTickCount() + 1000;
+	int next_tick_in = GetTickCount();
 	while (HandleMessages (pWindow))
 	{
-		if (GetTickCount() > next_tick_in)
+		if (GetTickCount() >= next_tick_in)
 		{
 			next_tick_in += 1000;
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);

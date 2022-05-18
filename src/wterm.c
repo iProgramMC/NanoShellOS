@@ -275,13 +275,12 @@ void TerminalHostTask(int arg)
 	
 	//LogMsg("Select this window and type something.");
 	
-	int timeout = 50;
+	int timeout = GetTickCount();
 	while (HandleMessages (pWindow))
 	{
-		timeout--;
-		if (timeout == 0)
+		if (GetTickCount() > timeout)
 		{
-			timeout = 10;
+			timeout += 10;
 			if (pWindow->m_isSelected || basic_console.m_dirty)
 			{
 				WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);

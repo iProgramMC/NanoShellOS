@@ -301,6 +301,7 @@ unsigned long idtPtr[2];
 
 // some forward declarations
 extern void IrqTaskA();
+extern void IrqTaskB();
 extern void IrqClockA();
 extern void IrqMouseA();
 extern void IrqSb16A();
@@ -374,7 +375,7 @@ void KiIdtInit()
 #endif
 	
 	SetupSoftInterrupt (0x80, OnSyscallReceivedA);
-	SetupSoftInterrupt (0x81, IrqTaskA);
+	SetupSoftInterrupt (0x81, IrqTaskB);
 	
 	// SPECIAL CASE: Vbox Guest driver
 #ifdef EXPERIMENTAL
@@ -471,6 +472,7 @@ bool g_gotTime = false;
 uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
 uint64_t ReadTSC();
 bool g_trustRtcUpdateFinishFlag;
+void MonitorSystem();
 void IrqClock()
 {
 	//acknowledge interrupt
@@ -487,7 +489,9 @@ void IrqClock()
 		g_nSeconds++;
 		g_tscTwoSecondsAgo = g_tscOneSecondAgo;
 		g_tscOneSecondAgo  = ReadTSC();
-		SLogMsg("TSC difference: %Q", g_tscOneSecondAgo - g_tscTwoSecondsAgo);
+		//SLogMsg("TSC difference: %Q", g_tscOneSecondAgo - g_tscTwoSecondsAgo);
+		
+		MonitorSystem();
 	}
 	
 	// 1 real second passed. Don't count on it, as some emulators don't send this flag

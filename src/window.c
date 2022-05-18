@@ -3218,7 +3218,7 @@ bool HandleMessages(Window* pWindow)
 	//	pWindow->m_renderFinished = bkp;
 	
 	LockFree (&pWindow->m_EventQueueLock);
-	KeTaskDone();//hlt; //give it a good halt
+	KeTaskDone(); // give it a good halt
 	return true;
 }
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
