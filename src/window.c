@@ -1400,6 +1400,8 @@ void SelectWindowUnsafe(Window* pWindow)
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 		g_focusedOnWindow = pWindow;
 	}
+	
+	RequestTaskbarUpdate();
 }
 void SelectWindow(Window* pWindow)
 {
@@ -2601,9 +2603,15 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 	}
 }
 
-SAI bool IsForemostWindow(Window* pWindow)
+SAI void WindowCheckForemostAndObscured(Window* pWindow, bool *bForemost, bool *bObscured)
 {
-	if (pWindow->m_isSelected) return true;//yeah
+	if (pWindow->m_isSelected)
+	{
+		*bForemost = true;
+		*bObscured = false;
+		return;
+	}
+	
 	int sx = GetScreenWidth(), sy = GetScreenHeight();
 	
 	int windIndex = pWindow - g_windows;
@@ -2612,30 +2620,86 @@ SAI bool IsForemostWindow(Window* pWindow)
 	
 	int x2 = x + tw, y2 = y + th;
 	
+	bool bForemostSet = false, bObscuredSet = false;
+	*bForemost = true;
+	*bObscured = true;
+	
+	if (x > sx) return;
+	if (y > sy) return;
+	if (x2 < 0) return;
+	if (y2 < 0) return;
+	
+	if (x2 > sx) x2 = sx;
+	if (y2 > sy) y2 = sy;
+	
+	if (x < 0) x = 0;
+	if (y < 0) y = 0;
+	
+	//FIXME: For efficiency, small gaps where the window is still visible may be ignored
+	//You won't be able to see much in these gaps anyway
 	for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
 	{
 		if (j >= sy) break;
-		for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+		for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
 		{
 			short n = GetWindowIndexInDepthBuffer (i, j);
 			if (n != windIndex)
-				return false;
+			{
+				*bForemost = false;
+				bForemostSet = true;
+			}
+			// if we catch a glimpse of the window:
+			else
+			{
+				*bObscured = false;
+				bObscuredSet = true;
+			}
+			
+			if (bForemostSet && bObscuredSet) return;
 		}
 		short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
 		if (n != windIndex)
-			return false;
+		{
+			*bForemost = false;
+			bForemostSet = true;
+		}
+		else
+		{
+			*bObscured = false;
+			bObscuredSet = true;
+		}
+		
+		if (bForemostSet && bObscuredSet) return;
 	}
-	for (int i = x; i < x2; i += WINDOW_MIN_WIDTH-1)
+	for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
 	{
 		short n = GetWindowIndexInDepthBuffer (i, y2 - 1);
 		if (n != windIndex)
-			return false;
+		{
+			*bForemost = false;
+			bForemostSet = true;
+		}
+		else
+		{
+			*bObscured = false;
+			bObscuredSet = true;
+		}
+		
+		if (bForemostSet && bObscuredSet) return;
 	}
 	short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
 	if (n != windIndex)
-		return false;
+	{
+		*bForemost = false;
+		bForemostSet = true;
+	}
+	else
+	{
+		*bObscured = false;
+		bObscuredSet = true;
+	}
 	
-	return true;
+	return;
 }
 
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
@@ -2669,53 +2733,22 @@ void RenderWindow (Window* pWindow)
 	short n = GetWindowIndexInDepthBuffer (x, y);
 	if (n == -1)
 	{
-		SLogMsg("Updating during RenderWindow()? Why?");
 		if (x >= 0 && y >= 0 && x < GetScreenWidth() && y < GetScreenHeight())
+		{
+			SLogMsg("Updating during RenderWindow()? Why?");
 			UpdateDepthBuffer();
+		}
 	}
 	
-	if (IsForemostWindow(pWindow))
+	bool bForemost = false, bObscured = false;
+	WindowCheckForemostAndObscured(pWindow, &bForemost, &bObscured);
+	
+	if (bObscured)
+		return; // No point!
+	
+	if (bForemost)
 	{
 		//optimization
-		//TODO FIXME: Crash when placing at the top right of the screen so that:
-		//1) The y top position < 0
-		//2) The x right position > ScreenWidth.
-		//The crappy fix I did "for the moment" is just to disallow placement of the window at y<0.
-		/*int ys = pWindow->m_rect.top;
-		int ye = ys + pWindow->m_vbeData.m_height;
-		int kys = 0, kzs = 0;
-		if (ys < 0)
-		{
-			kys -= ys * pWindow->m_vbeData.m_width;
-			kzs -= ys;
-			ys = 0;
-		}
-		if (ye > GetScreenHeight())
-			ye = GetScreenHeight();
-		int xs = pWindow->m_rect.left;
-		int xe = xs + pWindow->m_vbeData.m_width;
-		int off = 0;
-		if (xs < 0)
-		{
-			off = -xs;
-			xs = 0;
-		}
-		if (xe >= GetScreenWidth())
-			xe =  GetScreenWidth();
-		
-		int xd = (xe - xs);
-		int oms = ys * g_mainScreenVBEData.m_pitch32 + xs,
-		    omc = ys * g_mainScreenVBEData.m_width + xs;
-		for (int y = ys, ky = kys, kz = kzs; y != ye; y++, kz++)
-		{
-			ky = kz * pWindow->m_vbeData.m_width + off;
-			//just memcpy stuff
-			memcpy_ints(&g_mainScreenVBEData.m_framebuffer32[oms], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
-			memcpy_ints(&g_framebufferCopy[omc], &pWindow->m_vbeData.m_framebuffer32[ky], xd);
-			oms += g_mainScreenVBEData.m_pitch32;
-			omc += g_mainScreenVBEData.m_width;
-		}*/
-		
 		VidBitBlit(
 			g_vbeData,
 			pWindow->m_rect.left,
@@ -2832,9 +2865,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 
 		VidTextOutInternal(pTitle, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
 		
-		int MinimizAndCloseGap = 0;
-		
-		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth) / 2;//-iconGap-textwidth-MinimizAndCloseGap)/2;
+		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth) / 2;
 		
 		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
 		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
@@ -3073,7 +3104,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		UpdateDepthBuffer();
 		VidSetVBEData (&pWindow->m_vbeData);
-		PaintWindowBorderNoBackgroundOverpaint(pWindow);
+		PaintWindowBackgroundAndBorder(pWindow);
 		
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
 		

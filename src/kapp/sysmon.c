@@ -136,7 +136,6 @@ SAI int ConvertToGraphPos(Image *pImg, int y, int ymax)
 }
 void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 {
-	SLogMsg("UpdateSystemMonitorGraph");
 	int cpu_usage_total = 100 - cpu_idle_time;
 	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	int memUsedKB = (npp - nfpp) * 4;
@@ -180,7 +179,6 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	pInst->dataPointMemUsage = memUsedKB;
 	
 	VidSetVBEData(backup);
-	SLogMsg("UpdateSystemMonitorGraph done!");
 }
 
 void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -235,9 +233,9 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			AddControlEx (pWindow, CONTROL_LISTVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 124, listview_width, 20);
-			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 144, listview_width, 20);
-			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", UPTIME_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", UPTIME_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
@@ -262,9 +260,22 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	}
 	
 	SystemMonitorInstance* pInstance = (SystemMonitorInstance*)MmAllocate(sizeof(SystemMonitorInstance));
+	if (!pInstance)
+	{
+		DestroyWindow (pWindow);
+		while (HandleMessages (pWindow));
+		return;
+	}
 	memset (pInstance, 0, sizeof *pInstance);
 	
 	Image* pSystemImage = BitmapAllocate (SYSMON_WIDTH - 20, 100, 0x0000FF);
+	if (!pInstance)
+	{
+		MmFree (pInstance);
+		DestroyWindow (pWindow);
+		while (HandleMessages (pWindow));
+		return;
+	}
 	pInstance->pImg = pSystemImage;
 	
 	pWindow->m_data = pInstance;
