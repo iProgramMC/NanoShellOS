@@ -7,29 +7,31 @@ build/*
 keep/*
 tools/*
 
+apps/Calc/build/*
+apps/Calc/*.nse
 apps/Clock/build/*
 apps/Clock/*.nse
 apps/CrtDemo/build/*
 apps/CrtDemo/*.nse
+apps/GameTest/build/*
+apps/GameTest/*.nse
 apps/List/build/*
 apps/List/*.nse
 apps/Notepad/build/*
 apps/Notepad/*.nse
-apps/WindowTest/build/*
-apps/WindowTest/*.nse
-apps/GameTest/build/*
-apps/GameTest/*.nse
-apps/Tiny/build/*
-apps/Tiny/*.nse
-apps/StickyNotes/build/*
-apps/StickyNotes/*.nse
-apps/ArduNS/*
 apps/Raycaster/build/*
 apps/Raycaster/*.nse
+apps/StickyNotes/build/*
+apps/StickyNotes/*.nse
+apps/Tiny/build/*
+apps/Tiny/*.nse
+apps/WindowTest/build/*
+apps/WindowTest/*.nse
 apps/WorldMap/build/*
 apps/WorldMap/*.nse
 
 #apps I don't want out yet because I do not like embedding third party code into the OS
+apps/ArduNS/*
 apps/Dink/*
 apps/NesEmu/*
 
