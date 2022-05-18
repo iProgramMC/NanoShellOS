@@ -701,9 +701,7 @@ bool g_shutdownRequest 			  = false;
 bool g_shutdownWantReb 			  = false;
 bool g_shutdownSentCloseSignals   = false;
 
-void VersionProgramTask(int argument);
-void IconTestTask   (int argument);
-void PrgPaintTask   (int argument);
+void RequestTaskbarUpdate();
 #endif
 
 // Window depth buffer
@@ -833,10 +831,18 @@ WindowEventQueueItem g_windowEventQueue[MASTER_WIN_EVT_QUEUE_MAX];
 int g_windowEventQueueHead = 0;
 int g_windowEventQueueTails[WINDOWS_MAX];
 
+void OnWindowHung(Window *pWindow);
+
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
 {
 	if (pWindow->m_flags & WF_FROZEN)
 		return ; // Can't send events to frozen objects!
+	
+	//if hasn't responded in 5 seconds:
+	if (pWindow->m_lastHandledMessagesWhen + 5000 <= GetTickCount())
+	{
+		OnWindowHung(pWindow);
+	}
 	
     WindowEventQueueItem item;
     item.m_destWindow = pWindow;
@@ -923,7 +929,7 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 				pWindow->m_frequentWindowRenders++;
 				if (pWindow->m_frequentWindowRenders > 50)
 				{
-					LogMsg("[WindowRegisterEventUnsafe] Potential game detected, allowing acceleration");
+					SLogMsg("[WindowRegisterEventUnsafe] Potential game detected, allowing acceleration");
 					pWindow->m_flags |= WF_NOWAITWM;
 				}
 			}
@@ -935,23 +941,40 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 		DebugLogMsg("Could not register event %d for window %x", eventType, pWindow);
 }
 
+void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+void OnWindowHung(Window *pWindow)
+{
+	pWindow->m_flags |= WI_HUNGWIND;
+	if (!(pWindow->m_flags & WF_FROZEN))
+		pWindow->m_flags |= WI_FROZENRM;
+	
+	// draw the window title bar and say that it's not responding
+	if (!(pWindow->m_flags & WF_NOBORDER))
+	{
+		VBEData* pBackup = g_vbeData;
+		
+		VidSetVBEData (&pWindow->m_vbeData);
+		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		VidSetVBEData (pBackup);
+		pWindow->m_renderFinished = true;
+	}
+	
+	pWindow->m_cursorID_backup = pWindow->m_cursorID;
+	pWindow->m_cursorID = CURSOR_WAIT;
+}
 //This is what you should use in most cases.
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
 {
-	//ACQUIRE_LOCK (pWindow->m_eventQueueLock);
-	
-	int queue_timeout = 1000;
+	int queue_timeout = GetTickCount() + 5000;
 	while (pWindow->m_EventQueueLock.m_held)
 	{
-		queue_timeout--;
 		KeTaskDone();
 		
-		if (queue_timeout == 0)
+		if (queue_timeout > GetTickCount())
 		{
-			SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!", pWindow, pWindow->m_title);
-			
-			//pWindow->m_flags |= WF_FROZEN;
-			
+			SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!  Marking it as hung...", pWindow, pWindow->m_title);
+			/*
+			*/
 			return;
 		}
 	}
@@ -1299,6 +1322,8 @@ void NukeWindowUnsafe (Window* pWindow)
 		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
 		return;
 	}
+	
+	RequestTaskbarUpdate();
 }
 
 void NukeWindow (Window* pWindow)
@@ -1404,6 +1429,8 @@ int g_NewWindowX = 10, g_NewWindowY = 10;
 
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
+	flags &= ~WI_INTEMASK;
+	
 	if (!g_windowManagerRunning)
 	{
 		LogMsg("This program does not run in the command line.");
@@ -1481,6 +1508,11 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 
 	
+	pWnd->m_lastHandledMessagesWhen          = GetTickCount();
+	pWnd->m_lastSentPaintEventExternallyWhen = 0;
+	pWnd->m_frequentWindowRenders            = 0;
+	pWnd->m_cursorID_backup                  = 0;
+	
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
 	pWnd->m_vbeData.m_available     = true;
@@ -1527,6 +1559,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	UseHeap (pHeapBackup);
 	
 	LockFree (&g_CreateLock);
+	
+	RequestTaskbarUpdate();
+	
 	return pWnd;
 }
 #endif 
@@ -2820,7 +2855,15 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
-	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+	if (pWindow->m_flags & WI_HUNGWIND)
+	{
+		char windowtitle_copy[WINDOW_TITLE_MAX + 100];
+		strcpy (windowtitle_copy, pWindow->m_title);
+		strcat (windowtitle_copy, " (not responding)");
+		PaintWindowBorderStandard(recta, windowtitle_copy, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+	}
+	else
+		PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 void PaintWindowBorder(Window* pWindow)
 {
@@ -2959,11 +3002,27 @@ char WinReadFromInputQueue (Window* this)
 
 static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
+	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	//setup paint stuff so the window can only paint in their little box
 	VidSetVBEData (&pWindow->m_vbeData);
 	VidSetFont(SYSTEM_FONT);
 	pWindow->m_vbeData.m_dirty = 0;
 	//pWindow->m_renderFinished = false;
+	
+	if (pWindow->m_flags & WI_HUNGWIND)
+	{
+		// Window no longer frozen
+		pWindow->m_flags &= ~WI_HUNGWIND;
+		
+		if (pWindow->m_flags &  WI_FROZENRM)
+			pWindow->m_flags &= ~WF_FROZEN;
+		
+		// Un-hang the window
+		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		
+		pWindow->m_cursorID = pWindow->m_cursorID_backup;
+	}
+	
 	//todo: switch case much?
 	if (eventType == EVENT_MINIMIZE)
 	{
@@ -3191,6 +3250,7 @@ bool HandleMessages(Window* pWindow)
 {
 	if (!g_windowManagerRunning)
 		return false;
+	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	
 	// grab the lock
 	LockAcquire (&pWindow->m_EventQueueLock);

@@ -110,7 +110,7 @@ IconType CabGetIconBasedOnName(const char *pName, int pType)
 	}
 	return icon;
 }
-
+void RequestTaskbarUpdate();
 void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
@@ -152,7 +152,7 @@ reset:
 	pWindow->m_iconID = icon;
 	strcpy (pWindow->m_title, "Cabinet - ");
 	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
-	
+	RequestTaskbarUpdate();
 	RequestRepaint(pWindow);
 }
 

@@ -666,6 +666,7 @@ void LaunchRun()
 	DebugLogMsg("Created run popup task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 
+Window* g_pTaskBarWindow;
 void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
@@ -801,9 +802,17 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
 }
-
+void RequestTaskbarUpdate()
+{
+	if (!g_pTaskBarWindow) return;
+	
+	WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE, 0, 0);
+	WindowRegisterEvent(g_pTaskBarWindow, EVENT_PAINT,  0, 0);
+}
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
+	if (g_pTaskBarWindow) return;
+	
 	// create ourself a window:
 	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT-1, sh = GetScreenHeight();
 	int wx = 0, wy = 0;
@@ -820,6 +829,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	pWindow->m_iconID = ICON_DESKTOP2;
 	
+	g_pTaskBarWindow = pWindow;
 	// setup:
 	//ShowWindow(pWindow);
 	

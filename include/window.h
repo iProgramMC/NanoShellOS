@@ -445,11 +445,14 @@ enum CURSORTYPE
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 
+#define WI_FROZENRM 0x04000000//Internal flag: Remove the 'frozen' flag when the window is no longer hung
+#define WI_HUNGWIND 0x08000000//Internal flag: The window is hung (won't respond to events)
 #define WF_SYSPOPUP 0x10000000//Internal flag: System Popup (omit from taskbar)
 #define WF_MENUITEM 0x20000000//Internal flag: Menu Item
+#define WI_INITGOOD 0x40000000//If the initialization process succeeded
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
-#define WI_INITGOOD 0x40000000//If the initialization process succeeded
+#define WI_INTEMASK 0xCC000000//Internal flag mask that CreateWindow will filter
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
@@ -512,10 +515,14 @@ typedef struct WindowStruct
 	
 	Rectangle  m_taskbarRect;
 	
-	Cursor     m_customCursor, m_backupCursor;
+	Cursor     m_customCursor;
 	
 	int        m_frequentWindowRenders;
 	int        m_lastSentPaintEventExternallyWhen;
+	
+	int        m_cursorID_backup;
+	
+	int        m_lastHandledMessagesWhen;
 } Window;
 
 /**
