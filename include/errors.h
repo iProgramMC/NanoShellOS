@@ -25,6 +25,7 @@ enum
 	ETXTBUSY,      // Text file busy
 	EBADF,         // Bad file descriptor
 	ESPIPE,        // Illegal seek
+	EIEIO,         // Computer bought the farm
 	ECOUNT,
 };
 	

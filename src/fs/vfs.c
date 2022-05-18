@@ -903,6 +903,7 @@ static const char* ErrorStrings[] = {
 	"Text file busy",
 	"Bad file descriptor",
 	"Illegal seek (is FIFO)",
+	"Computer bought the farm",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

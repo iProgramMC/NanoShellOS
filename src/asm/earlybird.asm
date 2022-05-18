@@ -6,6 +6,8 @@
 ;
 bits 32
 
+;%define DONT_ENABLE_FPU
+
 ; Setup kernel page directory and subsequent pages.  Maps the entire memory map from 0x00000000 to BASE_ADDRESS.
 %define BASE_ADDRESS 0xC0000000
 %define VIRT_TO_PHYS(k) ((k) - BASE_ADDRESS)
@@ -119,6 +121,7 @@ KiSetupStuff: ; enables FPU, SSE and Write Protect honoring in ring 0
 
 	clts ;clear task switched flag
 	
+%ifndef DONT_ENABLE_FPU
 	; load cr0
 	mov  eax, cr0
 	; check for the x87 FPU unit
@@ -146,7 +149,8 @@ KiSetupStuff: ; enables FPU, SSE and Write Protect honoring in ring 0
 	
 	; initialize the FPU
 	fninit
-	
+%endif
+
 .noFpuOrFinish:
 	ret
 	
