@@ -9,9 +9,20 @@
 #include <widget.h>
 #include <vfs.h>
 #include <elf.h>
+#include <image.h>
 #include <task.h>
-#define SYSMON_WIDTH  300
+#define SYSMON_WIDTH  500
 #define SYSMON_HEIGHT 300
+
+typedef struct
+{
+	int dataPointCPUUsage;
+	int dataPointMemUsage;
+	int dataPointWmFps;
+	
+	Image* pImg;
+}
+SystemMonitorInstance;
 
 enum
 {
@@ -63,17 +74,20 @@ void MonitorSystem()
 
 int GetNumPhysPages(void);
 int GetNumFreePhysPages(void);
-void UpdateSystemMonitorLists(Window* pWindow)
+
+//returns the amount of time the CPU spent idling
+int UpdateSystemMonitorLists(Window* pWindow)
 {
 	// Update process list view.
 	ResetList(pWindow, PROCESS_LISTVIEW);
 	
 	char buffer [1024];
+	int cpu_usage_idle_percent = 0;
 	// update kernel idle process
 	{
 		uint64_t cpu_usage_percent_64 = s_idle_time_total * 100 / s_cpu_time_total;
-		int cpu_usage_percent = (int)cpu_usage_percent_64;
-		sprintf (buffer, "[Idle]  [%d%%] System idle", cpu_usage_percent);
+		cpu_usage_idle_percent = (int)cpu_usage_percent_64;
+		sprintf (buffer, "[Idle]  [%d%%] System idle", cpu_usage_idle_percent);
 		AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
 	}
 	
@@ -104,14 +118,92 @@ void UpdateSystemMonitorLists(Window* pWindow)
 	FormatTime(buffer, FORMAT_TYPE_VAR, GetTickCount() / 1000);
 	strcat (buffer, "      ");
 	SetLabelText(pWindow, UPTIME_LABEL, buffer);
+	
+	return cpu_usage_idle_percent;
+}
+void ShiftImageLeftBy(Image *pImg, int by)
+{
+	uint32_t* pFB = (uint32_t*)pImg->framebuffer;
+	for (int i = 0; i < pImg->height; i++)
+	{
+		// this'll probably work, but not for the opposite direction
+		memcpy_ints(&pFB[pImg->width * i], &pFB[pImg->width * i + by], pImg->width - by);
+	}
+}
+SAI int ConvertToGraphPos(Image *pImg, int y, int ymax)
+{
+	return (int)((uint64_t)(ymax - y) * (uint64_t)pImg->height / (uint64_t)ymax);
+}
+void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
+{
+	SLogMsg("UpdateSystemMonitorGraph");
+	int cpu_usage_total = 100 - cpu_idle_time;
+	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
+	int memUsedKB = (npp - nfpp) * 4;
+	
+	SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
+	Image *pImg = pInst->pImg;
+	
+	ShiftImageLeftBy(pImg, 4); // 4 pixels <--
+	
+	VBEData image_data, *backup;
+	extern VBEData* g_vbeData;
+	backup = g_vbeData;
+	
+	BuildGraphCtxBasedOnImage (&image_data, pImg);
+	
+	VidSetVBEData(&image_data);
+	VidFillRect(0x000000, pImg->width - 4, 0, pImg->width, pImg->height);
+	
+	// draw lines:
+	
+	// memory usage
+	VidDrawLine(
+		// color
+		0x0000FF, 
+		// pos 1
+		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointMemUsage, npp * 4),
+		// pos 2
+		pImg->width - 1, ConvertToGraphPos(pImg, memUsedKB,                npp * 4));
+	
+	// CPU usage
+	VidDrawLine(
+		// color
+		0x00FF00, 
+		// pos 1
+		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointCPUUsage, 100),
+		// pos 2
+		pImg->width - 1, ConvertToGraphPos(pImg, cpu_usage_total,          100));
+	
+	//update the data points
+	pInst->dataPointCPUUsage = cpu_usage_total;
+	pInst->dataPointMemUsage = memUsedKB;
+	
+	VidSetVBEData(backup);
+	SLogMsg("UpdateSystemMonitorGraph done!");
 }
 
 void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		#define PADDING_AROUND_LISTVIEW 8
 		case EVENT_PAINT:
 		{
+			//paint the image
+			
+			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
+			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
+			int listview_height = SYSMON_HEIGHT*3/4  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			
+			int x = (pWindow->m_vbeData.m_width - (SYSMON_WIDTH - 20)) / 2;
+			int y = (pWindow->m_vbeData.m_height - SYSMON_HEIGHT - 100) + listview_y + listview_height + 10;
+			
+			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
+			Image *pImg = pInst->pImg;
+			
+			VidBlitImage(pImg, x, y);
+			
 			break;
 		}
 		case EVENT_COMMAND:
@@ -120,7 +212,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 		}
 		case EVENT_UPDATE:
 		{
-			UpdateSystemMonitorLists (pWindow);
+			UpdateSystemMonitorGraph (pWindow, UpdateSystemMonitorLists (pWindow));
 			break;
 		}
 		case EVENT_CREATE:
@@ -128,7 +220,6 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			Rectangle r;
 			// Add a list view control.
 			
-			#define PADDING_AROUND_LISTVIEW 8
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
 			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
@@ -143,9 +234,9 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			AddControlEx (pWindow, CONTROL_LISTVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 4, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 124, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 24, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 144, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "placeholder", UPTIME_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
@@ -161,7 +252,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	// create ourself a window:
 	int xPos = (GetScreenSizeX() - SYSMON_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - SYSMON_HEIGHT) / 2;
-	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, WF_ALWRESIZ);
+	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT + 100, SystemMonitorProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_RESMON;
 	
 	if (!pWindow)
@@ -170,8 +261,13 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 		return;
 	}
 	
-	// setup:
-	//ShowWindow(pWindow);
+	SystemMonitorInstance* pInstance = (SystemMonitorInstance*)MmAllocate(sizeof(SystemMonitorInstance));
+	memset (pInstance, 0, sizeof *pInstance);
+	
+	Image* pSystemImage = BitmapAllocate (SYSMON_WIDTH - 20, 100, 0x0000FF);
+	pInstance->pImg = pSystemImage;
+	
+	pWindow->m_data = pInstance;
 	
 	// event loop:
 #if THREADING_ENABLED
@@ -186,4 +282,6 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 		}
 	}
 #endif
+
+	MmFree(pSystemImage);
 }
