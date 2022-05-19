@@ -1,4 +1,10 @@
-//Game Sprites
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           GameTest application
+
+         Game sprite include file
+******************************************/
 
 #include "sand.h"
 #include "jump.h"

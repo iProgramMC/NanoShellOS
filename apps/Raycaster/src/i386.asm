@@ -1,3 +1,6 @@
+; NanoShell Operating System (C) 2022 iProgramInCpp
+; Raycaster application
+; Some math functions I couldn't implement in C directly
 
 ; Stolen from musl: https://git.musl-libc.org/cgit/musl/tree/src/math/i386/atan2f.s?id=v1.1.24
 global atan2f

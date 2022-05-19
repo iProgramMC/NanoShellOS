@@ -1,4 +1,11 @@
-//game.c
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           Raycaster application
+
+          Game logic source file
+******************************************/
+
 #include <nsstandard.h>
 #include "game.h"
 

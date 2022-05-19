@@ -1,3 +1,11 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           GameTest application
+
+             Main source file
+******************************************/
+
 #include <nsstandard.h>
 
 Window* g_pWindow = NULL;

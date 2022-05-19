@@ -1,8 +1,5 @@
-# 
-#   Makefile for my OS project
-#
-#   2020-2021 iProgramInCpp
-#
+# NanoShell Operating System (C) 2022 iProgramInCpp
+# Kernel makefile
 
 SRC_DIR=src
 INC_DIR=include

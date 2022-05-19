@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+          Tiny demo application
+
+             Main source file
+******************************************/
 #include <stdint.h> // come on, freestanding has this
 
 typedef void (*PutString_t)(const char *pString);

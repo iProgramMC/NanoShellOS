@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+        C Runtime Demo application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 
 int NsMain (int argc, char** argv)

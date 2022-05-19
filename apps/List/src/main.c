@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+        Directory list application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 
 Console* GetConsole();

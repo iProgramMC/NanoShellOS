@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+          Chart demo application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 
 #define CHART_RANDOMIZE 0x1000
@@ -8,7 +15,7 @@
 #define CHART_AREA (CHART_WINDOW_HEIGHT - 36)
 #define CHART_AREA_WIDTH (CHART_WINDOW_WIDTH - 50)
 
-// simple shitty RNG
+// simple crappy RNG
 int g_randGen = 0x9521af17;
 
 int Random (void)

@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+            Notepad application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 
 enum

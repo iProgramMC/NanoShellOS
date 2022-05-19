@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           Raycaster application
+
+          Game logic header file
+******************************************/
 #ifndef GAME_H
 #define GAME_H
 

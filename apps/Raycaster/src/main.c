@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           Raycaster application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 #include "game.h"
 

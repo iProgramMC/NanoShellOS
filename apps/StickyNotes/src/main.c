@@ -1,6 +1,10 @@
-// NanoShell Operating System
-// Sticky Notes application
-// (C) 2022 iProgramInCpp
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+         Sticky Notes application
+
+             Main source file
+******************************************/
 
 #include <nsstandard.h>
 #include <note.h>

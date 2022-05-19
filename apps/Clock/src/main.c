@@ -1,3 +1,11 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+             Clock application
+
+             Main source file
+******************************************/
+
 #include <nsstandard.h>
 
 #define VERSION_BUTTON_OK_COMBO 0x1000

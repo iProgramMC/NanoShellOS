@@ -1,3 +1,6 @@
+; NanoShell Operating System (C) 2022 iProgramInCpp
+; Calculator Application
+; Math functions required for compilation
 BITS 32
 section .text
 

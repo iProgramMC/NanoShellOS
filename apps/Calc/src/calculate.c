@@ -1,3 +1,11 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+          Calculator application
+
+       ExpressionParser source file
+******************************************/
+
 #include <nsstandard.h>
 
 enum

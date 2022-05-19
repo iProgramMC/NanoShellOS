@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+           WorldMap application
+
+             Main source file
+******************************************/
 #include <nsstandard.h>
 
 #include "world_map.h"
