@@ -211,7 +211,7 @@ void WaitUntilWMUpdate ();
 /***********************************************************
     Internal function to initialize the task scheduler.
 ***********************************************************/
-void KiTaskSystemInitialize();
+void KiTaskSystemInit();
 
 /***********************************************************
     Internal function to list all tasks to debug output.

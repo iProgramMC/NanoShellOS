@@ -82,7 +82,7 @@ void MmFirstThingEver();
 /**
  * Initializes the memory manager and heap.
  */
-void MmInit(multiboot_info_t*);
+void MmInit();
 
 /**
  * Maps a contiguous block of physical memory near the hint address.

@@ -28,347 +28,73 @@
 #include <wcall.h>
 #include <window.h>
 
-extern bool g_interruptsAvailable;
+// definitions we don't really want out there:
+void MbSetup(uint32_t check, uint32_t mbaddr);
+void MbReadCmdLine();
+void MbCheckMem();
+void MbCheckCmdLine();
+void MmInitPrimordial();
+void FsFatInit();
+void FsInitRdInit();
+void CfgLoadFromCmdLine();
+void CfgLoadFromMainFile();
+void AcpiInitIfApplicable();
+void VbInitIfApplicable();
+void VmwInitIfApplicable();
+void BgaInitIfApplicable();
+void KiIrqEnable();
+void KeCPUID();
+void ShellInit();
+void CrashReporterCheckNoWindow();
+void KiLaunch(TaskedFunction func);
+bool KiEmergencyMode();
 
-extern void FsMountFatPartitions(void);
-
-char g_cmdline [1024];
-
-__attribute__((noreturn)) void KeStopSystem()
+NO_RETURN
+void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 {
-	cli;
-	while (1)
-		hlt;
-}
-
-extern uint32_t e_placement;
-int g_nKbExtRam = 0;
-
-void KePrintSystemVersion()
-{
-	LogMsg("NanoShell (TM), May 2022 - " VersionString);
-	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_nKbExtRam,
-				 GetNumPhysPages() * 4);
-	LogMsg("Built on: %s %s", __DATE__, __TIME__);
-}
-
-void KiPerformRamCheck()
-{
-	if (g_nKbExtRam < 8192)
-	{
-		SwitchMode(0);
-		CoInitAsText(&g_debugConsole);
-		LogMsg("NanoShell has not found enough extended memory.	8Mb of extended "
-		       "memory is\nrequired to run NanoShell.   You may need to upgrade "
-		       "your computer.");
-		KeStopSystem();
-	}
-}
-
-extern void KeCPUID();			 // io.asm
-extern void ShellInit(void); // shell.c
-
-extern VBEData *g_vbeData;
-
-extern bool g_IsBGADevicePresent; // pci.c
-
-multiboot_info_t *g_pMultibootInfo;
-
-extern bool g_gotTime; // idt.c
-extern bool g_bRtcInitialized; // misc.c
-
-extern uint32_t e_temporary1, e_temporary2;
-extern uint32_t g_BGADeviceBAR0;
-
-#ifdef EXPERIMENTAL
-extern void VbGuestInit();
-#endif
-
-bool VmwDetect();
-bool VmwInit();
-bool gInitializeVB;
-extern void KiIdtInit2();
-extern void AttemptLocateRsdPtr();
-extern void CrashReporterCheckNoWindow();
-__attribute__((noreturn))
-void KiStartupSystem(unsigned long check, unsigned long mbaddr)
-{
-	bool textMode = true;
-	// TODO: Use serial debugging, instead of the E9h port?
-
-	// Initially, both debug consoles are initialized as E9 hacks/serial.
-	CoInitAsE9Hack(&g_debugConsole);
-	CoInitAsE9Hack(&g_debugSerialConsole);
-
-	// Initialise the terminal.
-	g_debugConsole.color = DefaultConsoleColor;
-
-	// Check the multiboot checknum
-	if (check != 0x2badb002)
-	{
-		LogMsg("NanoShell has not booted from a Multiboot-compatible bootloader.  A bootloader such as GRUB is required to run NanoShell.");
-		KeStopSystem();
-	}
-
-	WindowCallInitialize();
-
-	// Read the multiboot data:
-	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + BASE_ADDRESS);
-	g_pMultibootInfo = mbi;
-	
-	uint32_t cmdlineaddr = mbi->cmdline;
-	if (!(mbi->flags & MULTIBOOT_INFO_CMDLINE))
-	{
-		strcpy (g_cmdline, "No!");
-	}
-	else if (cmdlineaddr < 0x100000)
-	{
-		strcpy (g_cmdline, ((char*)0xC0000000 + cmdlineaddr));
-	}
-	else
-	{
-		strcpy (g_cmdline, "No!");
-	}
-
-	g_nKbExtRam = mbi->mem_upper;
-	KiPerformRamCheck();
-	MmFirstThingEver();
-
-	// grab the CPUID
+	CoKickOff();
+	MbSetup(check, mbaddr);
+	WindowCallInit();
+	MbReadCmdLine();
+	MbCheckMem();
+	MmInitPrimordial();
 	KeCPUID();
-
-	// Initialize eventual PCI devices.	This is useful to find the main BGA
-	// controller, if there's one.
 	PciInit();
-	
-	// Initialize the task scheduler
-	KiTaskSystemInitialize();
-
-	// Setup the IDT
+	KiTaskSystemInit();
 	KiIdtInit();
-	
-	KiSetupPic();
-	
-	// Tell the OS that interrupts are now available. :)
-	g_interruptsAvailable = true;
-	
-	// Initialize the Memory Management Subsystem
-	MmInit(mbi);
-	
-	// Initialize the video subsystem
-	VidInitialize(mbi);
-	
-	// Initialize the clipboard
+	KiPicInit();
+	MmInit();
+	VidInit();
 	CbInit();
-	
-	// Initialize the configuration system
-	CfgInitialize();
-	
+	CfgInit();
 	KePrintSystemVersion();
-	
-	if (!VidIsAvailable())
-	{
-		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
-		
-		// try this:
-		#define DEFAULT_WIDTH 1024
-		#define DEFAULT_HEIGHT 768
-		
-		BgaChangeScreenResolution(DEFAULT_WIDTH, DEFAULT_HEIGHT);
-		mbi->flags |= MULTIBOOT_INFO_FRAMEBUFFER_INFO;
-		mbi->framebuffer_type = 1;
-		// TODO FIXME: We assume this is the address, but what if it isn't?
-		// Furthermore, what if the pitch doesn't match the width*4?
-		mbi->framebuffer_addr = g_BGADeviceBAR0;
-		mbi->framebuffer_width = DEFAULT_WIDTH;
-		mbi->framebuffer_pitch = DEFAULT_WIDTH * 4;
-		mbi->framebuffer_height = DEFAULT_HEIGHT;
-		mbi->framebuffer_bpp = 32;
-
-		// and re-attempt init:
-		VidInitialize(mbi);
-	}
-	
-	if (strcmp (g_cmdline, "No!") == 0 || g_cmdline[0] == 0)
-	{
-		LogMsg("NanoShell cannot boot, because either:");
-		LogMsg("- no cmdline was passed");
-		LogMsg("- cmdline's address was %x%s", cmdlineaddr, cmdlineaddr >= 0x100000 ? " (was bigger than 1 MB)" : "");
-		KeStopSystem();
-	}
-
-	CfgLoadFromParms (g_cmdline);
-	
-	// Allow task switching
+	BgaInitIfApplicable();
+	MbCheckCmdLine();
+	CfgLoadFromCmdLine();
 	KiPermitTaskSwitching();
-	
-	// Initialize the sound blaster device
 	SbInit();
-
-	// Initialize the keyboard.
-	KbInitialize();
-	
-	// KePrintMemoryMapInfo();
-	
-	// Initialize the file system
-	FsSetup ();
-
-	// Initialize the ramdisk
-	if (g_pMultibootInfo->mods_count != 1)
-		KeBugCheck(BC_EX_INITRD_MISSING, NULL);
-
-	//Usually the mods table is below 1m.
-	if (g_pMultibootInfo->mods_addr >= 0x100000)
-	{
-		LogMsg("Module table starts at %x.  OS state not supported", g_pMultibootInfo->mods_addr);
-	}
-	
-	//The initrd module is here.
-	multiboot_module_t *initRdModule = (void*) (g_pMultibootInfo->mods_addr + 0xc0000000);
-
-	//Precalculate an address we can use
-	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
-	
-	// We should no longer have the problem of it hitting our frame bitset.
-	
-	LogMsg("Init Ramdisk module Start address: %x, End address: %x", initRdModule->mod_start, initRdModule->mod_end);
-	//If the end address went beyond 1 MB:
-	if (initRdModule->mod_end >= 0x100000)
-	{
-		//Actually go to the effort of mapping the initrd to be used.
-		pInitrdAddress = MmMapPhysicalMemory (0x30000000, initRdModule->mod_start, initRdModule->mod_end);
-	}
-	
-	LogMsg("Physical address that we should load from: %x", pInitrdAddress);
-	
-	// Initialize the IDE driver
-	StIdeInitialize();
-
-	// Initialize the FAT partitions.
-	FsMountFatPartitions();
-	
-	// Load the initrd last so its entries show up last when we type 'ls'.
-	FsInitializeInitRd((void*)pInitrdAddress);
-	
+	KbInit();
+	FsInit();
+	StIdeInit();
+	FsFatInit();
+	FsInitRdInit();
 	UartInit(0);
-	
-	LogMsg("(loading config from disk...)");
-	
-	char config_file [PATH_MAX+2];
-	ConfigEntry *pEntry = CfgGetEntry ("root");
-	if (!pEntry)
-	{
-		KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
-	}
-	strcpy (config_file, pEntry->value);
-	if (strcmp(config_file, "/"))//If the root dir isn't just /
-	{
-		strcat (config_file, "/ns.ini");
-	}
-	else
-	{
-		strcat (config_file, "ns.ini");
-	}
-	LogMsg("(loading config from disk from %s...)", config_file);
-	
-	int fd = FiOpen (config_file, O_RDONLY);
-	if (fd < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
-	
-	int size = FiTellSize(fd);
-	char *pText = MmAllocateK(size+1);
-	
-	int read = FiRead( fd, pText, size );
-	if (read < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
-	pText [read] = 0;
-	
-	CfgLoadFromTextBasic (pText);
-	
-	MmFreeK (pText);
-	
-	FiClose (fd);
-
+	CfgLoadFromMainFile();
 	#ifdef EXPERIMENTAL_RSDPTR
-	pEntry = CfgGetEntry ("Driver::Acpi");
-	if (pEntry)
-	{
-		if (strcmp (pEntry->value, "on") == 0)
-			AttemptLocateRsdPtr();
-	}
+	AcpiInitIfApplicable();
 	#endif
-	
 	#ifdef EXPERIMENTAL
-	pEntry = CfgGetEntry ("Driver::VirtualBox");
-	if (pEntry)
-	{
-		if (strcmp (pEntry->value, "on") == 0)
-			gInitializeVB = true;
-	}
-	
-	if (gInitializeVB)
-		VbGuestInit();
+	VbInitIfApplicable();
 	#endif
-
-	sti;
-	g_bRtcInitialized = true;
-	// Initialize the mouse driver too
-	
-	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
-	//MouseInit ();
-	
+	KiIrqEnable();
 	MouseInit();
-	
-	pEntry = CfgGetEntry ("Driver::VMware");
-	if (pEntry)
-	{
-		if (strcmp (pEntry->value, "on") == 0)
-			if (VmwDetect())
-				VmwInit();
-	}
-	
-	LogMsg("System ready to roll!");
-
-	// print the hello text, to see if the OS booted ok
-	if (!VidIsAvailable())
-	{
-		LogMsg("\n\x01\x0CWarning\x01\x0F: NanoShell has fallen back to emergency text mode\n");
-		textMode = true;
-	}
-	else
-	{
-		// KePrintSystemInfo();
-	
-		// LogMsg("Type 'w' to start up the GUI!");
-		
-		ConfigEntry *pEntry = CfgGetEntry ("emergency");
-		if (pEntry)
-		{
-			if (strcmp(pEntry->value, "yes") == 0)
-			{
-				LogMsg("Using emergency text mode");
-			}
-			else
-			{
-				textMode = false;
-			}
-		}
-		else
-			LogMsg("No 'emergency' config key found, using text mode");
-	}
-
+	VmwInitIfApplicable();
 	ShellInit();
-
-	TaskedFunction func = textMode ? ShellRun : WindowManagerTask;
-	
-	int err_code = 0;
-	//TODO: spawn a process instead
-	Task* pTask = KeStartTask(func, 0, &err_code);
-	if (!pTask)
-		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);
-	KeTaskAssignTag(pTask, "init");
-	
-	//TODO: Panic when this process dies.
-	
-	// Idle Loop
+	SLogMsg("System ready to roll!");
+	if (KiEmergencyMode())
+		KiLaunch(ShellRun);
+	else
+		KiLaunch(WindowManagerTask);
 	while (true)
 	{
 		CrashReporterCheckNoWindow();

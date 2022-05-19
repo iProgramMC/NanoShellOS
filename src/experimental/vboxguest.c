@@ -6,6 +6,7 @@
 ******************************************/
 #include <main.h>
 #include <memory.h>
+#include <config.h>
 #include <pci.h>
 #include <video.h>
 
@@ -227,6 +228,19 @@ void VbGuestInit()
 	
 	// Enable VmmDevMem interrupts - all of them for now
 	gVbVmmDev[3] = 0xFFFFFFFF;
+}
+extern bool gInitializeVB;
+void VbInitIfApplicable()
+{
+	ConfigEntry* pEntry = CfgGetEntry ("Driver::VirtualBox");
+	if (pEntry)
+	{
+		if (strcmp (pEntry->value, "on") == 0)
+			gInitializeVB = true;
+	}
+	
+	if (gInitializeVB)
+		VbGuestInit();
 }
 
 #endif

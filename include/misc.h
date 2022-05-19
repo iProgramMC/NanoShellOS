@@ -152,4 +152,15 @@ void TmGetTime (TimeStruct* pStruct);
  */
 TimeStruct* TmReadTime();
 
+/**
+ * Stops all kernel activity forcefully. Only use this if something
+ * terrible happened and we need to shutdown immediately.
+ */
+NO_RETURN void KeStopSystem();
+
+/**
+ * Get the multiboot_info_t passed into KiStartupSystem.
+ */
+multiboot_info_t* KiGetMultibootInfo();
+
 #endif//_MISC_H

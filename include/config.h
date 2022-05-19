@@ -24,7 +24,7 @@ ConfigEntry;
 // my OS is the definition of insecure
 uint32_t HashString(const char *const str);
 
-void CfgInitialize(void);
+void CfgInit(void);
 void CfgPrintEntries(void);
 void CfgLoadFromTextBasic(char* work);
 void CfgLoadFromFile (const char * file);//TODO

@@ -6,6 +6,7 @@
 ******************************************/
 
 #include <main.h>
+#include <config.h>
 #include <console.h>
 #include <print.h>
 #include <string.h>
@@ -180,6 +181,15 @@ void AttemptLocateRsdPtr()
 		}
 		
 		RsdpAnalyze(pDesc);
+	}
+}
+void AcpiInitIfApplicable()
+{
+	ConfigEntry* pEntry = CfgGetEntry ("Driver::Acpi");
+	if (pEntry)
+	{
+		if (strcmp (pEntry->value, "on") == 0)
+			AttemptLocateRsdPtr();
 	}
 }
 

@@ -273,6 +273,7 @@ void IrqMouse()
 #if 1
 void MouseInit()
 {
+	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//return;//don't have it for now
 	uint8_t _status;
 	

@@ -124,7 +124,7 @@ typedef uint8_t KeyState;
 // Maps an AT or PS/2 key code to ASCII
 char KbMapAtCodeToChar(char c);
 
-void KbInitialize();
+void KbInit();
 void IrqKeyboard();
 void KbAddKeyToBuffer(char key);
 char KbGetKeyFromBuffer();

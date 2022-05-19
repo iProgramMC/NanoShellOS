@@ -140,7 +140,7 @@ void FsMountRamDisk(void* pRamDisk);
 //Internal functions.  Should only be used by FS drivers
 #if 1
 
-void FsSetup ();
+void FsInit ();
 FileNode* CreateFileNode (FileNode* pParent);
 void EraseFileNode (FileNode* pFileNode);
 

@@ -6,6 +6,7 @@
 ******************************************/
 #include <config.h>
 #include <task.h>
+#include <vfs.h>
 
 uint32_t val_32_const = 0x811c9dc5u;
 uint32_t prime_32_const = 0x1000193u;
@@ -32,7 +33,7 @@ ConfigEntry* g_config_entries = NULL;
 int          g_config_entries_count = 0;
 int          g_config_entries_max   = 512;
 
-void CfgInitialize()
+void CfgInit()
 {
 	size_t sz = sizeof (ConfigEntry) * g_config_entries_max;
 	g_config_entries = (ConfigEntry*)MmAllocateK (sz);
@@ -268,3 +269,46 @@ bool CfgEntryMatches(const char *pKey, const char *pValueCmp)
 	return strcmp (pValue, pValueCmp) == 0;
 }
 
+extern char g_cmdline [1024];
+void CfgLoadFromCmdLine()
+{
+	CfgLoadFromParms(g_cmdline);
+}
+void CfgLoadFromMainFile()
+{
+	SLogMsg("(loading config from disk...)");
+	
+	char config_file [PATH_MAX+2];
+	ConfigEntry *pEntry = CfgGetEntry ("root");
+	if (!pEntry)
+	{
+		KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	}
+	strcpy (config_file, pEntry->value);
+	if (strcmp(config_file, "/"))//If the root dir isn't just /
+	{
+		strcat (config_file, "/ns.ini");
+	}
+	else
+	{
+		strcat (config_file, "ns.ini");
+	}
+	SLogMsg("(loading config from disk from %s...)", config_file);
+	
+	int fd = FiOpen (config_file, O_RDONLY);
+	if (fd < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	
+	int size = FiTellSize(fd);
+	char *pText = MmAllocateK(size+1);
+	
+	int read = FiRead( fd, pText, size );
+	if (read < 0) KeBugCheck (BC_EX_INACCESSIBLE_BOOT_DEVICE, NULL);
+	pText [read] = 0;
+	
+	CfgLoadFromTextBasic (pText);
+	
+	MmFreeK (pText);
+	
+	FiClose (fd);
+
+}

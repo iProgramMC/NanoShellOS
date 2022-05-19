@@ -71,7 +71,7 @@ DriveID StMountTestRamDisk (void);
 /**
  * Initializes IDE driver.
  */
-void StIdeInitialize(void);
+void StIdeInit(void);
 
 // Internal
 #if 1

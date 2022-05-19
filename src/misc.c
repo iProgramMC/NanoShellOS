@@ -4,12 +4,17 @@
 
            Misc - timing module
 ******************************************/
+#include <multiboot.h>
 #include <main.h>
 #include <misc.h>
+#include <config.h>
 #include <memory.h>
 #include <video.h>
 #include <print.h>
 #include <string.h>
+#include <vga.h>
+#include <task.h>
+#include <debug.h>
 
 #define CURRENT_YEAR 2022
 
@@ -548,4 +553,106 @@ void RenderThumbClock(int x, int y, int size)//=32
 
 #endif
 
+// Formerly in main.c
+#if 1
 
+multiboot_info_t *g_pMultibootInfo;
+
+char g_cmdline [1024];
+
+NO_RETURN void KeStopSystem()
+{
+	cli;
+	while (1)
+		hlt;
+}
+void KePrintSystemVersion()
+{
+	LogMsg("NanoShell (TM), May 2022 - " VersionString);
+	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper,
+				 GetNumPhysPages() * 4);
+	LogMsg("Built on: %s %s", __DATE__, __TIME__);
+}
+void MbSetup (uint32_t check, uint32_t mbaddr)
+{
+	if (check != 0x2badb002)
+	{
+		LogMsg("NanoShell has not booted from a Multiboot-compatible bootloader.  A bootloader such as GRUB is required to run NanoShell.");
+		KeStopSystem();
+	}
+	
+	// Read the multiboot data:
+	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + BASE_ADDRESS);
+	g_pMultibootInfo = mbi;
+}
+multiboot_info_t* KiGetMultibootInfo()
+{
+	return g_pMultibootInfo;
+}
+void MbReadCmdLine ()
+{
+	uint32_t cmdlineaddr = g_pMultibootInfo->cmdline;
+	if (!(g_pMultibootInfo->flags & MULTIBOOT_INFO_CMDLINE))
+	{
+		strcpy (g_cmdline, "None!");
+	}
+	else if (cmdlineaddr < 0x100000)
+	{
+		strcpy (g_cmdline, ((char*)0xC0000000 + cmdlineaddr));
+	}
+	else
+	{
+		strcpy (g_cmdline, "None!");
+	}
+}
+void MbCheckMem()
+{
+	if (g_pMultibootInfo->mem_upper < 15360)
+	{
+		SwitchMode(0);
+		CoInitAsText(&g_debugConsole);
+		LogMsg("NanoShell has not found enough extended memory.	16Mb of extended "
+		       "memory is\nrequired to run NanoShell.    You may need to upgrade "
+		       "your computer.");
+		KeStopSystem();
+	}
+}
+void MbCheckCmdLine()
+{
+	if (strcmp (g_cmdline, "No!") == 0 || g_cmdline[0] == 0)
+	{
+		LogMsg("NanoShell cannot boot, because either:");
+		LogMsg("- no cmdline was passed");
+		LogMsg("- cmdline's address was %x%s", g_pMultibootInfo->cmdline, g_pMultibootInfo->cmdline >= 0x100000 ? " (was bigger than 1 MB)" : "");
+		KeStopSystem();
+	}
+}
+bool KiEmergencyMode()
+{
+	bool textMode = true;
+	ConfigEntry *pEntry = CfgGetEntry ("emergency");
+	if (pEntry)
+	{
+		if (strcmp(pEntry->value, "yes") == 0)
+		{
+			LogMsg("Using emergency text mode");
+		}
+		else
+		{
+			textMode = false;
+		}
+	}
+	else
+		LogMsg("No 'emergency' config key found, using text mode");
+	return textMode;
+}
+void KiLaunch (TaskedFunction func)
+{
+	int err_code = 0;
+	//TODO: spawn a process instead
+	Task* pTask = KeStartTask(func, 0, &err_code);
+	if (!pTask)
+		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);
+	KeTaskAssignTag(pTask, "init");
+}
+#endif

@@ -248,7 +248,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 	return DEVERR_NOTFOUND;
 }
 
-void StIdeInitialize()
+void StIdeInit()
 {
 	//LogMsg("Probing for available IDE drives...");
 	

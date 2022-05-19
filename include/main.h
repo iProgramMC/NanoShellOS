@@ -46,6 +46,7 @@ extern void KeTaskDone();
 
 #define UNUSED __attribute__((unused))
 #define ALWAYS_INLINE __attribute__((always_inline))
+#define NO_RETURN __attribute__((noreturn))
 
 //SAI = Static and Always Inlined
 #define SAI static ALWAYS_INLINE inline

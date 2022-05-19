@@ -264,13 +264,15 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			int* er = MmAllocate(sizeof(int));
-			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, &er);
+			int* er = MmAllocateK(sizeof(int));
+			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, er);
 			
 			if (ec != ELF_ERROR_NONE)
 			{
 				LogMsg(ElfGetErrorMsg(ec), fileName);
 			}
+			
+			MmFreeK(er);
 			
 			LogMsg("");
 		}

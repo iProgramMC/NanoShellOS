@@ -379,7 +379,7 @@ Task* KeGetRunningTask()
 	if (s_currentRunningTask == -1) return NULL;
 	return &g_runningTasks[s_currentRunningTask];
 }
-void KiTaskSystemInitialize()
+void KiTaskSystemInit()
 {
 	for (int i = 0; i < C_MAX_TASKS; i++)
 		KeResetTask(g_runningTasks + i, false, true);

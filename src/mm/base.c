@@ -15,6 +15,7 @@
 #include <print.h>
 #include <string.h>
 #include <vga.h>
+#include <misc.h>
 
 extern bool g_interruptsAvailable;
 
@@ -43,18 +44,11 @@ void MmUsePageDirectory(uint32_t* curPageDir, uint32_t phys)
 	g_curPageDirP = phys;
 	__asm__ volatile ("mov %0, %%cr3"::"r"((uint32_t*)phys));
 }
-/*
-void MmRevertToKernelPageDir()
-{
-	MmUsePageDirectory(g_pageDirectory, (uint32_t)g_pageDirectory - BASE_ADDRESS);
-}*/
-
 extern void MmStartupStuff(); //io.asm
-void MmFirstThingEver()
+void MmInitPrimordial()
 {
 	MmStartupStuff();
-	e_frameBitsetSize = 131072;//(memorySizeKb >> 2); //nBytesRAM >> 12 = (nKbExtRam << 10) >> 12 = nKbExtRam >> 2
-	//e_placement += e_frameBitsetSize;
+	e_frameBitsetSize = 131072;
 	e_frameBitsetVirt = g_frameBitset;
 }
 
@@ -63,7 +57,6 @@ int g_numPagesAvailable = 0;
 int GetNumPhysPages()
 {
 	return g_numPagesAvailable;
-	//return e_frameBitsetSize;
 }
 
 /* Quick memory map one page trick */
@@ -116,7 +109,7 @@ void MmUnmapPhysMemFastUnsafe(void* pMem)
 	
 	g_LastPageTable[i].m_bPresent = false;
 	
-	MmInvalidateSinglePage (pMem);
+	MmInvalidateSinglePage ( (uintptr_t)pMem );
 }
 
 #endif
@@ -554,8 +547,10 @@ bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLin
 
 
 int g_offset = 0;
-void MmInit(multiboot_info_t* pInfo)
+void MmInit()
 {
+	multiboot_info_t* pInfo = KiGetMultibootInfo();
+	
 	e_placement += 0x1000;
 	e_placement &= ~0xFFF;
 	
@@ -672,8 +667,8 @@ void MmFreePageUnsafe(void* pAddr)
 }
 bool MmIsPageMapped(uint32_t pageAddr)
 {
-	uint32_t pageTableNum = (pageAddr >> 22);
-	uint32_t pageEntryNum = (pageAddr >> 12) & 0x3FF;
+	//uint32_t pageTableNum = (pageAddr >> 22);
+	//uint32_t pageEntryNum = (pageAddr >> 12) & 0x3FF;
 	
 	if (pageAddr >= 0xC0000000 && pageAddr < 0xC0700000)
 		return true;

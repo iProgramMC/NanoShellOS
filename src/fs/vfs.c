@@ -261,7 +261,7 @@ void EraseFileNode (FileNode* pFileNode)
 
 void FsInitializeDevicesDir();
 //First time setup of the file manager
-void FsSetup ()
+void FsInit ()
 {
 	memset(&g_root, 0, sizeof g_root);
 	

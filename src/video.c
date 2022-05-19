@@ -11,6 +11,7 @@
 #include <string.h>
 #include <icon.h>
 #include <task.h>
+#include <misc.h>
 
 // Basic definitions for video
 #if 1
@@ -1777,19 +1778,45 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 	return false;
 }
 
+void BgaInitIfApplicable()
+{
+	if (!VidIsAvailable())
+	{
+		multiboot_info_t* mbi = KiGetMultibootInfo();
+		SLogMsg("BGA device BAR0:%x", g_BGADeviceBAR0);
+		
+		// try this:
+		#define DEFAULT_WIDTH 1024
+		#define DEFAULT_HEIGHT 768
+		
+		BgaChangeScreenResolution(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+		mbi->flags |= MULTIBOOT_INFO_FRAMEBUFFER_INFO;
+		mbi->framebuffer_type = 1;
+		// TODO FIXME: We assume this is the address, but what if it isn't?
+		// Furthermore, what if the pitch doesn't match the width*4?
+		mbi->framebuffer_addr = g_BGADeviceBAR0;
+		mbi->framebuffer_width = DEFAULT_WIDTH;
+		mbi->framebuffer_pitch = DEFAULT_WIDTH * 4;
+		mbi->framebuffer_height = DEFAULT_HEIGHT;
+		mbi->framebuffer_bpp = 32;
+
+		// and re-attempt init:
+		VidInit();
+	}
+}
+
 //present, read/write, user/supervisor, writethrough
 #define VBE_PAGE_BITS (1 | 2 | 4 | 16)
-void VidInitialize(multiboot_info_t* pInfo)
+void VidInit()
 {
-	cli;
-	SLogMsg("Initializing video subsystem");
+	multiboot_info_t* pInfo = KiGetMultibootInfo();
+	
 	g_vbeData = &g_mainScreenVBEData;
 	
 	g_vbeData->m_available = false;
 	
 	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
 	{
-		SLogMsg("Passed in VBE info. Physical address: %x", pInfo->framebuffer_addr);
 		if (pInfo->framebuffer_type != 1)
 		{
 			SLogMsg("Need direct RGB framebuffer!");
@@ -1819,12 +1846,8 @@ void VidInitialize(multiboot_info_t* pInfo)
 			index++;
 		}
 		
-		SLogMsg("Allocating framebuffer copy: %dx%d.  Pitch:%d",pInfo->framebuffer_width,pInfo->framebuffer_height,pInfo->framebuffer_pitch);
 		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
-		SLogMsg("Size: %d", p);
-		
 		g_framebufferCopy = MmAllocateK (p);
-		SLogMsg("Allocated!");
 		
 		MmTlbInvalidate();
 		

@@ -9,7 +9,7 @@
 
 #include <main.h>
 
-void WindowCallInitialize();
-void WindowCallDeinitialize();
+void WindowCallInit();
+void WindowCallDeinit();
 
 #endif//_WTERM_H

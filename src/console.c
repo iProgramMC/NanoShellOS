@@ -39,26 +39,6 @@ uint32_t g_vgaColorsToRGB[] = {
 	0x00FFFF55,
 	0x00FFFFFF,
 };
-/*
-uint32_t g_vgaColorsToRGB[] = {
-	0x00000000,
-	0x000000AA,
-	0x0000AA00,
-	0x0000AAAA,
-	0x00AA0000,
-	0x00AA00AA,
-	0x00AAAA00,
-	0x00AAAAAA,
-	0x00555555,
-	0x005555FF,
-	0x0055FF55,
-	0x0055FFFF,
-	0x00FF5555,
-	0x00FF55FF,
-	0x00FFFF55,
-	0x00FFFFFF,
-};
-*/
 extern bool g_uses8by16Font;
 Console g_debugConsole; // for LogMsg
 Console g_debugSerialConsole; // for SLogMsg
@@ -492,4 +472,11 @@ void LogHexDumpData (void* pData, int size) {
 		}
 		LogMsg("");
 	}
+}
+
+
+void CoKickOff()
+{
+	CoInitAsE9Hack(&g_debugConsole);
+	CoInitAsE9Hack(&g_debugSerialConsole);
 }

@@ -390,7 +390,7 @@ void KiPermitTaskSwitching()
 	SetupPicInterrupt (0x0, IrqTaskA);
 }
 
-void KiSetupPic()
+void KiPicInit()
 {
 	
 	//initialize the pics
@@ -432,6 +432,13 @@ void KiSetupPic()
 		WritePort(0x20, 0x20);
 		WritePort(0xA0, 0x20);
 	}
+}
+
+extern bool g_bRtcInitialized;
+void KiIrqEnable()
+{
+	sti;
+	g_bRtcInitialized = true;
 }
 
 /**

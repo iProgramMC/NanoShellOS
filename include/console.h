@@ -73,4 +73,6 @@ bool CoInputBufferEmpty();
 char CoGetChar   ();
 void CoGetString (char* buffer, int buffer_size);
 
+void CoKickOff(); // main.c calls this
+
 #endif//_CONSOLE_H

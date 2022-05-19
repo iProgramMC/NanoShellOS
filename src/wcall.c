@@ -406,7 +406,7 @@ void UserCallStuffNotSupportedC(void)
 
 extern char UserCallStuff[], UserCallStuffEnd[];
 extern char UserCallStuffNotSupported[], UserCallStuffNotSupportedEnd[];
-void WindowCallInitialize()
+void WindowCallInit()
 {
 	memcpy ((void*)0xC0007C00, UserCallStuff, UserCallStuffEnd - UserCallStuff);
 }

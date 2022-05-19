@@ -196,9 +196,9 @@ int GetWidth(Rectangle* rect);
 int GetHeight(Rectangle* rect);
 
 /**
- * Initializes the graphics API based on the multiboot info.
+ * Initializes the graphics engine.
  */
-void VidInitialize (multiboot_info_t* pInfo);
+void VidInit ();
 
 /**
  * Attempts to change the screen resolution.

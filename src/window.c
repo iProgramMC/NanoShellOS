@@ -1983,7 +1983,7 @@ void SetupWindowManager()
 	
 	LogMsg("\n\n\n");
 	
-	WindowCallInitialize ();
+	WindowCallInit ();
 	
 	//test:
 #if !THREADING_ENABLED
@@ -2286,7 +2286,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	#endif
 	#endif
 	}
-	WindowCallDeinitialize ();
 	KillWindowDepthBuffer();
 	g_debugConsole.pushOrWrap = 0;
 	VidSetFont (FONT_TAMSYN_REGULAR);

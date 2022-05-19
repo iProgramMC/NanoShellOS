@@ -5,6 +5,7 @@
  VMware Tools guest protocol device driver
 ******************************************/
 #include <main.h>
+#include <config.h>
 #include <memory.h>
 #include <video.h>
 #include <string.h>
@@ -172,10 +173,7 @@ bool VmwInit()
 		LogMsg("VMware device not detected");
 		return false;
 	}
-	
-	LogMsg("VMware device detected, initializing");
-	
-	SLogMsg("Enabling abscursor ...");
+	LogMsg("VMware device detected, initializing it");
 	
 	VmwCommand command;
 	memset (&command, 0, sizeof command);
@@ -183,33 +181,34 @@ bool VmwInit()
 	command.command = CMD_ABSPTR_CMND;
 	command.size    = ABSPTR_ENABLE;
 	VmwSend (command);
-	SLogMsg("AbsPtr Cmnd...");
 	
 	command.command = CMD_ABSPTR_STAT;
 	command.size    = 0;
 	VmwSend (command);
-	SLogMsg("AbsPtr Stat...");
 	
-	SLogMsg("AbsPtr Interrupt hooked...");
 	SetupPicInterrupt (0x0C, VmwAbsCursorIrqA);
 	
 	command.command = CMD_ABSPTR_DATA;
 	command.size    = 1;
 	VmwSend (command);
-	SLogMsg("AbsPtr Data...");
-	
 	
 	command.command = CMD_ABSPTR_CMND;
 	command.size    = ABSPTR_ABSOLUTE;
 	VmwSend (command);
-	SLogMsg("AbsPtr Cmnd2...");
-	
-	
-	
 	
 	LogMsg("Done!");
 	return true;
 }
 
+void VmwInitIfApplicable()
+{
+	ConfigEntry* pEntry = CfgGetEntry ("Driver::VMware");
+	if (pEntry)
+	{
+		if (strcmp (pEntry->value, "on") == 0)
+			if (VmwDetect())
+				VmwInit();
+	}
+}
 
 #endif

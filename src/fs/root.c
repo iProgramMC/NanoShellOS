@@ -4,6 +4,7 @@
 
        FILE SYSTEM: VFS root module
 ******************************************/
+#include <multiboot.h>
 #include <vfs.h>
 #include <console.h>
 #include <string.h>
@@ -367,4 +368,40 @@ void FsInitializeInitRd(void* pRamDisk)
 		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
 	}
 }
+
+void FsInitRdInit()
+{
+	// Initialize the ramdisk
+	multiboot_info_t* pInfo = KiGetMultibootInfo();
+	if (pInfo->mods_count != 1)
+		KeBugCheck(BC_EX_INITRD_MISSING, NULL);
+
+	//Usually the mods table is below 1m.
+	if (pInfo->mods_addr >= 0x100000)
+	{
+		LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
+		KeStopSystem();
+	}
+	//The initrd module is here.
+	multiboot_module_t *initRdModule = (void*) (pInfo->mods_addr + 0xc0000000);
+
+	//Precalculate an address we can use
+	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
+	
+	// We should no longer have the problem of it hitting our frame bitset.
+	
+	SLogMsg("Init Ramdisk module Start address: %x, End address: %x", initRdModule->mod_start, initRdModule->mod_end);
+	//If the end address went beyond 1 MB:
+	if (initRdModule->mod_end >= 0x100000)
+	{
+		//Actually go to the effort of mapping the initrd to be used.
+		pInitrdAddress = MmMapPhysicalMemory (0x30000000, initRdModule->mod_start, initRdModule->mod_end);
+	}
+	
+	SLogMsg("Physical address that we should load from: %x", pInitrdAddress);
+	
+	// Load the initrd last so its entries show up last when we type 'ls'.
+	FsInitializeInitRd((void*)pInitrdAddress);
+}
+
 #endif

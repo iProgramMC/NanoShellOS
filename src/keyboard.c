@@ -364,7 +364,7 @@ void RevertKeyboardProperties()
 {
 }
 
-void KbInitialize()
+void KbInit()
 {
 	//setup keyboard
 	//this shows that everything is setup alright

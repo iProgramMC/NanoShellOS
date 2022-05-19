@@ -1926,7 +1926,7 @@ void FatUnmountFileSystem(FatFileSystem* pFS)
 	LogMsg("File system unmounted.  Need to do it from the VFS side too. TODO!");
 }
 
-void FsMountFatPartitions ()
+void FsFatInit ()
 {
 	// probe each drive
 	MasterBootRecord record;
