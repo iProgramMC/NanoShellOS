@@ -1,3 +1,9 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+    Window Modals - Message Box dialog
+******************************************/
 #include <window.h>
 #include <widget.h>
 #include <icon.h>

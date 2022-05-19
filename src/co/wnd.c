@@ -1,5 +1,10 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Console: Window
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+           Window Console module 
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <video.h>

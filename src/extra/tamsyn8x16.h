@@ -1,9 +1,8 @@
-/*****************************************
-        NanoShell Operating System
-       (c) 2021 -2022 iProgramInCpp
-	   
-	     Tamsyn font include file
-*****************************************/
+/*************************************************************
+                  NanoShell Operating System
+		         (C) 2021, 2022 iProgramInCpp
+               Tamsyn font (C) 2015 Scott Fial
+*************************************************************/
 
 //Source: http://www.fial.com/~scott/tamsyn-font/
 

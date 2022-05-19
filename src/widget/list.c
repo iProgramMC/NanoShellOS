@@ -1,6 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: List View controls
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
 
+    Widget library: List view controls
+******************************************/
 #include <widget.h>
 #include <video.h>
 #include <image.h>

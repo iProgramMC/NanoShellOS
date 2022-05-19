@@ -1,5 +1,10 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Console: E9 debug port
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+          0xE9 debug port module 
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <video.h>

@@ -1,3 +1,9 @@
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+     Window Modals - Text Input dialog
+******************************************/
 #include <window.h>
 #include <widget.h>
 #include <wbuiltin.h>

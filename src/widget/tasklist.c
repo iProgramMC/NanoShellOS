@@ -1,5 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Task list control
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+    Widget library: Task List controls
+******************************************/
 
 #include <widget.h>
 #include <video.h>

@@ -1,3 +1,9 @@
+;
+; 		NanoShell Operating System
+;      (C) 2021-2022 iProgramInCpp
+; 
+;    VMware Absolute Cursor ASM Module
+;
 BITS 32
 extern VmwAbsCursorIrq
 global VmwCommandInput

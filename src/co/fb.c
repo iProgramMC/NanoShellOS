@@ -1,5 +1,10 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Console: VBEdata output
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+      VBE framebuffer console module 
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <video.h>

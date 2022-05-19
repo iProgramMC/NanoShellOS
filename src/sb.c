@@ -1,3 +1,9 @@
+/*****************************************
+		NanoShell Operating System
+		  (C) 2022 iProgramInCpp
+
+      Sound Blaster 16 driver module
+******************************************/
 #include <main.h>
 #include <string.h>
 #include <print.h>

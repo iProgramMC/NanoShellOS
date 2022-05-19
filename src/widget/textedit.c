@@ -1,5 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Text Area controls
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+    Widget library: Text Area controls
+******************************************/
 
 #include <widget.h>
 #include <video.h>

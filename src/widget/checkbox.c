@@ -1,6 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Checkbox control
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
 
+     Widget library: Checkbox control
+******************************************/
 #include <widget.h>
 #include <video.h>
 #include <image.h>

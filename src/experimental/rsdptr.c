@@ -1,3 +1,10 @@
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+       RSD Pointer experiment module
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <print.h>

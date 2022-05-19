@@ -1,6 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Menu bar control
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
 
+     Widget library: Menu bar control
+******************************************/
 #include <widget.h>
 #include <video.h>
 #include <image.h>

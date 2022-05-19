@@ -1,5 +1,10 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Console: VGA text mode
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+       VGA text mode console module 
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <video.h>

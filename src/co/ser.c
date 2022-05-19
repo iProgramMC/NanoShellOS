@@ -1,5 +1,10 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Console: Serial
+/*****************************************
+		NanoShell Operating System
+	   (C) 2021, 2022 iProgramInCpp
+
+        Serial port console module 
+******************************************/
+
 #include <main.h>
 #include <console.h>
 #include <video.h>

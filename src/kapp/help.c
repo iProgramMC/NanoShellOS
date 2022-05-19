@@ -2,7 +2,7 @@
 		NanoShell Operating System
 	      (C) 2022 iProgramInCpp
 
-        Help Application module
+            Help Applet module
 ******************************************/
 
 

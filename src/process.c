@@ -1,3 +1,9 @@
+/*****************************************
+		NanoShell Operating System
+		  (C) 2022 iProgramInCpp
+
+         Process Executive module
+******************************************/
 #include <process.h>
 
 SafeLock gProcessLock;

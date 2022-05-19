@@ -1,5 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Thread-safe wrappers for Mm functions.
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
+
+   Thread safe wrappers for MM functions
+******************************************/
 
 #include <memory.h>
 

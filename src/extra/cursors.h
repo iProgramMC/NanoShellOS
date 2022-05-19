@@ -1,3 +1,9 @@
+/*************************************************************
+                  NanoShell Operating System
+		         (C) 2021, 2022 iProgramInCpp
+
+                   Cursor definition module
+*************************************************************/
 
 #define X 0X00FFFFFF,
 //#define S 0X007F7F7F,

@@ -1,6 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Image viewer control
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
 
+   Widget library: Image viewer control
+******************************************/
 #include <widget.h>
 #include <video.h>
 #include <image.h>

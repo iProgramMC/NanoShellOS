@@ -1,6 +1,9 @@
-// NanoShell Operating System (C) 2022 iProgramInCpp
-// Widget Library: Button controls
+/*****************************************
+		NanoShell Operating System
+	      (C) 2022 iProgramInCpp
 
+      Widget library: Button controls
+******************************************/
 #include <widget.h>
 #include <video.h>
 #include <image.h>
