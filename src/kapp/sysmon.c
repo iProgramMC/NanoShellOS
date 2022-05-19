@@ -11,8 +11,9 @@
 #include <elf.h>
 #include <image.h>
 #include <task.h>
-#define SYSMON_WIDTH  500
-#define SYSMON_HEIGHT 300
+
+#define SYSMON_WIDTH  400
+#define SYSMON_HEIGHT 400
 
 typedef struct
 {
@@ -192,10 +193,10 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
 			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = SYSMON_HEIGHT*3/4  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = (SYSMON_HEIGHT) / 2  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
 			int x = (pWindow->m_vbeData.m_width - (SYSMON_WIDTH - 20)) / 2;
-			int y = (pWindow->m_vbeData.m_height - SYSMON_HEIGHT - 100) + listview_y + listview_height + 10;
+			int y = (pWindow->m_vbeData.m_height - SYSMON_HEIGHT) + listview_y + listview_height + 10;
 			
 			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
 			Image *pImg = pInst->pImg;
@@ -221,7 +222,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
 			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = SYSMON_HEIGHT*3/4  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = (SYSMON_HEIGHT) / 2  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
@@ -248,16 +249,15 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 void SystemMonitorEntry (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
-	int xPos = (GetScreenSizeX() - SYSMON_WIDTH)  / 2;
-	int yPos = (GetScreenSizeY() - SYSMON_HEIGHT) / 2;
-	Window* pWindow = CreateWindow ("System Monitor", xPos, yPos, SYSMON_WIDTH, SYSMON_HEIGHT + 100, SystemMonitorProc, WF_ALWRESIZ);
-	pWindow->m_iconID = ICON_RESMON;
+	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, WF_ALWRESIZ);
 	
 	if (!pWindow)
 	{
 		DebugLogMsg("Hey, the window couldn't be created");
 		return;
 	}
+	
+	pWindow->m_iconID = ICON_SYSMON;
 	
 	SystemMonitorInstance* pInstance = (SystemMonitorInstance*)MmAllocate(sizeof(SystemMonitorInstance));
 	if (!pInstance)

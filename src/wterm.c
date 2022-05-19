@@ -140,7 +140,7 @@ extern void ShellInit(void);
 //! NOTE: arg is a pointer to an array of 4 ints.
 void TerminalHostTask(int arg)
 {
-	int array[] = { 100, 100, 80, 25 };
+	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, 80, 25 };
 	
 	bool providedShellCmd = false, hookDebugConsole = false;
 	char* shellcmd = (char*)arg;

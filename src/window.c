@@ -774,8 +774,11 @@ short GetWindowIndexInDepthBuffer (int x, int y)
 	return test;
 }
 //TODO: make this really work
-void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int index)
+void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int index, bool *bObscuredOut, bool *bForeMostOut)
 {
+	*bObscuredOut = true;
+	*bForeMostOut = true;
+	
 	int hx = GetScreenSizeX(), hy = GetScreenSizeY();
 	int idxl = r.left, idxr = r.right;
 	if (idxl < 0) idxl = 0;
@@ -786,31 +789,60 @@ void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int
 	if (gap <= 0) return;//it will never be bigger than zero if it is now
 	//int gapdiv2 = gap / 2;
 	idxl += hx * r.top;
+	idxr += hx * r.top;
 	for (int y = r.top; y < r.bottom; y++)
 	{
 		if (y >= hy) break;//no point.
 		if (y < 0) continue;
-		//memset_ints(&g_windowDepthBuffer[idxl], index<<16|index, gapdiv2);
-		memset_shorts(&g_windowDepthBuffer[idxl], index, gap);
-		g_windowDepthBuffer[idxr-1] = index;
+		
+		for (int j = idxl; j != idxr; j++)
+			// If this pixel is not occupied by a window yet
+			if (g_windowDepthBuffer[j] < 0)
+			{
+				// occupy it ourselves, and let the WM know that we're not totally occluded
+				if (*bObscuredOut)
+				{
+					*bObscuredOut = false;
+				}
+				g_windowDepthBuffer[j] = index;
+			}
+			// It's occupied by the foremost window at that pixel, so this window is no longer considered 'foremost'
+			else
+			{
+				if (*bForeMostOut)
+					*bForeMostOut = false;
+			}
 		
 		idxl += hx;
+		idxr += hx;
 	}
 }
 void UpdateDepthBuffer (void)
 {
 	memset_ints (g_windowDepthBuffer, 0xFFFFFFFF, g_windowDepthBufferSzBytes/4);
 	
-	for (int i = 0; i < WINDOWS_MAX; i++)
+	// Go front to back instead of back to front.
+	bool bFilledIn[WINDOWS_MAX] = { 0 };
+	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
 	{
 		short j = g_windowDrawOrder[i];
 		if (j == -1) continue;
-		if (g_windows[j].m_used)
-			if (!g_windows[j].m_hidden)
-			{
-				//if (!g_windows[i].m_isSelected)
-					FillDepthBufferWithWindowIndex (g_windows[j].m_rect, j);//g_windows[j].m_vbeData.m_framebuffer32, j);
-			}
+		if (!g_windows[j].m_used) continue;
+		
+		if (g_windows[j].m_hidden) continue;
+		
+		if (!bFilledIn[j])
+		{
+			bFilledIn[j] = true;
+			FillDepthBufferWithWindowIndex (g_windows[j].m_rect, j, &g_windows[j].m_bObscured, &g_windows[j].m_bForemost);
+			/*
+			SLogMsg("Window '%s' is %s and %s",
+				g_windows[j].m_title,
+				g_windows[j].m_bObscured ? "obscured" : "not obscured",
+				g_windows[j].m_bForemost ? "foremost" : "not foremost"
+			);
+			*/
+		}
 	}
 }
 #endif
@@ -2603,108 +2635,14 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 	}
 }
 
-SAI void WindowCheckForemostAndObscured(Window* pWindow, bool *bForemost, bool *bObscured)
-{
-	if (pWindow->m_isSelected)
-	{
-		*bForemost = true;
-		*bObscured = false;
-		return;
-	}
-	
-	int sx = GetScreenWidth(), sy = GetScreenHeight();
-	
-	int windIndex = pWindow - g_windows;
-	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
-	int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
-	
-	int x2 = x + tw, y2 = y + th;
-	
-	bool bForemostSet = false, bObscuredSet = false;
-	*bForemost = true;
-	*bObscured = true;
-	
-	if (x > sx) return;
-	if (y > sy) return;
-	if (x2 < 0) return;
-	if (y2 < 0) return;
-	
-	if (x2 > sx) x2 = sx;
-	if (y2 > sy) y2 = sy;
-	
-	if (x < 0) x = 0;
-	if (y < 0) y = 0;
-	
-	//FIXME: For efficiency, small gaps where the window is still visible may be ignored
-	//You won't be able to see much in these gaps anyway
-	for (int j = y; j < y2; j += WINDOW_MIN_HEIGHT-1)
-	{
-		if (j >= sy) break;
-		for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
-		{
-			short n = GetWindowIndexInDepthBuffer (i, j);
-			if (n != windIndex)
-			{
-				*bForemost = false;
-				bForemostSet = true;
-			}
-			// if we catch a glimpse of the window:
-			else
-			{
-				*bObscured = false;
-				bObscuredSet = true;
-			}
-			
-			if (bForemostSet && bObscuredSet) return;
-		}
-		short n = GetWindowIndexInDepthBuffer (x2 - 1, j);
-		if (n != windIndex)
-		{
-			*bForemost = false;
-			bForemostSet = true;
-		}
-		else
-		{
-			*bObscured = false;
-			bObscuredSet = true;
-		}
-		
-		if (bForemostSet && bObscuredSet) return;
-	}
-	for (int i = x; i < x2; i += WINDOW_MIN_HEIGHT-1)
-	{
-		short n = GetWindowIndexInDepthBuffer (i, y2 - 1);
-		if (n != windIndex)
-		{
-			*bForemost = false;
-			bForemostSet = true;
-		}
-		else
-		{
-			*bObscured = false;
-			bObscuredSet = true;
-		}
-		
-		if (bForemostSet && bObscuredSet) return;
-	}
-	short n = GetWindowIndexInDepthBuffer (x2 - 1, y2 - 1);
-	if (n != windIndex)
-	{
-		*bForemost = false;
-		bForemostSet = true;
-	}
-	else
-	{
-		*bObscured = false;
-		bObscuredSet = true;
-	}
-	
-	return;
-}
-
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
+	if (pWindow->m_bObscured)
+	{
+		SLogMsg("Window %s obscured, don't draw", pWindow->m_title);
+		return;
+	}
 	if (pWindow->m_minimized)
 	{
 		// Draw as icon
@@ -2740,13 +2678,7 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 	
-	bool bForemost = false, bObscured = false;
-	WindowCheckForemostAndObscured(pWindow, &bForemost, &bObscured);
-	
-	if (bObscured)
-		return; // No point!
-	
-	if (bForemost)
+	if (pWindow->m_bForemost)
 	{
 		//optimization
 		VidBitBlit(

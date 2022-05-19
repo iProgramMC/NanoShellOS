@@ -523,6 +523,14 @@ typedef struct WindowStruct
 	int        m_cursorID_backup;
 	
 	int        m_lastHandledMessagesWhen;
+	
+	//these two booleans are updated by UpdateDepthBuffer() internally
+	//if none of the window's pixels are visible
+	bool       m_bObscured;
+	//if all of the window's pixels are visible at the same time
+	//(we can optimize drawing by just VidBitBlitting it directly
+	//to the screen, instead of taking occlusion into account)
+	bool       m_bForemost;
 } Window;
 
 /**
