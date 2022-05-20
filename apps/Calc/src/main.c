@@ -97,11 +97,20 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			
 			AddControl (pWindow, CONTROL_TEXTINPUT, r, "", 100, 0, 0);
 			
+			#define BUTTON_GAP 2
 			#define BUTTON(x,y,t)\
-				RECT(r, x * bWidth + 1 + WND_BORDER_SIZE, y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE, bWidth, bHeight);\
+				RECT(r,\
+				x * bWidth + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
+				y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE + BUTTON_GAP,\
+				bWidth  - BUTTON_GAP*2,\
+				bHeight - BUTTON_GAP*2);\
 				AddControl (pWindow, CONTROL_BUTTON, r, #t, BUTTONID_CALC ## t, 0, 0);
 			#define BUTTON2(x,y,t,t2)\
-				RECT(r, x * bWidth + 1 + WND_BORDER_SIZE, y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE, bWidth, bHeight);\
+				RECT(r,\
+				x * bWidth + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
+				y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE + BUTTON_GAP,\
+				bWidth  - BUTTON_GAP*2,\
+				bHeight - BUTTON_GAP*2);\
 				AddControl (pWindow, CONTROL_BUTTON, r, t, BUTTONID_ ## t2, 0, 0);
 				
 			BUTTON(0,1,7)

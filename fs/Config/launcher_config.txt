@@ -18,6 +18,7 @@ add_item|38|0|Minesweeper|shell:mineswp
 
 // Pre-packaged applications that aren't built into the kernel
 add_item|65|0|Clock|exwindow:/Bin/Clock.nse
+add_item|72|0|Calculator|exwindow:/Bin/Calc.nse
 add_item|135|0|Sticky Notes|exwindow:/Bin/StickyNotes.nse
 
 // Some testing applications
