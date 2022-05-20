@@ -195,13 +195,21 @@ KeIdtLoad:
 	sti
 	ret
 
-
+extern _kernel_end
 global MmStartupStuff
 MmStartupStuff:
 ; WORK: Change this if necessary.  Paging is not setup at this stage
 ;       so this address is purely PHYSICAL.
-; TODO: Maybe assign this to the end of BSS - 0xC0000000?? That could and should work
-	mov ecx, 0x700000
+
+; TODO: Compilation seems to include stuff like CODE_SEG, DATA_SEG, VMWARE_MAGIC
+;       etc after our bss, which may not work.
+; Use this weird math to move the placement, in order to be page aligned, as the
+; system loves it that way.
+
+	mov ecx, (_kernel_end - 0xC0000000 + 0x1000)
+	
+	; couldn't do the and itself during compilation :(
+	and ecx, 0xFFFFF000
 	mov dword [e_placement], ecx
 	ret
 	

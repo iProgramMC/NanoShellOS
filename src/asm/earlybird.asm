@@ -60,7 +60,7 @@ KeEntry:
 	; NOTE: If the kernel goes haywire just change PagesToMap
 .label3:
 	
-	; Map the one and only pagetable (TODO) to both virtual addresses 0x0 and 0xC0000000
+	; Map the two pagetables required to both virtual addresses 0x0 and 0xC0000000
 	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) +   0*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03
 	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) +   1*4], VIRT_TO_PHYS(g_pageTableArray+4096) + 0x03
 	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) + 768*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03

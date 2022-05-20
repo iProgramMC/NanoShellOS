@@ -165,12 +165,10 @@ uint32_t g_memoryStart;
 #define OFFSET_FROM_BIT(a) (a % 32)
 static void MmSetFrame (uint32_t frameAddr)
 {
-	//ACQUIRE_LOCK (g_memoryPmmLock);
 	uint32_t frame = frameAddr >> 12;
 	uint32_t idx = INDEX_FROM_BIT (frame),
 			 off =OFFSET_FROM_BIT (frame);
 	e_frameBitsetVirt[idx] |= (0x1 << off);
-	//FREE_LOCK (g_memoryPmmLock);
 }
 static void MmClrFrame (uint32_t frameAddr)
 {
@@ -262,12 +260,36 @@ void MmInitializePMM(multiboot_info_t* mbi)
 					MmClrFrame (addr);
 			}
 	}
-	//LogMsg("Finished.");
 	
 	// Clear out the kernel, from 0x100000 to 0x600000
-	for (int i = 0x100; i < 0x700; i++)
+	for (int i = 0x100; i < (e_placement >> 12) + 1; i++)
 	{
-		MmSetFrame(i); // Set frame as not allocatable
+		MmSetFrame(i << 12); // Set frame as not allocatable
+	}
+	
+	multiboot_info_t* pInfo = KiGetMultibootInfo();
+	if (pInfo->mods_count > 0)
+	{
+		//Usually the mods table is below 1m.
+		if (pInfo->mods_addr >= 0x100000)
+		{
+			LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
+			KeStopSystem();
+		}
+		
+		//The initrd module is here.
+		multiboot_module_t *pModules = (void*) (pInfo->mods_addr + 0xc0000000);
+		for (int i = 0; i < pInfo->mods_count; i++)
+		{
+			SLogMsg("Blocking out frames from module");
+			// block out the frames this contains from being allocated by the PMM
+			for (uint32_t pg = pModules[i].mod_start;
+				          pg < pModules[i].mod_end + 0xFFF;
+						  pg += 4096)
+			{
+				MmSetFrame (pg);
+			}
+		}
 	}
 	
 	g_numPagesAvailable = GetNumFreePhysPages();
@@ -275,6 +297,8 @@ void MmInitializePMM(multiboot_info_t* mbi)
 
 uint32_t MmMapPhysicalMemoryRWUnsafe(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
 {
+	SLogMsg("MmMapPhysicalMemoryRWUnsafe(%x, %x, %x, %d)", hint, phys_start, phys_end, bReadWrite);
+	
 	// Get the hint offset in the page tables we should start out at
 	int page_table_offset = (int)((hint >> 12) & 0xFFF);
 	int page_direc_offset = (int)((hint >> 22));
@@ -351,9 +375,9 @@ uint32_t MmMapPhysicalMemoryRWUnsafe(uint32_t hint, uint32_t phys_start, uint32_
 	}
 	
 	// Mark the frames as occupied
-	for (uint32_t i = phys_start; i < phys_end; i += 4096)
+	for (uint32_t i = phys_start; i < phys_end + 0xFFF; i += 0x1000)
 	{
-		MmSetFrame (i >> 12);
+		MmSetFrame (i);
 	}
 	
 	MmTlbInvalidate ();
