@@ -17,21 +17,16 @@ float Calculate(const char*pText, int *errorCode);//calculate.c
 const char* ErrorCodeToString (int ec);
 
 int variable = 0, errorcode = 0;
-char input[250], inputold[250];
-char outpt[250], outptold[250];
-char error[250], errorold[250];
+char input[250];
+char outpt[250];
+char error[250];
 
 float resultCalculation = 0;
 
+bool bResultMode = false;
+
 void FormatFloatToString (char* out, float n, int precision)
 {
-	/*if (n != n)
-	{
-		//NaN
-		sprintf(out, "nan");
-		return;
-	}*/
-	
 	//TODO: won't handle large enough numbers.  Precision should be smaller than 10.
 	long long po10 = 1;
 	for (int i = 0; i < precision; i++) po10 *= 10;
@@ -40,9 +35,9 @@ void FormatFloatToString (char* out, float n, int precision)
 	
 	long long fmtint = (long long)fmt;
 	char format_string[100];
-	sprintf(format_string, "%cx %cd.%c0%dd", '%', '%', '%', precision);
+	sprintf(format_string, "%cd.%c0%dd", '%', '%', precision);
 	
-	sprintf(out, format_string, *((long*)&n), (int)(fmtint/po10), (int)(fmtint % po10));
+	sprintf(out, format_string, (int)(fmtint/po10), (int)(fmtint % po10));
 }
 
 void RequestRepaint(Window *pWindow);
@@ -67,6 +62,22 @@ enum {
 	BUTTONID_MINUS,
 	BUTTONID_CLEAR,
 };
+void CopyTextBoxContents(Window* pWindow)
+{
+	const char *strin = TextInputGetRawText (pWindow, 100);
+	if (!strin)
+	{
+		// it's not there, whoa
+		// bye!
+		DefaultWindowProc(pWindow, EVENT_DESTROY, 0, 0);
+	}
+	
+	int sl = strlen (strin);
+	if (sl > 240)
+		sl = 240;
+	memcpy (input, strin, sl);
+	input[sl] = 0;
+}
 char syms[] = "0123456789=%*/+-C";
 #define WND_BORDER_SIZE 3
 #define TITLE_BAR_SIZE  TITLE_BAR_HEIGHT
@@ -81,6 +92,10 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			Rectangle r;
 			//add each button, a terrible solution indeed
 			int bWidth = (pWindow->m_vbeData.m_width-WND_BORDER_SIZE*2)/4, bHeight = (pWindow->m_vbeData.m_height-4-4-TITLE_BAR_HEIGHT) / 5;
+			
+			RECT (r, 10, 10 + TITLE_BAR_HEIGHT, CALC_WIDTH - 20, 20);
+			
+			AddControl (pWindow, CONTROL_TEXTINPUT, r, "", 100, 0, 0);
 			
 			#define BUTTON(x,y,t)\
 				RECT(r, x * bWidth + 1 + WND_BORDER_SIZE, y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE, bWidth, bHeight);\
@@ -108,48 +123,69 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			
 			break;
 		}
-		case EVENT_PAINT:
+		case EVENT_KEYRAW:
 		{
-			VidTextOut(inputold, 5, TITLE_BAR_HEIGHT+05, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);//undraw the old text
-			VidTextOut(input,    5, TITLE_BAR_HEIGHT+05, 0x000000,            WINDOW_BACKGD_COLOR);//draw the new one on
-			VidTextOut(outptold, 5, TITLE_BAR_HEIGHT+15, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);//undraw the old text
-			VidTextOut(outpt,    5, TITLE_BAR_HEIGHT+15, 0x000000,            WINDOW_BACKGD_COLOR);//draw the new one on
-			VidTextOut(errorold, 5, TITLE_BAR_HEIGHT+25, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);//undraw the old text
-			VidTextOut(error,    5, TITLE_BAR_HEIGHT+25, 0x000000,            WINDOW_BACKGD_COLOR);//draw the new one on
-			memcpy (inputold, input, sizeof (input));
-			memcpy (outptold, outpt, sizeof (outpt));
-			memcpy (errorold, error, sizeof (error));
+			if (bResultMode)
+			{
+				bResultMode = false;
+				strcpy (input, "");
+				SetTextInputText (pWindow, 100, input);
+			}
+			DefaultWindowProc (pWindow, EVENT_KEYRAW, 0, 0);
 			break;
 		}
 		case EVENT_COMMAND:
 		{
 			if (parm1 == BUTTONID_EQUAL)
 			{
+				//the input array maybe out of sync with the text box, so copy the textbox's contents over
+				CopyTextBoxContents(pWindow);
+				
 				//perform the calculation!
 				int error_code = 0;
 				float result = Calculate(input, &error_code);
+				strcpy (input, "");
 				if (error_code)
 				{
-					strcpy(error, ErrorCodeToString(error_code));
+					MessageBox(pWindow, ErrorCodeToString(error_code), "Calculator", MB_OK | ICON_ERROR << 16);
+					SetTextInputText (pWindow, 100, input);
 				}
 				else
 				{
 					FormatFloatToString(outpt, result, 4);
+					bResultMode = true;
+					SetTextInputText (pWindow, 100, outpt);
 				}
-				strcpy (input, "");
 			}
 			else if (parm1 == BUTTONID_CLEAR)
 			{
+				bResultMode = false;
 				strcpy (input, "");
+				SetTextInputText (pWindow, 100, input);
 			}
 			else
 			{
+				if (bResultMode)
+				{
+					strcpy (input, "");
+					bResultMode = false;
+				}
+				else
+				{
+					// take in the string
+					CopyTextBoxContents(pWindow);
+				}
+				
 				//Append symbol.
 				char digit = syms[parm1 - BUTTONID_CALC0];
 				char str[2]; str[0] = digit, str[1] = 0;
 				
+				
 				if (strlen (input) < 240)
 					strcat (input, str);
+				
+				// reput it in the textbox
+				SetTextInputText (pWindow, 100, input);
 			}
 			RequestRepaint (pWindow);
 			break;
@@ -165,7 +201,6 @@ int NsMain (int argc, char** argv)
 	char fmt[100];
 	float variable_a = 6;
 	FormatFloatToString(fmt, 5.f / variable_a, 6);
-	LogMsg("\n\n\n\nTest: %s", fmt);
 	
 	Window* pWindow = CreateWindow (
 		"Calculator",

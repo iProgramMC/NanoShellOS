@@ -48,6 +48,7 @@ void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 	VidSetFont(SYSTEM_FONT);
 }
 
+void CtlTextEditRecalcCurXY(Control *this);
 void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 {
 	int slen = strlen (pText);
@@ -65,15 +66,15 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	strcpy (this->m_textInputData.m_pText, pText);
 	this->m_textInputData.m_textCapacity = newCapacity;
 	this->m_textInputData.m_textLength   = slen;
-	this->m_textInputData.m_textCursorIndex = 0;
+	this->m_textInputData.m_textCursorIndex = slen;
 	this->m_textInputData.m_textCursorSelStart = -1;
 	this->m_textInputData.m_textCursorSelEnd   = -1;
-	this->m_textInputData.m_textCursorIndex    = 0;
 	this->m_textInputData.m_textCursorX        = 0;
 	this->m_textInputData.m_textCursorY        = 0;
 	this->m_textInputData.m_scrollX            = 0;
 	this->m_textInputData.m_scrollY            = 0;
 	
+	CtlTextEditRecalcCurXY (this);
 	CtlTextInputUpdateScrollSize (this, pWindow);
 }
 

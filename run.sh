@@ -1,1 +1,3 @@
-cmd.exe /k run.bat && exit
+# works only in wsl :)
+
+cmd.exe /k "run.bat && exit"
