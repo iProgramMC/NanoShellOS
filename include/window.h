@@ -40,7 +40,7 @@
 #define DEFAULT_WINDOW_TEXT_COLOR               0x00000000
 #define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
 #define DEFAULT_SYSTEM_FONT                     FONT_BASIC
-#define DEFAULT_TITLE_BAR_HEIGHT                18
+#define DEFAULT_TITLE_BAR_HEIGHT                20
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
 #define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
 #define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE

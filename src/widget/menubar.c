@@ -121,7 +121,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 	
 	Rectangle menu_bar_rect;
 	menu_bar_rect.left   = 1 + 3 * has3dBorder;
-	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT;
+	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT - 1;
 	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
 	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 3;
 	
@@ -141,8 +141,9 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		case EVENT_PAINT:
 		{
 			// Render the root.  If any children are opened, draw them.
-			VidFillRectangle (BUTTONMIDD, menu_bar_rect);
-			VidDrawHLine (0, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom);
+			VidFillRectangle (WINDOW_BACKGD_COLOR, menu_bar_rect);
+			VidDrawHLine (BUTTONDARK, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom);
+			VidDrawHLine (BUTTONLITE, menu_bar_rect.left, menu_bar_rect.right, menu_bar_rect.bottom + 1);
 			
 			if (this->m_menuBarData.m_root.m_childrenArray)
 			{
@@ -154,7 +155,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					const char* pText = pChild->m_text;
 					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
 					
-					width += 10;
+					width += 15;
 					
 					if (pChild->m_isOpen)
 					{
@@ -166,7 +167,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						
 						VidFillRectangle (0x7F, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 7, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 						//render the child menu as well:
 						
 						/*WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);*/
@@ -195,7 +196,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					const char* pText = pChild->m_text;
 					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
 					
-					width += 10;
+					width += 15;
 					
 					Rectangle rect;
 					rect.left   = menu_bar_rect.left + current_x;
@@ -217,7 +218,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 							pChild->m_isOpen = true;
 							WindowMenu menu;
 							ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
-							SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + TITLE_BAR_HEIGHT);
+							SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + MENU_BAR_HEIGHT);
 							MenuRecursivelyFreeEntries (&menu);
 						}
 						else

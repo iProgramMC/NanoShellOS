@@ -976,6 +976,8 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 void OnWindowHung(Window *pWindow)
 {
+	SLogMsg("Window with address %x (title: %s) is being marked as hung...", pWindow, pWindow->m_title);
+	
 	pWindow->m_flags |= WI_HUNGWIND;
 	if (!(pWindow->m_flags & WF_FROZEN))
 		pWindow->m_flags |= WI_FROZENRM;
@@ -2719,6 +2721,7 @@ void RenderWindow (Window* pWindow)
 	}
 }
 extern const unsigned char* g_pCurrentFont;
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, int iconID, bool selected, bool maximized)
 {
 	Rectangle rectb = windowRect;
@@ -2779,6 +2782,13 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		rectb.right  -= 2;
 		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 2;
 		
+		RenderButtonShapeSmallInsideOut (rectb, BUTTONLITE, BUTTONDARK, TRANSPARENT);
+		
+		rectb.left  ++;
+		rectb.top   ++;
+		rectb.right --;
+		rectb.bottom -= 2;
+		
 		VidFillRectHGradient(
 			selected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
 			selected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
@@ -2796,17 +2806,17 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 
 		VidTextOutInternal(pTitle, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
 		
-		int offset = -5 + iconGap + (rectb.right - rectb.left - textwidth) / 2;
+		int offset = -5 + (rectb.right - rectb.left - textwidth) / 2;
 		
 		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
 		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
 		
-		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top + 2 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top + 1 + 3 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top + 1 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top + 0 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
 		if (iconID != ICON_NULL)
-			RenderIconForceSize(iconID, rectb.left+1, rectb.top+1+iconOffset, 16);
+			RenderIconForceSize(iconID, rectb.left+1, rectb.top + iconOffset, 16);
 	}
 	
 #undef X
@@ -3267,19 +3277,22 @@ bool HandleMessages(Window* pWindow)
 	
 	LockFree (&pWindow->m_EventQueueLock);
 	
-	bool bIsWM = KeGetRunningTask() != g_pWindowMgrTask;
+	bool bIsNotWM = KeGetRunningTask() != g_pWindowMgrTask;
 	if (!have_handled_events)
 	{
 		// suspend until the window manager has updated itself.
 		// if this IS the window manager handling events for us, we'd basically be waiting forever, so don't
-		if (bIsWM && !(pWindow->m_flags & WF_NOWAITWM))
+		if (bIsNotWM)
 		{
-			WaitUntilWMUpdate();
+			if (pWindow->m_flags & WF_NOWAITWM)
+				WaitMS(1);// ayy
+			else 
+				WaitUntilWMUpdate();
 		}
 	}
 	
 	// if this is the window manager, let it handle everything else first
-	if (!bIsWM)
+	if (!bIsNotWM)
 		KeTaskDone(); // give it a good halt
 	return true;
 }
@@ -3305,8 +3318,8 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				Rectangle rect;
 				rect.right = pWindow->m_vbeData.m_width - 3 - WINDOW_RIGHT_SIDE_THICKNESS - has3dBorder * 2;
 				rect.left  = rect.right - ACTION_BUTTON_WIDTH+2;
-				rect.top   = 2 + has3dBorder * 2;
-				rect.bottom= rect.top + TITLE_BAR_HEIGHT-4;
+				rect.top   = 3 + has3dBorder * 2;
+				rect.bottom= rect.top + TITLE_BAR_HEIGHT-6;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
 				#ifdef ENABLE_MAXIMIZE
