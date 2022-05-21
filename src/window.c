@@ -868,7 +868,11 @@ void OnWindowHung(Window *pWindow);
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
 {
 	if (pWindow->m_flags & WF_FROZEN)
-		return ; // Can't send events to frozen objects!
+	{
+		// Can't send events to frozen objects! Just pretend it's handled already
+		pWindow->m_lastHandledMessagesWhen = GetTickCount();
+		return;
+	}
 	
 	//if hasn't responded in 5 seconds:
 	if (pWindow->m_lastHandledMessagesWhen + 5000 <= GetTickCount())
@@ -937,7 +941,8 @@ void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int
 {
 	if (pWindow->m_flags & WF_FROZEN)
 	{
-		//return.  Do not queue up events (it can overflow)
+		// Can't send events to frozen objects, so pretend it's handled already
+		pWindow->m_lastHandledMessagesWhen = GetTickCount();
 		return;
 	}
 	if (pWindow->m_eventQueueSize < EVENT_QUEUE_MAX - 1)
@@ -977,6 +982,9 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 void OnWindowHung(Window *pWindow)
 {
 	SLogMsg("Window with address %x (title: %s) is being marked as hung...", pWindow, pWindow->m_title);
+	//don't hang twice
+	if (pWindow->m_flags & WI_HUNGWIND)
+		return;
 	
 	pWindow->m_flags |= WI_HUNGWIND;
 	if (!(pWindow->m_flags & WF_FROZEN))
@@ -2983,6 +2991,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	if (pWindow->m_flags & WI_HUNGWIND)
 	{
+		SLogMsg("Window %s no longer frozen!", pWindow->m_title);
 		// Window no longer frozen
 		pWindow->m_flags &= ~WI_HUNGWIND;
 		

@@ -167,13 +167,13 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						
 						VidFillRectangle (0x7F, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 7, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 8, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
 						//render the child menu as well:
 						
 						/*WidgetMenuBar_RenderSubMenu (pChild, rect.left, rect.bottom);*/
 					}
 					else
-						VidTextOut (pText, menu_bar_rect.left + current_x + 5, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 8, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR, TRANSPARENT);
 					
 					current_x += width;
 				}

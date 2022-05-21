@@ -571,19 +571,44 @@ void KillFont (int fontID)
 		}
 	}
 	
+	int MeasureTextUntilSpaceOrMaxedWidth (const char* pText, const char** pTextOut, bool* bReachedMaxSizeBeforeEnd, int xMaxSize)
+	{
+		int w = 0;
+		while (1)
+		{
+			if (*pText == '\n' || *pText == '\0' || *pText == ' ')
+			{
+				*pTextOut = pText;
+				*bReachedMaxSizeBeforeEnd = false;
+				return w;
+			}
+			int cw = GetCharWidthInl(*pText);
+			w += cw;
+			if (w >= xMaxSize)
+			{
+				
+				*pTextOut = pText;
+				*bReachedMaxSizeBeforeEnd = true;
+				return w;
+			}
+			pText++;
+		}
+	}
+	
 	// Makes the text fit in a rectangle of `xSize` width and `ySize` height,
 	// and puts it in pTextOut.
 	// Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
 	// Returns the y height attained.
 	int WrapText(char *pTextOut, const char* text, int xSize)
 	{
+		bool bReachedMaxSizeBeforeEnd = false;
 		char* pto = pTextOut;
 		const char* text2;
 		int lineHeight = g_pCurrentFont[1];
 		int x = 0, y = lineHeight;
 		while (1)
 		{
-			int widthWord = MeasureTextUntilSpace (text, &text2);
+			int widthWord = MeasureTextUntilSpaceOrMaxedWidth (text, &text2, &bReachedMaxSizeBeforeEnd, xSize);
 			//can fit?
 			if (x + widthWord > xSize)
 			{
@@ -593,9 +618,16 @@ void KillFont (int fontID)
 				*pto++ = '\n';
 			}
 			
+			x += widthWord + GetCharWidthInl(' ');
+			
 			while (text != text2)
 				*pto++ = *text++;
 			
+			if (bReachedMaxSizeBeforeEnd)
+			{
+				text2--;
+				bReachedMaxSizeBeforeEnd = false;
+			}
 			if (*text2 == '\n')
 			{
 				x = 0;

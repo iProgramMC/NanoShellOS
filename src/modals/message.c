@@ -86,7 +86,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	
 	int szX, szY;
 	
-	char* test = MmAllocateK(strlen(pText)+5);
+	char* test = MmAllocateK(strlen(pText) * 2);
 	int buttonStyle = style & 0x7;
 	if (!test)
 	{
@@ -160,6 +160,8 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 			case MB_ABORTRETRYIGNORE: return MBID_IGNORE;
 		}
 	}
+	
+	wSzX = pBox->m_rect.right - pBox->m_rect.left;
 	
 	// Add the basic controls required.
 	Rectangle rect;
