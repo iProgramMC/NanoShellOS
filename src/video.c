@@ -1676,7 +1676,7 @@ void SetMousePos (unsigned newX, unsigned newY)
 
 // Video initialization
 #if 1
-void VidInitializeVBEData(multiboot_info_t* pInfo)
+void VidInitializeVBEData(multiboot_info_t* pInfo, uintptr_t address)
 {
 	int bpp = pInfo->framebuffer_bpp;
 	g_vbeData->m_available = true;
@@ -1692,9 +1692,9 @@ void VidInitializeVBEData(multiboot_info_t* pInfo)
 	g_vbeData->m_pitch32   = pInfo->framebuffer_pitch / sizeof (int);
 	g_vbeData->m_pitch16   = pInfo->framebuffer_pitch / sizeof (short);
 	
-	g_vbeData->m_framebuffer32 = (uint32_t*)VBE_FRAMEBUFFER_HINT;
-	g_vbeData->m_framebuffer16 = (uint16_t*)VBE_FRAMEBUFFER_HINT;
-	g_vbeData->m_framebuffer8  = (uint8_t *)VBE_FRAMEBUFFER_HINT;
+	g_vbeData->m_framebuffer32 = (uint32_t*)address;
+	g_vbeData->m_framebuffer16 = (uint16_t*)address;
+	g_vbeData->m_framebuffer8  = (uint8_t *)address;
 	
 	VidSetClipRect (NULL);
 }
@@ -1794,9 +1794,9 @@ void BgaInitIfApplicable()
 		mbi->framebuffer_type = 1;
 		// TODO FIXME: We assume this is the address, but what if it isn't?
 		// Furthermore, what if the pitch doesn't match the width*4?
-		mbi->framebuffer_addr = g_BGADeviceBAR0;
-		mbi->framebuffer_width = DEFAULT_WIDTH;
-		mbi->framebuffer_pitch = DEFAULT_WIDTH * 4;
+		mbi->framebuffer_addr   = g_BGADeviceBAR0;
+		mbi->framebuffer_width  = DEFAULT_WIDTH;
+		mbi->framebuffer_pitch  = DEFAULT_WIDTH * 4;
 		mbi->framebuffer_height = DEFAULT_HEIGHT;
 		mbi->framebuffer_bpp = 32;
 
@@ -1823,10 +1823,10 @@ void VidInit()
 			sti;
 			return;
 		}
-		// map shit to 0xE0000000 or above
+		// map this to 0xE0000000 or above
 		int index = VBE_FRAMEBUFFER_HINT >> 22;
 		uint32_t pointer = pInfo->framebuffer_addr;
-		uint32_t final_address = 0xE0000000;
+		uint32_t final_address = VBE_FRAMEBUFFER_HINT;
 		final_address += pointer & 0xFFF;
 		pointer &= ~0xFFF;
 		
@@ -1852,7 +1852,7 @@ void VidInit()
 		MmTlbInvalidate();
 		
 		// initialize the VBE data:
-		VidInitializeVBEData (pInfo);
+		VidInitializeVBEData (pInfo, final_address);
 		VidPrintTestingPattern();
 		
 		// initialize the console:
