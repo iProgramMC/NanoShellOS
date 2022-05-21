@@ -3160,9 +3160,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		PaintWindowBackgroundAndBorder(pWindow);
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
 	}
-	else if (eventType == EVENT_PAINT)
+	else if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
 	{
-		PaintWindowBorderNoBackgroundOverpaint(pWindow);
+		//PaintWindowBorderNoBackgroundOverpaint(pWindow);
 	}
 	
 	someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);

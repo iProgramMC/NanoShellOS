@@ -30,13 +30,14 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] Loading an ELF at some virtual address with its own heap and executing it
 - [x] Task Switching (concurrent threads)
 - [x] TSC-backed timing (works best on systems with an invariant TSC, but it's not that crappy on older systems, as the TSC recalibrates itself every second)
+- [x] FPU and SSE support
 #### User
 - [x] A basic shell, can execute applications
 - [x] Get a GUI running (Also in a task)
 - [x] Applications can use the GUI API
 - [x] Port DOOM
 - [ ] Move all applications that don't depend on features I'm not willing to expose to user applications (i.e. taskbar/systemmonitor will stay)
-- [ ] Compile C code to an NSE file (not sure what compiler I'd use for that, but I'm still looking, preferably an easy to port compiler that does not have many dependencies)
+- [ ] Compile C code to an NSE file (I'll probably port TCC to NanoShell)
 - [ ] Allow applications to temporarily upload and use their own resources in the kernel (icons, text, images etc)
 #### Drivers
 - [x] PS/2 Mouse and Keyboard
@@ -167,5 +168,7 @@ I've only done one VMware test, but it should work fine on there too.
 My main testing box is a computer with an Intel Core 2 CPU and 2 GB of RAM (reported 512 MB though).  It works just fine,
 although you will need a real PS/2 mouse (a USB mouse will **not** work, yet), and a real PS/2 keyboard (I haven't done
 any testing whether USB keyboards also work with PS/2 emulation, but I like to be on the safe side and use both.)
+
+Because it works on QEMU with TCG on my machine (which is a software emulator), I think it'll work on slower machines too.
 
 

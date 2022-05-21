@@ -164,8 +164,10 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	Heap* pBkp = g_pHeap;
 	UseHeapUnsafe (&pProc->sHeap);
 	
+	strcpy (pProc->sIdentifier, pIdent);
+	
 	// Create the task itself
-	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pIdent, "--Process--", 1337);
+	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pProc->sIdentifier, "[Process]", 0);
 	if (!pTask)
 	{
 		SLogMsg("crap");
@@ -180,7 +182,6 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->bWillDie = false;
 	pProc->nTasks = 1;
 	pProc->sTasks[0] = pTask;
-	strcpy (pProc->sIdentifier, pIdent);
 	
 	UseHeapUnsafe (pBkp);
 	

@@ -135,6 +135,27 @@ void VidSetVbeData (VBEData* pData)
 {
 	_I_VidSetVbeData(pData);
 }
+
+void RenderIcon(int type, int x, int y)
+{
+	_I_RenderIcon(type, x, y);
+}
+
+void RenderIconOutline(int type, int x, int y, uint32_t color)
+{
+	_I_RenderIconOutline(type, x, y, color);
+}
+
+void RenderIconForceSize(int type, int x, int y, int size)
+{
+	_I_RenderIconForceSize(type, x, y, size);
+}
+
+void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color)
+{
+	_I_RenderIconForceSizeOutline(type, x, y, size, color);
+}
+
 #endif
 
 
@@ -283,6 +304,16 @@ int CcRunCCode(const char* data, int length)
 #endif
 
 #ifdef USE_WINDOW
+void SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler)
+{
+	_I_SetWidgetEventHandler (pWindow, comboID, handler);
+}
+
+void RequestRepaintNew(Window *pWindow)
+{
+	_I_RequestRepaintNew (pWindow);
+}
+
 int AddControlEx(Window* pWindow, int type, int anchor_mode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
 	return _I_AddControlEx (pWindow, type, anchor_mode, rect, text, comboID, p1, p2);
@@ -336,6 +367,11 @@ void ShellAbout (const char* pText, int icon)
 #endif
 
 #ifdef USE_MISC
+
+int GetRandom()
+{
+	return _I_GetRandom();
+}
 TimeStruct* GetTime ()
 {
 	return _I_GetTime();

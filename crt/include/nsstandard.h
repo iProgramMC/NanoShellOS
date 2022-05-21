@@ -18,6 +18,9 @@ void sprintf (char* OutBuffer, const char* FormatType, ...);
 void sleep(int ms);
 void exit (int errcode);
 
+// Miscellanea
+int GetRandom();
+
 // Logging
 void LogMsg    (const char* Format, ...);
 void LogMsgNoCr(const char* Format, ...);
@@ -111,7 +114,10 @@ void VidFillRectVGradient(unsigned colorU, unsigned colorD, int left, int top, i
 void VidDrawRectangle(unsigned color, Rectangle rect);
 void SetMousePos (unsigned pX, unsigned pY);
 void VidSetVbeData (VBEData* pData);
-
+void RenderIcon(int type, int x, int y);
+void RenderIconOutline(int type, int x, int y, uint32_t color);
+void RenderIconForceSize(int type, int x, int y, int size);
+void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color);
 
 // Window API
 Window*     CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags);
@@ -146,11 +152,13 @@ void        CheckboxSetChecked(Window* pWindow, int comboID, bool checked);
 void        SetTextInputText(Window* pWindow, int comboID, const char* pText);
 void        ShellAbout (const char* pText, int icon);
 void        RequestRepaint (Window *pWindow);
+void        RequestRepaintNew (Window *pWindow);
 void        PopupWindow (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
 uint32_t    ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCaption);
 char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 uint32_t    GetThemingParameter (int type);
 void        SetThemingParameter (int type, uint32_t parm);
+void        SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

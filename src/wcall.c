@@ -254,6 +254,14 @@ enum
 		CB_COPY_BLOB,
 		CB_GET_CURRENT_VARIANT,
 		CB_RELEASE,
+	
+	// System Calls V1.5
+		VID_RENDER_ICON,
+		VID_RENDER_ICON_OUTLINE,
+		VID_RENDER_ICON_SIZE,
+		VID_RENDER_ICON_SIZE_OUTLINE,
+		TM_GET_RANDOM,
+		
 };
 
 const void *WindowCall[] = {
@@ -392,6 +400,13 @@ const void *WindowCall[] = {
 		CbCopyBlob,
 		CbGetCurrentVariant,
 		CbRelease,
+		
+	// System Calls V1.5 - 21/05/2022
+		RenderIcon,
+		RenderIconOutline,
+		RenderIconForceSize,
+		RenderIconForceSizeOutline,
+		GetRandom,
 };
 
 

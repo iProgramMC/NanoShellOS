@@ -3,7 +3,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 14
+#define WCALL_VERSION 15
 enum
 {
 	// System Calls V1.0
@@ -157,6 +157,15 @@ enum
 		CB_COPY_BLOB,
 		CB_GET_CURRENT_VARIANT,//danger!!
 		CB_RELEASE,
+	#endif
+	
+	// System Calls V1.5
+	#if WCALL_VERSION >= 15
+		VID_RENDER_ICON,
+		VID_RENDER_ICON_OUTLINE,
+		VID_RENDER_ICON_SIZE,
+		VID_RENDER_ICON_SIZE_OUTLINE,
+		TM_GET_RANDOM,
 	#endif
 };
 

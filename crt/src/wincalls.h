@@ -402,3 +402,25 @@ CALL (CbRelease, CB_RELEASE, void, ClipboardVariant* pVar)
 	SARGS(pVar)
 CALL_END
 #endif
+
+// Calls V1.5
+#ifdef USE_VIDEO
+CALL (RenderIcon, VID_RENDER_ICON, void, int type, int x, int y)
+	SARGS(type, x, y)
+CALL_END
+CALL (RenderIconOutline, VID_RENDER_ICON_OUTLINE, void, int type, int x, int y, uint32_t color)
+	SARGS(type, x, y, color)
+CALL_END
+CALL (RenderIconForceSize, VID_RENDER_ICON_SIZE, void, int type, int x, int y, int size)
+	SARGS(type, x, y, size)
+CALL_END
+CALL (RenderIconForceSizeOutline, VID_RENDER_ICON_SIZE_OUTLINE, void, int type, int x, int y, int size, uint32_t color)
+	SARGS(type, x, y, size, color)
+CALL_END
+#endif
+
+#ifdef USE_MISC
+CALL (GetRandom, TM_GET_RANDOM, int, void)
+	RARGS()
+CALL_END
+#endif

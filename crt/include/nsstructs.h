@@ -844,6 +844,8 @@ typedef struct
 }
 SafeLock;
 
+// DON'T rely on this!!! This is an internal kernel struct and can be changed.
+
 typedef struct WindowStruct
 {
 	bool       m_used;

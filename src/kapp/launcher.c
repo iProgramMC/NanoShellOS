@@ -107,15 +107,6 @@ RESOURCE_STATUS LaunchCabinet()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	return RESOURCE_LAUNCH_SUCCESS;
 }
-RESOURCE_STATUS LaunchMineGame()
-{
-	UNUSED int errorCode = 0;
-	Task* pTask = KeStartTask(PrgMineTask, 0, &errorCode);
-	
-	if (!pTask)
-		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	return RESOURCE_LAUNCH_SUCCESS;
-}
 RESOURCE_STATUS LaunchVBuilder()
 {
 	UNUSED int errorCode = 0;
@@ -163,7 +154,6 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	else if (STREQ(pResourceID, "cpanel"))   return LaunchControlPanel();
 	else if (STREQ(pResourceID, "notepad"))  return LaunchNotepad();
 	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
-	else if (STREQ(pResourceID, "mineswp"))  return LaunchMineGame();
 	else if (STREQ(pResourceID, "vbuild"))   return LaunchVBuilder();
 	else if (STREQ(pResourceID, "magnify"))  return LaunchMagnifier();
 	else if (STREQ(pResourceID, "launcher")) { LaunchLauncher(); return RESOURCE_LAUNCH_SUCCESS; }
