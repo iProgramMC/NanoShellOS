@@ -121,9 +121,9 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 	
 	Rectangle menu_bar_rect;
 	menu_bar_rect.left   = 1 + 3 * has3dBorder;
-	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT - 1;
+	menu_bar_rect.top    = has3dBorder * 2 + TITLE_BAR_HEIGHT + 1;
 	menu_bar_rect.right  = pWindow->m_vbeData.m_width - 1 - 3 * has3dBorder;
-	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 3;
+	menu_bar_rect.bottom = menu_bar_rect.top + MENU_BAR_HEIGHT + 1;
 	
 	switch (eventType)
 	{

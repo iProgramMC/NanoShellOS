@@ -119,6 +119,12 @@ void RedrawEverything();
 				r.right++, r.bottom++;
 				
 				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, ICON_APP_DEMO, true, false);
+				
+				RECT (r, DESKTOP_POPUP_WIDTH/2+40, TITLE_BAR_HEIGHT+3+75, 180-1, 70+TITLE_BAR_HEIGHT-1);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
+				r.right++, r.bottom++;
+				
+				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, ICON_APP_DEMO, true, false);
 				break;
 			}
 			case EVENT_CREATE:

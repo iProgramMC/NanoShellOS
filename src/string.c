@@ -44,8 +44,8 @@ int memcmp(const void* ap, const void* bp, size_t size)
 }
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size)
 {
-	BYTE* dst = (BYTE*) dstptr;
-	const BYTE* src = (const BYTE*) srcptr;
+	BYTE* restrict dst = (BYTE*) dstptr;
+	const BYTE* restrict src = (const BYTE*) srcptr;
 	for(size_t i = 0; i < size; i++)
 	{
 		dst[i] = src[i];

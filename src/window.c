@@ -1065,6 +1065,11 @@ void ChangeCursor (Window* pWindow, int cursorID)
 
 void WindowManagerShutdown(bool wants_restart_too)
 {
+	if (g_shutdownRequest || g_shutdownWaiting)
+	{
+		MessageBox(NULL, "The window station is shutting down.", "Error", MB_OK | ICON_ERROR << 16);
+		return;
+	}
 	g_shutdownRequest = true;
 	g_shutdownWantReb = wants_restart_too;
 }
@@ -2221,13 +2226,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			
 			//VidSetFont(FONT_TAMSYN_REGULAR);
 			
-			//LogMsg("Sending kill messages to windows...");
+			LogMsg("Sending kill messages to windows...");
 			for (int i = 0; i < WINDOWS_MAX; i++)
 			{
 				WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
 			}
 			
-			shutdownTimeout = 2500;
+			shutdownTimeout = 1000;
 		}
 		if (g_shutdownWaiting)
 		{
@@ -2244,8 +2249,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			}
 			if (noMoreWindows)
 			{
-				//LogMsg("\nAll windows have shutdown gracefully?  Quitting...");
-				//LogMsg("STATUS: We survived!  Exitting in a brief moment.");
+				SLogMsg("\nAll windows have shutdown gracefully?  Quitting...");
+				SLogMsg("STATUS: We survived!  Exitting in a brief moment.");
 				//g_windowManagerRunning = false;
 				
 				// On Shutdown:
@@ -2261,10 +2266,13 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				{
 					if (g_windows[i].m_used)
 					{
-						if (g_windows[i].m_pOwnerThread)
-							KeKillTask (g_windows[i].m_pOwnerThread);
-						if (g_windows[i].m_pSubThread)
-							KeKillTask (g_windows[i].m_pSubThread);
+						if (!g_windows[i].m_bWindowManagerUpdated)
+						{
+							if (g_windows[i].m_pOwnerThread)
+								KeKillTask (g_windows[i].m_pOwnerThread);
+							if (g_windows[i].m_pSubThread)
+								KeKillTask (g_windows[i].m_pSubThread);
+						}
 						
 						NukeWindow (&g_windows[i]);
 					}
@@ -2788,14 +2796,19 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		rectb.left   ++;
 		rectb.top    ++;
 		rectb.right  -= 2;
-		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT - 2;
+		rectb.bottom = rectb.top + TITLE_BAR_HEIGHT;
 		
-		RenderButtonShapeSmallInsideOut (rectb, BUTTONLITE, BUTTONDARK, TRANSPARENT);
-		
-		rectb.left  ++;
-		rectb.top   ++;
-		rectb.right --;
-		rectb.bottom -= 2;
+		if (!(flags & WF_FLATBORD))
+		{
+			RenderButtonShapeSmallInsideOut (rectb, BUTTONLITE, BUTTONDARK, TRANSPARENT);
+			
+			rectb.left  ++;
+			rectb.top   ++;
+			rectb.right --;
+			rectb.bottom -= 2;
+		}
+		else
+			rectb.bottom -= 3;
 		
 		VidFillRectHGradient(
 			selected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
@@ -2814,13 +2827,13 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 
 		VidTextOutInternal(pTitle, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
 		
-		int offset = -5 + (rectb.right - rectb.left - textwidth) / 2;
+		int offset = (rectb.right - rectb.left - textwidth) / 2;
 		
-		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height + 1;
-		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 10;
+		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height;
+		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 9;
 		
-		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top + 1 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top + 0 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top + 3 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top + 2 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
 		if (iconID != ICON_NULL)
@@ -3327,8 +3340,8 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				Rectangle rect;
 				rect.right = pWindow->m_vbeData.m_width - 3 - WINDOW_RIGHT_SIDE_THICKNESS - has3dBorder * 2;
 				rect.left  = rect.right - ACTION_BUTTON_WIDTH+2;
-				rect.top   = 3 + has3dBorder * 2;
-				rect.bottom= rect.top + TITLE_BAR_HEIGHT-6;
+				rect.top   = 2 + has3dBorder * 3;
+				rect.bottom= rect.top + TITLE_BAR_HEIGHT - 4;
 				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
 				
 				#ifdef ENABLE_MAXIMIZE
