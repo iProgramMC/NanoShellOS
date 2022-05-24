@@ -8,10 +8,6 @@
 #include <string.h>
 #include <vga.h>
 
-void ___swap(char*a, char*b) {
-	char e;e=*a;*a=*b;*b=e;
-}
-
 void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 {
 	//handle zero
@@ -142,6 +138,15 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 						pString++;
 					}
 
+					break;
+				}
+				// Escape a percentage symbol
+				case '%':
+				{
+					if (currentIndex >= sz - 1)
+						goto finished;
+
+					buf[currentIndex++] = '%';
 					break;
 				}
 				// Format a char

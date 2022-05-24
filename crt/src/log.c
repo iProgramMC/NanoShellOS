@@ -10,211 +10,392 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
-// sprintf implementation
-__attribute__((always_inline))
-static inline void ___swap(char*a, char*b) {
-	char e;e=*a;*a=*b;*b=e;
+// printf implementation
+
+void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
+{
+	//handle zero
+	if (num == 0)
+	{
+		str[0] = '0';
+		str[1] = '\0';
+		return;
+	}
+
+	// print the actual digits themselves
+	int i = 0;
+	while (num)
+	{
+		str[i++] = '0' + (num % 10);
+		str[i]   = '\0';
+		num /= 10;
+	}
+
+	// append padding too
+	for (; i < paddingInfo; i++)
+	{
+		str[i++] = paddingChar;
+		str[i]   = '\0';
+	}
+
+	// reverse the string
+	int start = 0, end = i - 1;
+	while (start < end)
+	{
+		char
+		temp       = str[start];
+		str[start] = str[end];
+		str[end]   = temp;
+		start++;
+		end--;
+	}
+}
+void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar)
+{
+	if (num < 0)
+	{
+		str[0] = '-';
+		uns_to_str((uint64_t)(-num), str + 1, paddingInfo, paddingChar);
+	}
+	else
+		uns_to_str((uint64_t)  num,  str,     paddingInfo, paddingChar);
 }
 
-void vsprintf(char* memory, const char* format, va_list list) {
-	int padding_info = -1; char padding_char = ' ';
-	while (*format) {
-		char m = *format;
-		format++;
-		if (m == '%') {
-			m = *format++;
-			// parse the m
-			if (!m) return;
-			padding_info = -1;
+// features:
+// %s, %S = prints a string
+// %c, %C = prints a char
+// %d, %i, %D, %I = prints an int32
+// %u, %U = prints a uint32
+// %l = prints a uint64
+// %L = prints an int64
+// %x, %X = prints a uint32 in hex in lowercase or uppercase respectively
+// %q, %Q = prints a uint64 in hex in lowercase or uppercase respectively
+// %b, %B = prints a uint16 in hex in lowercase or uppercase respectively
+// %w, %W = prints a uint8  in hex in lowercase or uppercase respectively
+// %p, %P = prints a pointer address (fully platform dependent)
+
+size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
+{
+	int  paddingInfo = -1;
+	char paddingChar = ' ';
+	size_t currentIndex = 0;
+	while (*fmt)
+	{
+		char m = *fmt;
+		if (!m) goto finished;
+		fmt++;
+
+		if (m == '%')
+		{
+			m = *(fmt++);
+
+			// if hit end, return
+			if (!m) goto finished;
+
+			// handle %0 or %.
 			if (m == '0' || m == '.')
 			{
-				padding_info = m - '0';
-				m = *format++;
-				if (!m) return;
+				// this by default handles %0<anything> too, though it does nothing
+				paddingInfo = m - '0';
+				m = *(fmt++);
+
+				// if hit end, return
+				if (!m) goto finished;
+
+				// handle %0D<anything> cases (D = digit)
 				if (m >= '0' && m <= '9')
 				{
-					padding_info = m - '0';
-					padding_char = '0';
-					m = *format++;
+					paddingInfo = m - '0';
+					paddingChar = 0;
+					m = *(fmt++);
 				}
 			}
 			else if (m >= '1' && m <= '9')
 			{
-				padding_info = m - '0';
-				padding_char = ' ';
-				m = *format++;
-				if (!m) return;
+				paddingInfo = m - '0';
+				paddingChar = ' ';
+				m = *(fmt++);
+
+				// if hit end, return
+				if (!m) goto finished;
 			}
-			switch (m) {
-				case 's': {
-					char* stringToPrint = va_arg(list, char*);
-					if (stringToPrint == NULL) stringToPrint = "(null)";
-					int length = strlen(stringToPrint);
-					memcpy(memory, stringToPrint, length);
-					memory += length;
-					continue;
-				}
-				case 'c': {
-					int chrToPrint = va_arg(list, int);
-					*memory++ = chrToPrint;
-					continue;
-				}
-				case 'd':case'i': {
-					int32_t num = va_arg(list, int32_t);
-					char str[17] = {0, };
-					int i = 0;
-					bool isNegative = false;
-					if (num == 0) {
-						str[i++] = '0'; 
-						//str[i] = '\0'; 
-						//goto skip1;
+
+			switch (m)
+			{
+				// Format a string
+				case 's': case 'S':
+				{
+					const char* pString = va_arg(args, const char*);
+
+					//allow user to print null
+					if (pString == NULL)
+						pString = "(null)";
+
+					while (*pString)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = *pString;
+
+						pString++;
 					}
-					if (num == -2147483648) {
-						char* e = "-2147483648";
-						int length = strlen(e);
-						memcpy(memory, e, length);
-						memory += length;
-						goto skip3;
-					}
+
+					break;
+				}
+				// Escape a percentage symbol
+				case '%':
+				{
+					if (currentIndex >= sz - 1)
+						goto finished;
+
+					buf[currentIndex++] = '%';
+					break;
+				}
+				// Format a char
+				case 'c': case 'C':
+				{
+					// using va_arg(args, char) has undefined behavior, because
+					// char arguments will be promoted to int.
+					char character = (char)va_arg(args, int);
+
+					if (currentIndex >= sz - 1)
+						goto finished;
+
+					buf[currentIndex++] = character;
+					break;
+				}
+				// Format an int
+				case 'd': case 'i': case 'D': case 'I':
+				{
+					int num = va_arg(args, int);
+					char buffer[20];
 					
-					// In standard itoa(), negative numbers are handled only with  
-					// base 10. Otherwise numbers are considered unsigned. 
-					if (num < 0) {
-						isNegative = true;
-						num = -num;
+					int_to_str(num, buffer, paddingInfo, paddingChar);
+
+					const char* pString = buffer;
+					while (*pString)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = *pString;
+
+						pString++;
 					}
-					int base = 10;
-					// Process individual digits 
-					while (num != 0) 
-					{ 
-						int rem = num % base; 
-						str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0'; 
-						num = num/base; 
-					}
-					// add padding:
-					for (; i < padding_info; )
-						str[i++] = padding_char;
-					// If number is negative, append '-' 
-					if (isNegative) 
-						str[i++] = '-'; 
-					str[i] = '\0'; // Append string terminator 
-					int start = 0; 
-					int end = i -1; 
-					while (start < end) 
-					{ 
-						___swap((str+start), (str+end)); 
-						start++; 
-						end--; 
-					}
-					int length = i;
-					memcpy(memory, str, length);
-					memory += length;
-				skip3:;
-					continue;
+
+					break;
 				}
-				case 'u': {
-					uint32_t num = va_arg(list, uint32_t);
-					char str[14] = {0, };
-					int i = 0;
-					if (num == 0) {
-						str[i++] = '0'; 
-						//str[i] = '\0'; 
-						//goto skip2;
+				// Format an unsigned int
+				case 'u': case 'U':
+				{
+					uint32_t num = va_arg(args, uint32_t);
+					char buffer[20];
+					
+					uns_to_str(num, buffer, paddingInfo, paddingChar);
+
+					const char* pString = buffer;
+					while (*pString)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = *pString;
+
+						pString++;
 					}
-					int base = 10;
-					// Process individual digits 
-					while (num != 0) 
-					{ 
-						int rem = num % base; 
-						str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0'; 
-						num = num/base; 
-					} 
-					// add padding:
-					for (; i < padding_info; )
-						str[i++] = padding_char;
-					str[i] = '\0'; // Append string terminator 
-					int start = 0; 
-					int end = i -1; 
-					while (start < end) 
-					{ 
-						___swap((str+start), (str+end)); 
-						start++; 
-						end--; 
-					}
-					int length = i;
-					memcpy(memory, str, length);
-					memory += length;
-					continue;
+
+					break;
 				}
-				case 'b': {
-					uint32_t toPrint = va_arg(list, uint32_t);
-					uint32_t power = (15 << 4), pt = 4;
-					for (; power != 0; power >>= 4, pt -= 4) {
-						uint32_t p = toPrint & power;
-						p >>= pt;
-						*memory = "0123456789abcdef"[p];
-						memory++;
+				// Format an unsigned 64-bit int
+				case 'l':
+				{
+					uint64_t num = va_arg(args, uint64_t);
+					char buffer[30];
+					
+					uns_to_str(num, buffer, paddingInfo, paddingChar);
+
+					const char* pString = buffer;
+					while (*pString)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = *pString;
+
+						pString++;
 					}
-					continue;
+
+					break;
 				}
-				case 'B': {
-					uint32_t toPrint = va_arg(list, uint32_t);
-					uint32_t power = (15 << 4), pt = 4;
-					for (; power != 0; power >>= 4, pt -= 4) {
-						uint32_t p = toPrint & power;
-						p >>= pt;
-						*memory = "0123456789ABCDEF"[p];
-						memory++;
+				// Format a signed 64-bit int
+				case 'L':
+				{
+					int64_t num = va_arg(args, int64_t);
+					char buffer[30];
+					
+					int_to_str(num, buffer, paddingInfo, paddingChar);
+
+					const char* pString = buffer;
+					while (*pString)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = *pString;
+
+						pString++;
 					}
-					continue;
+
+					break;
 				}
-				case 'x': {
-					uint32_t toPrint = va_arg(list, uint32_t);
-					uint32_t power = (15 << 28), pt = 28;
-					for (; power != 0; power >>= 4, pt -= 4) {
-						uint32_t p = toPrint & power;
-						p >>= pt;
-						*memory = "0123456789abcdef"[p];
-						memory++;
-					}
-					continue;
+				// Format a uint8_t as lowercase/uppercase hexadecimal
+				case 'b':
+				case 'B':
+				{
+					const char* charset = "0123456789abcdef";
+					if (m == 'B')
+						charset = "0123456789ABCDEF";
+
+					// using va_arg(args, uint8_t) has undefined behavior, because
+					// uint8_t arguments will be promoted to int.
+					uint8_t p = (uint8_t) va_arg(args, uint32_t);
+
+					if (currentIndex >= sz - 1) goto finished;
+					buf[currentIndex++] = charset[(p & 0xF0) >> 4];
+					if (currentIndex >= sz - 1) goto finished;
+					buf[currentIndex++] = charset[p & 0x0F];
+
+					break;
 				}
-				case 'X': {
-					uint32_t toPrint = va_arg(list, uint32_t);
-					uint32_t power = (15 << 28), pt = 28;
-					for (; power != 0; power >>= 4, pt -= 4) {
-						uint32_t p = toPrint & power;
-						p >>= pt;
-						*memory = "0123456789ABCDEF"[p];
-						memory++;
+				// Format a uint16_t as lowercase/uppercase hexadecimal
+				case 'w':
+				case 'W':
+				{
+					const char* charset = "0123456789abcdef";
+					if (m == 'W')
+						charset = "0123456789ABCDEF";
+
+					// using va_arg(args, uint16_t) has undefined behavior, because
+					// uint16_t arguments will be promoted to int.
+					uint16_t p = (uint16_t) va_arg(args, uint32_t);
+
+					for (uint32_t mask = 0xF000, bitnum = 12; mask; mask >>= 4, bitnum -= 4)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = charset[(p & mask) >> bitnum];
 					}
-					continue;
+
+					break;
+				}
+				// Format a uint32_t as lowercase/uppercase hexadecimal
+				case 'x':
+				case 'X':
+#if SIZE_MAX == 0xFFFFFFFFu //todo: a proper way
+				case 'p': case 'P':
+#endif
+				{
+					const char* charset = "0123456789abcdef";
+					if (m == 'X' || m == 'P')
+						charset = "0123456789ABCDEF";
+
+					uint32_t p = va_arg(args, uint32_t);
+
+					for (uint32_t mask = 0xF0000000, bitnum = 28; mask; mask >>= 4, bitnum -= 4)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = charset[(p & mask) >> bitnum];
+					}
+
+					break;
+				}
+				// Format a uint64_t as lowercase/uppercase hexadecimal
+				case 'q':
+				case 'Q':
+#if SIZE_MAX == 0xFFFFFFFFFFFFFFFFull //todo: a proper way
+				case 'p': case 'P':
+#endif
+				{
+					const char* charset = "0123456789abcdef";
+					if (m == 'Q' || m == 'P')
+						charset = "0123456789ABCDEF";
+
+					uint32_t p = va_arg(args, uint32_t);
+
+					for (uint64_t mask = 0xF000000000000000ULL, bitnum = 60; mask; mask >>= 4, bitnum -= 4)
+					{
+						if (currentIndex >= sz - 1)
+							goto finished;
+
+						// place this character here
+						buf[currentIndex++] = charset[(p & mask) >> bitnum];
+					}
+
+					break;
 				}
 			}
-		} else {
-			*memory++ = m;
+		}
+		else
+		{
+			if (currentIndex >= sz - 1)
+				goto finished;
+			buf[currentIndex++] = m;
 		}
 	}
-	*memory = '\0';
-	return;
+finished:
+	buf[currentIndex] = '\0';
+	return currentIndex;
 }
 
-void sprintf(char*a, const char*c, ...)
+size_t vsprintf(char* buf, const char* fmt, va_list args)
 {
-	va_list list;
-	va_start(list, c);
-	vsprintf(a, c, list);
-	va_end(list);
+	return vsnprintf(buf, SIZE_MAX, fmt, args);
 }
+
+size_t snprintf(char* buf, size_t sz, const char* fmt, ...)
+{
+	va_list lst;
+	va_start(lst, fmt);
+
+	size_t val = vsnprintf(buf, sz, fmt, lst);
+
+	va_end(lst);
+
+	return val;
+}
+
+size_t sprintf(char* buf, const char* fmt, ...)
+{
+	va_list lst;
+	va_start(lst, fmt);
+
+	size_t val = vsprintf(buf, fmt, lst);
+
+	va_end(lst);
+
+	return val;
+}
+
 void LogMsg(UNUSED const char* fmt, ...)
 {
 #ifdef USE_CONSOLE
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
-	sprintf(cr+strlen(cr), "\n");
+	snprintf(cr + strlen(cr), 2, "\n");
 	_I_PutString(cr);
 	
 	va_end(list);
@@ -226,7 +407,7 @@ void LogMsgNoCr(UNUSED const char* fmt, ...)
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr), fmt, list);
 	
 	_I_PutString(cr);
 	
