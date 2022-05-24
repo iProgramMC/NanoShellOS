@@ -27,8 +27,9 @@ void LogMsgNoCr(const char* Format, ...);
 #define printf LogMsgNoCr
 
 // Memory management
-void *malloc (size_t size);
+void* malloc (size_t size);
 void  free   (void*  ptr);
+void* realloc(void*  ptr, size_t sz);
 
 // Memory and string operations
 int    memcmp     (const void* ap, const void* bp, size_t size);

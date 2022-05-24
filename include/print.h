@@ -10,8 +10,8 @@
 #include <main.h>
 #include <stdarg.h>
 
-void sprintf(char*a, const char*c, ...);
-void vsprintf(char* memory, const char* format, va_list list);
+size_t sprintf(char*a, const char*c, ...);
+size_t vsprintf(char* memory, const char* format, va_list list);
 
 void DumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 

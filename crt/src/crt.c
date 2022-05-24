@@ -42,7 +42,6 @@ void *malloc (size_t size)
 	
 	return g_AllocatedMemoryList[fs];
 }
-
 void free (void* ptr)
 {
 	_I_Free(ptr);
@@ -54,6 +53,35 @@ void free (void* ptr)
 			g_AllocatedMemorySize[i]  = 0;
 		}
 	}
+}
+void* realloc (void* ptr, size_t sz)
+{
+	if (!ptr) // why would you?!
+		return malloc(sz);
+	
+	// get the size of this block:
+	size_t szBlock = 0;
+	for (int i = 0; i < MMMAX; i++)
+	{
+		if (g_AllocatedMemoryList[i] == ptr)
+		{
+			szBlock = g_AllocatedMemorySize[i];
+			break;
+		}
+	}
+	if (szBlock == 0) // not found
+		return NULL;
+	void *pNewData = malloc(sz);
+	if (!pNewData) return NULL;
+	
+	size_t copy = szBlock;
+	if (copy > sz) //in case we want to shrink the block
+		copy = sz;
+	memcpy (pNewData, ptr, copy);
+	// free the old block as you don't need it anymore
+	free(ptr);
+	
+	return pNewData;
 }
 
 void sleep (int ms)
