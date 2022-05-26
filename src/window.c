@@ -1327,7 +1327,7 @@ void NukeWindowUnsafe (Window* pWindow)
 	if (pWindow->m_vbeData.m_framebuffer32)
 	{
 		MmFreeK (pWindow->m_vbeData.m_framebuffer32);
-		pWindow->m_vbeData.m_available     = 0;
+		pWindow->m_vbeData.m_version       = 0;
 		pWindow->m_vbeData.m_framebuffer32 = NULL;
 	}
 	if (pWindow->m_pControlArray)
@@ -1564,7 +1564,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
-	pWnd->m_vbeData.m_available     = true;
+	pWnd->m_vbeData.m_version       = VBEDATA_VERSION_2;
 	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
 	if (!pWnd->m_vbeData.m_framebuffer32)
 	{
@@ -2657,6 +2657,47 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 	}
 }
 
+void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy)
+{
+	//TODO: clean up this function!
+	
+	int oi = 0;
+	if (y < 0)
+	{
+		oi += -y * tw;
+		y = 0;
+	}
+	
+	oi += szy * tw + szx;
+	
+	int sx = GetScreenWidth(), sy = GetScreenHeight();
+	int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
+	int offfb,                         offcp;
+	for (int j = y; j != y2; j++)
+	{
+		int o = oi;
+		if (j >= sy) break;
+		offfb = j * pitch, offcp = j * width;
+		if (x > 0) offfb += x, offcp += x;
+		for (int i = x; i != x2; i++)
+		{
+			if (i < sx && i >= 0)
+			{
+				short n = g_windowDepthBuffer [offcp];
+				if (n == windIndex)
+				{
+					g_framebufferCopy         [offcp] = texture[o];
+					g_vbeData->m_framebuffer32[offfb] = texture[o];
+				}
+				offcp++;
+				offfb++;
+			}
+			o++;
+		}
+		oi += tw;
+	}
+}
+
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
@@ -2673,23 +2714,18 @@ void RenderWindow (Window* pWindow)
 		return;
 	}
 	
+	//to avoid clashes with other threads printing, TODO use a safelock!!
+	cli;
+	DsjRectSet local_copy;
+	memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
+	DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
+	sti;
+	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
-	int sx = GetScreenWidth(), sy = GetScreenHeight();
 	int windIndex = pWindow - g_windows;
+	
 	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
-	int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
-	uint32_t *texture = pWindow->m_vbeData.m_framebuffer32;
-	
-	int o = 0;
-	int x2 = x + tw, y2 = y + th;
-	
-	if (y < 0)
-	{
-		o += -y * pWindow->m_vbeData.m_width;
-		y = 0;
-	}
-	
 	short n = GetWindowIndexInDepthBuffer (x, y);
 	if (n == -1)
 	{
@@ -2700,44 +2736,79 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 	
+	if (!local_copy.m_bIgnoreAndDrawAll)
+	{
+		for (int i = 0; i < local_copy.m_rectCount; i++)
+		{
+			//clip all rectangles!
+			Rectangle *e = &local_copy.m_rects[i];
+			if (e->left < 0) e->left = 0;
+			if (e->top  < 0) e->top  = 0;
+			
+			if (e->right >= (int)pWindow->m_vbeData.m_width)
+				e->right  = (int)pWindow->m_vbeData.m_width;
+			if (e->bottom >= (int)pWindow->m_vbeData.m_height)
+				e->bottom  = (int)pWindow->m_vbeData.m_height;
+		}
+	}
 	if (pWindow->m_bForemost)
 	{
-		//optimization
-		VidBitBlit(
-			g_vbeData,
-			pWindow->m_rect.left,
-			pWindow->m_rect.top,
-			pWindow->m_vbeData.m_width,
-			pWindow->m_vbeData.m_height,
-			&pWindow->m_vbeData,
-			0, 0,
-			BOP_SRCCOPY
-		);
+		if (local_copy.m_bIgnoreAndDrawAll)
+		{
+			//optimization
+			VidBitBlit(
+				g_vbeData,
+				pWindow->m_rect.left,
+				pWindow->m_rect.top,
+				pWindow->m_vbeData.m_width,
+				pWindow->m_vbeData.m_height,
+				&pWindow->m_vbeData,
+				0, 0,
+				BOP_SRCCOPY
+			);
+		}
+		else for (int i = 0; i < local_copy.m_rectCount; i++)
+		{
+			Rectangle e = local_copy.m_rects[i];
+			//optimization
+			VidBitBlit(
+				g_vbeData,
+				pWindow->m_rect.left + e.left,
+				pWindow->m_rect.top  + e.top,
+				e.right  - e.left,
+				e.bottom - e.top,
+				&pWindow->m_vbeData,
+				e.left, e.top,
+				BOP_SRCCOPY
+			);
+		}
 	}
 	else
 	{
-		int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
-		int offfb,                         offcp;
-		for (int j = y; j != y2; j++)
+		int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
+		uint32_t *texture = pWindow->m_vbeData.m_framebuffer32;
+		
+		int x2 = x + tw, y2 = y + th;
+		
+		if (local_copy.m_bIgnoreAndDrawAll)
 		{
-			if (j >= sy) break;
-			offfb = j * pitch, offcp = j * width;
-			if (x > 0) offfb += x, offcp += x;
-			for (int i = x; i != x2; i++)
-			{
-				if (i < sx && i >= 0)
-				{
-					short n = g_windowDepthBuffer [offcp];
-					if (n == windIndex)
-					{
-						g_framebufferCopy         [offcp] = texture[o];
-						g_vbeData->m_framebuffer32[offfb] = texture[o];
-					}
-					offcp++;
-					offfb++;
-				}
-				o++;
-			}
+			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
+		}
+		else for (int i = 0; i < local_copy.m_rectCount; i++)
+		{
+			Rectangle e = local_copy.m_rects[i];
+			WindowBlitTakingIntoAccountOcclusions(
+				windIndex,
+				texture,
+				x + e.left,
+				x + e.right,
+				y + e.top,
+				y + e.bottom,
+				tw,
+				th,
+				e.left,
+				e.top
+			);
 		}
 	}
 }

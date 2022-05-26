@@ -129,7 +129,7 @@ Image *BitmapAllocate(int width, int height, uint32_t default_color)
 
 void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage)
 {
-	pData->m_available    = true;
+	pData->m_version      = VBEDATA_VERSION_1;
 	pData->m_width        = pImage->width;
 	pData->m_height       = pImage->height;
 	pData->m_pitch        = pImage->width * 4;

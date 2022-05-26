@@ -458,7 +458,6 @@ enum CURSORTYPE
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
-
 #define WIN_KB_BUF_SIZE  512
 typedef struct WindowStruct
 {

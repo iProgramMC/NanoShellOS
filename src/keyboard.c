@@ -468,6 +468,11 @@ void IrqKeyboard(UNUSED int e[50])
 			CbPushTextIntoBuffer();
 		}
 		
+		if (keycode == (SCANCODE_RELEASE | KEY_F11))
+		{
+			VidCorruptScreenForTesting();
+		}
+		
 		if (g_virtualMouseEnabled && VidIsAvailable() && !g_ps2MouseAvail)
 		{
 			UpdateFakeMouse();

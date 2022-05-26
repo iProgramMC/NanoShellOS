@@ -123,9 +123,27 @@ typedef struct
 }
 Image;
 
+enum
+{
+	VBEDATA_VERSION_1 = 1, //V1: The basics! I think this is all most of the OS needs.
+	VBEDATA_VERSION_2,     //V2: Dirty rect logging support
+};
+
+// The disjoint rect set, for tracking dirty rectangles
+#define DSJ_RECT_SET_MAX 64
+typedef struct DsjRectSet
+{
+	// an emergency "screw it, draw it all" button if the pool gets exhausted
+	bool      m_bIgnoreAndDrawAll;
+	Rectangle m_rects[DSJ_RECT_SET_MAX];
+	int       m_rectCount;
+}
+DsjRectSet;
+
 typedef struct
 {
-	bool     m_available;			    //if the vbe display is available
+	//bool     m_available;			    //if the vbe display is available
+	char     m_version;                 //replaces old m_available (*1)
 	unsigned m_width, m_height, m_pitch;//bytes per row
 	int      m_bitdepth;                //bits per pixel, only values we support: 0=8, 1=16, 2=32
 	bool     m_dirty;					//useful if the framebuffer won't directly be pushed to the screen
@@ -135,9 +153,20 @@ typedef struct
 		uint8_t * m_framebuffer8;
 	};
 	int m_pitch32, m_pitch16;      //uint32_t's and uint16_t's per row.
-	Rectangle m_clipRect;
+	Rectangle      m_clipRect;
+	//*1. Version is either 0 (if no one bothered to initialize this crap, which would be weird),
+	//    1 (Version 1, which does NOT support dirty rect logging), and finally, Version 2 (which does!)
+	//    Any other features of VBEData will be added later down the line as V3, V4...
+	DsjRectSet     m_drs;
 }
 VBEData;
+
+// Internal drawing functions should call this
+void DirtyRectLogger (int x, int y, int width, int height);
+// Internal function to clear all info about the disjoint rect set
+void DisjointRectSetClear (DsjRectSet *pSet);
+// Corrupt the screen for testing
+void VidCorruptScreenForTesting();
 
 #define FLAGS_TOO(flags, color) (flags | (color & 0XFFFFFF))
 
@@ -416,5 +445,6 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
  * Kills a CreateFont() created font.  Other fonts cannot be killed.
  */
 void KillFont (int fontID);
+
 
 #endif//_VIDEO_H

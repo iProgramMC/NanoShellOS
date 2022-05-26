@@ -356,7 +356,7 @@ void SetDefaultCursor ()
 bool VidIsAvailable()
 {
 	if (!g_vbeData) return false;
-	return g_vbeData->m_available;
+	return g_vbeData->m_version != 0;
 }
 int GetScreenSizeX()
 {
@@ -445,9 +445,11 @@ inline void VidPlotPixelInline(unsigned x, unsigned y, unsigned color)
 	VidPlotPixelToCopyInlineUnsafe(x, y, color);
 	VidPlotPixelRaw32I (x, y, color);
 }
+// The exposed vidplotpixel :)
 void VidPlotPixel(unsigned x, unsigned y, unsigned color)
 {
 	VidPlotPixelInline(x, y, color);
+	DirtyRectLogger (x, y, 1, 1);
 }
 static void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 {
@@ -529,6 +531,8 @@ void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 			start += g_vbeData->m_width;
 		}
 	}
+	
+	DirtyRectLogger(left, top, right - left + 1, bottom - top + 1);
 }
 void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
 {
@@ -563,6 +567,8 @@ void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, i
 		for (int y = top; y <= bottom; y++)
 			VidPlotPixelInline(x, y, color);
 	}
+	
+	DirtyRectLogger(left, top, right - left + 1, bottom - top + 1);
 }
 void VidFillRectVGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom)
 {
@@ -597,6 +603,8 @@ void VidFillRectVGradient(unsigned colorL, unsigned colorR, int left, int top, i
 		for (int x = left; x <= right; x++)
 			VidPlotPixelInline(x, y, color);
 	}
+	
+	DirtyRectLogger(left, top, right - left + 1, bottom - top + 1);
 }
 void VidDrawHLine(unsigned color, int left, int right, int y)
 {
@@ -611,6 +619,8 @@ void VidDrawHLine(unsigned color, int left, int right, int y)
 		VidPlotPixelInline(x, y, color);
 		VidPlotPixelInline(x, y, color);
 	}
+	
+	DirtyRectLogger(left, y, right - left + 1, 1);
 }
 void VidDrawVLine(unsigned color, int top, int bottom, int x)
 {
@@ -625,6 +635,8 @@ void VidDrawVLine(unsigned color, int top, int bottom, int x)
 		VidPlotPixelInline(x, y, color);
 		VidPlotPixelInline(x, y, color);
 	}
+	
+	DirtyRectLogger(x, top, 1, bottom - top + 1);
 }
 int absinl(int i)
 {
@@ -675,6 +687,7 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 		}
 		
 		VidPlotPixelInline(x, y, p);
+		DirtyRectLogger (x, y, 1, 1);
 		
 		for (int i = 0; x < xe; i++)
 		{
@@ -687,6 +700,7 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 				px += 2 * (dy1 - dx1);
 			}
 			VidPlotPixelInline(x, y, p);
+			DirtyRectLogger (x, y, 1, 1);
 		}
 	}
 	else
@@ -701,6 +715,7 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 		}
 		
 		VidPlotPixelInline(x, y, p);
+		DirtyRectLogger (x, y, 1, 1);
 		
 		for (int i = 0; y < ye; i++)
 		{
@@ -713,21 +728,12 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 				py += 2 * (dx1 - dy1);
 			}
 			VidPlotPixelInline(x, y, p);
+			DirtyRectLogger (x, y, 1, 1);
 		}
 	}
 }
 void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 {
-	//TODO: memcpy method.
-	/*const uint32_t* fb = pImage->framebuffer;
-	
-	int ixe = x + pImage->width, iye = y + pImage->height;
-	for (int iy = y; iy < iye; iy++)
-		for (int ix = x; ix < ixe; ix++)
-		{
-			VidPlotPixelInline(ix, iy, *(fb++));
-		}*/
-	
 	// TODO: More complete fill-in of the VBEData structure
 	VBEData data;
 	data.m_bitdepth = 2;
@@ -743,6 +749,8 @@ void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 		0, 0,
 		BOP_SRCCOPY
 	);
+	
+	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
 void VidBlitImage(Image* pImage, int x, int y)
 {
@@ -756,6 +764,8 @@ void VidBlitImage(Image* pImage, int x, int y)
 				VidPlotPixelInline(ix, iy, *fb);
 			fb++;
 		}
+	
+	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
 void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 {
@@ -769,6 +779,8 @@ void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 				VidPlotPixelInline(ix, iy, color);
 			fb++;
 		}
+	
+	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
@@ -789,6 +801,8 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 				VidPlotPixel (gx+x, gy+y, pixel);
 		}
 	}
+	
+	DirtyRectLogger(gx, gy, width, height);
 }
 void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, uint32_t outline)
 {
@@ -808,6 +822,8 @@ void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, 
 				VidPlotPixel (gx+x, gy+y, outline);
 		}
 	}
+	
+	DirtyRectLogger(gx, gy, width, height);
 }
 void VidDrawRect(unsigned color, int left, int top, int right, int bottom)
 {
@@ -988,6 +1004,8 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 				memcpy_ints(pdoffset, psoffset, width);
 			}
 		}
+		
+		DirtyRectLogger(x1, y1, width, height);
 	}
 	else if (mode == BOP_DSTFILL)
 	{
@@ -1007,6 +1025,7 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 				memset_ints(pdoffset, x1, width);
 			}
 		}
+		DirtyRectLogger(x1, y1, width, height);
 	}
 	else SLogMsg("TODO: VidBitBlit mode %x");
 }
@@ -1279,7 +1298,6 @@ static inline void RenderCursorStretchy(void)
 		}
 	}
 }
-
 
 void RenderCursor(void)
 {
@@ -1646,7 +1664,7 @@ Point GetMousePos ()
 void SetMousePos (unsigned newX, unsigned newY)
 {
 	//NOTE: As this is called in an interrupt too, a call here might end up coming right
-	//while we we're drawing a window or something.  Keep a backup of the previous settings.
+	//while we we're drawing a  or something.  Keep a backup of the previous settings.
 	
 	VBEData* backup = g_vbeData;
 	g_vbeData = &g_mainScreenVBEData;
@@ -1679,7 +1697,7 @@ void SetMousePos (unsigned newX, unsigned newY)
 void VidInitializeVBEData(multiboot_info_t* pInfo, uintptr_t address)
 {
 	int bpp = pInfo->framebuffer_bpp;
-	g_vbeData->m_available = true;
+	g_vbeData->m_version   = VBEDATA_VERSION_1;
 	g_vbeData->m_width     = pInfo->framebuffer_width;
 	g_vbeData->m_height    = pInfo->framebuffer_height;
 	if (bpp == 32)
@@ -1756,7 +1774,7 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 		}
 		
 		//Assume that everything went ok, and set our main screen VBE data to have that:
-		g_mainScreenVBEData.m_available = true;
+		g_mainScreenVBEData.m_version   = VBEDATA_VERSION_1;
 		g_mainScreenVBEData.m_width     = xSize;
 		g_mainScreenVBEData.m_height    = ySize;
 		g_mainScreenVBEData.m_pitch     = xSize * 4;//TODO: Hack
@@ -1813,7 +1831,7 @@ void VidInit()
 	
 	g_vbeData = &g_mainScreenVBEData;
 	
-	g_vbeData->m_available = false;
+	g_vbeData->m_version = 0;
 	
 	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
 	{
@@ -1875,5 +1893,117 @@ void VidInit()
 		//LogMsg("Warning: no VBE mode specified.");
 		//sti;
 	}
+}
+#endif
+
+// Dirty rect logger
+#if 1
+
+void DisjointRectSetRemove(DsjRectSet* pSet, int rectangle_index)
+{
+	memcpy (&pSet->m_rects[rectangle_index], &pSet->m_rects[rectangle_index + 1], sizeof(Rectangle) * (DSJ_RECT_SET_MAX - rectangle_index - 1));
+	pSet->m_rectCount--;
+}
+
+bool RectangleOverlapTolerant(Rectangle* r1, Rectangle* r2)
+{
+	return (r1->left - 3 <= r2->right + 3 && r1->right + 3 >= r2->left - 3 && r1->top - 3 <= r2->bottom + 3 && r1->bottom + 3 >= r2->top - 3);
+}
+
+// if r2 is FULLY inside r1
+bool RectangleFullyInside(Rectangle* r1, Rectangle* r2)
+{
+	// r2 is fully contained inside r1
+	return (
+	r1->left <= r2->left && r2->right  <= r1->right  &&
+	r1->top  <= r2->top  && r2->bottom <= r1->bottom
+	);
+}
+void DisjointRectSetClear (DsjRectSet *pSet)
+{
+	pSet->m_bIgnoreAndDrawAll = 0;
+	pSet->m_rectCount = 0;
+}
+
+//returns whether or not the DRS changed
+bool DisjointRectSetAddNoShatter (DsjRectSet *pSet, Rectangle rect)
+{
+	cli;//should I do this?
+	for (int i = 0; i != pSet->m_rectCount; i++)
+	{
+		Rectangle* arect = &pSet->m_rects[i];
+		if (RectangleFullyInside(arect, &rect)) return false; //nothing changed
+		
+		//check if the rectangles intersect
+		if (RectangleOverlapTolerant (arect, &rect))
+		{
+			//yes, let's just merge them both
+			int left   = arect->left;   if (left   > rect.left)   left   = rect.left;
+			int top    = arect->top;    if (top    > rect.top)    top    = rect.top;
+			int right  = arect->right;  if (right  < rect.right)  right  = rect.right;
+			int bottom = arect->bottom; if (bottom < rect.bottom) bottom = rect.bottom;
+
+			arect->left   = left;
+			arect->top    = top;
+			arect->right  = right;
+			arect->bottom = bottom;
+
+			return true;
+		}
+		
+		// check if the rectangles only touch, TODO unscrew up this
+		if (arect->left == rect.right)
+			arect->left =  rect.left;
+		if (arect->right == rect.left)
+			arect->right =  rect.right;
+		if (arect->top == rect.bottom)
+			arect->top =  rect.top;
+		if (arect->bottom == rect.top)
+			arect->bottom =  rect.bottom;
+	}
+	if (pSet->m_rectCount == DSJ_RECT_SET_MAX)
+	{
+		// All, hell naw!
+		// There's another check for this, but why not check here too? Maybe this'll get called
+		// from something by itself instead of just calling DisjointRectSetAdd.
+		// Bail and draw everything.
+		pSet->m_bIgnoreAndDrawAll = true;
+		DisjointRectSetClear(pSet);
+		return false;
+	}
+	pSet->m_rects[pSet->m_rectCount++] = rect;
+	sti;
+	return true;
+}
+void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
+{
+	if (pSet->m_rectCount == DSJ_RECT_SET_MAX)
+	{
+		// Overloaded! Screw it, draw everything
+		pSet->m_bIgnoreAndDrawAll = true;
+		DisjointRectSetClear(pSet);
+	}
+	DisjointRectSetAddNoShatter(pSet, rect);
+}
+// The function a vbedata will use to let us know of changes
+void DirtyRectLogger (int x, int y, int width, int height)
+{
+	if (g_vbeData->m_version < VBEDATA_VERSION_2)
+		return;
+	
+	Rectangle rect = { x, y, x + width, y + height };
+	DisjointRectSetAdd(&g_vbeData->m_drs, rect);
+}
+void VidCorruptScreenForTesting()
+{
+	VBEData* backup = g_vbeData;
+	if (g_vbeData != &g_mainScreenVBEData)
+	{
+		g_vbeData = &g_mainScreenVBEData;
+	}
+	
+	VidPrintTestingPattern();
+	
+	g_vbeData = backup;
 }
 #endif

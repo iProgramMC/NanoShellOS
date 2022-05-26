@@ -87,6 +87,7 @@ BitmapFont;
 		{
 			VidPlotPixelToCopyInlineUnsafeF(x, y, color);
 			VidPlotPixelRaw32IF (x, y, color);
+			DirtyRectLogger (x, y, 1, 1);
 		}
 	}
 	
