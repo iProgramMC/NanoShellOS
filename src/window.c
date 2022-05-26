@@ -2329,6 +2329,11 @@ Control* GetControlByComboID(Window* pWindow, int comboID)
 //Returns an index, because we might want to relocate the m_pControlArray later.
 int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
+	if (type == CONTROL_SIMPLE_VLINE)
+	{
+		type = CONTROL_SIMPLE_HLINE;
+		p1 |= 1;
+	}
 	if (!pWindow->m_pControlArray)
 	{
 		VidSetVBEData(NULL);

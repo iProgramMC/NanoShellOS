@@ -14,6 +14,8 @@
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
+#define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
+
 //TODO: Move this to its own space.
 typedef struct
 {
@@ -43,6 +45,21 @@ enum
 	MENU$FILE$EXIT, MENU$VIEW$CHVWMOD,
 	MENU$FILE$MRD,
 	
+	//TODO: implement functionality for most of these
+	//the coolbar is still in its planning phase :)
+	CB$BACK,      //
+	CB$FWD,       //
+	CB$PROPERTIES,//pops out a 'properties' dialog
+	CB$SEARCH,    //allows to search rescursively in a directory
+	CB$COPY,      //copies a file path name to the clipboard
+	CB$PASTE,     //
+	CB$UNDO,      //
+	CB$REDO,      //
+	CB$VIEWICON,  //
+	CB$VIEWLIST,  //
+	CB$VIEWTABLE, //
+	CB$WHATSTHIS, //pops out 'help' at, say, <root>/Help/Cabinet.md?
+	CB$PACKAGER,  //zip archive?
 };
 
 void CabinetMountRamDisk(Window *pwnd, const char *pfn)
@@ -114,7 +131,7 @@ void RequestTaskbarUpdate();
 void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
-	ResetList        (pWindow, MAIN_LISTVIEW);
+	ResetList (pWindow, MAIN_LISTVIEW);
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 		AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
@@ -239,8 +256,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	{
 		case EVENT_PAINT:
 		{
-			VidTextOut (g_cbntOldCWD, 8, 15 + TITLE_BAR_HEIGHT*2, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut (g_cabinetCWD, 8, 15 + TITLE_BAR_HEIGHT*2,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cbntOldCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cabinetCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
 			strcpy(g_cbntOldCWD, g_cabinetCWD);
 			break;
 		}
@@ -425,6 +442,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						break;
 				}
 			}
+			else
+				MessageBox(pWindow, "Not implemented!  Check back later or something", "Cabinet", MB_OK | ICON_INFO << 16);
 			break;
 		}
 		case EVENT_CREATE:
@@ -434,7 +453,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			// Add a list view control.
 			
 			#define PADDING_AROUND_LISTVIEW 8
-			#define TOP_PADDING             36
+			#define TOP_PADDING             (TITLE_BAR_HEIGHT+18+COOLBAR_BUTTON_HEIGHT)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
@@ -469,6 +488,51 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			strcpy (g_cabinetCWD, "/");
 			
 			UpdateDirectoryListing (pWindow);
+			
+			// Add the cool bar widgets
+			int i = 0;
+			int button_icons[] = {
+				ICON_BACK, ICON_FORWARD,
+				-1,
+				ICON_COPY, ICON_PASTE,
+				-1,
+				ICON_UNDO, ICON_REDO,
+				-1,
+				ICON_VIEW_ICON, ICON_VIEW_TABLE,
+				-1,
+				ICON_PROPERTIES, ICON_FILE_SEARCH,
+				ICON_WHATS_THIS, ICON_PACKAGER,
+			};
+			int button_actions[] = {
+				CB$BACK, CB$FWD,
+				-1,
+				CB$COPY, CB$PASTE,
+				-1,
+				CB$UNDO, CB$REDO, 
+				-1,
+				CB$PROPERTIES, CB$SEARCH,
+				CB$WHATSTHIS, CB$PACKAGER,
+			};
+			int x_pos = PADDING_AROUND_LISTVIEW;
+			for (i = 0; i < (int)ARRAY_COUNT(button_icons); i++)
+			{
+				if (button_icons[i] == 0)
+					continue; // none
+				if (button_icons[i] == -1)
+				{
+					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, 5, COOLBAR_BUTTON_HEIGHT);
+					//add a simple vertical line
+					AddControl(pWindow, CONTROL_SIMPLE_VLINE, r, NULL, 0, 0, 0);
+					x_pos += 5;
+				}
+				else
+				{
+					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
+					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CB$BACK + i, button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
+					
+					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);
+				}
+			}
 			
 			break;
 		}

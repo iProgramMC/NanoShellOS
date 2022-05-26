@@ -102,7 +102,10 @@ bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		case EVENT_PAINT:
 		{
 			// Draw a rectangle to surround the things we put inside
-			VidDrawHLine(WINDOW_BACKGD_COLOR - 0x0F0F0F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
+			if (this->m_parm1 & 1)
+				VidDrawVLine(WINDOW_BACKGD_COLOR - 0x2F2F2F, this->m_rect.top + 8, this->m_rect.bottom - 8, (this->m_rect.left + this->m_rect.right) / 2);
+			else
+				VidDrawHLine(WINDOW_BACKGD_COLOR - 0x2F2F2F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
 			
 			break;
 		}

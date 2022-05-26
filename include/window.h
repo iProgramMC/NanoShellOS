@@ -219,7 +219,9 @@ enum {
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
-	CONTROL_COUNT
+	CONTROL_COUNT,
+	
+	CONTROL_SIMPLE_VLINE = -CONTROL_SIMPLE_HLINE, // macro for CONTROL_SIMPLE_HLINE with parm1 = 1
 };
 
 enum
