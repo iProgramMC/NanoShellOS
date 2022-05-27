@@ -13,6 +13,8 @@
 #include <task.h>
 #include <misc.h>
 
+#define VISIBLE_DRAW_BORDER_THICKNESS 1
+
 // Basic definitions for video
 #if 1
 
@@ -1136,19 +1138,21 @@ static inline void RenderCursorOpaque(void)
 		{
 			if (ky < 0) i = -ky, ky = 0;
 			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                            ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                            ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                        ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky)^0xFFFFFFFF);
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + i,                          ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + i,                          ky) ^ 0xFFFFFFFF);
+				VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1-i, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->width-1-i, ky) ^ 0xFFFFFFFF);
+			}
 		}
 		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
 		{
 			if (kx < 0) j = -kx, kx = 0;
 			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                             VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                            )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                        )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-2)^0xFFFFFFFF);
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + i,                           VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + i                          ) ^ 0xFFFFFFFF);
+				VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1-i, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->height-1-i) ^ 0xFFFFFFFF);
+			}
 		}
 		return;
 	}
@@ -1223,19 +1227,21 @@ static inline void RenderCursorStretchy(void)
 		{
 			if (ky < 0) i = -ky, ky = 0;
 			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs,                                  ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + 1,                              ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky)^0xFFFFFFFF);
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + i,                                ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + i,                                ky) ^ 0xFFFFFFFF);
+				VidPlotPixelIgnoreCursorChecksChecked(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1-i, ky, VidReadPixel(g_mouseX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1-i, ky) ^ 0xFFFFFFFF);
+			}
 		}
 		for (int j = 0, kx=g_mouseX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
 		{
 			if (kx < 0) j = -kx, kx = 0;
 			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs,                                   VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs                                  )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + 1                              )^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1)^0xFFFFFFFF);
-			VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2)^0xFFFFFFFF);
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + i,                                 VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + i                                ) ^ 0xFFFFFFFF);
+				VidPlotPixelIgnoreCursorChecksChecked(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1-i, VidReadPixel(kx, g_mouseY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1-i) ^ 0xFFFFFFFF);
+			}
 		}
 		return;
 	}
@@ -1355,19 +1361,21 @@ static inline void RedrawOldPixelsOpaque(int oldX, int oldY)
 		{
 			if (ky < 0) i = -ky, ky = 0;
 			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                            ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                            ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                        ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                        ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1, ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-2, ky));
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + i,                          ky, VidReadPixel(oldX - g_currentCursor->leftOffs + i,                          ky));
+				VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1-i, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->width-1-i, ky));
+			}
 		}
 		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->width; j++, kx++)
 		{
 			if (kx < 0) j = -kx, kx = 0;
 			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                             VidReadPixel(kx, oldY - g_currentCursor->topOffs                            ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                         VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                        ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-2));
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + i,                           VidReadPixel(kx, oldY - g_currentCursor->topOffs + i                          ));
+				VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1-i, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->height-1-i));
+			}
 		}
 		return;
 	}
@@ -1496,19 +1504,21 @@ static inline void RedrawOldPixelsStretchy(int oldX, int oldY)
 		{
 			if (ky < 0) i = -ky, ky = 0;
 			if (ky >= GetScreenHeight()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs,                                  ky, VidReadPixel(oldX - g_currentCursor->leftOffs,                                  ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + 1,                              ky, VidReadPixel(oldX - g_currentCursor->leftOffs + 1,                              ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1, ky));
-			VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-2, ky));
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + i,                                ky, VidReadPixel(oldX - g_currentCursor->leftOffs + i,                                ky));
+				VidPlotPixelIgnoreCursorChecksChecked(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1-i, ky, VidReadPixel(oldX - g_currentCursor->leftOffs + g_currentCursor->boundsWidth-1-i, ky));
+			}
 		}
 		for (int j = 0, kx=oldX - g_currentCursor->leftOffs; j < g_currentCursor->boundsWidth; j++, kx++)
 		{
 			if (kx < 0) j = -kx, kx = 0;
 			if (kx >= GetScreenWidth()) break;
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs,                                   VidReadPixel(kx, oldY - g_currentCursor->topOffs                                        ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + 1,                               VidReadPixel(kx, oldY - g_currentCursor->topOffs + 1                                    ));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1));
-			VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-2));
+			for (int i = 0; i < VISIBLE_DRAW_BORDER_THICKNESS; i++)
+			{
+				VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + i,                                 VidReadPixel(kx, oldY - g_currentCursor->topOffs + i                                ));
+				VidPlotPixelIgnoreCursorChecksChecked(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1-i, VidReadPixel(kx, oldY - g_currentCursor->topOffs + g_currentCursor->boundsHeight-1-i));
+			}
 		}
 		return;
 	}
