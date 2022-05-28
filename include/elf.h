@@ -131,7 +131,8 @@ enum
 	//...
 };
 
-#define DEFAULT_HEAP_SIZE 4096
+int GetDefaultHeapSize();
+void SetDefaultHeapSize(int);
 
 void ElfPerformTest();
 const char *ElfGetErrorMsg (int error_code);

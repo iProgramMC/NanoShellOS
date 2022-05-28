@@ -10,6 +10,17 @@
 #include <vfs.h>
 #include <task.h>
 #include <process.h>
+#include <config.h>
+
+int gDefaultHeapSize = 4096;
+void SetDefaultHeapSize(int e)
+{
+	gDefaultHeapSize = e;
+}
+int GetDefaultHeapSize()
+{
+	return gDefaultHeapSize;
+}
 
 //#define ELF_DEBUG
 #ifdef ELF_DEBUG

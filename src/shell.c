@@ -265,7 +265,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			int* er = MmAllocateK(sizeof(int));
-			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, DEFAULT_HEAP_SIZE, er);
+			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, GetDefaultHeapSize(), er);
 			
 			if (ec != ELF_ERROR_NONE)
 			{
