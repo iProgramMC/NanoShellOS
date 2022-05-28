@@ -2016,4 +2016,9 @@ void VidCorruptScreenForTesting()
 	
 	g_vbeData = backup;
 }
+void DirtyRectInvalidateAll()
+{
+	g_vbeData->m_drs.m_bIgnoreAndDrawAll = true;
+	DisjointRectSetClear(&g_vbeData->m_drs);
+}
 #endif

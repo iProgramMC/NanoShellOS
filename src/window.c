@@ -3155,6 +3155,8 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_SIZE)
 	{
+		DirtyRectInvalidateAll();
+		
 		PaintWindowBackgroundAndBorder(pWindow);
 		
 		// Update controls based on their anchoring modes.

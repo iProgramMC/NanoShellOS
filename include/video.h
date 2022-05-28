@@ -167,6 +167,8 @@ void DirtyRectLogger (int x, int y, int width, int height);
 void DisjointRectSetClear (DsjRectSet *pSet);
 // Corrupt the screen for testing
 void VidCorruptScreenForTesting();
+// Invalidate everything!
+void DirtyRectInvalidateAll();
 
 #define FLAGS_TOO(flags, color) (flags | (color & 0XFFFFFF))
 
