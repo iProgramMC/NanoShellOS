@@ -1929,18 +1929,68 @@ bool RectangleFullyInside(Rectangle* r1, Rectangle* r2)
 }
 void DisjointRectSetClear (DsjRectSet *pSet)
 {
+	pSet->m_rectCount = 0;
+	pSet->m_bIgnoreAndDrawAll = false;
 }
 
-//returns whether or not the DRS changed
-bool DisjointRectSetAddNoShatter (DsjRectSet *pSet, Rectangle rect)
-{
-}
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
+	if (rect.left < 0) rect.left = 0;
+	if (rect.top  < 0) rect.top  = 0;
+	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
+	if (rect.bottom >= GetScreenSizeY()) rect.bottom = GetScreenSizeY();
+	
+	cli;
+	for (int i = 0; i != pSet->m_rectCount; i++)
+	{
+		Rectangle* arect = &pSet->m_rects[i];
+		if (RectangleFullyInside(arect, &rect))
+		{
+			sti;
+			return; //nothing changed
+		}
+
+		//check if the rectangles intersect
+		if (RectangleOverlapTolerant (arect, &rect))
+		{
+			//yes, let's just merge them both
+			int left   = arect->left;   if (left   > rect.left)   left   = rect.left;
+			int top    = arect->top;    if (top    > rect.top)    top    = rect.top;
+			int right  = arect->right;  if (right  < rect.right)  right  = rect.right;
+			int bottom = arect->bottom; if (bottom < rect.bottom) bottom = rect.bottom;
+
+			arect->left   = left;
+			arect->top    = top;
+			arect->right  = right;
+			arect->bottom = bottom;
+
+			sti;
+			return;
+		}
+	}
+	if (pSet->m_rectCount >= 100)
+	{
+		// All, hell naw!
+		// There's another check for this, but why not check here too? Maybe this'll get called
+		// from something by itself instead of just calling DisjointRectSetAdd.
+		// Bail and draw everything.
+		pSet->m_bIgnoreAndDrawAll = true;
+		DisjointRectSetClear(pSet);
+		sti;
+		return;
+	}
+	//merging will be done by the window manager itself
+	pSet->m_rects[pSet->m_rectCount++] = rect;
+	sti;
 }
 // The function a vbedata will use to let us know of changes
 void DirtyRectLogger (int x, int y, int width, int height)
 {
+	if (g_vbeData->m_version < VBEDATA_VERSION_2)
+		return;
+
+	Rectangle rect = { x, y, x + width, y + height };
+	DisjointRectSetAdd(&g_vbeData->m_drs, rect);
 }
 void VidCorruptScreenForTesting()
 {

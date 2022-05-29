@@ -130,13 +130,13 @@ enum
 };
 
 // The disjoint rect set, for tracking dirty rectangles
-#define DSJ_RECT_SET_MAX 64
+#define DSJ_RECT_SET_MAX 128 //2kb for now... Not great.
 typedef struct DsjRectSet
 {
 	// an emergency "screw it, draw it all" button if the pool gets exhausted
 	bool      m_bIgnoreAndDrawAll;
-	Rectangle m_rects[DSJ_RECT_SET_MAX];
 	int       m_rectCount;
+	Rectangle m_rects[DSJ_RECT_SET_MAX];
 }
 DsjRectSet;
 

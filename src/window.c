@@ -2715,11 +2715,11 @@ void RenderWindow (Window* pWindow)
 	}
 	
 	//to avoid clashes with other threads printing, TODO use a safelock!!
-	//cli;
-	//DsjRectSet local_copy;
-	//memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
-	//DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
-	//sti;
+	cli;
+	DsjRectSet local_copy;
+	memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
+	DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
+	sti;
 	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
@@ -2736,7 +2736,7 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 	
-	/*if (!local_copy.m_bIgnoreAndDrawAll)
+	if (!local_copy.m_bIgnoreAndDrawAll)
 	{
 		for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
@@ -2750,10 +2750,10 @@ void RenderWindow (Window* pWindow)
 			if (e->bottom >= (int)pWindow->m_vbeData.m_height)
 				e->bottom  = (int)pWindow->m_vbeData.m_height;
 		}
-	}*/
+	}
 	if (pWindow->m_bForemost)
 	{
-		//if (local_copy.m_bIgnoreAndDrawAll)
+		if (local_copy.m_bIgnoreAndDrawAll)
 		{
 			//optimization
 			VidBitBlit(
@@ -2767,7 +2767,7 @@ void RenderWindow (Window* pWindow)
 				BOP_SRCCOPY
 			);
 		}
-		/*else for (int i = 0; i < local_copy.m_rectCount; i++)
+		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
 			Rectangle e = local_copy.m_rects[i];
 			//optimization
@@ -2781,7 +2781,7 @@ void RenderWindow (Window* pWindow)
 				e.left, e.top,
 				BOP_SRCCOPY
 			);
-		}*/
+		}
 	}
 	else
 	{
@@ -2790,11 +2790,11 @@ void RenderWindow (Window* pWindow)
 		
 		int x2 = x + tw, y2 = y + th;
 		
-		//if (local_copy.m_bIgnoreAndDrawAll)
+		if (local_copy.m_bIgnoreAndDrawAll)
 		{
 			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
 		}
-		/*else for (int i = 0; i < local_copy.m_rectCount; i++)
+		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
 			Rectangle e = local_copy.m_rects[i];
 			WindowBlitTakingIntoAccountOcclusions(
@@ -2809,7 +2809,7 @@ void RenderWindow (Window* pWindow)
 				e.left,
 				e.top
 			);
-		}*/
+		}
 	}
 }
 extern const unsigned char* g_pCurrentFont;
