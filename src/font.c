@@ -383,8 +383,8 @@ void KillFont (int fontID)
 					
 					if (c == 255)
 					{
-						VidPlotPixel (ox+xi, oy+yi, colorFg);
-						if (bold) VidPlotPixel (ox+xi+bold, oy+yi, colorFg);
+						VidPlotPixelInlineF (ox+xi, oy+yi, colorFg);
+						if (bold) VidPlotPixelInlineF (ox+xi+bold, oy+yi, colorFg);
 					}
 					else
 					{
@@ -393,7 +393,7 @@ void KillFont (int fontID)
 							uint8_t ro = (((colorBg>>16)&255)*(256-c)+((colorFg>>16)&255)*(c))/256;\
 							uint8_t go = (((colorBg>> 8)&255)*(256-c)+((colorFg>> 8)&255)*(c))/256;\
 							uint8_t bo = (((colorBg>> 0)&255)*(256-c)+((colorFg>> 0)&255)*(c))/256;\
-							VidPlotPixel (ox+xi, oy+yi, ro<<16|go<<8|bo);\
+							VidPlotPixelInlineF (ox+xi, oy+yi, ro<<16|go<<8|bo);\
 						}
 						
 						Blend(ox,xi,oy,yi);
@@ -402,6 +402,8 @@ void KillFont (int fontID)
 					}
 				}
 			}
+			
+			DirtyRectLogger(ox + pFont->m_charInfo[id].xoffset, oy + pFont->m_charInfo[id].yoffset, pFont->m_charInfo[id].cwidth, pFont->m_charInfo[id].cheight);
 			
 			return;
 		}
@@ -419,13 +421,15 @@ void KillFont (int fontID)
 				{
 					if (test1 & bitmask)
 					{
-						VidPlotPixel(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixel(ox + x, oy + y, colorBg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
 				}
 			}
+			
+			DirtyRectLogger(ox, oy, width, height);
 		}
 		else if (g_pCurrentFont[2] == FONTTYPE_GLCD)
 		{
@@ -437,24 +441,28 @@ void KillFont (int fontID)
 				{
 					if (test[c * width + x] & bitmask)
 					{
-						VidPlotPixel(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixel(ox + x, oy + y, colorBg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
 				}
 			}
 			if (colorBg != TRANSPARENT)
 				for (int y = 0; y < height; y++)
 				{
-					VidPlotPixel(ox + x, oy + y, colorBg);
+					VidPlotPixelInlineF(ox + x, oy + y, colorBg);
 				}
+			
+			DirtyRectLogger(ox, oy, width, height);
 		}
 		else
 		{
 			if (c == 0x5)
 			{
 				RenderIcon(ICON_NANOSHELL16, ox, oy + (g_pCurrentFont[1] - 16) / 2);
+				
+				DirtyRectLogger(ox, oy, 16, 16);
 				return;
 			}
 			for (int y = 0; y < height; y++)
@@ -464,13 +472,15 @@ void KillFont (int fontID)
 				{
 					if (test[c * height + y] & bitmask)
 					{
-						VidPlotPixel(ox + x, oy + y, colorFg);
-						if (bold) VidPlotPixel(ox + x + bold, oy + y, colorFg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
 					}
 					else if (colorBg != TRANSPARENT)
-						VidPlotPixel(ox + x, oy + y, colorBg);
+						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
 				}
 			}
+			
+			DirtyRectLogger(ox, oy, width, height);
 		}
 	}
 	void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx)

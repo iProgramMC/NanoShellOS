@@ -451,7 +451,7 @@ inline void VidPlotPixelInline(unsigned x, unsigned y, unsigned color)
 void VidPlotPixel(unsigned x, unsigned y, unsigned color)
 {
 	VidPlotPixelInline(x, y, color);
-	DirtyRectLogger (x, y, 1, 1);
+	//DirtyRectLogger (x, y, 1, 1);
 }
 static void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color)
 {
@@ -800,7 +800,7 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 			
 			uint32_t pixel = p->framebuffer[xgrab + p->width * ygrab];
 			if (pixel != TRANSPARENT)
-				VidPlotPixel (gx+x, gy+y, pixel);
+				VidPlotPixelInline (gx+x, gy+y, pixel);
 		}
 	}
 	
@@ -821,7 +821,7 @@ void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, 
 			int ygrab = y * p->height/ height;
 			
 			if (p->framebuffer[xgrab + p->width * ygrab] != TRANSPARENT)
-				VidPlotPixel (gx+x, gy+y, outline);
+				VidPlotPixelInline (gx+x, gy+y, outline);
 		}
 	}
 	
@@ -1911,8 +1911,6 @@ void VidInit()
 
 void DisjointRectSetRemove(DsjRectSet* pSet, int rectangle_index)
 {
-	memcpy (&pSet->m_rects[rectangle_index], &pSet->m_rects[rectangle_index + 1], sizeof(Rectangle) * (DSJ_RECT_SET_MAX - rectangle_index - 1));
-	pSet->m_rectCount--;
 }
 
 bool RectangleOverlapTolerant(Rectangle* r1, Rectangle* r2)
@@ -1931,78 +1929,18 @@ bool RectangleFullyInside(Rectangle* r1, Rectangle* r2)
 }
 void DisjointRectSetClear (DsjRectSet *pSet)
 {
-	pSet->m_bIgnoreAndDrawAll = 0;
-	pSet->m_rectCount = 0;
 }
 
 //returns whether or not the DRS changed
 bool DisjointRectSetAddNoShatter (DsjRectSet *pSet, Rectangle rect)
 {
-	cli;//should I do this?
-	for (int i = 0; i != pSet->m_rectCount; i++)
-	{
-		Rectangle* arect = &pSet->m_rects[i];
-		if (RectangleFullyInside(arect, &rect)) return false; //nothing changed
-		
-		//check if the rectangles intersect
-		if (RectangleOverlapTolerant (arect, &rect))
-		{
-			//yes, let's just merge them both
-			int left   = arect->left;   if (left   > rect.left)   left   = rect.left;
-			int top    = arect->top;    if (top    > rect.top)    top    = rect.top;
-			int right  = arect->right;  if (right  < rect.right)  right  = rect.right;
-			int bottom = arect->bottom; if (bottom < rect.bottom) bottom = rect.bottom;
-
-			arect->left   = left;
-			arect->top    = top;
-			arect->right  = right;
-			arect->bottom = bottom;
-
-			return true;
-		}
-		
-		// check if the rectangles only touch, TODO unscrew up this
-		if (arect->left == rect.right)
-			arect->left =  rect.left;
-		if (arect->right == rect.left)
-			arect->right =  rect.right;
-		if (arect->top == rect.bottom)
-			arect->top =  rect.top;
-		if (arect->bottom == rect.top)
-			arect->bottom =  rect.bottom;
-	}
-	if (pSet->m_rectCount == DSJ_RECT_SET_MAX)
-	{
-		// All, hell naw!
-		// There's another check for this, but why not check here too? Maybe this'll get called
-		// from something by itself instead of just calling DisjointRectSetAdd.
-		// Bail and draw everything.
-		pSet->m_bIgnoreAndDrawAll = true;
-		DisjointRectSetClear(pSet);
-		return false;
-	}
-	pSet->m_rects[pSet->m_rectCount++] = rect;
-	sti;
-	return true;
 }
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
-	if (pSet->m_rectCount == DSJ_RECT_SET_MAX)
-	{
-		// Overloaded! Screw it, draw everything
-		pSet->m_bIgnoreAndDrawAll = true;
-		DisjointRectSetClear(pSet);
-	}
-	DisjointRectSetAddNoShatter(pSet, rect);
 }
 // The function a vbedata will use to let us know of changes
 void DirtyRectLogger (int x, int y, int width, int height)
 {
-	if (g_vbeData->m_version < VBEDATA_VERSION_2)
-		return;
-	
-	Rectangle rect = { x, y, x + width, y + height };
-	DisjointRectSetAdd(&g_vbeData->m_drs, rect);
 }
 void VidCorruptScreenForTesting()
 {
