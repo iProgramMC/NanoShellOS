@@ -83,12 +83,16 @@ BitmapFont;
 	__attribute__((always_inline))
 	inline void VidPlotPixelInlineF(unsigned x, unsigned y, unsigned color)
 	{
-		if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
-		{
-			VidPlotPixelToCopyInlineUnsafeF(x, y, color);
-			VidPlotPixelRaw32IF (x, y, color);
-			DirtyRectLogger (x, y, 1, 1);
-		}
+		if (
+			(int)x <  g_vbeData->m_clipRect.left ||
+			(int)y <  g_vbeData->m_clipRect.top  ||
+			(int)x >= g_vbeData->m_clipRect.right ||
+			(int)y >= g_vbeData->m_clipRect.bottom
+		)
+			return;
+		
+		VidPlotPixelToCopyInlineUnsafeF(x, y, color);
+		VidPlotPixelRaw32IF (x, y, color);
 	}
 	
 	//a VidReadPixel alternative that actually works on anything other than the main screen :)
