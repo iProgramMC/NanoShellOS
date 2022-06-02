@@ -197,7 +197,7 @@ static uint32_t MmFindFreeFrame()
 		//no, continue
 	}
 	//what
-	SLogMsg("WARNING: No more free memory?!  This can result in bad stuff!!");
+	SLogMsg("No more physical memory page frames. This can and will go bad!!");
 	return 0xffffffffu;
 }
 int GetNumFreePhysPages()

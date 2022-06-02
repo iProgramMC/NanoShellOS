@@ -56,6 +56,9 @@ static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalI
 	
 	pItem->m_icon = optionalIcon;
 	strcpy(pItem->m_contents, pText);
+	
+	memcpy (pItem->m_contentsShown, pItem->m_contents, 64);
+	strcpy (pItem->m_contentsShown + sizeof(pItem->m_contentsShown) - 4, "...");
 }
 static void CtlRemoveElementFromList(Control* pCtl, int index, Window* pWindow)
 {
@@ -193,7 +196,7 @@ go_back:
 					if (pData->m_pItems[i].m_icon)
 						RenderIconForceSize (pData->m_pItems[i].m_icon, this->m_rect.left + 4, this->m_rect.top + 2 + j * LIST_ITEM_HEIGHT, 16);
 				}
-				VidTextOut (pData->m_pItems[i].m_contents, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
+				VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
 			}
 			
 			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
@@ -297,6 +300,18 @@ static void CtlIconAddElementToList (Control* pCtlIcon, const char* pText, int o
 	strcpy(pItem->m_contents, pText);
 	
 	//WrapText(pItem->m_contents, pText, ICON_ITEM_WIDTH);
+	
+	memcpy (pItem->m_contentsShown, pItem->m_contents, 64);
+	pItem->m_contentsShown[sizeof(pItem->m_contentsShown) - 1] = 0;
+	
+	char text_wrapped[256];
+	WrapText(text_wrapped, pItem->m_contentsShown, ICON_ITEM_WIDTH);
+	if (text_wrapped[0] == '\n')
+		memcpy(text_wrapped, text_wrapped+1, sizeof(text_wrapped) - 1);
+	
+	memcpy (pItem->m_contentsShown, text_wrapped, 64);
+	
+	strcpy (pItem->m_contentsShown + sizeof(pItem->m_contentsShown) - 4, "...");
 }
 static void CtlIconRemoveElementFromList(Control* pCtlIcon, int index, Window* pWindow)
 {
@@ -408,7 +423,7 @@ go_back:
 					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
 					
 					int w, h;
-					VidTextOutInternal(pData->m_pItems[i].m_contents, 0, 0, 0, 0, true, &w, &h);
+					VidTextOutInternal(pData->m_pItems[i].m_contentsShown, 0, 0, 0, 0, true, &w, &h);
 					
 					int mid = (br.left + br.right) / 2;
 					
@@ -419,8 +434,8 @@ go_back:
 					if (pData->m_pItems[i].m_icon)
 						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, this->m_rect.top + 2 + j * ICON_ITEM_HEIGHT, 32);
 				}
-				//VidTextOut (pData->m_pItems[i].m_contents, this->m_rect.left + 4 + elementX, this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32, color, colorT);
-				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
+				//VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + elementX, this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32, color, colorT);
+				VidDrawText (pData->m_pItems[i].m_contentsShown, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
 				
 				elementX += ICON_ITEM_WIDTH;
 				k++;
@@ -553,6 +568,18 @@ static void CtlIconDragAddElementToList (Control* pCtlIcon, const char* pText, i
 	
 	pItem->m_icon = optionalIcon;
 	strcpy(pItem->m_contents, pText);
+	
+	memcpy (pItem->m_contentsShown, pItem->m_contents, 64);
+	pItem->m_contentsShown[sizeof(pItem->m_contentsShown) - 1] = 0;
+	
+	char text_wrapped[256];
+	WrapText(text_wrapped, pItem->m_contentsShown, ICON_ITEM_WIDTH);
+	if (text_wrapped[0] == '\n')
+		memcpy(text_wrapped, text_wrapped+1, sizeof(text_wrapped) - 1);
+	
+	memcpy (pItem->m_contentsShown, text_wrapped, 64);
+	
+	strcpy (pItem->m_contentsShown + sizeof(pItem->m_contentsShown) - 4, "...");
 	
 	//TODO!
 	//WidgetIconViewDrag_ArrangeIcons(pCtlIcon);
@@ -840,7 +867,7 @@ go_back:
 					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
 					
 					int w, h;
-					VidTextOutInternal(pData->m_pItems[i].m_contents, 0, 0, 0, 0, true, &w, &h);
+					VidTextOutInternal(pData->m_pItems[i].m_contentsShown, 0, 0, 0, 0, true, &w, &h);
 					
 					int mid = (br.left + br.right) / 2;
 					
@@ -852,7 +879,7 @@ go_back:
 						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, y, 32);
 				}
 				
-				VidDrawText (pData->m_pItems[i].m_contents, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
+				VidDrawText (pData->m_pItems[i].m_contentsShown, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
 			}
 			
 			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);

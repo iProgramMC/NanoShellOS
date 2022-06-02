@@ -257,6 +257,7 @@ typedef struct
 	int  m_icon;//can be blank
 	int  m_posX, m_posY; //used for CONTROL_ICONVIEWDRAG
 	char m_contents [128];
+	char m_contentsShown [64]; // padded in the end with '...'
 }
 ListItem;
 

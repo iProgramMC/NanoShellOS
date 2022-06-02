@@ -26,7 +26,7 @@ CharInfo;
 
 typedef struct
 {
-	uint8_t   m_width, m_height, m_type;
+	uint8_t   m_width, m_height, m_type, m_bAlreadyBold;
 	CharInfo  m_charInfo[127-32];//include data for the ASCII printables only
 	uint8_t*  m_bitmap;          //bitmap data is grayscale 0-255
 	uint32_t  m_bmWidth, m_bmHeight;
@@ -229,6 +229,7 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	pFont->m_width    = chheight/2;
 	pFont->m_height   = chheight;
 	pFont->m_type     = FONTTYPE_BITMAP;
+	pFont->m_bAlreadyBold = true; // can't embolden further
 	for (int i = 0; i < 95; i++)
 		pFont->m_charInfo [i] = chinfo [i];
 	
@@ -270,12 +271,12 @@ void KillFont (int fontID)
 		{
 			if (c == 0x5)
 				return 16;
-			return g_pCurrentFont[3 + 256 * g_pCurrentFont[1] + c];
+			return g_pCurrentFont[4 + 256 * g_pCurrentFont[1] + c];
 		}
 		else if (g_pCurrentFont[2] == FONTTYPE_BIG)
 		{
 			if (c > '~' || c < ' ') c = '?';
-			return g_pCurrentFont[3 + g_pCurrentFont[1]*2 * (128-32) + c-32]+1;
+			return g_pCurrentFont[4 + g_pCurrentFont[1]*2 * (128-32) + c-32]+1;
 		}
 		else if (g_pCurrentFont[2] == FONTTYPE_MONOSPACE)
 		{
@@ -361,7 +362,7 @@ void KillFont (int fontID)
 		}
 		
 		bool bold = false;
-		if (colorFg & TEXT_RENDER_BOLD)
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
 		{
 			bold = true;
 		}
@@ -370,7 +371,7 @@ void KillFont (int fontID)
 		bool trans = colorBg == TRANSPARENT;
 		
 		int width = g_pCurrentFont[0], height = g_pCurrentFont[1];
-		const unsigned char* test = g_pCurrentFont + 3;
+		const unsigned char* test = g_pCurrentFont + 4;
 		if (g_pCurrentFont[2] == FONTTYPE_BITMAP)
 		{
 			if (c > '~' || c < ' ') c = '?';
@@ -414,7 +415,7 @@ void KillFont (int fontID)
 		else if (g_pCurrentFont[2] == FONTTYPE_BIG)
 		{
 			if (c > '~' || c < ' ') c = '?';
-			const unsigned char* testa = (const unsigned char*)(g_pCurrentFont + 3);
+			const unsigned char* testa = (const unsigned char*)(g_pCurrentFont + 4);
 			for (int y = 0; y < height; y++)
 			{
 				int to = ((c-' ') * height + y)*2;
@@ -496,7 +497,7 @@ void KillFont (int fontID)
 		int cwidth = 0, height = lineHeight;
 		
 		bool bold = false;
-		if (colorFg & TEXT_RENDER_BOLD)
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
 		{
 			bold = true;
 		}
@@ -551,7 +552,7 @@ void KillFont (int fontID)
 	
 	static int MeasureTextUntilNewLineI (const char* pText, const char** pTextOut, uint32_t flags)
 	{
-		bool bold = (flags & TEXT_RENDER_BOLD) != 0;
+		bool bold = ((flags & TEXT_RENDER_BOLD) && !g_pCurrentFont[3]);
 		int w = 0;
 		while (1)
 		{
@@ -672,7 +673,7 @@ void KillFont (int fontID)
 		int startY = rect.top;
 		
 		bool bold = false;
-		if (colorFg & TEXT_RENDER_BOLD)
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
 		{
 			bold = true;
 		}

@@ -94,7 +94,8 @@ void CrashReportWindow( int argument )
 	AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, 0, TEXTSTYLE_WORDWRAPPED);
 	SetHugeLabelText(pWindow, 2, otherString);
 	
-	RECT(r, 50, winheight/4, winwidth - 60, (winheight-TITLE_BAR_HEIGHT-80));
+	int ylol = (winheight - TITLE_BAR_HEIGHT) / 4 + TITLE_BAR_HEIGHT;
+	RECT(r, 50, ylol, winwidth - 60, (winheight-ylol-40));
 	AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 5, 0);
 	SetTextInputText(pWindow, 4, string);
 	

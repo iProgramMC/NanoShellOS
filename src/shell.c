@@ -472,6 +472,10 @@ void ShellExecuteCommand(char* p)
 	{
 		GraphicsTest();
 	}
+	else if (strcmp (token, "xyzzy") == 0)
+	{
+		LogMsg("Huzzah!");
+	}
 	else if (strcmp (token, "w") == 0)
 	{
 		if (VidIsAvailable())

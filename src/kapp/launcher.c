@@ -5,6 +5,7 @@
        Launcher Application module
 ******************************************/
 
+#include <wtheme.h>
 #include <wbuiltin.h>
 #include <wterm.h>
 #include <wmenu.h>
@@ -497,8 +498,8 @@ void LauncherEntry(__attribute__((unused)) int arg)
 #define TASKBAR_TIME_THING_WIDTH 50
 
 //hack.
-#undef  TITLE_BAR_HEIGHT
-#define TITLE_BAR_HEIGHT 12
+#undef TITLE_BAR_HEIGHT
+#define TITLE_BAR_HEIGHT (GetThemingParameter(P_TITLE_BAR_HEIGHT) - 6)
 
 WindowMenu g_taskbarMenu;
 
@@ -697,12 +698,20 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			Rectangle r;
 			
-			RECT (r, 4, 3, TASKBAR_BUTTON_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_BUTTON, r, "\x05 NanoShell", TASKBAR_HELLO, 0, 0);
+			int wbutton, hbutton;
+			const char *pNanoShellText = "\x05 NanoShell";
+			VidTextOutInternal (pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
+			
+			int btn_width = TASKBAR_BUTTON_WIDTH;
+			if (btn_width < wbutton + 10)
+				btn_width = wbutton + 10;
+			
+			RECT (r, 4, 3, btn_width, TASKBAR_BUTTON_HEIGHT);
+			AddControl(pWindow, CONTROL_BUTTON, r, pNanoShellText, TASKBAR_HELLO, 0, 0);
 			RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH, 3, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
 			
-			int launcherItemPosX = 8 + TASKBAR_BUTTON_WIDTH;
+			int launcherItemPosX = 8 + btn_width;
 			for (int i = 0; i < g_nLauncherItems; i++)
 			{
 				if (g_pLauncherItems[i].m_addToQuickLaunch)

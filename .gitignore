@@ -1,6 +1,9 @@
 #probably not necessary but a good thing to add just in case
 .git/*
 
+src/extra/testa.h
+src/extra/testb.h
+
 #directories I don't want added
 limine
 build/*

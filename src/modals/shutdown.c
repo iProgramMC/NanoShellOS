@@ -86,7 +86,7 @@ int ShutdownBox (Window* pWindow)
 		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
 	}
 	
-	int wSzX = 320, wSzY = 170;
+	int wSzX = 320, wSzY = 170 + TITLE_BAR_HEIGHT - 18;
 	
 	int wPosX = (GetScreenWidth () - wSzX) / 2;
 	int wPosY = (GetScreenHeight() - wSzY) / 2;

@@ -2905,11 +2905,11 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		
 		int offset = (rectb.right - rectb.left - textwidth) / 2;
 		
-		int textOffset = (TITLE_BAR_HEIGHT) / 2 - height;
-		int iconOffset = (TITLE_BAR_HEIGHT) / 2 - 9;
+		int textOffset = (TITLE_BAR_HEIGHT - height) / 2;
+		int iconOffset = (TITLE_BAR_HEIGHT - 16)     / 2;
 		
-		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top + 3 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top + 2 + 2 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top - 0 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top - 1 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
 		if (iconID != ICON_NULL)
@@ -3413,7 +3413,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			{
 				bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
 				
-				#define ACTION_BUTTON_WIDTH 18
+				#define ACTION_BUTTON_WIDTH TITLE_BAR_HEIGHT
 				
 				Rectangle rect;
 				rect.right = pWindow->m_vbeData.m_width - 3 - WINDOW_RIGHT_SIDE_THICKNESS - has3dBorder * 2;

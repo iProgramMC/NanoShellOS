@@ -25,7 +25,7 @@
 // Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
 // in parm1, and the menu item's comboID in parm2.
 
-#define MENU_BAR_HEIGHT 15
+#define MENU_BAR_HEIGHT TITLE_BAR_HEIGHT - 3
 
 void WidgetMenuBar_InitializeMenuBarItemAsEmpty (MenuBarTreeItem* this, int comboID)
 {

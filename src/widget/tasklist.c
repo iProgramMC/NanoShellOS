@@ -96,7 +96,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				// if this window has an icon:
 				if (pWnd->m_iconID)
 				{
-					RenderIconForceSize(pWnd->m_iconID, textX + clicked, this->m_rect.top + 3 + clicked, 16);
+					RenderIconForceSize(pWnd->m_iconID, textX + clicked, this->m_rect.top + 3 + (((this->m_rect.bottom - this->m_rect.top - 6) - 16) / 2) + clicked, 16);
 					textX += 22; 
 				}
 				
