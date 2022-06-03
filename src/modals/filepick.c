@@ -87,8 +87,8 @@ void FilePickerCdBack (Window *pWindow)
 
 //Null but all 0xffffffff's. Useful
 #define FNULL ((void*)0xffffffff)
-#define POPUP_WIDTH  400
-#define POPUP_HEIGHT 400
+#define POPUP_WIDTH  (400)
+#define POPUP_HEIGHT (400-18+TITLE_BAR_HEIGHT)
 void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	if (messageType == EVENT_COMMAND)
@@ -314,11 +314,14 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	rect.left   = 10;
 	rect.top    = 12 + TITLE_BAR_HEIGHT + 60;
 	rect.right  = POPUP_WIDTH - 10;
-	rect.bottom = POPUP_HEIGHT - 120 + 12 + TITLE_BAR_HEIGHT;
+	rect.bottom = POPUP_HEIGHT - 90;
+	
+	//400-18+18 -  120 + 12 + 18
+	
 	AddControl (pBox, CONTROL_ICONVIEW, rect, NULL, 100002, 0, 0);
 	
 	rect.left   = 10;
-	rect.top    = POPUP_HEIGHT - 120 + 12 + TITLE_BAR_HEIGHT + 20;
+	rect.top    = POPUP_HEIGHT - 90 + 20;
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 20;
 	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100000, 0, 0);

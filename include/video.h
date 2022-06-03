@@ -10,6 +10,8 @@
 #include <multiboot.h>
 #include <mouse.h>
 
+#define DIRTY_RECT_TRACK
+
 //Bochs GFX data
 #define VBE_DISPI_BANK_ADDRESS          0xA0000
 #define VBE_DISPI_BANK_SIZE_KB          64
@@ -59,8 +61,8 @@ enum {
 	FONT_TAMSYN_MED_BOLD,
 	FONT_TAMSYN_SMALL_REGULAR,
 	FONT_TAMSYN_SMALL_BOLD,
-	//FONT_BIGTEST,
-	//FONT_BIGTEST2,
+	FONT_BIGTEST,
+	FONT_BIGTEST2,
 	FONT_LAST,
 };
 

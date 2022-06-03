@@ -244,7 +244,7 @@ void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			// Add a list view control.
 			
 			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             36
+			#define TOP_PADDING             (TITLE_BAR_HEIGHT + 18)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 

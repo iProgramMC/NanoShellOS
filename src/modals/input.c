@@ -22,8 +22,8 @@ extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int message
 
 //Null but all 0xffffffff's. Useful
 #define FNULL ((void*)0xffffffff)
-#define POPUP_WIDTH  400
-#define POPUP_HEIGHT 120
+#define POPUP_WIDTH  (400)
+#define POPUP_HEIGHT (120-18+TITLE_BAR_HEIGHT)
 void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	if (messageType == EVENT_COMMAND)

@@ -1935,6 +1935,7 @@ void DisjointRectSetClear (DsjRectSet *pSet)
 
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
+#ifdef DIRTY_RECT_TRACK
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
@@ -1982,15 +1983,18 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	//merging will be done by the window manager itself
 	pSet->m_rects[pSet->m_rectCount++] = rect;
 	sti;
+#endif
 }
 // The function a vbedata will use to let us know of changes
 void DirtyRectLogger (int x, int y, int width, int height)
 {
+#ifdef DIRTY_RECT_TRACK
 	if (g_vbeData->m_version < VBEDATA_VERSION_2)
 		return;
 
 	Rectangle rect = { x, y, x + width, y + height };
 	DisjointRectSetAdd(&g_vbeData->m_drs, rect);
+#endif
 }
 void VidCorruptScreenForTesting()
 {
@@ -2006,7 +2010,9 @@ void VidCorruptScreenForTesting()
 }
 void DirtyRectInvalidateAll()
 {
+#ifdef DIRTY_RECT_TRACK
 	g_vbeData->m_drs.m_bIgnoreAndDrawAll = true;
 	DisjointRectSetClear(&g_vbeData->m_drs);
+#endif
 }
 #endif

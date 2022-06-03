@@ -157,9 +157,9 @@ void CrashReporterCheck()
 }
 
 extern bool g_windowManagerRunning;
+bool IsWindowManagerTask (Task *pTask);
 void CrashReporterCheckNoWindow()
 {
-	if (g_windowManagerRunning) return;
 	
 	if (KeDidATaskCrash())
 	{
@@ -167,6 +167,11 @@ void CrashReporterCheckNoWindow()
 		
 		// Allocate the registers so we can pass them onto the new task.
 		CrashInfo* pCrashInfo, crashInfo = *KeGetCrashedTaskInfo();
+		
+		SLogMsg("CrashReporterCheckNoWindow found a crash!  Oops.");
+		if (!IsWindowManagerTask(crashInfo.m_pTaskKilled->m_pProcess))
+			if (g_windowManagerRunning) return;
+		
 		pCrashInfo = &crashInfo;
 		
 		

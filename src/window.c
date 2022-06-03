@@ -58,6 +58,10 @@ static int          s_internal_action_queue_head,
 //
 
 Task *g_pWindowMgrTask;
+bool IsWindowManagerTask (Window *pWindow)
+{
+	return (KeGetRunningTask() == g_pWindowMgrTask);
+}
 
 bool ActionQueueWouldOverflow()
 {
@@ -1014,9 +1018,7 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 		
 		if (queue_timeout > GetTickCount())
 		{
-			SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!  Marking it as hung...", pWindow, pWindow->m_title);
-			/*
-			*/
+			//SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!  Marking it as hung...", pWindow, pWindow->m_title);
 			return;
 		}
 	}
@@ -2063,7 +2065,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		{
 			WindowAction *pFront = ActionQueueGetFront();
 			
-			SLogMsg("Executing action %d on window %x", pFront->nActionType, pFront->pWindow);
+			//SLogMsg("Executing action %d on window %x", pFront->nActionType, pFront->pWindow);
 			
 			switch (pFront->nActionType)
 			{
@@ -2668,6 +2670,9 @@ void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, i
 		y = 0;
 	}
 	
+	if (x > x2) return;
+	if (y > y2) return;
+	
 	oi += szy * tw + szx;
 	
 	int sx = GetScreenWidth(), sy = GetScreenHeight();
@@ -2715,11 +2720,13 @@ void RenderWindow (Window* pWindow)
 	}
 	
 	//to avoid clashes with other threads printing, TODO use a safelock!!
+#ifdef DIRTY_RECT_TRACK
 	cli;
 	DsjRectSet local_copy;
 	memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
 	DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
 	sti;
+#endif
 	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
@@ -2736,6 +2743,7 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 	
+#ifdef DIRTY_RECT_TRACK
 	if (!local_copy.m_bIgnoreAndDrawAll)
 	{
 		for (int i = 0; i < local_copy.m_rectCount; i++)
@@ -2751,10 +2759,13 @@ void RenderWindow (Window* pWindow)
 				e->bottom  = (int)pWindow->m_vbeData.m_height;
 		}
 	}
+#endif
 	if (pWindow->m_bForemost)
 	{
+#ifdef DIRTY_RECT_TRACK
 		if (local_copy.m_bIgnoreAndDrawAll)
 		{
+#endif
 			//optimization
 			VidBitBlit(
 				g_vbeData,
@@ -2766,6 +2777,7 @@ void RenderWindow (Window* pWindow)
 				0, 0,
 				BOP_SRCCOPY
 			);
+#ifdef DIRTY_RECT_TRACK
 		}
 		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
@@ -2782,6 +2794,7 @@ void RenderWindow (Window* pWindow)
 				BOP_SRCCOPY
 			);
 		}
+#endif
 	}
 	else
 	{
@@ -2790,9 +2803,12 @@ void RenderWindow (Window* pWindow)
 		
 		int x2 = x + tw, y2 = y + th;
 		
+#ifdef DIRTY_RECT_TRACK
 		if (local_copy.m_bIgnoreAndDrawAll)
 		{
+#endif
 			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
+#ifdef DIRTY_RECT_TRACK
 		}
 		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
@@ -2810,6 +2826,7 @@ void RenderWindow (Window* pWindow)
 				e.top
 			);
 		}
+#endif
 	}
 }
 extern const unsigned char* g_pCurrentFont;
@@ -2906,7 +2923,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		int offset = (rectb.right - rectb.left - textwidth) / 2;
 		
 		int textOffset = (TITLE_BAR_HEIGHT - height) / 2;
-		int iconOffset = (TITLE_BAR_HEIGHT - 16)     / 2;
+		int iconOffset = (TITLE_BAR_HEIGHT - 16)     / 2 - 1;
 		
 		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top - 0 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top - 1 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);

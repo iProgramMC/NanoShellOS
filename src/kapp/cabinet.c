@@ -247,7 +247,7 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 
 void PopupUserMountWindow(Window* pWindow)
 {
-	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
+	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90-18+TITLE_BAR_HEIGHT, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
 }
 
 void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, int parm2)

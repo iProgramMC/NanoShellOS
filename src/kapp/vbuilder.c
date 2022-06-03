@@ -525,7 +525,7 @@ void PrgVBldTask (__attribute__((unused)) int argument)
 		return;
 	}
 	
-	Window* pFormWindow  = CreateWindow ("Form Designer", 240, 180, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ);
+	Window* pFormWindow  = CreateWindow ("Form Designer", 240, 180-18+TITLE_BAR_HEIGHT, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
 	pFormWindow->m_iconID = ICON_DLGEDIT;
 	
 	if (!pFormWindow)
@@ -536,7 +536,7 @@ void PrgVBldTask (__attribute__((unused)) int argument)
 	}
 	
 	// The tool box window
-	Window* pToolsWindow = CreateWindow ("Toolkit", 100, 180, DEF_TOOLBOX_WID, DEF_TOOLBOX_HEI, PrgToolkitProc, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pToolsWindow = CreateWindow ("Toolbox", 100, 180-18+TITLE_BAR_HEIGHT, DEF_TOOLBOX_WID, DEF_TOOLBOX_HEI, PrgToolkitProc, WF_NOCLOSE | WF_NOMINIMZ | WF_SYSPOPUP);
 	pToolsWindow->m_iconID = ICON_NULL;
 	pToolsWindow->m_data   = pFormWindow;
 	pMainWindow ->m_data   = pFormWindow;

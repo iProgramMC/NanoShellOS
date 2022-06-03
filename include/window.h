@@ -261,7 +261,7 @@ typedef struct
 }
 ListItem;
 
-#define LIST_ITEM_HEIGHT 16
+#define LIST_ITEM_HEIGHT (GetLineHeight() + 6)
 #define ICON_ITEM_WIDTH  90
 #define ICON_ITEM_HEIGHT 60
 
