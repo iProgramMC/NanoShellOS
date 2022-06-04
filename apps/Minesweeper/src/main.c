@@ -52,6 +52,7 @@ bool m_mine[BOARD_MAX_WIDTH][BOARD_MAX_HEIGHT];
 bool m_unco[BOARD_MAX_WIDTH][BOARD_MAX_HEIGHT];
 bool m_flag[BOARD_MAX_WIDTH][BOARD_MAX_HEIGHT];
 bool m_clck[BOARD_MAX_WIDTH][BOARD_MAX_HEIGHT];
+bool m_upda[BOARD_MAX_WIDTH][BOARD_MAX_HEIGHT];
 
 void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
@@ -189,6 +190,7 @@ void MineFlagTile(int x, int y)
 		return;
 	
 	m_flag[x][y] ^= 1;
+	m_upda[x][y] = true;
 }
 	
 void MineUncoverTile(int x, int y)
@@ -209,7 +211,7 @@ void MineUncoverTile(int x, int y)
 	if (m_unco[x][y])
 		return;
 	
-	m_unco[x][y] = true;
+	m_unco[x][y] = m_upda[x][y] = true;
 	
 	if (m_mine[x][y])
 	{
@@ -221,7 +223,7 @@ void MineUncoverTile(int x, int y)
 			for (int mx = 0; mx < BoardWidth; mx++)
 			{
 				if (m_mine[mx][my])
-					m_unco[mx][my] = true;
+					m_unco[mx][my] = m_upda[mx][my] = true;
 			}
 		}
 		return;
@@ -298,6 +300,7 @@ void MineCheckWin()
 		for (int mx = 0; mx < BoardWidth; mx++)
 		{
 			m_flag[mx][my] = m_mine[mx][my];
+			m_upda[mx][my] = true;
 		}
 	}
 }
@@ -310,6 +313,7 @@ void InstantiateNewGame()
 	memset (m_unco, 0, sizeof m_unco);
 	memset (m_flag, 0, sizeof m_flag);
 	memset (m_clck, 0, sizeof m_clck);
+	memset (m_upda, 1, sizeof m_upda);
 }
 
 // TODO: Improve the "cool move" thing :^)
@@ -329,7 +333,11 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			{
 				for (int x = 0; x < BoardWidth; x++)
 				{
-					MineDrawTile(x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
+					if (m_upda[x][y])
+					{
+						m_upda[x][y] = 0;
+						MineDrawTile(x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
+					}
 				}
 			}
 			
@@ -343,6 +351,9 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			{
 				for (int x = 0; x < BoardWidth; x++)
 				{
+					if (m_clck[x][y])
+						m_upda[x][y] = true;
+					
 					m_clck[x][y] = false;
 				}
 			}
@@ -359,6 +370,7 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
 			m_clck[xcl][ycl] = true;
+			m_upda[xcl][ycl] = true;
 			
 			m_leftClickHeld  = true;
 			
@@ -377,6 +389,9 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			{
 				for (int x = 0; x < BoardWidth; x++)
 				{
+					if (m_clck[x][y])
+						m_upda[x][y] = true;
+					
 					m_clck[x][y] = false;
 				}
 			}
@@ -397,7 +412,10 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 				for (int x1 = xcl-1; x1 <= xcl+1; x1++)
 					for (int y1 = ycl-1; y1 <= ycl+1; y1++)
 						if (x1 >= 0 && y1 >= 0 && x1 < BoardWidth && y1 < BoardHeight)
+						{
+							m_upda[x1][y1] = true;
 							m_clck[x1][y1] = true;
+						}
 				
 				RequestRepaint(pWindow);
 			}
@@ -410,6 +428,9 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			{
 				for (int x = 0; x < BoardWidth; x++)
 				{
+					if (m_clck[x][y])
+						m_upda[x][y] = true;
+					
 					m_clck[x][y] = false;
 				}
 			}
@@ -644,7 +665,7 @@ int NsMain (UNUSED int argc, UNUSED char **argv)
 		bRequestingNewSize = false;
 		
 		Window* pWindow = CreateWindow ("Minesweeper", minesweeperX, minesweeperY, MINESW_WIDTH, MINESW_HEIGHT-15+MENU_BAR_HEIGHT, PrgMineProc, 0);
-		pWindow->m_iconID = ICON_BOMB;
+		SetWindowIcon (pWindow, ICON_BOMB);
 		
 		if (!pWindow)
 		{
