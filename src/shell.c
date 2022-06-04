@@ -26,6 +26,7 @@
 #include <pci.h>
 #include <config.h>
 #include <clip.h>
+#include <image.h>
 
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
@@ -311,6 +312,57 @@ void ShellExecuteCommand(char* p)
 			CCSTATUS status = CcRunCCode(pData, length);
 			LogMsg("Exited with status %d", status);
 			
+			MmFree(pData);
+			
+			LogMsg("");
+		}
+	}
+	else if (strcmp (token, "image") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			int fd = FiOpen (fileName, O_RDONLY);
+			if (fd < 0)
+			{
+				LogMsg("image: %s: %s", fileName, GetErrNoString(fd));
+				return;
+			}
+			
+			int length = FiTellSize(fd);
+			
+			char* pData = (char*)MmAllocate(length + 1);
+			pData[length] = 0;
+			
+			FiRead(fd, pData, length);
+			
+			FiClose(fd);
+			
+			// try to load an image
+			int error = 0;
+			Image* pImg;
+			
+			pImg = LoadImageFile(pData, &error);
+			if (error)
+			{
+				// can't
+				LogMsg("Could not load the image (%d).", error);
+			}
+			else
+			{
+				LogMsg("Image %dx%d", pImg->width, pImg->height);
+				VidBlitImage(pImg, 0, 0);
+				
+				MmFree(pImg);
+			}
 			MmFree(pData);
 			
 			LogMsg("");

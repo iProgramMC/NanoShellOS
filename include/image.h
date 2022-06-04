@@ -45,24 +45,60 @@ typedef struct BmpHeaderStruct
 	int32_t bmpVResPPM; // ignored
 	uint32_t numColors;
 	uint32_t numImportantColors;
-}__attribute__((packed))
+}
+__attribute__((packed))
 BmpHeaderStruct;
+
+typedef struct TgaHeaderStruct
+{
+	uint8_t  magic1;   //offset 0
+	uint8_t  colorMap; //offset 1
+	uint8_t  encoding; //offset 2
+	uint16_t cMapOrig; //offset 3,4 
+	uint16_t cMapLen;  //offset 5,6
+	uint8_t  cMapEnt;  //offset 7
+	uint16_t x;        //offset 8,9
+	uint16_t y;        //offset 10,11
+	uint16_t width;    //offset 12,13
+	uint16_t height;   //offset 14,15
+	uint8_t  imageBpp; //offset 16
+	uint8_t  pixelType;//offset 17
+}
+__attribute__((packed))
+TgaHeaderStruct;
+
+//TgaEncoding
+enum
+{
+	TGA_NO_IMAGE,
+	TGA_UNCOMPRESSED_COLORMAPPED,
+	TGA_UNCOMPRESSED,
+	TGA_RLE_COLORMAPPED = 9,
+	TGA_RLE,
+};
 
 //BmpLoadErrors
 enum
 {
-	BMPERR_SUCCESS,
-	BMPERR_PATH_EMPTY,
-	BMPERR_FILE_NOT_FOUND,
-	BMPERR_FILE_TOO_SMALL,
-	BMPERR_INVALID_HEADER,
-	BMPERR_NO_IMAGE_POINTER,
-	BMPERR_BAD_BPP,
-	BMPERR_BAD_COLOR_PLANES,
-	BMPERR_BAD_ALLOC,
+	BMPERR_SUCCESS,            // 0
+	BMPERR_PATH_EMPTY,         // 1
+	BMPERR_FILE_NOT_FOUND,     // 2
+	BMPERR_FILE_TOO_SMALL,     // 3
+	BMPERR_INVALID_HEADER,     // 4
+	BMPERR_NO_IMAGE_POINTER,   // 5
+	BMPERR_BAD_BPP,            // 6
+	BMPERR_BAD_COLOR_PLANES,   // 7
+	BMPERR_BAD_ALLOC,          // 8
+	BMPERR_UNKNOWN_FORMAT,     // 9
 };
 
+// to load specific formats
 Image *LoadBitmap (void* pBmpData, int *pErrorOut);
+Image *LoadTarga (void* pTgaData, int *pErrorOut);
+
+// to load any image file
+Image* LoadImageFile(void *pImageData, int *pErrorOut);
+
 Image *BitmapAllocate(int width, int height, uint32_t default_color);
 void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage);
 
