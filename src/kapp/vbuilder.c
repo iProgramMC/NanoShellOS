@@ -77,10 +77,14 @@ void VbRenderCtls(Window* pWindow)
 		rect.left += 5;
 		rect.top  += 5;
 		
+		Rectangle srect = C->m_rect;
+		srect.right --;
+		srect.bottom--;
+		
 		switch (C->m_type)
 		{
 			case CONTROL_TEXTCENTER:
-				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, srect);
 				VidDrawText (C->m_text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 				break;
 			case CONTROL_BUTTON:
@@ -88,17 +92,17 @@ void VbRenderCtls(Window* pWindow)
 				VidDrawText (C->m_text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 				break;
 			case CONTROL_TEXTINPUT:
-				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
-				RenderButtonShapeSmallInsideOut (C->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, srect);
+				RenderButtonShapeSmallInsideOut (srect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 				break;
 			case CONTROL_CHECKBOX:
 			{
-				VidFillRectangle(WINDOW_BACKGD_COLOR, C->m_rect);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, srect);
 				// Since I am too lazy to replicate that code, just construct a fake control and
 				// call its render event
 				Control c;
 				memset (&c, 0, sizeof c);
-				c.m_rect = C->m_rect;
+				c.m_rect = srect;
 				c.m_checkBoxData.m_checked = false;
 				strcpy (c.m_text, C->m_text);
 				
@@ -107,16 +111,16 @@ void VbRenderCtls(Window* pWindow)
 				break;
 			}
 			default:
-				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, C->m_rect);
+				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, srect);
 				VidDrawText (C->m_text, rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, TRANSPARENT);
 				if (!C->m_sele)
-					VidDrawRectangle(0x0000FF, C->m_rect);
+					VidDrawRectangle(0x0000FF, srect);
 				break;
 		}
 		
 		if (C->m_sele)
 		{
-			VidDrawRectangle(0xFF0000, C->m_rect);
+			VidDrawRectangle(0xFF0000, srect);
 		}
 	}
 }
