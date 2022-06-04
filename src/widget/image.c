@@ -39,19 +39,21 @@ void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
 		}
 	}
 }
+bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow);
 void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
-		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		Control *pThis = &pWindow->m_pControlArray[i];
+		if (pThis->m_comboID == comboID)
 		{
 			// Force a refresh of the image.
-			pWindow->m_pControlArray[i].m_parm1 = (int)pImage;
-			if (pWindow->m_pControlArray[i].m_imageCtlData.pImage)
-				MmFree(pWindow->m_pControlArray[i].m_imageCtlData.pImage);
-			pWindow->m_pControlArray[i].m_imageCtlData.pImage = NULL;
+			pThis->m_parm1 = (int)pImage;
+			if (pThis->m_imageCtlData.pImage)
+				MmFree(pThis->m_imageCtlData.pImage);
+			pThis->m_imageCtlData.pImage = NULL;
 			
-			WindowRegisterEventUnsafe (pWindow, EVENT_IMAGE_REFRESH, 0, 0);
+			WidgetImage_OnEvent (pThis, EVENT_IMAGE_REFRESH, 0, 0, pWindow);
 			
 			return;
 		}
