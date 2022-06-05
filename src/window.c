@@ -704,6 +704,8 @@ bool g_shutdownWaiting 			  = false;
 bool g_shutdownRequest 			  = false;
 bool g_shutdownWantReb 			  = false;
 bool g_shutdownSentCloseSignals   = false;
+bool g_shutdownProcessing		  = false;
+bool g_shutdownDoneAll			  = false;
 
 void RequestTaskbarUpdate();
 #endif
@@ -1067,7 +1069,7 @@ void ChangeCursor (Window* pWindow, int cursorID)
 
 void WindowManagerShutdown(bool wants_restart_too)
 {
-	if (g_shutdownRequest || g_shutdownWaiting)
+	if (g_shutdownProcessing)
 	{
 		MessageBox(NULL, "The window station is shutting down.", "Error", MB_OK | ICON_ERROR << 16);
 		return;
@@ -2033,6 +2035,105 @@ void HandleKeypressOnWindow(unsigned char key)
 		OnPressAltTabOnce();
 }
 
+typedef struct
+{
+	int return_code;
+	char title[WINDOW_TITLE_MAX];
+	Window* pWindowToKill;
+}
+UserKillWndControlBlock;
+
+void ShutdownProcessing(int parameter)
+{
+	KeTaskAssignTag(KeGetRunningTask(), "Shutting down");
+	g_shutdownProcessing = true;
+	
+	// Request an End Task to all applications.
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (g_windows[i].m_used)
+			WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
+	}
+	
+	// check every second if all of these windows are gone
+	int seconds_to_wait;
+check_wait:
+	seconds_to_wait = 10;
+	while (seconds_to_wait--)
+	{
+		SLogMsg("Waiting...");
+		bool noMoreWindows = true;
+		for (int i = 0; i < WINDOWS_MAX; i++)
+		{
+			if (g_windows[i].m_used)
+			{
+				noMoreWindows = false;
+				break;
+			}
+		}
+		if (noMoreWindows)
+		{
+			// Lookin' good!
+			SLogMsg("All windows have shutdown gracefully! Quitting...");
+			g_shutdownDoneAll    = true;
+			g_shutdownProcessing = false;
+			g_shutdownRequest    = false;
+			return;
+		}
+		
+		WaitMS (1000);
+	}
+	
+	// Start showing prompts
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (g_windows[i].m_used)
+		{
+			SLogMsg("Asking user if they want to shutdown this application...");
+			int result = MessageBox(
+				NULL,
+				"This NanoShell application cannot respond to the End Task\n"
+				"request.  It may be busy, waiting for a response from you,\n"
+				"or it may have stopped executing.\n"
+				"\n"
+				"o Press 'Ignore' to cancel the shut down and return to\n"
+				"  NanoShell.\n\n"
+				"o Press 'Abort' to close this application immediately.\n"
+				"  You will lose any unsaved information in this application.\n\n"
+				"o Press 'Retry' to wait for this application to shut itself\n"
+				"  down.",
+				g_windows[i].m_title,
+				MB_ABORTRETRYIGNORE | ICON_WARNING << 16
+			);
+			
+			if (result == MBID_ABORT)
+			{
+				SLogMsg("Shutting it down!");
+				if (g_windows[i].m_used)
+				{
+					if (!g_windows[i].m_bWindowManagerUpdated)
+					{
+						if (g_windows[i].m_pOwnerThread)
+							KeKillTask (g_windows[i].m_pOwnerThread);
+						if (g_windows[i].m_pSubThread)
+							KeKillTask (g_windows[i].m_pSubThread);
+					}
+					
+					NukeWindow (&g_windows[i]);
+				}
+			}
+			else if (result == MBID_IGNORE)
+			{
+				SLogMsg("Shutdown cancelled.");
+				g_shutdownDoneAll    = false;
+				g_shutdownProcessing = false;
+				g_shutdownRequest    = false;
+			}
+		}
+	}
+	goto check_wait;
+}
+
 int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
@@ -2097,13 +2198,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			
 			if (UpdateTimeout == 0 || updated)
 			{
-				//WindowAddEventToMasterQueue (pWindow, EVENT_UPDATE2, 0, 0);
 				UpdateTimeout = UPDATE_TIMEOUT;
 				updated = true;
 			}
 			
-			//TODO: This method misses a lot of key inputs.  Perhaps make a way to route keyboard inputs directly
-			//into a window's input buffer and read that instead of doing this hacky method right here?
 			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{
 				//Also send an EVENT_MOVECURSOR
@@ -2138,7 +2236,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			if (pWindow == g_pShutdownMessage)
 				if (!HandleMessages (pWindow))
 				{
-					//ReadyToDestroyWindow(pWindow);
 					KeStopSystem();
 					continue;
 				}
@@ -2174,13 +2271,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		UpdateTimeout--;
 		
 		RunOneEffectFrame ();
-		/*if (!g_EffectRunning)
-		{
-			Rectangle dest = { 100, 100, 200, 200 };
-			Rectangle src  = { 600, 600, 800, 800 };
-			
-			CreateMovingRectangleEffect(src, dest, "Hello");
-		}*/
 		
 		// Get the window we're over:
 		short windowOver = GetWindowIndexInDepthBuffer (g_mouseX, g_mouseY);
@@ -2221,69 +2311,22 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		timeout--;
 		
-		if (g_shutdownRequest && !g_shutdownWaiting)
+		if (g_shutdownRequest && !g_shutdownProcessing)
 		{
-			g_shutdownRequest = false;
-			g_shutdownWaiting = true;
-			
-			//VidSetFont(FONT_TAMSYN_REGULAR);
-			
-			LogMsg("Sending kill messages to windows...");
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			int errorCode = 0;
+			Task *pTask = KeStartTask(ShutdownProcessing, 0, &errorCode);
+			if (pTask == NULL)
 			{
-				WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
+				LogMsg("Cannot spawn shutdown processing task!  That's... weird.");
+				g_shutdownRequest = false;
 			}
-			
-			shutdownTimeout = 1000;
 		}
-		if (g_shutdownWaiting)
+		if (!g_shutdownProcessing)
 		{
-			shutdownTimeout--;
-			//LogMsgNoCr("\r(Waiting for all windows to shut down... -- %d ticks left.)", shutdownTimeout);
-			bool noMoreWindows = true;
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			if (g_shutdownDoneAll)
 			{
-				if (g_windows[i].m_used)
-				{
-					noMoreWindows = false;
-					break;
-				}
-			}
-			if (noMoreWindows)
-			{
-				SLogMsg("\nAll windows have shutdown gracefully?  Quitting...");
-				SLogMsg("STATUS: We survived!  Exitting in a brief moment.");
-				//g_windowManagerRunning = false;
-				
-				// On Shutdown:
-				g_shutdownWaiting = false;
-				WindowManagerOnShutdown ();
-				continue;
-			}
-			//Shutdown timeout equals zero.  If there are any windows still up, force-kill them.
-			if (shutdownTimeout <= 0)
-			{
-				LogMsg("\nWindow TIMEOUT (no response, all tasks dead/froze due to crash?)! Forcing *EMERGENCY EXIT* now! (Applying defibrillator)");
-				for (int i = 0; i < WINDOWS_MAX; i++)
-				{
-					if (g_windows[i].m_used)
-					{
-						if (!g_windows[i].m_bWindowManagerUpdated)
-						{
-							if (g_windows[i].m_pOwnerThread)
-								KeKillTask (g_windows[i].m_pOwnerThread);
-							if (g_windows[i].m_pSubThread)
-								KeKillTask (g_windows[i].m_pSubThread);
-						}
-						
-						NukeWindow (&g_windows[i]);
-					}
-				}
-				
-				//g_windowManagerRunning = false;
-				g_shutdownWaiting = false;
-				WindowManagerOnShutdown ();
-				continue;
+				g_shutdownDoneAll    = false;
+				WindowManagerOnShutdown();
 			}
 		}
 		

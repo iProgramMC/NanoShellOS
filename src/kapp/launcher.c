@@ -134,7 +134,7 @@ RESOURCE_STATUS LaunchMagnifier()
 
 void LaunchVersion()
 {
-	LaunchVersionApplet (NULL, ICON_EXPERIMENT);
+	LaunchVersionApplet (NULL, ICON_NANOSHELL);
 }
 
 void ShellAbout (const char *pText, int iconID)
@@ -147,7 +147,7 @@ void LaunchLauncher();
 RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 {
-	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet(NULL, ICON_EXPERIMENT);
+	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet(NULL, ICON_NANOSHELL);
 	else if (STREQ(pResourceID, "sysmon"))   return LaunchSystem();
 	else if (STREQ(pResourceID, "icontest")) return LaunchIconTest();
 	else if (STREQ(pResourceID, "cmdshell")) return LaunchTextShell();
