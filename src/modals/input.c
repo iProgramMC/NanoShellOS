@@ -127,7 +127,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	int wPosX = (GetScreenWidth()  - POPUP_WIDTH)  / 2;
 	int wPosY = (GetScreenHeight() - POPUP_HEIGHT) / 2;
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, POPUP_WIDTH, POPUP_HEIGHT, InputPopupProc, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, POPUP_WIDTH, POPUP_HEIGHT, InputPopupProc, WF_NOCLOSE | WF_NOMINIMZ | WI_MESSGBOX);
 	
 	// Add the basic controls required.
 	Rectangle rect;

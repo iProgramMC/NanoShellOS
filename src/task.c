@@ -299,9 +299,12 @@ void KeUnsuspendTasksWaitingForWM()
 		KeReviveTask(pCurTask);
 	}
 }
+void WmOnTaskDied(Task *pTask); // 💀
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt) cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
+	
+	WmOnTaskDied(pTask);
 	
 	// let everyone know that this task is gone
 	for (int i = 0; i < C_MAX_TASKS; i++)

@@ -362,6 +362,18 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 		}
 		case EVENT_DESTROY:
 		{
+			if (TextInputQueryDirtyFlag(pWindow, NOTEP_TEXTVIEW))
+			{
+				char buffer[1024];
+				sprintf(
+					buffer,
+					"You haven't saved your changes to \"%s\".\n\nWould you like to save them before closing?",
+					NOTEPDATA(pWindow)->m_untitled ? "Untitled" : NOTEPDATA(pWindow)->m_filename
+				);
+				int result = MessageBox (pWindow, buffer, "Notepad", MB_YESNO | ICON_TEXT_FILE << 16);
+				if (result == MBID_YES)
+					NotepadOnSave(pWindow);
+			}
 			if (pWindow->m_data)
 			{
 				MmFree(pWindow->m_data);

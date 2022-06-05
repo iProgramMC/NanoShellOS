@@ -156,7 +156,7 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 	int wPosX = (GetScreenWidth()  - COLOR_POPUP_WIDTH)  / 2;
 	int wPosY = (GetScreenHeight() - COLOR_POPUP_HEIGHT) / 2;
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, COLOR_POPUP_WIDTH, COLOR_POPUP_HEIGHT, ColorPopupProc, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, COLOR_POPUP_WIDTH, COLOR_POPUP_HEIGHT, ColorPopupProc, WF_NOCLOSE | WF_NOMINIMZ | WI_MESSGBOX);
 	
 	// Add the basic controls required.
 	int y = TITLE_BAR_HEIGHT + 10;

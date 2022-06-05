@@ -141,7 +141,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		wPosY = (GetScreenSizeY() - wSzY) / 2;
 	
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, wSzX, wSzY, MessageBoxCallback, WF_NOCLOSE | WF_NOMINIMZ | WI_MESSGBOX);
 	if (!pBox)
 	{
 		MmFreeK(test);

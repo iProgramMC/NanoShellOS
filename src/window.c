@@ -2043,35 +2043,106 @@ typedef struct
 }
 UserKillWndControlBlock;
 
+void WmOnTaskDied(Task *pTask)
+{
+	if (!g_windowManagerRunning) return;
+	
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (g_windows[i].m_used)
+		{
+			if (g_windows[i].m_pOwnerThread == pTask)
+				g_windows[i].m_pOwnerThread =  NULL;
+			if (g_windows[i].m_pSubThread   == pTask)
+				g_windows[i].m_pSubThread   =  NULL;
+		}
+	}
+}
+
 void ShutdownProcessing(int parameter)
 {
 	KeTaskAssignTag(KeGetRunningTask(), "Shutting down");
 	g_shutdownProcessing = true;
 	
 	// Request an End Task to all applications.
-	for (int i = 0; i < WINDOWS_MAX; i++)
-	{
-		if (g_windows[i].m_used)
-			WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
-	}
 	
-	// check every second if all of these windows are gone
-	int seconds_to_wait;
-check_wait:
-	seconds_to_wait = 10;
-	while (seconds_to_wait--)
+	// reverse to shut down the taskbar last.
+	while (true)
 	{
-		SLogMsg("Waiting...");
-		bool noMoreWindows = true;
-		for (int i = 0; i < WINDOWS_MAX; i++)
+		bool bReady = true;
+		for (int i = WINDOWS_MAX-1; i >= 0; i--)
 		{
 			if (g_windows[i].m_used)
 			{
-				noMoreWindows = false;
-				break;
+				bReady = false;
+				if (!(g_windows[i].m_flags & WI_MESSGBOX))
+				{
+					WindowRegisterEvent (g_windows + i, EVENT_DESTROY, 0, 0);
+				}
+				
+				int half_seconds_to_wait;
+			check_wait1:
+				half_seconds_to_wait = 20;
+				bool shutdownOK = false;
+				while (half_seconds_to_wait--)
+				{
+					if (!g_windows[i].m_used)
+					{
+						shutdownOK = true;
+						break; // move on
+					}
+					
+					WaitMS(500);
+				}
+				
+				if (!shutdownOK)
+				{
+					SLogMsg("Asking user if they want to shutdown this application...");
+					int result = MessageBox(
+						NULL,
+						"This NanoShell application cannot respond to the End Task\n"
+						"request.  It may be busy, waiting for a response from you,\n"
+						"or it may have stopped executing.\n"
+						"\n"
+						"o Press 'Ignore' to cancel the shut down and return to\n"
+						"  NanoShell.\n\n"
+						"o Press 'Abort' to close this application immediately.\n"
+						"  You will lose any unsaved information in this application.\n\n"
+						"o Press 'Retry' to wait for this application to shut itself\n"
+						"  down.",
+						g_windows[i].m_title,
+						MB_ABORTRETRYIGNORE | ICON_WARNING << 16
+					);
+					
+					if (result == MBID_ABORT)
+					{
+						SLogMsg("Shutting it down!");
+						if (g_windows[i].m_used)
+						{
+							if (!g_windows[i].m_bWindowManagerUpdated)
+							{
+								if (g_windows[i].m_pOwnerThread)
+									KeKillTask (g_windows[i].m_pOwnerThread);
+								if (g_windows[i].m_pSubThread)
+									KeKillTask (g_windows[i].m_pSubThread);
+							}
+							
+							NukeWindow (&g_windows[i]);
+						}
+					}
+					else if (result == MBID_IGNORE)
+					{
+						SLogMsg("Shutdown cancelled.");
+						g_shutdownDoneAll    = false;
+						g_shutdownProcessing = false;
+						g_shutdownRequest    = false;
+						return;
+					}
+					else goto check_wait1;
+				}
 			}
 		}
-		if (noMoreWindows)
+		if (bReady)
 		{
 			// Lookin' good!
 			SLogMsg("All windows have shutdown gracefully! Quitting...");
@@ -2080,58 +2151,7 @@ check_wait:
 			g_shutdownRequest    = false;
 			return;
 		}
-		
-		WaitMS (1000);
 	}
-	
-	// Start showing prompts
-	for (int i = 0; i < WINDOWS_MAX; i++)
-	{
-		if (g_windows[i].m_used)
-		{
-			SLogMsg("Asking user if they want to shutdown this application...");
-			int result = MessageBox(
-				NULL,
-				"This NanoShell application cannot respond to the End Task\n"
-				"request.  It may be busy, waiting for a response from you,\n"
-				"or it may have stopped executing.\n"
-				"\n"
-				"o Press 'Ignore' to cancel the shut down and return to\n"
-				"  NanoShell.\n\n"
-				"o Press 'Abort' to close this application immediately.\n"
-				"  You will lose any unsaved information in this application.\n\n"
-				"o Press 'Retry' to wait for this application to shut itself\n"
-				"  down.",
-				g_windows[i].m_title,
-				MB_ABORTRETRYIGNORE | ICON_WARNING << 16
-			);
-			
-			if (result == MBID_ABORT)
-			{
-				SLogMsg("Shutting it down!");
-				if (g_windows[i].m_used)
-				{
-					if (!g_windows[i].m_bWindowManagerUpdated)
-					{
-						if (g_windows[i].m_pOwnerThread)
-							KeKillTask (g_windows[i].m_pOwnerThread);
-						if (g_windows[i].m_pSubThread)
-							KeKillTask (g_windows[i].m_pSubThread);
-					}
-					
-					NukeWindow (&g_windows[i]);
-				}
-			}
-			else if (result == MBID_IGNORE)
-			{
-				SLogMsg("Shutdown cancelled.");
-				g_shutdownDoneAll    = false;
-				g_shutdownProcessing = false;
-				g_shutdownRequest    = false;
-			}
-		}
-	}
-	goto check_wait;
 }
 
 int g_oldMouseX = -1, g_oldMouseY = -1;

@@ -294,7 +294,7 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	int wPosX = (GetScreenWidth()  - POPUP_WIDTH)  / 2;
 	int wPosY = (GetScreenHeight() - POPUP_HEIGHT) / 2;
 	// Spawn a new window.
-	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, POPUP_WIDTH, POPUP_HEIGHT, FilePickerPopupProc, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pBox = CreateWindow (pCaption, wPosX, wPosY, POPUP_WIDTH, POPUP_HEIGHT, FilePickerPopupProc, WF_NOCLOSE | WF_NOMINIMZ | WI_MESSGBOX);
 	
 	// Add the basic controls required.
 	Rectangle rect;

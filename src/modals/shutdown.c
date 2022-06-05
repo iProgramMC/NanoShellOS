@@ -92,7 +92,7 @@ int ShutdownBox (Window* pWindow)
 	int wPosY = (GetScreenHeight() - wSzY) / 2;
 	
 	// Spawn a new window.
-	Window* pBox = CreateWindow ("Shutdown Computer", wPosX, wPosY, wSzX, wSzY, ShutdownBoxCallback, WF_NOCLOSE | WF_NOMINIMZ);
+	Window* pBox = CreateWindow ("Shutdown Computer", wPosX, wPosY, wSzX, wSzY, ShutdownBoxCallback, WF_NOCLOSE | WF_NOMINIMZ | WI_MESSGBOX);
 	if (!pBox)
 	{
 		SLogMsg("Cannot show window, returning default");
