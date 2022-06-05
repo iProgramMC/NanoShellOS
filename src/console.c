@@ -55,6 +55,8 @@ void ResetConsole() {
 	g_currentConsole = &g_debugConsole;
 }
 
+void CoColorFlip (Console *this);
+
 // The mess that goes into generalizing the console implementation to support any console device ever invented. Ever.
 #if 1
 	
@@ -196,7 +198,11 @@ void ResetConsole() {
 	}
 	void CoPlotChar (Console *this, int x, int y, char c)
 	{
+		if (this->m_ansiAttributes & ANSI_FLAG_NEGATIVE)
+			CoColorFlip (this);
 		g_plot_char[this->type](this,x,y,c);
+		if (this->m_ansiAttributes & ANSI_FLAG_NEGATIVE)
+			CoColorFlip (this);
 	}
 	void CoRefreshChar (Console *this, int x, int y)
 	{
@@ -218,12 +224,17 @@ int g_ansiToVGAColors[] = {
 	010, 014, 012, 016, 011, 015, 013, 017,
 };
 
+void CoColorFlip (Console *this)
+{
+	this->color = (this->color >> 4) | ((this->color << 4) & 0xF0);
+}
+
 void CoVisParseSGR(Console *this, char *contents)
 {
 	//use the betterStrTok method this time
 	TokenState state;
 	state.m_bInitted = 0;
-	char *token = Tokenize (&state, contents, " ");
+	char *token = Tokenize (&state, contents, ";");
 	if (!token) return;
 	
 	do
@@ -279,7 +290,7 @@ void CoVisParseSGR(Console *this, char *contents)
 			// WORK: Add more features here
 		}
 		
-		token = Tokenize (&state, NULL, " ");
+		token = Tokenize (&state, NULL, ";");
 	}
 	while (token);
 }
