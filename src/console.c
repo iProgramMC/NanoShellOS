@@ -212,18 +212,89 @@ void ResetConsole() {
 	}
 #endif
 
+int g_ansiToVGAColors[] = {
+	// 0-7 - these are octal characters
+	000, 004, 002, 006, 001, 005, 003, 007,
+	010, 014, 012, 016, 011, 015, 013, 017,
+};
+
+void CoVisParseSGR(Console *this, char *contents)
+{
+	//use the betterStrTok method this time
+	TokenState state;
+	state.m_bInitted = 0;
+	char *token = Tokenize (&state, contents, " ");
+	if (!token) return;
+	
+	do
+	{
+		int n = 0;
+		if (*token)
+			n = atoi (token);
+		
+		// Set foreground colors
+		/**/ if (n >= ANSI_ATTR_SETFGCOLORS && n <= ANSI_ATTR_SETFGCOLORS + 7)
+		{
+			this->color = (this->color & 0xF0) | g_ansiToVGAColors[n - ANSI_ATTR_SETFGCOLORS];
+		}
+		// Set background colors
+		else if (n >= ANSI_ATTR_SETBGCOLORS && n <= ANSI_ATTR_SETBGCOLORS + 7)
+		{
+			this->color = (this->color & 0x0F) | g_ansiToVGAColors[n - ANSI_ATTR_SETBGCOLORS] << 4;
+		}
+		// Set bright foreground colors
+		else if (n >= ANSI_ATTR_SETFGCOLRLS && n <= ANSI_ATTR_SETFGCOLRLS + 7)
+		{
+			this->color = (this->color & 0xF0) | g_ansiToVGAColors[n - ANSI_ATTR_SETFGCOLRLS + 8];
+		}
+		// Set bright background colors
+		else if (n >= ANSI_ATTR_SETBGCOLRLS && n <= ANSI_ATTR_SETBGCOLRLS + 7)
+		{
+			this->color = (this->color & 0x0F) | g_ansiToVGAColors[n - ANSI_ATTR_SETBGCOLRLS + 8] << 4;
+			if (this->type == CONSOLE_TYPE_TEXT) // Text mode?
+			{
+				this->color &= 0x7F; // disable the BLINK bit
+			}
+		}
+		else switch (n)
+		{
+			case ANSI_ATTR_INVISIBLE:
+				this->m_ansiAttributes |= ANSI_FLAG_INVISIBLE;
+				break;
+			case ANSI_ATTR_NOINVISIBLE:
+				this->m_ansiAttributes &=~ANSI_FLAG_INVISIBLE;
+				break;
+			case ANSI_ATTR_NEGATIVE:
+				this->m_ansiAttributes |= ANSI_FLAG_NEGATIVE;
+				break;
+			case ANSI_ATTR_SETBGCOLORD:
+				this->color = (this->color & 0x0F) | (DefaultConsoleColor & 0xF0);
+				break;
+			case ANSI_ATTR_SETFGCOLORD:
+				this->color = (this->color & 0xF0) | (DefaultConsoleColor & 0x0F);
+				break;
+			case ANSI_ATTR_NONEGATIVE:
+				this->m_ansiAttributes &=~ANSI_FLAG_NEGATIVE;
+				break;
+			// WORK: Add more features here
+		}
+		
+		token = Tokenize (&state, NULL, " ");
+	}
+	while (token);
+}
 void CoVisComOnAnsiEscCode(Console *this)
 {
-	SLogMsg("CoVisComOnAnsiEscCode: dumping ANSI escape code as hex:");
+	//SLogMsg("CoVisComOnAnsiEscCode: dumping ANSI escape code as hex:");
 	char *pEscCode = this->m_ansiEscCode;
 	char *pLastChar = NULL;
 	while (*pEscCode)
 	{
-		SLogMsgNoCr("%b ",*pEscCode);
+		//SLogMsgNoCr("%b ",*pEscCode);
 		pLastChar = pEscCode;
 		pEscCode++;
 	}
-	SLogMsg(".");
+	//SLogMsg(".");
 	
 	char firstChar = this->m_ansiEscCode[0];
 	char lastChar  = *pLastChar;
@@ -237,7 +308,14 @@ void CoVisComOnAnsiEscCode(Console *this)
 		case '[': {
 			switch (lastChar)
 			{
+				case 'm':
+				{
+					// parse SGR
+					CoVisParseSGR(this, contentsAfter);
+					break;
+				}
 				case 'H': // Go to absolute position
+				case 'f':
 				{
 					char str1[64], str2[64];
 					str1[0] = 0;

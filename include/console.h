@@ -23,6 +23,58 @@ enum ConsoleType {
 
 #define KB_BUF_SIZE 512
 
+enum {
+	ANSI_ATTR_OFF         = 0,
+	ANSI_ATTR_BOLD        = 1,
+	ANSI_ATTR_DIM         = 2,
+	ANSI_ATTR_ITALIC      = 3,
+	ANSI_ATTR_UNDERLINE   = 4,
+	ANSI_ATTR_BLINK       = 5, // only supported by the VGA text mode driver?
+	ANSI_ATTR_BLINK_FAST  = 6,
+	ANSI_ATTR_NEGATIVE    = 7,
+	ANSI_ATTR_INVISIBLE   = 8,
+	ANSI_ATTR_STRIKETHRU  = 9,
+	ANSI_ATTR_PRIMFONT    = 10,
+	ANSI_ATTR_ALTFONTST   = 11, // Alternative font start
+	ANSI_ATTR_DOUBLEUNDER = 21,
+	ANSI_ATTR_NOBOLD      = 22, // Normal intensity - no bold or faint
+	ANSI_ATTR_NOITALIC    = 23, // Normal slant - no italic
+	ANSI_ATTR_NOUNDERLINE = 24,
+	ANSI_ATTR_NOBLINK     = 25,
+	ANSI_ATTR_PROPORTSP   = 26,
+	ANSI_ATTR_NONEGATIVE  = 27,
+	ANSI_ATTR_NOINVISIBLE = 28,
+	ANSI_ATTR_NOSTRIKETHR = 29,
+	ANSI_ATTR_SETFGCOLORS = 30, // Set foreground color (start, until 37)
+	ANSI_ATTR_SETFGCOLORR = 38, // Set foreground color as (5;n) or (2;r;g;b). Won't support?
+	ANSI_ATTR_SETFGCOLORD = 39, // Set foreground color as DefaultConsoleColor
+	ANSI_ATTR_SETBGCOLORS = 40, // Set background color (start, until 47)
+	ANSI_ATTR_SETBGCOLORR = 48, // Set background color as (5;n) or (2;r;g;b). Won't support?
+	ANSI_ATTR_SETBGCOLORD = 49, // Set foreground color as DefaultConsoleColor
+	ANSI_ATTR_NOPROPORTSP = 50,
+	ANSI_ATTR_FRAMED      = 51,
+	ANSI_ATTR_CIRCLED     = 52,
+	ANSI_ATTR_OVERLINED   = 53,
+	ANSI_ATTR_NOFRAMECIRC = 54, // No frame or encircle
+	ANSI_ATTR_UNDERLINECL = 58, // Set underline color as (5;n) or (2;r;g;b)
+	ANSI_ATTR_SETFGCOLRLS = 90, // Set foreground bright color (start, until 97)
+	ANSI_ATTR_SETBGCOLRLS = 100,// Set background bright color (start, until 107)
+	
+};
+
+// ANSI attribute flags
+enum
+{
+	ANSI_FLAG_NEGATIVE  = (1 << 0),
+	ANSI_FLAG_INVISIBLE = (1 << 1),
+	ANSI_FLAG_BOLD      = (1 << 2),
+	ANSI_FLAG_BLINK     = (1 << 3),
+	ANSI_FLAG_DIM       = (1 << 4),
+	ANSI_FLAG_ITALIC    = (1 << 5),
+	ANSI_FLAG_STRIKETHR = (1 << 6),
+	//WORK: Add more here
+};
+
 typedef struct ConsoleStruct {
 	int  type; // ConsoleType enum
 	int  width, height; // width and height
@@ -41,6 +93,7 @@ typedef struct ConsoleStruct {
 	int  m_scrollY, m_actualHeight;//for wterm
 	char m_ansiEscCode[64];
 	bool m_usingAnsiEscCode;
+	uint32_t m_ansiAttributes;
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

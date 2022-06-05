@@ -205,6 +205,9 @@ void ShellExecuteCommand(char* p)
 		"Testing at 30 characters!"
 		"\e[2;2H"  // Move cursor at (1, 1) - coordinates are 1 based
 		"Testing at (1, 1)!"
+		"\e[94m"   // Set foreground color to bright red
+		" Now in blue."
+		"\e[39m"   // Reset foreground color to default
 		);
 	}
 	else if (strcmp (token, "pwd") == 0)
