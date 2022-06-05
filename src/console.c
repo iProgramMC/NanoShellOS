@@ -211,73 +211,222 @@ void ResetConsole() {
 		return g_print_char_int[this->type](this,c,next,bDontUpdateCursor);
 	}
 #endif
-//returns a bool, if it's a true, we need to skip the next character.
-bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor)
+
+void CoVisComOnAnsiEscCode(Console *this)
 {
-	switch (c)
+	SLogMsg("CoVisComOnAnsiEscCode: dumping ANSI escape code as hex:");
+	char *pEscCode = this->m_ansiEscCode;
+	char *pLastChar = NULL;
+	while (*pEscCode)
 	{
-		case '\x01':
-			//allow foreground color switching.
-			//To use this, just type `\x01\x0B`, for example, to switch to bright cyan
-			//Typing \x00 will end the parsing, so you can use \x01\x10, or \x01\x30.
-			
-			if (!next) break;
-			char color = next & 0xF;
-			this->color = (this->color & 0xF0) | color;
-			return true;
-		case '\x02':
-			//change X coordinate
-			//To use this, just type `\x02\x0B`, for example, to move cursorX to 11
-			
-			if (!next) break;
-			char xcoord = next;
-			if (xcoord >= this->width)
-				xcoord = this->width - 1;
-			this->curX = xcoord;
-			return true;
-		case '\b':
-			if (--this->curX < 0) {
-				this->curX = this->width - 1;
-				if (--this->curY < 0) this->curY = 0;
-			}
-			CoPlotChar(this, this->curX, this->curY, 0);
-			break;
-		case '\r': 
-			this->curX = 0;
-			break;
-		case '\n': 
-			this->curX = 0;
-			this->curY++;
-			while (this->curY >= this->height) {
-				CoScrollUpByOne(this);
-				this->curY--;
-			}
-			break;
-		case '\t': 
-			this->curX = (this->curX + 4) & ~3;
-			if (this->curX >= this->width) {
-				this->curX = 0;
-				this->curY++;
-			}
-			while (this->curY >= this->height) {
-				CoScrollUpByOne(this);
-				this->curY--;
-			}
-			break;
-		
-		default: {
-			CoPlotChar(this, this->curX, this->curY, c);
-			// advance cursor
-			if (++this->curX >= this->width) {
-				this->curX = 0;
-				this->curY++;
-			}
-			while (this->curY >= this->height) {
-				CoScrollUpByOne(this);
-				this->curY--;
+		SLogMsgNoCr("%b ",*pEscCode);
+		pLastChar = pEscCode;
+		pEscCode++;
+	}
+	SLogMsg(".");
+	
+	char firstChar = this->m_ansiEscCode[0];
+	char lastChar  = *pLastChar;
+	
+	char* contentsAfter = &this->m_ansiEscCode[1];
+	*pLastChar = '\0';
+	
+	switch (firstChar)
+	{
+		// CSI
+		case '[': {
+			switch (lastChar)
+			{
+				case 'H': // Go to absolute position
+				{
+					char str1[64], str2[64];
+					str1[0] = 0;
+					str2[0] = 0;
+					char *headwrite = str1;
+					char *headread  = contentsAfter;
+					while (*headread)
+					{
+						if (*headread == ';')
+							headwrite = str2;
+						else
+						{
+							*(headwrite++) = *headread;
+							*(headwrite)   = '\0';
+						}
+						headread++;
+					}
+					
+					int x1 = 1, y1 = 1;
+					if (*str1)
+						x1 = atoi (str1);
+					if (*str2)
+						y1 = atoi (str2);
+					
+					if (x1 < 1) x1 = 1;
+					if (y1 < 1) y1 = 1;
+					if (x1 >= this->width ) x1 = this->width;
+					if (y1 >= this->height) y1 = this->height;
+					
+					this->curX = x1 - 1;
+					this->curY = y1 - 1;
+					
+					break;
+				}
+				case 'G': // Go to absolute position horizontally
+				{
+					int pos = 1;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					if (pos < 0)
+						pos = 0;
+					if (pos >= this->width)
+						pos  = this->width;
+					this->curX = pos;
+					break;
+				}
+				case 'T': // Scroll down
+				{
+					int pos = 1;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					while (pos--)
+						CoScrollUpByOne(this);
+					break;
+				}
+				case 'K': // Erase in Line
+				{
+					int pos = 0;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					if (pos == 2)
+					{
+						for (int i = 0; i < this->width; i++)
+							CoPlotChar (this, i, this->curY, ' ');
+					}
+					else if (pos == 1)
+					{
+						for (int i = 0; i <= this->curX; i++)
+							CoPlotChar (this, i, this->curY, ' ');
+					}
+					else
+					{
+						for (int i = this->curX; i < this->width; i++)
+							CoPlotChar (this, i, this->curY, ' ');
+					}
+					break;
+				}
 			}
 			break;
 		}
+	}
+}
+//returns a bool, if it's a true, we need to skip the next character.
+bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor)
+{
+	if (!this->m_usingAnsiEscCode)
+	{
+		switch (c)
+		{
+			case '\x01':
+				//allow foreground color switching.
+				//To use this, just type `\x01\x0B`, for example, to switch to bright cyan
+				//Typing \x00 will end the parsing, so you can use \x01\x10, or \x01\x30.
+				
+				if (!next) break;
+				char color = next & 0xF;
+				this->color = (this->color & 0xF0) | color;
+				return true;
+			case '\x02':
+				//change X coordinate
+				//To use this, just type `\x02\x0B`, for example, to move cursorX to 11
+				
+				if (!next) break;
+				char xcoord = next;
+				if (xcoord >= this->width)
+					xcoord = this->width - 1;
+				this->curX = xcoord;
+				return true;
+			case '\e':
+			{
+				// ASCII escape code.
+				this->m_usingAnsiEscCode = true;
+				this->m_ansiEscCode[0] = 0;
+				break;
+			}
+			case '\b':
+				if (--this->curX < 0) {
+					this->curX = this->width - 1;
+					if (--this->curY < 0) this->curY = 0;
+				}
+				CoPlotChar(this, this->curX, this->curY, 0);
+				break;
+			case '\r': 
+				this->curX = 0;
+				break;
+			case '\n': 
+				this->curX = 0;
+				this->curY++;
+				while (this->curY >= this->height) {
+					CoScrollUpByOne(this);
+					this->curY--;
+				}
+				break;
+			case '\t': 
+				this->curX = (this->curX + 4) & ~3;
+				if (this->curX >= this->width) {
+					this->curX = 0;
+					this->curY++;
+				}
+				while (this->curY >= this->height) {
+					CoScrollUpByOne(this);
+					this->curY--;
+				}
+				break;
+			
+			default: {
+				CoPlotChar(this, this->curX, this->curY, c);
+				// advance cursor
+				if (++this->curX >= this->width) {
+					this->curX = 0;
+					this->curY++;
+				}
+				while (this->curY >= this->height) {
+					CoScrollUpByOne(this);
+					this->curY--;
+				}
+				break;
+			}
+		}
+	}
+	else
+	{
+		bool bFirstChar = this->m_ansiEscCode[0] == 0;
+		
+		// append to the ANSI escape code
+		char t[2];
+		t[1] = 0;
+		t[0] = c;
+		strcat (this->m_ansiEscCode, t);
+		if (this->m_ansiEscCode[sizeof(this->m_ansiEscCode) - 2] != 0) // Uh oh
+		{
+			this->m_usingAnsiEscCode = false;
+			CoVisComOnAnsiEscCode(this);
+		}
+		
+		// if this is the end:
+		if (!bFirstChar && strchr("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", c) != NULL)
+		{
+			this->m_usingAnsiEscCode = false;
+			CoVisComOnAnsiEscCode(this);
+		}
+		
+		return false;
 	}
 	if (!bDontUpdateCursor) CoMoveCursor(this);
 	return false;

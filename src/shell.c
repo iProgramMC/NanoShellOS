@@ -195,6 +195,18 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
 	}
+	else if (strcmp (token, "ta") == 0) // Test ANSI
+	{
+		LogMsg(
+		//"\e[15T" // Scroll 15 lines up
+		"You can't see this!"
+		"\e[1K"    // Erase from beginning of the line to the cursor's position.
+		"\e[30G"   // Move cursor horizontally to x=30
+		"Testing at 30 characters!"
+		"\e[2;2H"  // Move cursor at (1, 1) - coordinates are 1 based
+		"Testing at (1, 1)!"
+		);
+	}
 	else if (strcmp (token, "pwd") == 0)
 	{
 		LogMsg(g_cwd);

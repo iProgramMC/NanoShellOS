@@ -39,6 +39,8 @@ typedef struct ConsoleStruct {
 	int  m_inputBufferBeg, m_inputBufferEnd;
 	int  m_cursorFlashTimer, m_cursorFlashState;
 	int  m_scrollY, m_actualHeight;//for wterm
+	char m_ansiEscCode[64];
+	bool m_usingAnsiEscCode;
 } Console;
 
 extern Console g_debugConsole; // for LogMsg
