@@ -2697,31 +2697,6 @@ void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, in
 // Event processors called by user processes.
 #if 1
 
-//copied the VidPlotPixelInline code from video.c for speed:
-extern uint32_t* g_framebufferCopy;
-__attribute__((always_inline))
-inline void blpx2cp(unsigned x, unsigned y, unsigned color)
-{
-	if (g_vbeData == &g_mainScreenVBEData)
-		g_framebufferCopy[x + y * g_vbeData->m_width] = color;
-}
-__attribute__((always_inline))
-inline void blpx2ver (unsigned x, unsigned y, unsigned color)
-{
-	g_vbeData->m_dirty = 1;
-	g_vbeData->m_framebuffer32[x + y * g_vbeData->m_pitch32] = color;
-}
-
-__attribute__((always_inline))
-inline void blpxinl(unsigned x, unsigned y, unsigned color)
-{
-	//if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
-	{
-		blpx2cp (x, y, color);
-		blpx2ver(x, y, color);
-	}
-}
-
 void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy)
 {
 	//TODO: clean up this function!
