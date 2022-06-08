@@ -1083,7 +1083,7 @@ void WindowManagerShutdown(bool wants_restart_too)
 void WindowBlitTakingIntoAccountOcclusions(uint32_t windowFlags, short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy);
 void UncoverAWindow(Window* pWnd, Window *pUncoveredWindow)
 {
-	//if (pUncoveredWindow->m_flags & WI_TRANSPAR)
+	if (pUncoveredWindow->m_flags & WI_TRANSPAR)
 	{
 		int tw = pUncoveredWindow->m_vbeData.m_width, th = pUncoveredWindow->m_vbeData.m_height;
 		Rectangle ndr = pUncoveredWindow->m_rect;
@@ -1112,7 +1112,7 @@ void UncoverAWindow(Window* pWnd, Window *pUncoveredWindow)
 			ndr.top  - pUncoveredWindow->m_rect.top
 		);
 	}
-	/*else
+	else
 	{
 		VidBitBlit (
 			g_vbeData,
@@ -1125,7 +1125,7 @@ void UncoverAWindow(Window* pWnd, Window *pUncoveredWindow)
 			pWnd->m_rect.top  - pUncoveredWindow->m_rect.top,
 			BOP_SRCCOPY
 		);
-	}*/
+	}
 }
 
 void UndrawWindow (Window* pWnd)
@@ -1175,19 +1175,6 @@ void UndrawWindow (Window* pWnd)
 		else
 		{
 			UncoverAWindow (pWnd, windowDrawList[i]);
-			/*
-			VidBitBlit (
-				g_vbeData,
-				pWnd->m_rect.left,
-				pWnd->m_rect.top,
-				pWnd->m_rect.right  - pWnd->m_rect.left,
-				pWnd->m_rect.bottom - pWnd->m_rect.top,
-				&windowDrawList[i]->m_vbeData,
-				pWnd->m_rect.left - windowDrawList[i]->m_rect.left,
-				pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
-				BOP_SRCCOPY
-			);
-			*/
 		}
 	}
 	
@@ -1214,7 +1201,9 @@ static void ShowWindowUnsafe (Window* pWindow)
 		//TODO?
 	}
 	else
-		VidBitBlit (
+	{
+		UncoverAWindow(pWindow, pWindow);
+		/*VidBitBlit (
 			g_vbeData,
 			pWindow->m_rect.left,
 			pWindow->m_rect.top,
@@ -1223,7 +1212,8 @@ static void ShowWindowUnsafe (Window* pWindow)
 			&pWindow->m_vbeData,
 			0, 0,
 			BOP_SRCCOPY
-		);
+		);*/
+	}
 }
 
 void HideWindow (Window* pWindow)
