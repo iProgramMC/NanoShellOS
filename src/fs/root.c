@@ -14,7 +14,6 @@
 #include <tar.h>
 #include <debug.h>
 
-
 static uint32_t OctToBin(char *data, uint32_t size)
 {
 	uint32_t value = 0;
@@ -27,6 +26,7 @@ static uint32_t OctToBin(char *data, uint32_t size)
 	return value;
 }
 
+/*
 // Misc device files
 #if 1
 
@@ -83,13 +83,13 @@ static uint32_t FsTeletypeWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_
 		CoPrintChar (s_InodeToConsole[pNode->m_inode], *(pText++));
 	}
 	return size;
-}
+}*/
 
 
-#endif
+//#endif
 
-#if 1
-static DirEnt g_DirEnt; 
+//#if 1
+/*static DirEnt g_DirEnt; 
 
 static uint32_t FsRootFsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
@@ -156,10 +156,11 @@ static FileNode* FsDevFsFindDir(FileNode* pDirNode, const char* pName)
 		pNode = pNode->next;
 	}
 	return NULL;
-}
+}*/
 
 void FsInitializeDevicesDir()
 {
+	/*
 	// Add device directory
 	FileNode *pDevDir = CreateFileNode(FsGetRootNode());
 	pDevDir->m_length = 0;
@@ -192,8 +193,9 @@ void FsInitializeDevicesDir()
 	#include "vfs_dev_defs.h"
 	
 #undef DEFINE_DEVICE
+*/
 }
-
+/*
 FileNode* FsResolvePathCreateDirs (const char* pPath)
 {
 	char path_copy[PATH_MAX]; //max path
@@ -254,18 +256,18 @@ FileNode* FsResolvePathCreateDirs (const char* pPath)
 		return NULL;
 	}
 }
-
+*/
 void FsInitializeInitRd(void* pRamDisk)
 {	
 	// Add files to the ramdisk.
 	
 	int i = 0;
 	
-	FileNode *pRoot = FsGetRootNode();
+	/*FileNode *pRoot = FsGetRootNode();
 	
 	pRoot->ReadDir = FsRootFsReadDir;
 	pRoot->FindDir = FsRootFsFindDir;
-	
+	*/
 	SLogMsg("Adding Files...");
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
@@ -306,6 +308,7 @@ void FsInitializeInitRd(void* pRamDisk)
 			strcpy (directory_name, full_file_name);
 			strcpy (file_name,      pname2);
 			
+			/*
 			FileNode *pNewNode = NULL;
 			
 			if (directory_name[0] == 0)
@@ -363,7 +366,7 @@ void FsInitializeInitRd(void* pRamDisk)
 					pNewNode->m_perms |= PERM_EXEC;
 				}
 				i++;
-			}
+			}*/
 		}
 
 		// Advance to the next entry
@@ -407,4 +410,4 @@ void FsInitRdInit()
 	FsInitializeInitRd((void*)pInitrdAddress);
 }
 
-#endif
+//#endif

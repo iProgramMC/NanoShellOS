@@ -11,7 +11,7 @@
 #include <tar.h>
 
 #define MAX_CONCURRENT_RAMDISKS 32
-
+/*
 int g_rdsMountedCount = 0;
 
 static uint32_t OctToBin(char *data, uint32_t size)
@@ -80,9 +80,9 @@ static FileNode* FsRamDiskFindDir(FileNode* pDirNode, const char* pName)
 	}
 	return NULL;
 }
-
+*/
 void FsMountTarRamDisk(void* pRamDisk)
-{
+{/*
 	FileNode *pTarRoot = CreateFileNode (FsGetRootNode());
 	
 	sprintf(pTarRoot->m_name, "Tar%d", g_rdsMountedCount);
@@ -143,11 +143,11 @@ void FsMountTarRamDisk(void* pRamDisk)
 		}
 		
 		pRamDiskTar = (Tar*)((uintptr_t)pRamDiskTar + ((fileSize + 511) / 512 + 1) * 512);
-	}
+	}*/
 }
 
 void FsMountRamDisk(void* pRamDisk)
-{
+{/*
 	//hack
 	if (*(uint16_t*)pRamDisk >= 100)
 	{
@@ -208,5 +208,5 @@ void FsMountRamDisk(void* pRamDisk)
 			//also make it executable
 			pNode->m_perms |= PERM_EXEC;
 		} 
-	}
+	}*/
 }

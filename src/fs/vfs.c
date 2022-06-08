@@ -278,12 +278,12 @@ void FsInit ()
 // File Descriptor handlers:
 #if 1
 
-FileDescriptor g_FileNodeToDescriptor[FD_MAX];
-DirDescriptor  g_DirNodeToDescriptor [FD_MAX];
+//FileDescriptor g_FileNodeToDescriptor[FD_MAX];
+//DirDescriptor  g_DirNodeToDescriptor [FD_MAX];
 
 void FiDebugDump()
 {
-	LogMsg("Listing opened files.");
+	/*LogMsg("Listing opened files.");
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		FileDescriptor* p = &g_FileNodeToDescriptor[i];
@@ -293,12 +293,12 @@ void FiDebugDump()
 					p->m_bIsFIFO, p->m_pNode, p->m_openFile, p->m_openLine, p->m_sPath);
 		}
 	}
-	LogMsg("Done");
+	LogMsg("Done");*/
 }
 
 static int FiFindFreeFileDescriptor(const char* reqPath)
 {
-	for (int i = 0; i < FD_MAX; i++)
+	/*for (int i = 0; i < FD_MAX; i++)
 	{
 		if (g_FileNodeToDescriptor[i].m_bOpen)
 			if (strcmp (g_FileNodeToDescriptor[i].m_sPath, reqPath) == 0)
@@ -308,13 +308,13 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	{
 		if (!g_FileNodeToDescriptor[i].m_bOpen)
 			return i;
-	}
+	}*/
 	return -ENFILE;
 }
 
 static int FiFindFreeDirDescriptor(const char* reqPath)
 {
-	for (int i = 0; i < FD_MAX; i++)
+	/*for (int i = 0; i < FD_MAX; i++)
 	{
 		if (g_DirNodeToDescriptor[i].m_bOpen)
 			if (strcmp (g_DirNodeToDescriptor[i].m_sPath, reqPath) == 0)
@@ -324,7 +324,7 @@ static int FiFindFreeDirDescriptor(const char* reqPath)
 	{
 		if (!g_DirNodeToDescriptor[i].m_bOpen)
 			return i;
-	}
+	}*/
 	return -ENFILE;
 }
 
@@ -334,17 +334,18 @@ SafeLock g_FileSystemLock;
 bool FiIsValidDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
-	return g_FileNodeToDescriptor[fd].m_bOpen;
+	return false;//return g_FileNodeToDescriptor[fd].m_bOpen;
 }
 
 bool FiIsValidDirDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
-	return g_DirNodeToDescriptor[fd].m_bOpen;
+	return false;//return g_DirNodeToDescriptor[fd].m_bOpen;
 }
 
 int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
+	/*
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
 	int fd = FiFindFreeFileDescriptor(pFileName);
@@ -467,10 +468,14 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	return fd;
+	*/
+	
+	return -EIO;
 }
 
 int FiClose (int fd)
 {
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -490,10 +495,14 @@ int FiClose (int fd)
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
+	return -EIO;
 }
 
 int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
 	int dd = FiFindFreeDirDescriptor(pFileName);
@@ -537,10 +546,13 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	LockFree (&g_FileSystemLock);
 	
 	return dd;
+	*/
 }
 
 int FiCloseDir (int dd)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -560,10 +572,13 @@ int FiCloseDir (int dd)
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
 }
 
 DirEnt* FiReadDir (int dd)
 {
+	return NULL;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -585,10 +600,13 @@ DirEnt* FiReadDir (int dd)
 	
 	LockFree (&g_FileSystemLock);
 	return &pDesc->m_sCurDirEnt;
+	*/
 }
 
 int FiSeekDir (int dd, int loc)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -607,6 +625,7 @@ int FiSeekDir (int dd, int loc)
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
 }
 
 int FiRewindDir (int dd)
@@ -616,6 +635,8 @@ int FiRewindDir (int dd)
 
 int FiTellDir (int dd)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -627,10 +648,13 @@ int FiTellDir (int dd)
 	
 	LockFree (&g_FileSystemLock);
 	return pDesc->m_nStreamOffset;
+	*/
 }
 
 int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -656,10 +680,13 @@ int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
 }
 
 int FiStat (const char *pFileName, StatResult* pOut)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	
 	FileNode *pNode = FsResolvePath(pFileName);
@@ -679,10 +706,13 @@ int FiStat (const char *pFileName, StatResult* pOut)
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
 }
 
 size_t FiRead (int fd, void *pBuf, int nBytes)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -705,11 +735,14 @@ size_t FiRead (int fd, void *pBuf, int nBytes)
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
 	LockFree (&g_FileSystemLock);
 	return rv;
+	*/
 }
 
 //TODO
 size_t FiWrite (int fd, void *pBuf, int nBytes)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -732,10 +765,13 @@ size_t FiWrite (int fd, void *pBuf, int nBytes)
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
 	LockFree (&g_FileSystemLock);
 	return rv;
+	*/
 }
 
 int FiSeek (int fd, int offset, int whence)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -774,10 +810,13 @@ int FiSeek (int fd, int offset, int whence)
 	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
+	*/
 }
 
 int FiTell (int fd)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -787,10 +826,13 @@ int FiTell (int fd)
 	int rv = g_FileNodeToDescriptor[fd].m_nStreamOffset;
 	LockFree (&g_FileSystemLock);
 	return rv;
+	*/
 }
 
 int FiTellSize (int fd)
 {
+	return -EIO;
+	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -800,19 +842,25 @@ int FiTellSize (int fd)
 	int rv = g_FileNodeToDescriptor[fd].m_nFileEnd;
 	LockFree (&g_FileSystemLock);
 	return rv;
+	*/
 }
 
 
 extern char g_cwd[PATH_MAX+2];
 int FiRemoveFile (const char *pfn)
 {
+	return -EIO;
+	/*
 	FileNode *p = FsResolvePath (pfn);
 	if (!p) return -ENOENT;
 	
 	return FsRemoveFile (p); // Node no longer valid : )
+	*/
 }
 int FiChangeDir (const char *pfn)
 {
+	return -EIO;
+	/*
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
 	
 	int slen = strlen (pfn);
@@ -875,6 +923,7 @@ int FiChangeDir (const char *pfn)
 	strcpy (g_cwd, cwd_work);
 	
 	return -ENOTHING;
+	*/
 }
 
 #endif

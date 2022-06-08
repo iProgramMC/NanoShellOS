@@ -13,6 +13,8 @@
 #include <fat.h>
 FatFileSystem s_Fat32Structures[32];
 
+#if 0
+
 // Internal FAT code
 #if 1
 
@@ -1848,11 +1850,14 @@ static void FatMountRootDir(FatFileSystem* pSystem, char* pOutPath)
 
 #endif
 
+#endif
+
 // Mounting code
 #if 1
 
 int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
+	/*
 	// Find a Fat32 structure in the list of Fat32 structures.
 	int FreeArea = -1;
 	for (size_t i = 0; i < ARRAY_COUNT(s_Fat32Structures); i++)
@@ -1913,10 +1918,13 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	LogMsg("Mounted '%s'.", out_path, 512 * pFat32->m_bpb.m_nSectorsPerCluster);
 	
 	return MOUNT_SUCCESS;
+	*/
+	return 0;
 }
 
 void FatUnmountFileSystem(FatFileSystem* pFS)
 {
+	/*
 	FatFlushFat (pFS);
 	MmFreeK (pFS->m_pFat);
 	MmFreeK (pFS->m_pbFatModified);
@@ -1924,10 +1932,12 @@ void FatUnmountFileSystem(FatFileSystem* pFS)
 	pFS->m_pbFatModified = NULL;
 	pFS->m_bMounted      = false;
 	LogMsg("File system unmounted.  Need to do it from the VFS side too. TODO!");
+	*/
 }
 
 void FsFatInit ()
 {
+	/*
 	// probe each drive
 	MasterBootRecord record;
 	for (int i = 0; i < 0x100; i++)
@@ -1950,7 +1960,7 @@ void FsFatInit ()
 				FsMountFatPartition (i, pPart->m_StartLBA, pPart->m_PartSizeSectors);
 			}
 		}
-	}
+	}*/
 }
 
 #endif
