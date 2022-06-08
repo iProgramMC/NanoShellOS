@@ -657,7 +657,32 @@ void LaunchRun()
 	DebugLogMsg("Created run popup task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 
-Window* g_pTaskBarWindow;
+Window* g_pTaskBarWindow, *g_pDeskTopWindow;
+void CALLBACK DesktopProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	switch (messageType)
+	{
+		case EVENT_CREATE:
+		{
+			Rectangle r;
+			
+			RECT(r,0,0,pWindow->m_rect.right - pWindow->m_rect.left,pWindow->m_rect.bottom - pWindow->m_rect.top);
+			
+			AddControlEx(pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, LISTVIEW_NOSCROLL | LISTVIEW_NOBORDER, 0);
+			
+			AddElementToList(pWindow, 1000, "File system", ICON_HARD_DRIVE);
+			AddElementToList(pWindow, 1000, "Text Editor", ICON_NOTEPAD);
+			
+			break;
+		}
+		case EVENT_DESTROY:
+			g_pDeskTopWindow = NULL;
+			//fallthrough
+		default:
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			break;
+	}
+}
 void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
@@ -797,6 +822,9 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			}
 			break;
 		}
+		case EVENT_DESTROY:
+			g_pTaskBarWindow = NULL;
+			//fallthrough
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
@@ -818,16 +846,16 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP);
+	Window* pWindow        = CreateWindow ("Taskbar", wx, wy, ww, wh,      TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP);
+	Window* pDesktopWindow = CreateWindow ("Desktop", 0,  wh, ww, sh - wh, DesktopProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WI_NOFORWRD);
 	
-	if (!pWindow)
+	if (pWindow)
 	{
-		DebugLogMsg("Hey, the taskbar couldn't be created. Why?");
-		return;
+		pWindow->m_iconID = ICON_DESKTOP2;
 	}
 	
-	pWindow->m_iconID = ICON_DESKTOP2;
 	
+	g_pDeskTopWindow = pDesktopWindow;
 	g_pTaskBarWindow = pWindow;
 	// setup:
 	//ShowWindow(pWindow);
@@ -835,9 +863,21 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	// event loop:
 #if THREADING_ENABLED
 	int timeout = GetTickCount();
-	while (HandleMessages (pWindow))
+	while (pWindow || pDesktopWindow)
 	{
-		if (GetTickCount() > timeout)
+		if (pWindow)
+		{
+			if (!HandleMessages (pWindow))
+				pWindow = NULL;
+		}
+		
+		if (pDesktopWindow)
+		{
+			if (!HandleMessages (pDesktopWindow))
+				pDesktopWindow = NULL;
+		}
+		
+		if (pWindow && GetTickCount() > timeout)
 		{
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
 			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);

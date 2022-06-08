@@ -462,8 +462,12 @@ inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
 }
 
 extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
+
+extern Window *g_pDeskTopWindow;
 void RedrawBackground (Rectangle rect)
 {
+	if (g_pDeskTopWindow) return; // let the desktop handle it
+	
 	if (g_BackgroundSolidColorActive)
 	{
 		/*rect.right--, rect.bottom--;
@@ -1441,7 +1445,10 @@ void SelectWindowUnsafe(Window* pWindow)
 			}
 		}
 		
-		MovePreExistingWindowToFront (pWindow - g_windows);
+		if (!(pWindow->m_flags & WI_NOFORWRD))
+		{
+			MovePreExistingWindowToFront (pWindow - g_windows);
+		}
 		pWindow->m_isSelected = true;
 		UpdateDepthBuffer();
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
@@ -1702,11 +1709,15 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
 	
 	// if we're not frozen AND we have a title to drag on
-	if (window->m_minimized || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
+	if (!window->m_isBeingDragged)
 	{
-		if (!window->m_isBeingDragged)
+		int x = mouseX - window->m_rect.left;
+		int y = mouseY - window->m_rect.top;
+		Point mousePoint = {x, y};
+		
+		//are we in the title bar region? TODO
+		if (window->m_minimized || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
 		{
-			//are we in the title bar region? TODO
 			Rectangle recta = window->m_rect;
 			if (!window->m_minimized)
 			{
@@ -1721,11 +1732,6 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				recta.right  -= recta.left; recta.left = 0;
 				recta.bottom -= recta.top;  recta.top  = 0;
 			}
-			
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
-			Point mousePoint = {x, y};
-			
 			if (!window->m_maximized && (RectangleContains(&recta, &mousePoint) || window->m_minimized))
 			{
 				window->m_isBeingDragged = true;
@@ -1776,12 +1782,12 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				
 				SetCursor (&g_windowDragCursor);
 			}
-			if (!window->m_minimized && !window->m_isBeingDragged)
-			{
-				window->m_clickedInside = true;
-				
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-			}
+		}
+		if (!window->m_minimized && !window->m_isBeingDragged)
+		{
+			window->m_clickedInside = true;
+			
+			WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
 	
@@ -2142,7 +2148,7 @@ void ShutdownProcessing(int parameter)
 				}
 			}
 		}
-		if (bReady)
+		//if (bReady)
 		{
 			// Lookin' good!
 			SLogMsg("All windows have shutdown gracefully! Quitting...");
