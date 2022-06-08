@@ -466,8 +466,6 @@ extern void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 extern Window *g_pDeskTopWindow;
 void RedrawBackground (Rectangle rect)
 {
-	if (g_pDeskTopWindow) return; // let the desktop handle it
-	
 	if (g_BackgroundSolidColorActive)
 	{
 		/*rect.right--, rect.bottom--;
@@ -1082,6 +1080,54 @@ void WindowManagerShutdown(bool wants_restart_too)
 	g_shutdownWantReb = wants_restart_too;
 }
 
+void WindowBlitTakingIntoAccountOcclusions(uint32_t windowFlags, short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy);
+void UncoverAWindow(Window* pWnd, Window *pUncoveredWindow)
+{
+	//if (pUncoveredWindow->m_flags & WI_TRANSPAR)
+	{
+		int tw = pUncoveredWindow->m_vbeData.m_width, th = pUncoveredWindow->m_vbeData.m_height;
+		Rectangle ndr = pUncoveredWindow->m_rect;
+		
+		if (ndr.left   < pWnd->m_rect.left)
+			ndr.left   = pWnd->m_rect.left;
+		if (ndr.top    < pWnd->m_rect.top)
+			ndr.top    = pWnd->m_rect.top;
+		if (ndr.right  > pWnd->m_rect.right)
+			ndr.right  = pWnd->m_rect.right;
+		if (ndr.bottom > pWnd->m_rect.bottom)
+			ndr.bottom = pWnd->m_rect.bottom;
+		
+		WindowBlitTakingIntoAccountOcclusions(
+			pUncoveredWindow->m_flags,
+			(short)(pUncoveredWindow - g_windows),
+			pUncoveredWindow->m_vbeData.m_framebuffer32,
+			
+			ndr.left,
+			ndr.right,
+			ndr.top,
+			ndr.bottom,
+			tw,
+			th,
+			ndr.left - pUncoveredWindow->m_rect.left,
+			ndr.top  - pUncoveredWindow->m_rect.top
+		);
+	}
+	/*else
+	{
+		VidBitBlit (
+			g_vbeData,
+			pWnd->m_rect.left,
+			pWnd->m_rect.top,
+			pWnd->m_rect.right  - pWnd->m_rect.left,
+			pWnd->m_rect.bottom - pWnd->m_rect.top,
+			&pUncoveredWindow->m_vbeData,
+			pWnd->m_rect.left - pUncoveredWindow->m_rect.left,
+			pWnd->m_rect.top  - pUncoveredWindow->m_rect.top,
+			BOP_SRCCOPY
+		);
+	}*/
+}
+
 void UndrawWindow (Window* pWnd)
 {
 	VBEData* backup = g_vbeData;
@@ -1128,6 +1174,8 @@ void UndrawWindow (Window* pWnd)
 		}
 		else
 		{
+			UncoverAWindow (pWnd, windowDrawList[i]);
+			/*
 			VidBitBlit (
 				g_vbeData,
 				pWnd->m_rect.left,
@@ -1139,6 +1187,7 @@ void UndrawWindow (Window* pWnd)
 				pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
 				BOP_SRCCOPY
 			);
+			*/
 		}
 	}
 	
@@ -1437,10 +1486,8 @@ void SelectWindowUnsafe(Window* pWindow)
 				if (g_windows[i].m_isSelected)
 				{
 					g_windows[i].m_isSelected = false;
+					
 					WindowRegisterEventUnsafe(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
-					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
-					g_windows[i].m_vbeData.m_dirty = true;
-					g_windows[i].m_renderFinished = true;
 				}
 			}
 		}
@@ -1451,8 +1498,10 @@ void SelectWindowUnsafe(Window* pWindow)
 		}
 		pWindow->m_isSelected = true;
 		UpdateDepthBuffer();
+		
+		// windows can render themselves when focus is set
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
-		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
+		
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
@@ -2728,7 +2777,7 @@ inline void blpxinl(unsigned x, unsigned y, unsigned color)
 	}
 }
 
-void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy)
+void WindowBlitTakingIntoAccountOcclusions(uint32_t windowFlags, short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy)
 {
 	//TODO: clean up this function!
 	
@@ -2760,8 +2809,16 @@ void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, i
 				short n = g_windowDepthBuffer [offcp];
 				if (n == windIndex)
 				{
-					g_framebufferCopy         [offcp] = texture[o];
-					g_vbeData->m_framebuffer32[offfb] = texture[o];
+					if (texture[o] != WI_TRANSPARKEY)
+					{
+						g_framebufferCopy         [offcp] = texture[o];
+						g_vbeData->m_framebuffer32[offfb] = texture[o];
+					}
+					else if (!(windowFlags & WI_TRANSPAR))
+					{
+						g_framebufferCopy         [offcp] = texture[o];
+						g_vbeData->m_framebuffer32[offfb] = texture[o];
+					}
 				}
 				offcp++;
 				offfb++;
@@ -2829,7 +2886,7 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 #endif
-	if (pWindow->m_bForemost)
+	if (pWindow->m_bForemost  &&  !(pWindow->m_flags & WI_TRANSPAR))
 	{
 #ifdef DIRTY_RECT_TRACK
 		if (local_copy.m_bIgnoreAndDrawAll)
@@ -2876,13 +2933,14 @@ void RenderWindow (Window* pWindow)
 		if (local_copy.m_bIgnoreAndDrawAll)
 		{
 #endif
-			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
+			WindowBlitTakingIntoAccountOcclusions(pWindow->m_flags, windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
 #ifdef DIRTY_RECT_TRACK
 		}
 		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
 			Rectangle e = local_copy.m_rects[i];
 			WindowBlitTakingIntoAccountOcclusions(
+				pWindow->m_flags,
 				windIndex,
 				texture,
 				x + e.left,
@@ -3030,7 +3088,11 @@ void PaintWindowBorder(Window* pWindow)
 	//recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
 	//recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
 	
-	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
+	uint32_t bgc = WINDOW_BACKGD_COLOR;
+	if (pWindow->m_flags & WI_TRANSPAR)
+		bgc = WI_TRANSPARKEY;
+	
+	VidFillRectangle(bgc, recta);
 	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 void PaintWindowBackgroundAndBorder(Window* pWindow)
@@ -3356,12 +3418,25 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		PaintWindowBackgroundAndBorder(pWindow);
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
 	}
-	else if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
-	{
-		//PaintWindowBorderNoBackgroundOverpaint(pWindow);
-	}
 	
 	someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
+	
+	if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
+	{
+		//PaintWindowBorderNoBackgroundOverpaint(pWindow);
+		for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
+		{
+			if (pWindow->m_pControlArray[i].m_active)
+			{
+				Control* p = &pWindow->m_pControlArray[i];
+				if (p->OnEvent && (uint32_t)p->m_comboID >= 0xFFFF0000u  &&  (uint32_t)p->m_comboID <= 0xFFFF0005u)
+				{
+					if (p->OnEvent(p, EVENT_PAINT, parm1, parm2, pWindow))
+						break;
+				}
+			}
+		}
+	}
 	
 	//reset to main screen
 	VidSetVBEData (NULL);
@@ -3387,6 +3462,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_CREATE)
 	{
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		
+		pWindow->m_renderFinished = true;
+		pWindow->m_vbeData.m_drs.m_bIgnoreAndDrawAll = true;
+		
 		AddWindowToDrawOrder (pWindow - g_windows);
 		ShowWindow(pWindow);
 		SelectWindow(pWindow);

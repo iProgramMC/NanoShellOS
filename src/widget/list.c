@@ -654,7 +654,7 @@ SAI int _Abs(int i)
 	else return i;
 }
 
-void WidgetIconViewDrag_DrawIconIndex(Control *this, int i, bool bClear)
+void WidgetIconViewDrag_DrawIconIndex(Control *this, Window *pWindow, int i, bool bClear)
 {
 	ListViewData* pData = &this->m_listViewData;
 	ListItem *pItem = &pData->m_pItems[i];
@@ -670,6 +670,14 @@ void WidgetIconViewDrag_DrawIconIndex(Control *this, int i, bool bClear)
 	//if (!parm1 || i == parm2)
 	
 	uint32_t color = WINDOW_TEXT_COLOR;
+	
+	uint32_t bgcolor = WINDOW_TEXT_COLOR_LIGHT;
+	if (pWindow->m_flags & WI_TRANSPAR)
+	{
+		bgcolor = WI_TRANSPARKEY;
+		color = WINDOW_TEXT_COLOR_LIGHT;
+	}
+	
 	Rectangle br = { x, y + 36 * pData->m_hasIcons, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 	
 	if (pData->m_bIsDraggingIt && pData->m_trackedListItem == i)
@@ -685,7 +693,7 @@ void WidgetIconViewDrag_DrawIconIndex(Control *this, int i, bool bClear)
 		int mid = (br.left + br.right) / 2;
 		
 		if (bClear)
-			VidFillRect(0xFFFFFF, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
+			VidFillRect(bgcolor,  mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
 		else
 			VidFillRect(0x00007F, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
 	}
@@ -697,7 +705,7 @@ void WidgetIconViewDrag_DrawIconIndex(Control *this, int i, bool bClear)
 			if (!bClear)
 				RenderIconForceSize (pData->m_pItems[i].m_icon, ex, y, 32);
 			else
-				VidFillRect(0xFFFFFF, ex, y, ex+31, y+31);
+				VidFillRect(bgcolor, ex, y, ex+31, y+31);
 		}
 	}
 	
@@ -751,8 +759,8 @@ go_back:
 					if (RectangleContains (&br, &pt))
 					{
 						nSelectedIcon = i;
-						WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, true);
-						WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, false);
+						WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, true);
+						WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, false);
 						break;
 					}
 				}
@@ -765,8 +773,8 @@ go_back:
 					pData->m_startDragX      = pt.x;
 					pData->m_startDragY      = pt.y;
 					
-					WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, true);
-					WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, false);
+					WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, true);
+					WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, false);
 				}
 				else if (_Abs(pData->m_startDragX - pt.x) > 4 || _Abs(pData->m_startDragY - pt.y) > 4)
 				{
@@ -790,7 +798,7 @@ go_back:
 					//bUpdate = !(pData->m_bIsDraggingIt);
 					if (!(pData->m_bIsDraggingIt))
 					{
-						WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, true);
+						WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, true);
 					}
 					
 					pData->m_bIsDraggingIt = true;
@@ -823,7 +831,7 @@ go_back:
 				
 				// Undraw the old icon.
 				SLogMsg("Undrawing the old icon");
-				WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, true);
+				WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, true);
 				
 				// Place the icon there.
 				ListItem *pItem = &pData->m_pItems[pData->m_trackedListItem];
@@ -836,7 +844,7 @@ go_back:
 				
 				//bUpdate = true;
 				SLogMsg("Drawing the new icon");
-				//WidgetIconViewDrag_DrawIconIndex(this, pData->m_trackedListItem, false);
+				//WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_trackedListItem, false);
 				
 				ChangeCursor (pWindow, CURSOR_DEFAULT);
 				
@@ -866,16 +874,16 @@ go_back:
 				if (pData->m_highlightedElementIdx != nSelectedIcon)
 				{
 					int oldElement = pData->m_highlightedElementIdx;
-					WidgetIconViewDrag_DrawIconIndex(this, oldElement, true);
+					WidgetIconViewDrag_DrawIconIndex(this, pWindow, oldElement, true);
 					
 					pData->m_highlightedElementIdx = nSelectedIcon;
 					
-					WidgetIconViewDrag_DrawIconIndex(this, oldElement, false);
+					WidgetIconViewDrag_DrawIconIndex(this, pWindow, oldElement, false);
 					
 					if (pData->m_highlightedElementIdx >= 0)
 					{
-						WidgetIconViewDrag_DrawIconIndex(this, pData->m_highlightedElementIdx, true);
-						WidgetIconViewDrag_DrawIconIndex(this, pData->m_highlightedElementIdx, false);
+						WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_highlightedElementIdx, true);
+						WidgetIconViewDrag_DrawIconIndex(this, pWindow, pData->m_highlightedElementIdx, false);
 					}
 				}
 				else if (nSelectedIcon != -1)
@@ -911,6 +919,9 @@ go_back:
 				rk.bottom -= 2;
 			}
 			
+			if (pWindow->m_flags & WI_TRANSPAR)
+				parm1 = 1;
+			
 			if (!parm1)
 				VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			
@@ -935,11 +946,11 @@ go_back:
 			
 			for (int i = 0; i < pData->m_elementCount; i++)
 			{
-				WidgetIconViewDrag_DrawIconIndex(this, i, true);
+				WidgetIconViewDrag_DrawIconIndex(this, pWindow, i, true);
 			}
 			for (int i = 0; i < pData->m_elementCount; i++)
 			{
-				WidgetIconViewDrag_DrawIconIndex(this, i, false);
+				WidgetIconViewDrag_DrawIconIndex(this, pWindow, i, false);
 			}
 			
 			if (!parm1 && !(this->m_parm1 & LISTVIEW_NOBORDER))

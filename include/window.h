@@ -448,7 +448,7 @@ enum CURSORTYPE
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 
-#define WI_TRANSPAR 0x00800000//Internal flag: Allow transparent pixels. Used by the desktop window only.
+#define WI_TRANSPAR 0x00800000//Internal flag: Allow transparent pixels. Used by the desktop window only. Use carefully, because this can really slow
 #define WI_NOFORWRD 0x01000000//Internal flag: Don't bring this window forward no matter what
 #define WI_MESSGBOX 0x02000000//Internal flag: This is a message box. Wait for it
 #define WI_FROZENRM 0x04000000//Internal flag: Remove the 'frozen' flag when the window is no longer hung
@@ -459,6 +459,8 @@ enum CURSORTYPE
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
 #define WI_INTEMASK 0xCC000000//Internal flag mask that CreateWindow will filter
+
+#define WI_TRANSPARKEY 0xFF777777 // A key that isn't TRANSPARENT to allow stuff to render
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 

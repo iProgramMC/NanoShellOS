@@ -847,7 +847,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
 	Window* pWindow        = CreateWindow ("Taskbar", wx, wy, ww, wh,      TaskbarProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP);
-	Window* pDesktopWindow = CreateWindow ("Desktop", 0,  wh, ww, sh - wh, DesktopProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WI_NOFORWRD);
+	Window* pDesktopWindow = CreateWindow ("Desktop", 0,  wh, ww, sh - wh, DesktopProgramProc, WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WI_NOFORWRD | WI_TRANSPAR);
 	
 	if (pWindow)
 	{
