@@ -114,6 +114,13 @@ bool FsFat32ClusterChainRegenerateCache(Fat32ClusterChain *pChain)
 	FsFat32ReadCluster(pChain->pFS, pChain->currentCluster, pChain->clusterCache);
 	return false;
 }
+int FsFat32ClusterChainTell(File* file)
+{
+	FsFat32AssertFileType(file);
+	Fat32ClusterChain *pChain = (Fat32ClusterChain*)file;
+	
+	return pChain->offsetBytes;
+}
 bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowExpansion)
 {
 	FsFat32AssertFileType(file);
@@ -122,8 +129,8 @@ bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowEx
 	int clusSize  = FsFat32GetClusterSize(pChain->pFS);
 	switch (whence)
 	{
-		//case SEEK_END:
-			//position += entry.file_length;
+		case SEEK_END:
+			position += pChain->entry.file_length;
 		case SEEK_SET:
 			pChain->currentCluster = pChain->firstCluster;
 			pChain->offsetBytes    = 0;
@@ -137,6 +144,7 @@ bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowEx
 			if (FsFat32IsEOF(pChain->currentCluster))
 				return true;
 			
+			// TODO: Optimize this quite a bit
 			for (int i = 0; i < position; i++)
 			{
 				if (FsFat32IsEOF(pChain->currentCluster)) return true;
@@ -196,6 +204,10 @@ void FsFat32ClusterChainClose(File* file)
 	pChain->taken = false;
 	pChain->clusterCacheLoaded = false;
 	pChain->currentCluster = pChain->firstCluster = pChain->offsetBytes = 0;
+	
+	if (pChain->clusterCache)
+		MmFreeK(pChain->clusterCache);
+	pChain->clusterCache = NULL;
 }
 
 static inline void FsFat32AssertFileType(File *pFile)
@@ -227,7 +239,7 @@ bool FsFat32ReadDirEntry(Fat32ClusterChain *pChain, DirectoryEntry *pDirEnt)
 	
 	// read the first directory entry
 try_again:;
-	uint32_t bytesRead = pChain->Read((File*)pChain, data, 32);
+	uint32_t bytesRead = FsFileRead((File*)pChain, data, 32);
 	if (!bytesRead)
 		return 0;
 	
@@ -262,7 +274,7 @@ try_again:;
 		}
 		
 		// load some more
-		bytesRead = pChain->Read((File*)pChain, data, 32);
+		bytesRead = FsFileRead((File*)pChain, data, 32);
 		if (bytesRead == 0)
 		{
 			SLogMsg("Warning: Orphaned LFN entry to end of directory");
@@ -326,14 +338,14 @@ try_again:;
 	//pDirEnt->attributes       = pSFNEntry->attrib;
 	pDirEnt->file_id          = FS_MAKE_ID(pChain->pFS->fsID, cluster_id);
 	pDirEnt->file_length      = pDirData->fileSize;
-	pDirEnt->is_directory     = (pDirData->attrib & FAT_DIRECTORY) != 0;
-	pDirEnt->perms            = (PERM_READ | PERM_WRITE | PERM_EXEC);
+	pDirEnt->type             = FILE_TYPE_FILE;
+	//pDirEnt->perms            = (PERM_READ | PERM_WRITE | PERM_EXEC);
 	
-	if (pDirData->attrib & FAT_READONLY)
-		pDirEnt->perms &= ~PERM_WRITE;
+	//if (pDirData->attrib & FAT_READONLY)
+		//pDirEnt->perms &= ~PERM_WRITE;
 	
-	if (pDirEnt->is_directory)
-		pDirEnt->type = FILE_TYPE_DIRECTORY;
+	if (pDirData->attrib & FAT_DIRECTORY)
+		pDirEnt->type |= FILE_TYPE_DIRECTORY;
 	
 	return true;
 }
@@ -353,12 +365,12 @@ void FsFat32DirectorySeek(Directory* pDirBase, int position)
 	
 	Fat32Directory *pDir = (Fat32Directory*)pDirBase;
 	
-	pDir->file->Seek((File*)pDir->file, 0, SEEK_SET, false);
+	FsFileSeek((File*)pDir->file, 0, SEEK_SET, false);
 	
 	DirectoryEntry unused;
 	while (position--)
 	{
-		if (!pDir->ReadEntry((Directory*)pDir, &unused))
+		if (!FsDirectoryReadEntry((Directory*)pDir, &unused))
 			return;
 	}
 }
@@ -369,12 +381,12 @@ int FsFat32DirectoryTell(Directory* pDirBase)
 	return pDir->told;
 }
 
-static inline void FsFat32AssertDirectoryType(Directory *pFile)
+static inline void FsFat32AssertDirectoryType(Directory *dir)
 {
-	ASSERT(pFile->ReadEntry == FsFat32DirectoryReadEntry &&  "This is not a directory on a FAT32 file system.");
-	ASSERT(pFile->Close     == FsFat32DirectoryClose     &&  "This is not a directory on a FAT32 file system.");
-	ASSERT(pFile->Seek      == FsFat32DirectorySeek      &&  "This is not a directory on a FAT32 file system.");
-	ASSERT(pFile->Tell      == FsFat32DirectoryTell      &&  "This is not a directory on a FAT32 file system.");
+	ASSERT(dir->ReadEntry == FsFat32DirectoryReadEntry &&  "This is not a directory on a FAT32 file system.");
+	ASSERT(dir->Close     == FsFat32DirectoryClose     &&  "This is not a directory on a FAT32 file system.");
+	ASSERT(dir->Seek      == FsFat32DirectorySeek      &&  "This is not a directory on a FAT32 file system.");
+	ASSERT(dir->Tell      == FsFat32DirectoryTell      &&  "This is not a directory on a FAT32 file system.");
 }
 
 #endif
@@ -383,9 +395,9 @@ static inline void FsFat32AssertDirectoryType(Directory *pFile)
 #if 1
 
 // Forward declaration
-File* FsFat32OpenInt(struct FileSystem *pFS, DirectoryEntry entry);
-Directory* FsFat32OpenDir (FileSystem *pFSBase, uint32_t dirID);
-bool FsFat32LocateFileInDir(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
+File*      FsFat32OpenInt        (FileSystem *pFSBase, DirectoryEntry* entry);
+Directory* FsFat32OpenDir        (FileSystem *pFSBase, uint32_t dirID);
+bool       FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
 uint32_t FsFat32GetRootDirID(struct FileSystem *pFS);
 
 static inline void FsFat32AssertType(FileSystem *pFS)
@@ -465,12 +477,12 @@ Fat32FileSystem *FsConstructFat32FileSystem(uint32_t fsID, uint8_t diskID, uint3
 	SLogMsg("Cluster size  is %d",  pFS->clusSize);
 	
 	int clusSize = pFS->clusSize;
-	/*pFS->clusSizeLog2 = -1;
+	pFS->clusSizeLog2 = -1;
 	while (clusSize)
 	{
 		pFS->clusSizeLog2++;
 		clusSize >>= 1;
-	}*/
+	}
 	
 	// Allocate some memory to store the FAT and stuff
 	pFS->pFat         = MmAllocateK(pFS->bpb.m_nSectorsPerFat32 * SECTOR_SIZE);
@@ -520,9 +532,9 @@ void FsFat32DestroyFileSystem(Fat32FileSystem * pFS)
 	// To whoever's trying to access this dying file system, tough luck. Sorry
 	MmFreeK(pFS);
 }
-Fat32ClusterChain* FsFat32OpenIntInt (Fat32FileSystem *pFS, DirectoryEntry entry)
+Fat32ClusterChain* FsFat32OpenIntInt (Fat32FileSystem *pFS, DirectoryEntry* entry)
 {
-	uint32_t firstCluster = (uint32_t)entry.file_id;
+	uint32_t firstCluster = (uint32_t)entry->file_id;
 	
 	// Look for a free handle
 	int freeArea = -1;
@@ -544,18 +556,21 @@ Fat32ClusterChain* FsFat32OpenIntInt (Fat32FileSystem *pFS, DirectoryEntry entry
 	Fat32ClusterChain *pChain = &pFS->fileHandles[freeArea];
 	pChain->taken = true;
 	pChain->pFS   = pFS;
-	pChain->entry = entry;
+	pChain->entry = *entry;
 	pChain->currentCluster = pChain->firstCluster = firstCluster;
 	pChain->offsetBytes    = 0;
 	pChain->clusterCacheLoaded = 0;
+	pChain->clusterCache       = MmAllocateK(FsFat32GetClusterSize(pFS));
 	
 	pChain->Read  = FsFat32ClusterChainRead;
+	pChain->Write = NULL;//FsFat32ClusterChainWrite;
 	pChain->Seek  = FsFat32ClusterChainSeek;
+	pChain->Tell  = FsFat32ClusterChainTell;
 	pChain->Close = FsFat32ClusterChainClose;
 	
 	return pChain;
 }
-File* FsFat32OpenInt (FileSystem *pFSBase, DirectoryEntry entry)
+File* FsFat32OpenInt (FileSystem *pFSBase, DirectoryEntry* entry)
 {
 	// Check that the type is the same.
 	FsFat32AssertType (pFSBase);
@@ -564,7 +579,7 @@ File* FsFat32OpenInt (FileSystem *pFSBase, DirectoryEntry entry)
 	Fat32FileSystem *pFS = (Fat32FileSystem *)pFSBase;
 	
 	// Check that the directory entry's file ID is the same as this file system's ID
-	ASSERT((entry.file_id >> 32) == pFS->fsID);
+	ASSERT((entry->file_id >> 32) == pFS->fsID);
 	
 	// Lock the file system for a bit
 	LockAcquire(&pFS->lock);
@@ -603,11 +618,8 @@ Directory* FsFat32OpenDir (FileSystem *pFSBase, uint32_t dirID)
 	
 	
 	DirectoryEntry entry;
-	entry.is_directory = true;
+	entry.type         = FILE_TYPE_FILE | FILE_TYPE_DIRECTORY;
 	entry.file_length  = -1;
-	entry.type         = FILE_TYPE_DIRECTORY;
-	entry.perms        = PERM_READ | PERM_WRITE;
-	entry.flags        = 0;
 	entry.file_id      = FS_MAKE_ID(pFS->fsID, dirID);
 	strcpy (entry.name, "");
 	
@@ -616,8 +628,8 @@ Directory* FsFat32OpenDir (FileSystem *pFSBase, uint32_t dirID)
 	pDir->taken = true;
 	pDir->told  = 0;
 	pDir->pFS   = pFS;
-	pDir->file  = FsFat32OpenIntInt(pFS, entry);
-	pDir->file->Seek((File*)pDir->file, 0, SEEK_SET, false);
+	pDir->file  = FsFat32OpenIntInt(pFS, &entry);
+	FsFileSeek((File*)pDir->file, 0, SEEK_SET, false);
 	
 	pDir->ReadEntry  = FsFat32DirectoryReadEntry;
 	pDir->Seek       = FsFat32DirectorySeek;
@@ -662,7 +674,7 @@ bool FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN
 	if (!pDirectory) return NULL;
 	
 	SLogMsg("Start reading entries...");
-	while (pDirectory->ReadEntry((Directory*)pDirectory, pEntry))
+	while (FsDirectoryReadEntry((Directory*)pDirectory, pEntry))
 	{
 		SLogMsg("Read Entry: %s...", pEntry->name);
 		if (strcmp (pEntry->name, pFN) == 0)

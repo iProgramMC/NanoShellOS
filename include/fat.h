@@ -154,8 +154,10 @@ typedef struct Fat32ClusterChain // File
 	struct Fat32FileSystem *pFS; // I can do this. Don't judge.
 	
 	File_Read  Read;
+	File_Write Write;
 	File_Close Close;
 	File_Seek  Seek;
+	File_Tell  Tell;
 	
 	// Our own variables for the cluster chain
 	bool taken;
@@ -163,7 +165,8 @@ typedef struct Fat32ClusterChain // File
 	uint32_t firstCluster;	//to allow for backwards seek
 	uint32_t offsetBytes;
 	bool    clusterCacheLoaded;
-	uint8_t clusterCache[65536];
+	//uint8_t clusterCache[65536];
+	uint8_t* clusterCache;
 }
 Fat32ClusterChain;
 

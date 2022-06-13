@@ -54,15 +54,10 @@ enum
 
 typedef struct
 {
-	char     name[261];
+	char     name[128];
 	FileID   file_id;
 	int      file_length;
-	uint32_t flags;
 	uint32_t type;
-	uint32_t perms;
-	bool     is_directory;
-	
-	//uint8_t  attributes;  // FAT
 }
 DirectoryEntry;
 
@@ -71,8 +66,10 @@ struct File;
 struct Directory;
 struct FileSystem;
 typedef uint32_t  (*File_Read) (struct File* file, void *pOut, uint32_t size);
+typedef uint32_t  (*File_Write)(struct File* file, void *pIn,  uint32_t size);
 typedef void      (*File_Close)(struct File* file);
 typedef bool      (*File_Seek) (struct File* file, int position, int whence, bool bAllowExpansion);
+typedef int       (*File_Tell) (struct File* file);
 
 typedef struct File
 {
@@ -80,10 +77,10 @@ typedef struct File
 	struct FileSystem *pFS;
 	
 	File_Read  Read;
+	File_Write Write;
 	File_Close Close;
 	File_Seek  Seek;
-	
-	// Work on: Write
+	File_Tell  Tell;
 }
 File;
 
@@ -108,7 +105,7 @@ typedef struct Directory
 Directory;
 
 typedef Directory*(*FileSystem_OpenDir)        (struct FileSystem *pFS, uint32_t dirID);
-typedef File*     (*FileSystem_OpenInt)        (struct FileSystem *pFS, DirectoryEntry entry);
+typedef File*     (*FileSystem_OpenInt)        (struct FileSystem *pFS, DirectoryEntry* entry);
 typedef bool      (*FileSystem_LocateFileInDir)(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
 typedef uint32_t  (*FileSystem_GetRootDirID)   (struct FileSystem *pFS);
 
@@ -126,12 +123,31 @@ typedef struct FileSystem
 }
 FileSystem;
 
+// Mounting
 bool        FsMountFileSystem (FileSystem *pFS);
 FileSystem* FsResolveByFsID   (uint32_t    fsID);
 FileSystem* FsResolveByFileID (FileID      id);
 FileID      FsGetGlobalRoot   ();
 void        FsSetGlobalRoot   (FileID id);
-File*       FsOpenFile        (DirectoryEntry entry);
+
+// File operations
+uint32_t FsFileRead (File* file, void *pOut, uint32_t size);
+uint32_t FsFileWrite(File* file, void *pOut, uint32_t size);
+void     FsFileClose(File* file);
+bool     FsFileSeek(File* file, int pos, int whence, bool bAllowExpansion);
+int      FsFileTell(File* file);
+
+// Directory operations
+void FsDirectoryClose     (Directory *pDirectory);
+bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut);
+void FsDirectorySeek      (Directory *pDirectory, int position);
+int  FsDirectoryTell      (Directory *pDirectory);
+
+// File system operations
+File*      FsOpenFile(DirectoryEntry* entry);
+Directory* FsOpenDir(FileID fileID);
+bool       FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut);
+uint32_t   FsGetRootDirID(FileSystem *pFS);
 
 #define BASE_FI(fi)  ((File*)fi)
 #define BASE_FS(fs)  ((FileSystem*)fs)

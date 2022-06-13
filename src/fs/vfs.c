@@ -20,8 +20,104 @@
 
 char g_cwd[PATH_MAX+2];
 
-// New Stuff
+// Shorthands for common FS operations
 #if 1
+
+uint32_t FsFileRead(File* file, void *pOut, uint32_t size)
+{
+	if (!file->Read)
+		return 0;
+	
+	return file->Read(file, pOut, size);
+}
+uint32_t FsFileWrite(File* file, void *pIn, uint32_t size)
+{
+	if (!file->Write)
+		return 0;
+	
+	return file->Write(file, pIn, size);
+}
+void FsFileClose(File* file)
+{
+	if (!file->Close) return;
+	
+	return file->Close(file);
+}
+bool FsFileSeek(File* file, int pos, int whence, bool bAllowExpansion)
+{
+	if (!file->Seek)
+		return true;
+	
+	return file->Seek(file, pos, whence, bAllowExpansion);
+}
+int FsFileTell (File *file)
+{
+	if (!file->Tell)
+		return 0;
+	
+	return file->Tell(file);
+}
+
+void FsDirectoryClose (Directory *pDirectory)
+{
+	if (!pDirectory->Close)
+		return;
+	
+	pDirectory->Close(pDirectory);
+}
+bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut)
+{
+	if (!pDirectory->ReadEntry)
+		return false; //! what would be the purpose of a directory if you can't read from it?
+	
+	return pDirectory->ReadEntry(pDirectory, pDirectoryEntryOut);
+}
+void FsDirectorySeek (Directory *pDirectory, int position)
+{
+	if (!pDirectory->Seek)
+		return;
+	
+	pDirectory->Seek(pDirectory, position);
+}
+int FsDirectoryTell (Directory *pDirectory)
+{
+	if (!pDirectory->Tell)
+		return 0;
+	
+	return pDirectory->Tell(pDirectory);
+}
+
+File* FsOpenFile(DirectoryEntry* entry)
+{
+	FileSystem *pFS = FsResolveByFileID(entry->file_id);
+	if (!pFS) return NULL;
+	
+	return pFS->OpenInt(pFS, entry);
+}
+Directory* FsOpenDir(FileID fileID)
+{
+	FileSystem *pFS = FsResolveByFileID(fileID);
+	if (!pFS) return NULL;
+	
+	return pFS->OpenDir(pFS, (uint32_t)fileID);
+}
+bool FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut)
+{
+	FileSystem *pFS = FsResolveByFileID (dirID);
+	if (!pFS) return NULL;
+	
+	return pFS->LocateFileInDir (pFS, (uint32_t)dirID, pFN, pEntryOut);
+}
+uint32_t FsGetRootDirID(FileSystem *pFS)
+{
+	return pFS->GetRootDirID(pFS);
+}
+
+#endif
+
+// Mount Manger
+#if 1
+
 FileSystem *g_pMountedFileSystems[C_MAX_FILE_SYSTEMS];
 FileID g_file_root = 0;
 
@@ -98,12 +194,9 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 	bool   bIsThisADir = true;
 	
 	strcpy(pEntryOut->name, "root");
-	pEntryOut->flags = 0;
-	pEntryOut->type  = 0;
-	pEntryOut->perms = PERM_READ|PERM_WRITE|PERM_EXEC;
+	pEntryOut->type  = FILE_TYPE_FILE | FILE_TYPE_DIRECTORY;
 	pEntryOut->file_length  = -1;
 	pEntryOut->file_id      = currentFile;
-	pEntryOut->is_directory = true;
 	
 	while (path1 && *path1)
 	{
@@ -121,31 +214,13 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 			return NO_FILE;
 		}
 		
-		bIsThisADir = pEntryOut->is_directory;
+		bIsThisADir = !!(pEntryOut->type & FILE_TYPE_DIRECTORY);
 		currentFile = pEntryOut->file_id;
 		
 		path1 = Tokenize(&state, NULL, "/");
 	}
 	
 	return currentFile;
-}
-
-File* FsOpenFile(DirectoryEntry entry)
-{
-	FileSystem *pFS = FsResolveByFileID(entry.file_id);
-	
-	if (!pFS) return NULL;
-	
-	return pFS->OpenInt(pFS, entry);
-}
-
-Directory* FsOpenDir(FileID fileID)
-{
-	FileSystem *pFS = FsResolveByFileID(fileID);
-	
-	if (!pFS) return NULL;
-	
-	return pFS->OpenDir(pFS, (uint32_t)fileID);
 }
 
 void FsInit()
@@ -402,7 +477,7 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 		return -ENOENT;
 	}
 	
-	if (!entry.is_directory)
+	if (!(entry.type & FILE_TYPE_DIRECTORY))
 	{
 		// Not a Directory
 		LockFree (&g_FileSystemLock);
