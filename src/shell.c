@@ -469,10 +469,6 @@ void ShellExecuteCommand(char* p)
 	{
 		KePrintMemoryMapInfo();
 	}
-	else if (strcmp (token, "whatistheclustersize") == 0)
-	{extern void FsFat32PrintClusterSizeDebugThing();
-		FsFat32PrintClusterSizeDebugThing();
-	}
 	else if (strcmp (token, "ls") == 0)
 	{
 		uint8_t color = g_currentConsole->color;

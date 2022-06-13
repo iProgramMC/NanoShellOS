@@ -8,6 +8,24 @@
 #include <fat.h>
 #include <task.h>
 
+// Forward Declarations
+#if 1
+
+uint32_t FsFat32CountClusters(Fat32FileSystem *pFS, uint32_t cluster);
+
+static inline void FsFat32AssertFileType(File *pFile);
+uint32_t FsFat32GetNextCluster  (Fat32FileSystem *pFS, uint32_t cluster);
+void     FsFat32ReadCluster     (Fat32FileSystem *pFS, uint32_t cluster, void *pDataOut);
+
+static inline void FsFat32AssertDirectoryType(Directory *pFile);
+
+File*      FsFat32OpenInt        (FileSystem *pFSBase, DirectoryEntry* entry);
+Directory* FsFat32OpenDir        (FileSystem *pFSBase, uint32_t dirID);
+bool       FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
+uint32_t   FsFat32GetRootDirID   (FileSystem *pFSBase);
+
+#endif
+
 // Utilities
 #if 1
 // WORK: Need to fix this for Big Endian platforms
@@ -89,9 +107,6 @@ void FatParseLFN (char* pNameOut, uint8_t* pEntries, uint32_t nEntries)
 
 // File I/O
 #if 1
-static inline void FsFat32AssertFileType(File *pFile);
-uint32_t FsFat32GetNextCluster  (Fat32FileSystem *pFS, uint32_t cluster);
-void     FsFat32ReadCluster     (Fat32FileSystem *pFS, uint32_t cluster, void *pDataOut);
 
 bool FsFat32ClusterChainRegenerateCache(Fat32ClusterChain *pChain)
 {
@@ -120,6 +135,27 @@ int FsFat32ClusterChainTell(File* file)
 	Fat32ClusterChain *pChain = (Fat32ClusterChain*)file;
 	
 	return pChain->offsetBytes;
+}
+int FsFat32ClusterChainTellSize(File* file)
+{
+	FsFat32AssertFileType(file);
+	Fat32ClusterChain *pChain = (Fat32ClusterChain*)file;
+	
+	if (pChain->entry.file_length >= 0)
+	{
+		SLogMsg("Returning file length as %d", pChain->entry.file_length);
+		return pChain->entry.file_length;
+	}
+	else
+	{
+		// auto-calculate size
+		uint32_t size = FsFat32GetClusterSize(pChain->pFS) * FsFat32CountClusters(pChain->pFS, pChain->firstCluster);
+		
+		pChain->entry.file_length = size;
+		
+		SLogMsg("Returning file length as %d", pChain->entry.file_length);
+		return size;
+	}
 }
 bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowExpansion)
 {
@@ -168,7 +204,6 @@ bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowEx
 	}
 	return false;
 }
-
 uint32_t FsFat32ClusterChainRead(File* file, void *pOut, uint32_t size)
 {
 	FsFat32AssertFileType(file);
@@ -194,7 +229,6 @@ uint32_t FsFat32ClusterChainRead(File* file, void *pOut, uint32_t size)
 	
 	return i;
 }
-
 void FsFat32ClusterChainClose(File* file)
 {
 	FsFat32AssertFileType(file);
@@ -209,19 +243,19 @@ void FsFat32ClusterChainClose(File* file)
 		MmFreeK(pChain->clusterCache);
 	pChain->clusterCache = NULL;
 }
-
 static inline void FsFat32AssertFileType(File *pFile)
 {
-	ASSERT(pFile->Read  == FsFat32ClusterChainRead  &&  "This is not a file on a FAT32 file system.");
-	ASSERT(pFile->Close == FsFat32ClusterChainClose &&  "This is not a file on a FAT32 file system.");
-	ASSERT(pFile->Seek  == FsFat32ClusterChainSeek  &&  "This is not a file on a FAT32 file system.");
+	ASSERT(pFile->Read     == FsFat32ClusterChainRead      &&  "This is not a file on a FAT32 file system.");
+	ASSERT(pFile->Close    == FsFat32ClusterChainClose     &&  "This is not a file on a FAT32 file system.");
+	ASSERT(pFile->Seek     == FsFat32ClusterChainSeek      &&  "This is not a file on a FAT32 file system.");
+	ASSERT(pFile->Tell     == FsFat32ClusterChainTell      &&  "This is not a file on a FAT32 file system.");
+	ASSERT(pFile->TellSize == FsFat32ClusterChainTellSize  &&  "This is not a file on a FAT32 file system.");
 }
 
 #endif
 
 // Fat32 Directory
 #if 1
-static inline void FsFat32AssertDirectoryType(Directory *pFile);
 
 void FsFat32DirectoryClose(struct Directory* pDirBase)
 {
@@ -383,7 +417,6 @@ int FsFat32DirectoryTell(Directory* pDirBase)
 	Fat32Directory *pDir = (Fat32Directory*)pDirBase;
 	return pDir->told;
 }
-
 static inline void FsFat32AssertDirectoryType(Directory *dir)
 {
 	ASSERT(dir->ReadEntry == FsFat32DirectoryReadEntry &&  "This is not a directory on a FAT32 file system.");
@@ -397,12 +430,6 @@ static inline void FsFat32AssertDirectoryType(Directory *dir)
 // File system I/O
 #if 1
 
-// Forward declaration
-File*      FsFat32OpenInt        (FileSystem *pFSBase, DirectoryEntry* entry);
-Directory* FsFat32OpenDir        (FileSystem *pFSBase, uint32_t dirID);
-bool       FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
-uint32_t FsFat32GetRootDirID(struct FileSystem *pFS);
-
 static inline void FsFat32AssertType(FileSystem *pFS)
 {
 	ASSERT(pFS->OpenInt         == FsFat32OpenInt          &&  "This is not a FAT32 file system.");
@@ -410,7 +437,6 @@ static inline void FsFat32AssertType(FileSystem *pFS)
 	ASSERT(pFS->LocateFileInDir == FsFat32LocateFileInDir  &&  "This is not a FAT32 file system.");
 	ASSERT(pFS->GetRootDirID    == FsFat32GetRootDirID     &&  "This is not a FAT32 file system.");
 }
-
 void FsFat32ReadBpb(Fat32FileSystem *pFS)
 {
 	uint8_t data[512];
@@ -446,7 +472,6 @@ void FsFat32ReadBpb(Fat32FileSystem *pFS)
 	memcpy (PBPB->m_sVolumeLabel, data + 71, 11); PBPB->m_sVolumeLabel[11] = 0;
 	memcpy (PBPB->m_sSystemID   , data + 82,  8); PBPB->m_sSystemID   [ 8] = 0;
 }
-
 Fat32FileSystem *FsConstructFat32FileSystem(uint32_t fsID, uint8_t diskID, uint32_t PartitionStart, uint32_t PartitionSize)
 {
 	Fat32FileSystem *pFS = MmAllocateK(sizeof (Fat32FileSystem));
@@ -570,6 +595,7 @@ Fat32ClusterChain* FsFat32OpenIntInt (Fat32FileSystem *pFS, DirectoryEntry* entr
 	pChain->Seek  = FsFat32ClusterChainSeek;
 	pChain->Tell  = FsFat32ClusterChainTell;
 	pChain->Close = FsFat32ClusterChainClose;
+	pChain->TellSize = FsFat32ClusterChainTellSize;
 	
 	return pChain;
 }
@@ -651,7 +677,16 @@ void FsFat32ReadCluster(Fat32FileSystem *pFS, uint32_t cluster, void *pDataOut)
 	// read the data
 	StDeviceRead(sector_number,  pDataOut,  pFS->diskID,  pFS->bpb.m_nSectorsPerCluster);
 }
-
+uint32_t FsFat32CountClusters(Fat32FileSystem *pFS, uint32_t cluster)
+{
+	uint32_t num = 0;
+	while (!FsFat32IsEOF(cluster))
+	{
+		num++;
+		cluster = FsFat32GetNextCluster(pFS, cluster);
+	}
+	return num;
+}
 uint32_t FsFat32GetRootDirID(FileSystem *pFSBase)
 {
 	// Check that the type is the same.
@@ -663,7 +698,6 @@ uint32_t FsFat32GetRootDirID(FileSystem *pFSBase)
 	// Get the root directory itself.
 	return pFS->bpb.m_nRootDirStartCluster;
 }
-
 bool FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry)
 {
 	// Check that the type is the same.
@@ -730,11 +764,10 @@ int FsMountFatPartition(DriveID driveID, int partitionStart, int partitionSizeSe
 	
 	return 0;
 }
-
 void FatUnmountFileSystem(FatFileSystem* pFS)
 {
+	//TODO
 }
-
 void FsFatInit ()
 {
 	// probe each drive
@@ -764,19 +797,3 @@ void FsFatInit ()
 }
 
 #endif
-
-
-void FsFat32PrintClusterSizeDebugThing()
-{
-	FileSystem*pFS=FsResolveByFsID(0x200000);
-	if(!pFS){LogMsg("Couldn't do shit");return;}
-	LogMsg("ClusterSize:%d",((Fat32FileSystem*)pFS)->clusSize);
-}
-
-
-
-
-
-
-
-

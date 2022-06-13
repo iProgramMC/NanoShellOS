@@ -153,11 +153,12 @@ typedef struct Fat32ClusterChain // File
 	DirectoryEntry entry;
 	struct Fat32FileSystem *pFS; // I can do this. Don't judge.
 	
-	File_Read  Read;
-	File_Write Write;
-	File_Close Close;
-	File_Seek  Seek;
-	File_Tell  Tell;
+	File_Read     Read;
+	File_Write    Write;
+	File_Close    Close;
+	File_Seek     Seek;
+	File_Tell     Tell;
+	File_TellSize TellSize;
 	
 	// Our own variables for the cluster chain
 	bool taken;

@@ -65,22 +65,24 @@ DirectoryEntry;
 struct File;
 struct Directory;
 struct FileSystem;
-typedef uint32_t  (*File_Read) (struct File* file, void *pOut, uint32_t size);
-typedef uint32_t  (*File_Write)(struct File* file, void *pIn,  uint32_t size);
-typedef void      (*File_Close)(struct File* file);
-typedef bool      (*File_Seek) (struct File* file, int position, int whence, bool bAllowExpansion);
-typedef int       (*File_Tell) (struct File* file);
+typedef uint32_t  (*File_Read)    (struct File* file, void *pOut, uint32_t size);
+typedef uint32_t  (*File_Write)   (struct File* file, void *pIn,  uint32_t size);
+typedef void      (*File_Close)   (struct File* file);
+typedef bool      (*File_Seek)    (struct File* file, int position, int whence, bool bAllowExpansion);
+typedef int       (*File_Tell)    (struct File* file);
+typedef int       (*File_TellSize)(struct File* file);
 
 typedef struct File
 {
 	DirectoryEntry entry;
 	struct FileSystem *pFS;
 	
-	File_Read  Read;
-	File_Write Write;
-	File_Close Close;
-	File_Seek  Seek;
-	File_Tell  Tell;
+	File_Read     Read;
+	File_Write    Write;
+	File_Close    Close;
+	File_Seek     Seek;
+	File_Tell     Tell;
+	File_TellSize TellSize;
 }
 File;
 
@@ -131,11 +133,12 @@ FileID      FsGetGlobalRoot   ();
 void        FsSetGlobalRoot   (FileID id);
 
 // File operations
-uint32_t FsFileRead (File* file, void *pOut, uint32_t size);
-uint32_t FsFileWrite(File* file, void *pOut, uint32_t size);
-void     FsFileClose(File* file);
-bool     FsFileSeek(File* file, int pos, int whence, bool bAllowExpansion);
-int      FsFileTell(File* file);
+uint32_t FsFileRead    (File* file, void *pOut, uint32_t size);
+uint32_t FsFileWrite   (File* file, void *pOut, uint32_t size);
+void     FsFileClose   (File* file);
+bool     FsFileSeek    (File* file, int pos, int whence, bool bAllowExpansion);
+int      FsFileTell    (File* file);
+int      FsFileTellSize(File* file);
 
 // Directory operations
 void FsDirectoryClose     (Directory *pDirectory);

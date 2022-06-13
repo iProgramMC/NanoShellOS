@@ -57,6 +57,13 @@ int FsFileTell (File *file)
 	
 	return file->Tell(file);
 }
+int FsFileTellSize (File *file)
+{
+	if (!file->TellSize)
+		return 0;
+	
+	return file->TellSize(file);
+}
 
 void FsDirectoryClose (Directory *pDirectory)
 {
@@ -306,7 +313,6 @@ bool FiIsValidDirDescriptor(int fd)
 
 int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
-	/*
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
 	int fd = FiFindFreeFileDescriptor(pFileName);
@@ -316,12 +322,18 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 		return fd;
 	}
 	
-	//find the node:
+	//find the file
 	bool hasClearedAlready = false;
-	FileNode* pFile = FsResolvePath(pFileName);
-	if (!pFile)
+	
+	if (strlen(pFileName) >= PATH_MAX + 5)
+		return -ENAMETOOLONG;
+	
+	DirectoryEntry dirEntry;
+	FileID fileID = FsResolveFilePath(pFileName, &dirEntry);
+	if (!fileID)
 	{
 		// Allow creation, if O_CREAT was specified and we need to write data
+		/*
 		if ((oflag & O_CREAT) && (oflag & O_WRONLY))
 		{
 			// Resolve the directory's name
@@ -359,7 +371,7 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 				return -ENOSPC;
 			}
 		}
-		else
+		else*/
 		{
 			//Can't append to/read from a missing file!
 			LockFree (&g_FileSystemLock);
@@ -368,7 +380,7 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	//if we are trying to read, but we can't:
-	if ((oflag & O_RDONLY) && !(pFile->m_perms & PERM_READ))
+	/*if ((oflag & O_RDONLY) && !(pFile->m_perms & PERM_READ))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EACCES;
@@ -384,9 +396,9 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	{
 		LockFree (&g_FileSystemLock);
 		return -EACCES;
-	}
+	}*/
 	
-	if (pFile->m_type & FILE_TYPE_DIRECTORY)
+	if (dirEntry.type & FILE_TYPE_DIRECTORY)
 	{
 		LockFree (&g_FileSystemLock);
 		return -EISDIR;
@@ -398,12 +410,19 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
 		{
-			FsClearFile(pFile);
+			//FsClearFile(pFile);
 		}
 	}
 	
 	//open it:
-	if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
+	/*if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EIO;
+	}*/
+	
+	File* file = FsOpenFile(&dirEntry);
+	if (!file)
 	{
 		LockFree (&g_FileSystemLock);
 		return -EIO;
@@ -413,12 +432,9 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
 	pDesc->m_bOpen 			= true;
 	strcpy(pDesc->m_sPath, pFileName);
-	pDesc->m_pNode 			= pFile;
+	pDesc->m_pFile 			= file;
 	pDesc->m_openFile	 	= srcFile;
 	pDesc->m_openLine	 	= srcLine;
-	pDesc->m_nStreamOffset 	= 0;
-	pDesc->m_nFileEnd		= pFile->m_length;
-	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE;
 	
 	LockFree (&g_FileSystemLock);
 	
@@ -429,14 +445,10 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	return fd;
-	*/
-	
-	return -EIO;
 }
 
 int FiClose (int fd)
 {
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -449,15 +461,12 @@ int FiClose (int fd)
 	pDesc->m_bOpen = false;
 	strcpy(pDesc->m_sPath, "");
 	
-	FsClose (pDesc->m_pNode);
+	FsFileClose (pDesc->m_pFile);
 	
-	pDesc->m_pNode = NULL;
-	pDesc->m_nStreamOffset = 0;
+	pDesc->m_pFile = NULL;
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
-	*/
-	return -EIO;
 }
 
 int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
@@ -521,7 +530,7 @@ int FiCloseDir (int dd)
 	pDesc->m_bOpen = false;
 	strcpy(pDesc->m_sPath, "");
 	
-	pDesc->m_pDir->Close(pDesc->m_pDir);
+	FsDirectoryClose(pDesc->m_pDir);
 	
 	pDesc->m_pDir = NULL;
 	
@@ -540,7 +549,7 @@ DirectoryEntry* FiReadDir (int dd)
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	
-	bool result = pDesc->m_pDir->ReadEntry(pDesc->m_pDir, &pDesc->m_sCurDirEnt);
+	bool result = FsDirectoryReadEntry(pDesc->m_pDir, &pDesc->m_sCurDirEnt);
 	
 	if (!result)
 	{
@@ -554,8 +563,6 @@ DirectoryEntry* FiReadDir (int dd)
 
 int FiSeekDir (int dd, int loc)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -570,11 +577,10 @@ int FiSeekDir (int dd, int loc)
 	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
-	pDesc->m_nStreamOffset = loc;
+	FsDirectorySeek(pDesc->m_pDir, loc);
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
-	*/
 }
 
 int FiRewindDir (int dd)
@@ -584,8 +590,6 @@ int FiRewindDir (int dd)
 
 int FiTellDir (int dd)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -595,9 +599,10 @@ int FiTellDir (int dd)
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	
+	int rv = FsDirectoryTell (pDesc->m_pDir);
+	
 	LockFree (&g_FileSystemLock);
-	return pDesc->m_nStreamOffset;
-	*/
+	return rv;
 }
 
 int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
@@ -660,8 +665,6 @@ int FiStat (const char *pFileName, StatResult* pOut)
 
 size_t FiRead (int fd, void *pBuf, int nBytes)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
@@ -675,16 +678,10 @@ size_t FiRead (int fd, void *pBuf, int nBytes)
 		return -EINVAL;
 	}
 	
-	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf);
-	if (rv < 0) 
-	{
-		LockFree (&g_FileSystemLock);
-		return rv;
-	}
-	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	size_t rv = FsFileRead (g_FileNodeToDescriptor[fd].m_pFile, pBuf, nBytes);
+	
 	LockFree (&g_FileSystemLock);
 	return rv;
-	*/
 }
 
 //TODO
@@ -719,19 +716,11 @@ size_t FiWrite (int fd, void *pBuf, int nBytes)
 
 int FiSeek (int fd, int offset, int whence)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
-	}
-	
-	if (g_FileNodeToDescriptor[fd].m_bIsFIFO)
-	{
-		LockFree (&g_FileSystemLock);
-		return -ESPIPE;
 	}
 	
 	if (whence < 0 || whence > SEEK_END)
@@ -740,58 +729,39 @@ int FiSeek (int fd, int offset, int whence)
 		return -EINVAL;
 	}
 	
-	int realOffset = offset;
-	switch (whence)
-	{
-		case SEEK_CUR:
-			realOffset += g_FileNodeToDescriptor[fd].m_nStreamOffset;
-			break;
-		case SEEK_END:
-			realOffset += g_FileNodeToDescriptor[fd].m_nFileEnd;
-			break;
-	}
-	if (realOffset > g_FileNodeToDescriptor[fd].m_nFileEnd)
-	{
-		LockFree (&g_FileSystemLock);
-		return -EOVERFLOW;
-	}
+	FsFileSeek(g_FileNodeToDescriptor[fd].m_pFile, offset, whence, false);
 	
-	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
+	int rv = FsFileTell(g_FileNodeToDescriptor[fd].m_pFile);
+	
 	LockFree (&g_FileSystemLock);
-	return -ENOTHING;
-	*/
+	return rv;
 }
 
 int FiTell (int fd)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
 	}
-	int rv = g_FileNodeToDescriptor[fd].m_nStreamOffset;
+	int rv = FsFileTell(g_FileNodeToDescriptor[fd].m_pFile);
 	LockFree (&g_FileSystemLock);
 	return rv;
-	*/
 }
 
 int FiTellSize (int fd)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
 	}
-	int rv = g_FileNodeToDescriptor[fd].m_nFileEnd;
+	int rv = FsFileTellSize(g_FileNodeToDescriptor[fd].m_pFile);
+	SLogMsg("Told size of file as %d",rv);
 	LockFree (&g_FileSystemLock);
 	return rv;
-	*/
 }
 
 
@@ -916,30 +886,3 @@ const char *GetErrNoString(int errno)
 	
 	return ErrorStrings[errno];
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
