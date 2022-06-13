@@ -34,7 +34,7 @@ static inline bool FsFat32IsEOF(uint32_t clusNum)
 {
 	return clusNum >= 0x0FFFFFF0;
 }
-static inline bool FsFat32GetClusterSize (Fat32FileSystem *pFS)
+static inline int FsFat32GetClusterSize (Fat32FileSystem *pFS)
 {
 	return pFS->clusSize;
 }
@@ -89,8 +89,7 @@ void FatParseLFN (char* pNameOut, uint8_t* pEntries, uint32_t nEntries)
 
 // File I/O
 #if 1
-static inline void FsFat32AssertFileType1(File *pFile, const char *func);
-#define FsFat32AssertFileType(pFile) FsFat32AssertFileType1(pFile, __FUNCTION__)
+static inline void FsFat32AssertFileType(File *pFile);
 uint32_t FsFat32GetNextCluster  (Fat32FileSystem *pFS, uint32_t cluster);
 void     FsFat32ReadCluster     (Fat32FileSystem *pFS, uint32_t cluster, void *pDataOut);
 
@@ -110,7 +109,6 @@ bool FsFat32ClusterChainRegenerateCache(Fat32ClusterChain *pChain)
 	}
 
 	// load a new cluster
-	SLogMsg("Loading A New Cluster...");
 	pChain->clusterCacheLoaded = true;
 
 	FsFat32ReadCluster(pChain->pFS, pChain->currentCluster, pChain->clusterCache);
@@ -118,14 +116,10 @@ bool FsFat32ClusterChainRegenerateCache(Fat32ClusterChain *pChain)
 }
 bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowExpansion)
 {
-	SLogMsg("SEEK(%p, %d, %d, %s)",file,position,whence,bAllowExpansion?"true":"false");
 	FsFat32AssertFileType(file);
 	
 	Fat32ClusterChain *pChain = (Fat32ClusterChain*)file;
-	
-	
 	int clusSize  = FsFat32GetClusterSize(pChain->pFS);
-	SLogMsg("CLUSSIZE:%d",clusSize);
 	switch (whence)
 	{
 		//case SEEK_END:
@@ -134,22 +128,14 @@ bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowEx
 			pChain->currentCluster = pChain->firstCluster;
 			pChain->offsetBytes    = 0;
 		case SEEK_CUR:
-			SLogMsg("OffsetBytes:%d",pChain->offsetBytes);
-			SLogMsg("Chainloaded:%d",pChain->clusterCacheLoaded);
 			if (pChain->offsetBytes == 0 && !pChain->clusterCacheLoaded) // TODO: optimize this!
 			{
 				if (FsFat32ClusterChainRegenerateCache(pChain))
-				{
-					SLogMsg("Regenerating cache failed");
 					return true;
-				}
 			}
 			
 			if (FsFat32IsEOF(pChain->currentCluster))
-			{
-				SLogMsg("EOF hit");
 				return true;
-			}
 			
 			for (int i = 0; i < position; i++)
 			{
@@ -159,19 +145,13 @@ bool FsFat32ClusterChainSeek(File* file, int position, int whence, bool bAllowEx
 				if (!bAllowExpansion)
 				{
 					if (pChain->offsetBytes >= (uint32_t)pChain->entry.file_length  &&  pChain->entry.file_length >= 0)
-					{
-						SLogMsg("EOF hit by means of filesize (%d)",pChain->entry.file_length);
 						return true;
-					}
 				}
 				
 				if ((pChain->offsetBytes % clusSize == 0) || !pChain->clusterCacheLoaded)
 				{
 					if (FsFat32ClusterChainRegenerateCache(pChain))
-					{
-						SLogMsg("Regenerating cache failed2");
 						return true;
-					}
 				}
 				
 				pChain->offsetBytes++;
@@ -191,26 +171,17 @@ uint32_t FsFat32ClusterChainRead(File* file, void *pOut, uint32_t size)
 	uint8_t* pData = (uint8_t*)pOut;
 	uint32_t i = 0;
 	if (FsFat32ClusterChainSeek(file, 0, SEEK_CUR, false))
-	{
-		SLogMsg("Couldnt seek 0 bytes?");
 		return 0;
-	}
 	
 	for (i = 0; i != size; i++)
 	{
 		if (pChain->offsetBytes >= (uint32_t)pChain->entry.file_length && pChain->entry.file_length >= 0)
-		{
-			SLogMsg("pChain Entry File Length is positive AND offsetBytes is bigger or equal.");
 			return i;
-		}
 		
 		pData[i] = pChain->clusterCache[pChain->offsetBytes % clusSize];
 		
 		if (FsFat32ClusterChainSeek(file, 1, SEEK_CUR, false))
-		{
-			SLogMsg("Couldnt seek 1 byte?");
 			return i;
-		}
 	}
 	
 	return i;
@@ -227,9 +198,8 @@ void FsFat32ClusterChainClose(File* file)
 	pChain->currentCluster = pChain->firstCluster = pChain->offsetBytes = 0;
 }
 
-static inline void FsFat32AssertFileType1(File *pFile, const char *func)
+static inline void FsFat32AssertFileType(File *pFile)
 {
-	SLogMsg("Asserting file type in  '%s'", func);
 	ASSERT(pFile->Read  == FsFat32ClusterChainRead  &&  "This is not a file on a FAT32 file system.");
 	ASSERT(pFile->Close == FsFat32ClusterChainClose &&  "This is not a file on a FAT32 file system.");
 	ASSERT(pFile->Seek  == FsFat32ClusterChainSeek  &&  "This is not a file on a FAT32 file system.");
@@ -239,8 +209,7 @@ static inline void FsFat32AssertFileType1(File *pFile, const char *func)
 
 // Fat32 Directory
 #if 1
-static inline void FsFat32AssertDirectoryType1(Directory *pFile, const char *func);
-#define FsFat32AssertDirectoryType(pFile) FsFat32AssertDirectoryType1(pFile, __FUNCTION__)
+static inline void FsFat32AssertDirectoryType(Directory *pFile);
 
 void FsFat32DirectoryClose(struct Directory* pDirBase)
 {
@@ -258,19 +227,14 @@ bool FsFat32ReadDirEntry(Fat32ClusterChain *pChain, DirectoryEntry *pDirEnt)
 	
 	// read the first directory entry
 try_again:;
-	SLogMsg("ReadDirEntry: Reading Bytes");
 	uint32_t bytesRead = pChain->Read((File*)pChain, data, 32);
-	SLogMsg("ReadDirEntry: Reading %u Bytes", bytesRead);
 	if (!bytesRead)
-	{
-		SLogMsg("ReadDirEntry fails: No bytes read");
 		return 0;
-	}
 	
-	uint8_t* pEntry = data, firstByte = *pEntry;
+	uint8_t* pEntry = data;
 	FatDirectoryEntry* pDirData = (FatDirectoryEntry*)pEntry;
 	
-	if (firstByte == 0x00 || firstByte == 0xE5) goto try_again;
+	if (*pEntry == 0x00 || *pEntry == 0xE5) goto try_again;
 	
 	uint32_t lfnCount = 0;
 	while (pDirData->attrib == FAT_LFN)
@@ -284,7 +248,8 @@ try_again:;
 		if (pDirData->sfn[0] == (char)0xE5)
 		{
 			// a deleted file in the middle of our LFN stuff?
-			SLogMsg("Orphaned LFN entry");
+			if (lfnCount)
+				SLogMsg("Warning: Orphaned LFN entry");
 			lfnCount = 0;
 		}
 		memcpy (lfnDataHead, data, 32);
@@ -300,10 +265,15 @@ try_again:;
 		bytesRead = pChain->Read((File*)pChain, data, 32);
 		if (bytesRead == 0)
 		{
-			SLogMsg("Orphaned LFN entry to end of directory");
+			SLogMsg("Warning: Orphaned LFN entry to end of directory");
 			return false;
 		}
 	}
+	
+	if (*pEntry == 0x00 || *pEntry == 0xE5) goto try_again;
+	
+	// treat this seperately, because this flag is set on LFN entries too, which we do NOT want to ignore
+	if (pDirData->attrib & FAT_VOLUME_ID) goto try_again;
 	
 	memset(pDirEnt, 0, sizeof (*pDirEnt));
 	if (lfnCount > 0)
@@ -365,7 +335,6 @@ try_again:;
 	if (pDirEnt->is_directory)
 		pDirEnt->type = FILE_TYPE_DIRECTORY;
 	
-	SLogMsg("ReadDirEntry fails: Successfully read a directory entry");
 	return true;
 }
 bool FsFat32DirectoryReadEntry(Directory* pDirBase, DirectoryEntry* pOut)
@@ -400,9 +369,8 @@ int FsFat32DirectoryTell(Directory* pDirBase)
 	return pDir->told;
 }
 
-static inline void FsFat32AssertDirectoryType1(Directory *pFile, const char *func)
+static inline void FsFat32AssertDirectoryType(Directory *pFile)
 {
-	SLogMsg("Asserting directory type in  '%s'", func);
 	ASSERT(pFile->ReadEntry == FsFat32DirectoryReadEntry &&  "This is not a directory on a FAT32 file system.");
 	ASSERT(pFile->Close     == FsFat32DirectoryClose     &&  "This is not a directory on a FAT32 file system.");
 	ASSERT(pFile->Seek      == FsFat32DirectorySeek      &&  "This is not a directory on a FAT32 file system.");
@@ -420,22 +388,12 @@ Directory* FsFat32OpenDir (FileSystem *pFSBase, uint32_t dirID);
 bool FsFat32LocateFileInDir(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
 uint32_t FsFat32GetRootDirID(struct FileSystem *pFS);
 
-static inline void FsFat32AssertType1(FileSystem *pFS, const char *func)
-#define FsFat32AssertType(pFS) FsFat32AssertType1(pFS, __FUNCTION__)
+static inline void FsFat32AssertType(FileSystem *pFS)
 {
-	SLogMsg("Asserting FAT32 type for %p   in   %s", pFS, func);
-	SLogMsg("OpenInt:%p  OpenDir:%p  LocateFileInDir:%p  GetRootDirID:%p",
-		pFS->OpenInt,
-		pFS->OpenDir,
-		pFS->LocateFileInDir,
-		pFS->GetRootDirID);
-	
 	ASSERT(pFS->OpenInt         == FsFat32OpenInt          &&  "This is not a FAT32 file system.");
 	ASSERT(pFS->OpenDir         == FsFat32OpenDir          &&  "This is not a FAT32 file system.");
 	ASSERT(pFS->LocateFileInDir == FsFat32LocateFileInDir  &&  "This is not a FAT32 file system.");
 	ASSERT(pFS->GetRootDirID    == FsFat32GetRootDirID     &&  "This is not a FAT32 file system.");
-	
-	SLogMsg("Assertion succeeded.");
 }
 
 void FsFat32ReadBpb(Fat32FileSystem *pFS)
@@ -791,3 +749,19 @@ void FsFatInit ()
 }
 
 #endif
+
+
+void FsFat32PrintClusterSizeDebugThing()
+{
+	FileSystem*pFS=FsResolveByFsID(0x200000);
+	if(!pFS){LogMsg("Couldn't do shit");return;}
+	LogMsg("ClusterSize:%d",((Fat32FileSystem*)pFS)->clusSize);
+}
+
+
+
+
+
+
+
+

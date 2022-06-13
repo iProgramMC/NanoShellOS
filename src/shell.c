@@ -469,6 +469,10 @@ void ShellExecuteCommand(char* p)
 	{
 		KePrintMemoryMapInfo();
 	}
+	else if (strcmp (token, "whatistheclustersize") == 0)
+	{extern void FsFat32PrintClusterSizeDebugThing();
+		FsFat32PrintClusterSizeDebugThing();
+	}
 	else if (strcmp (token, "ls") == 0)
 	{
 		uint8_t color = g_currentConsole->color;
@@ -478,7 +482,6 @@ void ShellExecuteCommand(char* p)
 		LogMsg("\x01\x0F" "Directory of %s", g_cwd);
 		
 		bool bareMode = true;
-		SLogMsg("a");
 		
 		int dd = FiOpenDir (g_cwd);
 		if (dd < 0)
@@ -486,16 +489,12 @@ void ShellExecuteCommand(char* p)
 			LogMsg("ls: cannot list '%s': %s", g_cwd, GetErrNoString(dd));
 			return;
 		}
-		SLogMsg("b");
 		
 		FiRewindDir(dd);
-		SLogMsg("c");
 		
 		DirectoryEntry* pDirEnt;
-		SLogMsg("d");
 		while ((pDirEnt = FiReadDir(dd)) != NULL)
 		{
-			SLogMsg("E");
 			if (bareMode)
 			{
 				LogMsg("%s", pDirEnt->name);

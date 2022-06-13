@@ -69,7 +69,6 @@ void FsSetGlobalRoot(FileID id)
 
 FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 {
-	SLogMsg("FsResolveFilePath START!");
 	if (*pPath != '/')
 	{
 		// Not an absolute path. Append the CD
@@ -106,21 +105,16 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 	pEntryOut->file_id      = currentFile;
 	pEntryOut->is_directory = true;
 	
-	SLogMsg("This is pain!");
 	while (path1 && *path1)
 	{
-		SLogMsg("RESOLVING....");
 		if (!bIsThisADir)
 		{
 			SLogMsg("Path '%s' is malformed - trying to access files inside a file that isn't a directory", pPath);
 			return NO_FILE;
 		}
 		
-		SLogMsg("RESOLVING FILE SYSTEM....");
 		FileSystem *pFS = FsResolveByFileID(currentFile);
-		SLogMsg("TRYING TO LOCATE FILE IN DIRECTORY........");
 		bool b = pFS->LocateFileInDir(pFS, (uint32_t)currentFile, path1, pEntryOut);
-		SLogMsg("LOCATE DONE...");
 		if (!b)
 		{
 			SLogMsg("Path '%s' couldn't be located (%s)", pPath, path1);
@@ -130,7 +124,6 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 		bIsThisADir = pEntryOut->is_directory;
 		currentFile = pEntryOut->file_id;
 		
-		SLogMsg("Resolving");
 		path1 = Tokenize(&state, NULL, "/");
 	}
 	
@@ -408,7 +401,6 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 		LockFree (&g_FileSystemLock);
 		return -ENOENT;
 	}
-	SLogMsg("Got file ID: %Q", fileID);
 	
 	if (!entry.is_directory)
 	{
@@ -434,21 +426,17 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	pDesc->m_openLine	 	= srcLine;
 	
 	LockFree (&g_FileSystemLock);
-	
-	SLogMsg("Opened directory with fd %d",dd);
 	return dd;
 }
 
 int FiCloseDir (int dd)
 {
-	SLogMsg("Closing directory with fd %d",dd);
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
 	}
-	SLogMsg("Closing directory with fd %d",dd);
 	
 	//closes the file:
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
