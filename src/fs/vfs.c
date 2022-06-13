@@ -165,7 +165,15 @@ void FsSetGlobalRoot(FileID id)
 
 FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 {
-	if (*pPath != '/')
+	TokenState state;
+	
+	state.m_bInitted = false;
+	
+	char path[PATH_MAX + 5];
+	strcpy(path, pPath);
+	
+	char *path1 = Tokenize (&state, path, "/");
+	if (*path1 != 0)
 	{
 		// Not an absolute path. Append the CD
 		char path_copy[PATH_MAX * 2 + 5]; //max path
@@ -183,13 +191,6 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 		return FsResolveFilePath (path_copy, pEntryOut);
 	}
 	
-	char path[PATH_MAX + 5];
-	strcpy(path, pPath);
-	
-	TokenState state; state.m_bInitted = false;
-	
-	char *path1 = Tokenize (&state, path, "/");
-	
 	FileID currentFile = FsGetGlobalRoot();
 	bool   bIsThisADir = true;
 	
@@ -198,8 +199,12 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 	pEntryOut->file_length  = -1;
 	pEntryOut->file_id      = currentFile;
 	
-	while (path1 && *path1)
+	while (true)
 	{
+		path1 = Tokenize(&state, NULL, "/");
+		if (!path1) break;
+		if (!*path1) break;
+		
 		if (!bIsThisADir)
 		{
 			SLogMsg("Path '%s' is malformed - trying to access files inside a file that isn't a directory", pPath);
@@ -216,8 +221,6 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 		
 		bIsThisADir = !!(pEntryOut->type & FILE_TYPE_DIRECTORY);
 		currentFile = pEntryOut->file_id;
-		
-		path1 = Tokenize(&state, NULL, "/");
 	}
 	
 	return currentFile;
@@ -805,20 +808,20 @@ int FiRemoveFile (const char *pfn)
 }
 int FiChangeDir (const char *pfn)
 {
-	return -EIO;
-	/*
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
 	
 	int slen = strlen (pfn);
 	if (slen >= PATH_MAX) return -EOVERFLOW;
 	
+	DirectoryEntry entry;
 	
 	if (pfn[0] == '/')
 	{
 		// Absolute Path
-		FileNode *pNode = FsResolvePath (pfn);
-		if (!pNode) return -EEXIST;
-		if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+		FileID fileID = FsResolveFilePath (pfn, &entry);
+		
+		if (!fileID) return -EEXIST;
+		if (!(entry.type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
 		
 		//this should work!
 		strcpy (g_cwd, pfn);
@@ -859,17 +862,17 @@ int FiChangeDir (const char *pfn)
 	}
 	
 	//resolve the path
-	FileNode *pNode = FsResolvePath (cwd_work);
-	if (!pNode)
+	FileID fileID = FsResolveFilePath (pfn, &entry);
+	
+	if (!fileID)
 		return -ENOENT; //does not exist
-	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
+	if (!(entry.type & FILE_TYPE_DIRECTORY))
 		return -ENOTDIR; //not a directory
 	
 	//this should work!
 	strcpy (g_cwd, cwd_work);
 	
 	return -ENOTHING;
-	*/
 }
 
 #endif

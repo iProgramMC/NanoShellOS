@@ -287,6 +287,9 @@ try_again:;
 	// treat this seperately, because this flag is set on LFN entries too, which we do NOT want to ignore
 	if (pDirData->attrib & FAT_VOLUME_ID) goto try_again;
 	
+	// if it's one of the "." or ".." entries, skip it.
+	if (pDirData->sfn[0] == '.') goto try_again;
+	
 	memset(pDirEnt, 0, sizeof (*pDirEnt));
 	if (lfnCount > 0)
 	{
