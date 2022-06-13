@@ -37,31 +37,21 @@ void FilePickerUpdate (Window *pWindow)
 	if (strcmp (pCwd, "/")) //if can go to parent, add a button
 		AddElementToList (pWindow, 100002, "..", ICON_FOLDER_PARENT);
 	
-	FileNode *pFolderNode = FsResolvePath (pCwd);
+	DirectoryEntry* pEnt = NULL;
 	
-	DirEnt* pEnt = NULL;
-	int i = 0;
-	
-	if (!FsOpenDir(pFolderNode))
+	int fd = FiOpenDir(pCwd);
+	if (fd < 0)
 	{
 		MessageBox(pWindow, "Could not load directory.", "File picker", ICON_ERROR | ICON_WARNING << 16);
 		return;
 	}
 	
-	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
+	while ((pEnt = FiReadDir(fd)) != 0)
 	{
-		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
-		
-		if (!pNode)
-		{
-			AddElementToList (pWindow, 100002, "<a NULL directory entry>", ICON_ERROR);
-		}
-		else
-		{
-			AddElementToList (pWindow, 100002, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
-			i++;
-		}
+		AddElementToList (pWindow, 100002, pEnt->name, ICON_FILE);
 	}
+	
+	FiCloseDir(fd);
 }
 
 void FilePickerCdBack (Window *pWindow)
@@ -96,6 +86,7 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 		//Which button did we click?
 		if (parm1 == 100002)
 		{
+			/*
 			// List View
 			const char* pCwd = TextInputGetRawText(pWindow, 100001);
 			if (!pCwd)
@@ -160,7 +151,7 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 				char buffer [256];
 				sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
 				MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
-			}
+			}*/
 		}
 		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
 		{

@@ -26,6 +26,18 @@
 #define DebugLogMsg(...)
 #endif
 
+#ifdef MSVC
+
+#define CLUSTER_SIZE_DECL(pFS) \
+	65536
+
+#else
+
+#define CLUSTER_SIZE_DECL(pFS) \
+	(pFS->bpb.m_nSectorsPerCluster * SECTOR_SIZE)
+
+#endif
+
 // Credits: https://github.com/knusbaum/kernel/blob/master/fat32.c
 
 #define ADD_TIMESTAMP_TO_FILES
@@ -93,6 +105,156 @@ BiosParameterBlock;
 
 typedef struct
 {
+	uint8_t  m_BootIndicator;
+	uint8_t  m_StartCHS[3]; //not used
+	uint8_t  m_PartTypeDesc;
+	uint8_t  m_EndCHS[3]; //not used
+	uint32_t m_StartLBA; //used
+	uint32_t m_PartSizeSectors;
+}
+__attribute__((packed))
+Partition;
+
+typedef struct
+{
+	uint8_t   m_BootLoaderCode[446];
+	Partition m_Partitions[4];
+	uint16_t  m_BootSignature; //most of the time this is 0x55AA
+}
+__attribute__((packed))
+MasterBootRecord;
+
+
+typedef struct FatDirectoryEntry
+{
+#pragma pack (push, 1)
+	char sfn[8];
+	char ext[3];
+	char attrib;
+	uint32_t unk0;
+	uint32_t unk1;
+	uint16_t clusNumHigh;
+	uint16_t lastModTime;
+	uint16_t lastModDate;
+	uint16_t clusNumLow;
+	uint32_t fileSize;
+#pragma pack (pop)
+}
+__attribute__((packed))
+FatDirectoryEntry;
+STATIC_ASSERT(sizeof(FatDirectoryEntry) == 32, "FatDirectoryEntry must be 32 bytes!");
+
+struct Fat32FileSystem;
+struct Fat32ClusterChain;
+
+typedef struct Fat32ClusterChain // File
+{
+	// Inherited from File:
+	DirectoryEntry entry;
+	struct Fat32FileSystem *pFS; // I can do this. Don't judge.
+	
+	File_Read  Read;
+	File_Close Close;
+	File_Seek  Seek;
+	
+	// Our own variables for the cluster chain
+	bool taken;
+	uint32_t currentCluster;//to allow for forwards seek
+	uint32_t firstCluster;	//to allow for backwards seek
+	uint32_t offsetBytes;
+	bool    clusterCacheLoaded;
+	uint8_t clusterCache[65536];
+}
+Fat32ClusterChain;
+
+typedef struct Fat32Directory
+{
+	Fat32ClusterChain *file;
+	struct Fat32FileSystem *pFS;
+	
+	Directory_Close     Close;
+	Directory_ReadEntry ReadEntry;
+	Directory_Seek      Seek;
+	Directory_Tell      Tell;
+	
+	// Our own variables for the directory
+	bool taken;
+	int  told;
+}
+Fat32Directory;
+
+#define SECTOR_SIZE 512
+
+#define C_MAX_CLUSCHAIN_HANDLES 64
+#define C_MAX_DIRECTORY_HANDLES 64
+typedef struct Fat32FileSystem
+{
+	// The base FileSystem's variables.
+	uint32_t fsID;
+	
+	SafeLock lock;
+	
+	// to imitate the C++ mannerisms I've used prototyping this design
+	FileSystem_OpenInt         OpenInt;
+	FileSystem_OpenDir         OpenDir;
+	FileSystem_LocateFileInDir LocateFileInDir;
+	FileSystem_GetRootDirID    GetRootDirID;
+	
+	BiosParameterBlock bpb;
+	uint8_t  diskID; // as would be in storabs.c
+
+	uint32_t partStart, partSize;
+
+	uint32_t fatBeginSector;
+	uint32_t clusBeginSector;
+	uint32_t clusSize, clusSizeLog2;
+	uint32_t clusAllocHint;
+
+	uint32_t* pFat;
+	uint8_t*  pFatModified;
+	uint8_t*  pFatLoaded;
+
+	Fat32ClusterChain fileHandles[C_MAX_CLUSCHAIN_HANDLES];
+	Fat32Directory    dirHandles [C_MAX_DIRECTORY_HANDLES];
+}
+Fat32FileSystem;
+
+
+Fat32FileSystem *FsConstructFat32FileSystem    (uint32_t fsID, uint8_t diskID, uint32_t PartitionStart, uint32_t PartitionSize);
+FileSystem      *FsConstructFat32FileSystemBase(uint32_t fsID, uint8_t diskID, uint32_t PartitionStart, uint32_t PartitionSize);
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Old crap below...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+typedef struct
+{
 	char     m_pName[128];
 	uint8_t  m_dirFlags;
 	uint32_t m_firstCluster,
@@ -116,7 +278,7 @@ typedef struct
 	bool         m_bFatLock;
 	bool         m_bReportErrors;
 	int          m_nReportedErrors;
-	FileNode*    m_pRoot;
+	//FileNode*    m_pRoot;
 	BiosParameterBlock m_bpb;
 	uint32_t     m_fatBeginSector,
 	             m_clusBeginSector,
@@ -127,27 +289,6 @@ typedef struct
 				 m_driveID;
 }
 FatFileSystem;
-
-typedef struct
-{
-	uint8_t  m_BootIndicator;
-	uint8_t  m_StartCHS[3]; //not used
-	uint8_t  m_PartTypeDesc;
-	uint8_t  m_EndCHS[3]; //not used
-	uint32_t m_StartLBA; //used
-	uint32_t m_PartSizeSectors;
-}
-__attribute__((packed))
-Partition;
-
-typedef struct
-{
-	uint8_t   m_BootLoaderCode[446];
-	Partition m_Partitions[4];
-	uint16_t  m_BootSignature; //most of the time this is 0x55AA
-}
-__attribute__((packed))
-MasterBootRecord;
 
 extern FatFileSystem s_Fat32Structures[32];
 

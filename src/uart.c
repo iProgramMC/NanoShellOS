@@ -121,7 +121,7 @@ short UartGetPortBase(uint8_t com_num)
 {
 	return g_uart_port_bases[com_num];
 }
-
+/*
 static uint32_t FsSerialRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
 {
 	//TODO
@@ -143,10 +143,10 @@ static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t 
 	}
 	return size;
 }
-
+*/
 void ShellExecuteCommand(char* p);
 void UartInit(uint8_t com_num)
-{
+{/*
 	//COM1 and COM2
 	if (com_num >= 2)
 	{
@@ -222,7 +222,7 @@ void UartInit(uint8_t com_num)
 		UartWriteSingleChar(com_num, *pnText);
 		pnText++;
 	}
-	
+	*/
 }
 
 void UartWriteSingleChar(uint8_t com_num, char c)

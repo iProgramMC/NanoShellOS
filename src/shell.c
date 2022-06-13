@@ -132,7 +132,6 @@ int  g_lastReturnCode = 0;
 bool CoPrintCharInternal (Console* this, char c, char next);
 
 extern char g_cwd[PATH_MAX+2];
-FileNode* g_pCwdNode = NULL;
 
 extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
@@ -148,9 +147,6 @@ void ShellExecuteCommand(char* p)
 		return;
 	if (*token == 0)
 		return;
-	
-	//TODO
-	g_pCwdNode = FsResolvePath (g_cwd);
 	
 	if (strcmp (token, "help") == 0)
 	{
@@ -477,10 +473,12 @@ void ShellExecuteCommand(char* p)
 	{
 		uint8_t color = g_currentConsole->color;
 		
-		FileNode* pNode = g_pCwdNode;
-		LogMsg("\x01\x0F" "Directory of %s", pNode->m_name, pNode);
+		//FileNode* pNode = g_pCwdNode;
+		//LogMsg("\x01\x0F" "Directory of %s", pNode->m_name, pNode);
+		LogMsg("\x01\x0F" "Directory of %s", g_cwd);
 		
-		bool bareMode = false;
+		bool bareMode = true;
+		SLogMsg("a");
 		
 		int dd = FiOpenDir (g_cwd);
 		if (dd < 0)
@@ -488,24 +486,28 @@ void ShellExecuteCommand(char* p)
 			LogMsg("ls: cannot list '%s': %s", g_cwd, GetErrNoString(dd));
 			return;
 		}
+		SLogMsg("b");
 		
 		FiRewindDir(dd);
+		SLogMsg("c");
 		
-		DirEnt* pDirEnt;
+		DirectoryEntry* pDirEnt;
+		SLogMsg("d");
 		while ((pDirEnt = FiReadDir(dd)) != NULL)
 		{
+			SLogMsg("E");
 			if (bareMode)
 			{
-				LogMsg("%s", pDirEnt->m_name);
+				LogMsg("%s", pDirEnt->name);
 				continue;
 			}
 			
 			StatResult statResult;
-			int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
+			int res = FiStatAt (dd, pDirEnt->name, &statResult);
 			
 			if (res < 0)
 			{
-				LogMsg("ls: cannot stat '%s': %s", pDirEnt->m_name, GetErrNoString(res));
+				LogMsg("ls: cannot stat '%s': %s", pDirEnt->name, GetErrNoString(res));
 				continue;
 			}
 			#define THING "\x10"
@@ -515,7 +517,7 @@ void ShellExecuteCommand(char* p)
 					"-r"[!!(statResult.m_perms & PERM_READ )],
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
-					pDirEnt->m_name
+					pDirEnt->name
 				);
 			}
 			else
@@ -525,7 +527,7 @@ void ShellExecuteCommand(char* p)
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
 					statResult.m_size,
-					pDirEnt->m_name
+					pDirEnt->name
 				);
 			}
 			#undef THING
@@ -887,7 +889,6 @@ void ShellExecuteCommand(char* p)
 void ShellInit()
 {
 	strcpy (g_cwd, "/");
-	g_pCwdNode = FsResolvePath (g_cwd);
 }
 
 void ShellPrintMotd()

@@ -8,9 +8,12 @@
 #define _VFS_H
 
 #include <main.h>
+#include <task.h>
 
 struct FSNodeS;
 struct DirEntS;
+
+typedef uint64_t FileID;
 
 #define PATH_SEP ('/')
 #define PATH_THISDIR (".")
@@ -20,6 +23,24 @@ struct DirEntS;
 #define FS_FSROOT_NAME "FSRoot"
 
 #define FD_MAX 1024
+
+#define C_MAX_FILE_SYSTEMS 128
+
+#define NO_FILE ((FileID)0)
+
+#define FS_MAKE_ID(fsID, fileID)  (FileID)(((uint64_t)(fsID) << 32) | fileID)
+
+#define PERM_READ  (1)
+#define PERM_WRITE (2)
+#define PERM_EXEC  (4)
+
+#define FLAG_HIDDEN (1)
+#define FLAG_SYSTEM (2)
+
+//lseek whences
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 enum
 {
@@ -31,102 +52,112 @@ enum
 	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
 };
 
-#define PERM_READ  (1)
-#define PERM_WRITE (2)
-#define PERM_EXEC  (4)
-
-// Function pointer definitions so we can just call `file_node->Read(...);` etc.
-typedef uint32_t 		(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*);
-typedef uint32_t 		(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, void*);
-typedef bool     		(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
-typedef void     		(*FileCloseFunc)      (struct FSNodeS*);
-typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
-typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
-typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t);
-typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
-typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
-typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
-typedef int             (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
-
-typedef struct FSNodeS
+typedef struct
 {
-	struct FSNodeS
-	*parent,
-	*children,
-	*next,
-	*prev;
+	char     name[261];
+	FileID   file_id;
+	int      file_length;
+	uint32_t flags;
+	uint32_t type;
+	uint32_t perms;
+	bool     is_directory;
 	
-	char 	           m_name[128]; //+nullterm, so 127 concrete chars
-	uint32_t           m_type;
-	uint32_t           m_perms;
-	uint32_t           m_flags;
-	uint32_t           m_inode;      //device specific
-	uint32_t           m_length;     //file size
-	uint32_t           m_implData;   //implementation data. TODO
-	uint32_t           m_implData1;
-	uint32_t           m_implData2;
-	uint32_t           m_implData3;
-	uint64_t           m_modifyTime, m_createTime;
-	FileReadFunc       Read;
-	FileWriteFunc      Write;
-	FileOpenFunc       Open;
-	FileCloseFunc      Close;
-	// Opens a directory, and loads it into the file system structure.
-	FileOpenDirFunc    OpenDir;
-	// Returns the N-th child of a directory.
-	FileReadDirFunc    ReadDir;
-	// Tries to find a child with a name in a directory.
-	FileFindDirFunc    FindDir;
-	// Closes a directory.
-	FileCloseDirFunc   CloseDir;
-	// Creates an empty file and sets it up inside the file system. On FAT32, this does not allocate another cluster
-	// to store the file in. Windows does not, in fact, do this, so a zero-byte file only occupies its entry's worth
-	// of space.
-	FileCreateFileFunc CreateFile;
-	// Removes all the contents of a file.
-	FileEmptyFileFunc  EmptyFile;
-	// Creates an empty directory and sets up all the necessary stuff.  On FAT32, also creates the '.' and '..' links.
-	FileCreateDirFunc  CreateDir;
-	// Addendum: This will only remove EMPTY directories. Any directory with a file in it needs to be traversed first
-	// On FAT32, the . and .. directories won't count to the 'empty' directory limitation.
-	// This is exactly how most OSes implement remove(dir) anyway, so don't worry.
-	// The reason it works this way instead of deleting the whole directory is because 
-	FileRemoveFileFunc RemoveFile;
+	//uint8_t  attributes;  // FAT
 }
-FileNode;
+DirectoryEntry;
 
-typedef struct DirEntS
+// Base classes
+struct File;
+struct Directory;
+struct FileSystem;
+typedef uint32_t  (*File_Read) (struct File* file, void *pOut, uint32_t size);
+typedef void      (*File_Close)(struct File* file);
+typedef bool      (*File_Seek) (struct File* file, int position, int whence, bool bAllowExpansion);
+
+typedef struct File
 {
-	char     m_name[128]; //+nullterm, so 127 concrete chars
-	uint32_t m_inode;     //device specific
-	uint32_t m_type;
+	DirectoryEntry entry;
+	struct FileSystem *pFS;
+	
+	File_Read  Read;
+	File_Close Close;
+	File_Seek  Seek;
+	
+	// Work on: Write
 }
-DirEnt;
+File;
 
-/**
- * Gets the root entry of the filesystem.
- */
-FileNode* FsGetRootNode();
-
-//Standard read/write/open/close functions.  They are prefixed with Fs to distinguish them
-//from FiRead/FiWrite/FiOpen/FiClose, which deal with file handles not nodes.
-
-//Remember the definitions above.
-
-//These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
-uint32_t FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-uint32_t FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-bool     FsOpen      (FileNode* pNode, bool read, bool write);
-void     FsClose     (FileNode* pNode);
-bool     FsOpenDir   (FileNode* pNode);
-void     FsCloseDir  (FileNode* pNode);
-DirEnt*  FsReadDir   (FileNode* pNode, uint32_t index);
-FileNode*FsFindDir   (FileNode* pNode, const char* pName);
-int      FsRemoveFile(FileNode* pNode);
+typedef void   (*Directory_Close)    (struct Directory* pDir);
+typedef bool   (*Directory_ReadEntry)(struct Directory* pDir, DirectoryEntry* pOut);
+typedef void   (*Directory_Seek)     (struct Directory* pDir, int position);
+typedef int    (*Directory_Tell)     (struct Directory* pDir);
 
 
-FileNode*FsResolvePath (const char* pPath);
+typedef struct Directory
+{
+	File *file;
+	struct FileSystem *pFS;
+	
+	Directory_Close     Close;
+	Directory_ReadEntry ReadEntry;
+	Directory_Seek      Seek;      // - RewindDir does basically Seek(0)
+	Directory_Tell      Tell;
+	
+	// Work on: MakeDir, CreateFile, RemoveFile, StatFile; and possibly: Link?, Unlink?
+}
+Directory;
+
+typedef Directory*(*FileSystem_OpenDir)        (struct FileSystem *pFS, uint32_t dirID);
+typedef File*     (*FileSystem_OpenInt)        (struct FileSystem *pFS, DirectoryEntry entry);
+typedef bool      (*FileSystem_LocateFileInDir)(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
+typedef uint32_t  (*FileSystem_GetRootDirID)   (struct FileSystem *pFS);
+
+typedef struct FileSystem
+{
+	uint32_t fsID;
+	
+	SafeLock lock;
+	
+	// to imitate the C++ mannerisms I've used prototyping this design
+	FileSystem_OpenInt         OpenInt;
+	FileSystem_OpenDir         OpenDir;
+	FileSystem_LocateFileInDir LocateFileInDir;
+	FileSystem_GetRootDirID    GetRootDirID;
+}
+FileSystem;
+
+bool        FsMountFileSystem (FileSystem *pFS);
+FileSystem* FsResolveByFsID   (uint32_t    fsID);
+FileSystem* FsResolveByFileID (FileID      id);
+FileID      FsGetGlobalRoot   ();
+void        FsSetGlobalRoot   (FileID id);
+File*       FsOpenFile        (DirectoryEntry entry);
+
+#define BASE_FI(fi)  ((File*)fi)
+#define BASE_FS(fs)  ((FileSystem*)fs)
+
+//For internal use.
+typedef struct {
+	bool      m_bOpen;
+	File     *m_pFile;
+	char      m_sPath[PATH_MAX+2];
+	
+	const char* m_openFile;
+	int       m_openLine;
+}
+FileDescriptor;
+
+typedef struct {
+	bool        m_bOpen;
+	Directory  *m_pDir;
+	char        m_sPath[PATH_MAX+2];
+	
+	const char *m_openFile;
+	int         m_openLine;
+	
+	DirectoryEntry m_sCurDirEnt;
+}
+DirDescriptor ;
 
 void FiDebugDump();
 
@@ -141,8 +172,6 @@ void FsMountRamDisk(void* pRamDisk);
 #if 1
 
 void FsInit ();
-FileNode* CreateFileNode (FileNode* pParent);
-void EraseFileNode (FileNode* pFileNode);
 
 #endif
 
@@ -162,11 +191,6 @@ void EraseFileNode (FileNode* pFileNode);
 		uint32_t m_offset, m_length;
 	}
 	InitRdFileHeader;
-
-	/**
-	* Gets the root entry of the initrd.
-	*/
-	FileNode* FsGetInitrdNode ();
 	
 	/**
 	 * Initializes the initial ramdisk.
@@ -176,32 +200,6 @@ void EraseFileNode (FileNode* pFileNode);
 
 // Basic POSIX-like API
 #if 1
-	//For internal use.
-	typedef struct {
-		bool      m_bOpen;
-		FileNode *m_pNode;
-		char      m_sPath[PATH_MAX+2];
-		int       m_nStreamOffset;
-		int       m_nFileEnd;
-		bool      m_bIsFIFO; //is a char device, basically
-		
-		const char* m_openFile;
-		int       m_openLine;
-	}
-	FileDescriptor;
-	
-	typedef struct {
-		bool      m_bOpen;
-		FileNode *m_pNode;
-		char      m_sPath[PATH_MAX+2];
-		int       m_nStreamOffset;
-		DirEnt    m_sCurDirEnt;
-		
-		const char* m_openFile;
-		int       m_openLine;
-	}
-	DirDescriptor ;
-	
 	typedef struct
 	{
 		uint32_t m_type;
@@ -222,10 +220,6 @@ void EraseFileNode (FileNode* pFileNode);
 	#define O_CREAT  (8)
 	#define O_EXEC   (1024)
 	
-	//lseek whences
-	#define SEEK_SET 0
-	#define SEEK_CUR 1
-	#define SEEK_END 2
 	
 	#include <errors.h>
 	
@@ -260,7 +254,7 @@ void EraseFileNode (FileNode* pFileNode);
 	int FiCloseDir (int dd);
 	
 	// Reads a directory entry from the directory and advances the stream pointer.
-	DirEnt* FiReadDir (int dd);
+	DirectoryEntry* FiReadDir (int dd);
 	
 	// Seeks on a directory descriptor.
 	int FiSeekDir (int dd, int loc);

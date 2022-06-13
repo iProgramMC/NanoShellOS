@@ -136,39 +136,28 @@ reset:
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 		AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
 	
-	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
-	
-	DirEnt* pEnt = NULL;
-	int i = 0;
-	
-	if (!FsOpenDir(pFolderNode))
+	int fd = FiOpenDir(g_cabinetCWD);
+	if (fd < 0)
 	{
 		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
 		strcpy (g_cabinetCWD, "/");
 		goto reset;
 	}
 	
-	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
+	DirectoryEntry *pEnt;
+	while ((pEnt = FiReadDir(fd)) != 0)
 	{
-		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
-		
-		if (!pNode)
-		{
-			AddElementToList (pWindow, MAIN_LISTVIEW, "<a NULL directory entry>", ICON_ERROR);
-		}
-		else
-		{
-			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
-			i++;
-		}
+		AddElementToList (pWindow, MAIN_LISTVIEW, pEnt->name, ICON_FILE/*CabGetIconBasedOnName(pNode->m_name, pNode->m_type)*/);
 	}
 	
-	int icon = CabGetIconBasedOnName(pFolderNode->m_name, pFolderNode->m_type);
+	FiCloseDir(fd);
+	
+	int icon = ICON_FILE;//CabGetIconBasedOnName(pFolderNode->m_name, pFolderNode->m_type);
 	//SetWindowIcon (pWindow, icon);
 	//SetWindowTitle(pWindow, pFolderNode->m_name);
 	pWindow->m_iconID = icon;
 	strcpy (pWindow->m_title, "Cabinet - ");
-	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	strcat (pWindow->m_title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	RequestTaskbarUpdate();
 	RequestRepaint(pWindow);
 }
@@ -181,14 +170,17 @@ void CdBack(Window* pWindow)
 		if (g_cabinetCWD[i] == PATH_SEP)
 		{
 			g_cabinetCWD[i+(i == 0)] = 0;
-			FileNode* checkNode = FsResolvePath(g_cabinetCWD);
-			if (!checkNode)
+			
+			int fd = FiOpenDir(g_cabinetCWD);
+			if (fd < 0)
 			{
 				MessageBox(pWindow, "Cannot find parent directory.\n\nGoing back to root.", pWindow->m_title, ICON_ERROR << 16 | MB_OK);
 				
 				strcpy (g_cabinetCWD, "/");
 				return;
 			}
+			FiCloseDir(fd);
+			
 			UpdateDirectoryListing (pWindow);
 			break;
 		}
@@ -263,7 +255,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		}
 		case EVENT_COMMAND:
 		{
-			if (parm1 == MAIN_LISTVIEW)
+			/*if (parm1 == MAIN_LISTVIEW)
 			{
 				FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 				const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
@@ -415,7 +407,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 				}
 			}
-			else if (parm1 == MAIN_MENU_BAR)
+			else */if (parm1 == MAIN_MENU_BAR)
 			{
 				switch (parm2)
 				{

@@ -78,8 +78,8 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	StIdeInit();
 	FsFatInit();
 	FsInitRdInit();
-	UartInit(0);
-	CfgLoadFromMainFile();
+	//UartInit(0);
+	//CfgLoadFromMainFile();
 	#ifdef EXPERIMENTAL_RSDPTR
 	AcpiInitIfApplicable();
 	#endif

@@ -35,6 +35,8 @@ apps/WorldMap/*.nse
 apps/Minesweeper/build/*
 apps/Minesweeper/*.nse
 
+src/fs/fatkeep.h
+
 #apps I don't want out yet because I do not like embedding third party code into the OS
 apps/ArduNS/*
 fs/Bin/ArduNS.nse

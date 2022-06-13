@@ -323,7 +323,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					if (m == 'Q' || m == 'P')
 						charset = "0123456789ABCDEF";
 
-					uint32_t p = va_arg(args, uint32_t);
+					uint64_t p = va_arg(args, uint64_t);
 
 					for (uint64_t mask = 0xF000000000000000ULL, bitnum = 60; mask; mask >>= 4, bitnum -= 4)
 					{
