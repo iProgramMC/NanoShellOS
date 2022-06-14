@@ -152,6 +152,7 @@ typedef struct Fat32ClusterChain // File
 	// Inherited from File:
 	DirectoryEntry entry;
 	struct Fat32FileSystem *pFS; // I can do this. Don't judge.
+	FileID fileID;
 	
 	File_Read     Read;
 	File_Write    Write;

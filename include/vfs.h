@@ -61,6 +61,25 @@ typedef struct
 }
 DirectoryEntry;
 
+typedef struct
+{
+	//V1 struct (as is in user space)
+	uint32_t m_type;
+	uint32_t m_size;
+	uint32_t m_blocks; // num clusters
+	uint32_t m_inode;  // inode / cluster number
+	
+	uint32_t m_perms;
+	uint32_t m_modifyTime;
+	uint32_t m_createTime;
+	
+	//V2 struct
+	uint32_t m_flags;
+	uint32_t m_fs_id;
+	uint32_t m_dev_type; // soon
+}
+StatResult;
+
 // Base classes
 struct File;
 struct Directory;
@@ -76,6 +95,7 @@ typedef struct File
 {
 	DirectoryEntry entry;
 	struct FileSystem *pFS;
+	FileID fileID;
 	
 	File_Read     Read;
 	File_Write    Write;
@@ -87,7 +107,7 @@ typedef struct File
 File;
 
 typedef void   (*Directory_Close)    (struct Directory* pDir);
-typedef bool   (*Directory_ReadEntry)(struct Directory* pDir, DirectoryEntry* pOut);
+typedef bool   (*Directory_ReadEntry)(struct Directory* pDir, DirectoryEntry* pOut, StatResult* pStatOut);
 typedef void   (*Directory_Seek)     (struct Directory* pDir, int position);
 typedef int    (*Directory_Tell)     (struct Directory* pDir);
 
@@ -108,7 +128,7 @@ Directory;
 
 typedef Directory*(*FileSystem_OpenDir)        (struct FileSystem *pFS, uint32_t dirID);
 typedef File*     (*FileSystem_OpenInt)        (struct FileSystem *pFS, DirectoryEntry* entry);
-typedef bool      (*FileSystem_LocateFileInDir)(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
+typedef bool      (*FileSystem_LocateFileInDir)(struct FileSystem *pFS, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry, StatResult *pOutput);
 typedef uint32_t  (*FileSystem_GetRootDirID)   (struct FileSystem *pFS);
 
 typedef struct FileSystem
@@ -142,21 +162,22 @@ int      FsFileTellSize(File* file);
 
 // Directory operations
 void FsDirectoryClose     (Directory *pDirectory);
-bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut);
+bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut, StatResult *pStatResultOut);
 void FsDirectorySeek      (Directory *pDirectory, int position);
 int  FsDirectoryTell      (Directory *pDirectory);
 
 // File system operations
 File*      FsOpenFile(DirectoryEntry* entry);
 Directory* FsOpenDir(FileID fileID);
-bool       FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut);
+bool       FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut, StatResult *pResult);
 uint32_t   FsGetRootDirID(FileSystem *pFS);
 
 #define BASE_FI(fi)  ((File*)fi)
 #define BASE_FS(fs)  ((FileSystem*)fs)
 
 //For internal use.
-typedef struct {
+typedef struct
+{
 	bool      m_bOpen;
 	File     *m_pFile;
 	char      m_sPath[PATH_MAX+2];
@@ -166,7 +187,8 @@ typedef struct {
 }
 FileDescriptor;
 
-typedef struct {
+typedef struct
+{
 	bool        m_bOpen;
 	Directory  *m_pDir;
 	char        m_sPath[PATH_MAX+2];
@@ -175,8 +197,9 @@ typedef struct {
 	int         m_openLine;
 	
 	DirectoryEntry m_sCurDirEnt;
+	StatResult     m_sCurStatRes;
 }
-DirDescriptor ;
+DirDescriptor;
 
 void FiDebugDump();
 
@@ -219,19 +242,6 @@ void FsInit ();
 
 // Basic POSIX-like API
 #if 1
-	typedef struct
-	{
-		uint32_t m_type;
-		uint32_t m_size;
-		uint32_t m_blocks;
-		uint32_t m_inode;
-		
-		uint32_t m_perms;
-		uint32_t m_modifyTime;
-		uint32_t m_createTime;
-	}
-	StatResult;
-	
 	#define O_RDONLY (1)
 	#define O_WRONLY (2)
 	#define O_RDWR   (O_RDONLY | O_WRONLY)

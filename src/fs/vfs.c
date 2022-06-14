@@ -72,12 +72,12 @@ void FsDirectoryClose (Directory *pDirectory)
 	
 	pDirectory->Close(pDirectory);
 }
-bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut)
+bool FsDirectoryReadEntry (Directory *pDirectory, DirectoryEntry *pDirectoryEntryOut, StatResult *pStatResultOut)
 {
 	if (!pDirectory->ReadEntry)
 		return false; //! what would be the purpose of a directory if you can't read from it?
 	
-	return pDirectory->ReadEntry(pDirectory, pDirectoryEntryOut);
+	return pDirectory->ReadEntry(pDirectory, pDirectoryEntryOut, pStatResultOut);
 }
 void FsDirectorySeek (Directory *pDirectory, int position)
 {
@@ -108,12 +108,12 @@ Directory* FsOpenDir(FileID fileID)
 	
 	return pFS->OpenDir(pFS, (uint32_t)fileID);
 }
-bool FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut)
+bool FsLocateFileInDir(FileID dirID, const char *pFN, DirectoryEntry *pEntryOut, StatResult *pResult)
 {
 	FileSystem *pFS = FsResolveByFileID (dirID);
-	if (!pFS) return NULL;
+	if (!pFS) return false;
 	
-	return pFS->LocateFileInDir (pFS, (uint32_t)dirID, pFN, pEntryOut);
+	return pFS->LocateFileInDir (pFS, (uint32_t)dirID, pFN, pEntryOut, pResult);
 }
 uint32_t FsGetRootDirID(FileSystem *pFS)
 {
@@ -170,7 +170,7 @@ void FsSetGlobalRoot(FileID id)
 	g_file_root = id;
 }
 
-FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
+FileID FsResolveFilePathAndStat (const char *pPath, DirectoryEntry *pEntryOut, StatResult* pStatResultOut)
 {
 	TokenState state;
 	
@@ -195,7 +195,7 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 			return NO_FILE;
 		
 		// try to resolve this as a standard path
-		return FsResolveFilePath (path_copy, pEntryOut);
+		return FsResolveFilePathAndStat (path_copy, pEntryOut, pStatResultOut);
 	}
 	
 	FileID currentFile = FsGetGlobalRoot();
@@ -218,8 +218,7 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 			return NO_FILE;
 		}
 		
-		FileSystem *pFS = FsResolveByFileID(currentFile);
-		bool b = pFS->LocateFileInDir(pFS, (uint32_t)currentFile, path1, pEntryOut);
+		bool b = FsLocateFileInDir(currentFile, path1, pEntryOut, NULL);
 		if (!b)
 		{
 			SLogMsg("Path '%s' couldn't be located (%s)", pPath, path1);
@@ -231,6 +230,11 @@ FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
 	}
 	
 	return currentFile;
+}
+FileID FsResolveFilePath (const char *pPath, DirectoryEntry *pEntryOut)
+{
+	StatResult res;
+	return FsResolveFilePathAndStat(pPath, pEntryOut, &res);
 }
 
 void FsInit()
@@ -549,7 +553,7 @@ DirectoryEntry* FiReadDir (int dd)
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	
-	bool result = FsDirectoryReadEntry(pDesc->m_pDir, &pDesc->m_sCurDirEnt);
+	bool result = FsDirectoryReadEntry(pDesc->m_pDir, &pDesc->m_sCurDirEnt, &pDesc->m_sCurStatRes);
 	
 	if (!result)
 	{
@@ -607,8 +611,6 @@ int FiTellDir (int dd)
 
 int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -617,50 +619,56 @@ int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
-	FileNode *pNode = FsFindDir(pDesc->m_pNode, pFileName);
-	if (!pNode)
+	
+	// keep original tell
+	int original_tell = FsDirectoryTell (pDesc->m_pDir);
+	// rewind
+	FsDirectorySeek(pDesc->m_pDir, 0);
+	
+	// scan this directory for the directory entry
+	DirectoryEntry entry;
+	bool found = false;
+	
+	while (FsDirectoryReadEntry (pDesc->m_pDir, &entry, pOut))
+	{
+		if (strcmp (entry.name, pFileName) == 0)
+		{
+			found = true;
+			break;
+		}
+	}
+	
+	// restore original tell
+	FsDirectorySeek(pDesc->m_pDir, original_tell);
+	
+	// did you find the file?
+	if (!found)
 	{
 		LockFree (&g_FileSystemLock);
 		return -ENOENT;
 	}
 	
-	pOut->m_type       = pNode->m_type;
-	pOut->m_size       = pNode->m_length;
-	pOut->m_inode      = pNode->m_inode;
-	pOut->m_perms      = pNode->m_perms;
-	pOut->m_modifyTime = pNode->m_modifyTime;
-	pOut->m_createTime = pNode->m_createTime;
-	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	// Ok, then it should be safe to return.
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
-	*/
 }
 
 int FiStat (const char *pFileName, StatResult* pOut)
 {
-	return -EIO;
-	/*
 	LockAcquire (&g_FileSystemLock);
 	
-	FileNode *pNode = FsResolvePath(pFileName);
-	if (!pNode)
+	DirectoryEntry entry;
+	FileID fileID = FsResolveFilePathAndStat (pFileName, &entry, pOut);
+	
+	if (!fileID)
 	{
 		LockFree (&g_FileSystemLock);
 		return -ENOENT;
 	}
 	
-	pOut->m_type       = pNode->m_type;
-	pOut->m_size       = pNode->m_length;
-	pOut->m_inode      = pNode->m_inode;
-	pOut->m_perms      = pNode->m_perms;
-	pOut->m_modifyTime = pNode->m_modifyTime;
-	pOut->m_createTime = pNode->m_createTime;
-	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
-	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
-	*/
 }
 
 size_t FiRead (int fd, void *pBuf, int nBytes)
@@ -778,6 +786,7 @@ int FiRemoveFile (const char *pfn)
 }
 int FiChangeDir (const char *pfn)
 {
+	SLogMsg("FiChangeDir ( %s )",pfn);
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
 	
 	int slen = strlen (pfn);
@@ -809,6 +818,7 @@ int FiChangeDir (const char *pfn)
 	
 	if (strcmp (pfn, PATH_PARENTDIR) == 0)
 	{
+		SLogMsg("Parent dir thing");
 		for (int i = PATH_MAX - 1; i >= 0; i--)
 		{
 			//get rid of the last segment
@@ -832,7 +842,7 @@ int FiChangeDir (const char *pfn)
 	}
 	
 	//resolve the path
-	FileID fileID = FsResolveFilePath (pfn, &entry);
+	FileID fileID = FsResolveFilePath (cwd_work, &entry);
 	
 	if (!fileID)
 		return -ENOENT; //does not exist

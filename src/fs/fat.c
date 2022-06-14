@@ -21,7 +21,7 @@ static inline void FsFat32AssertDirectoryType(Directory *pFile);
 
 File*      FsFat32OpenInt        (FileSystem *pFSBase, DirectoryEntry* entry);
 Directory* FsFat32OpenDir        (FileSystem *pFSBase, uint32_t dirID);
-bool       FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry);
+bool       FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry, StatResult* result);
 uint32_t   FsFat32GetRootDirID   (FileSystem *pFSBase);
 
 #endif
@@ -266,7 +266,7 @@ void FsFat32DirectoryClose(struct Directory* pDirBase)
 	pDir->taken = false;
 	pDir->file->Close((File*)pDir->file);
 }
-bool FsFat32ReadDirEntry(Fat32ClusterChain *pChain, DirectoryEntry *pDirEnt)
+bool FsFat32ReadDirEntry(Fat32ClusterChain *pChain, DirectoryEntry *pDirEnt, StatResult *pStatResultOut)
 {
 	uint8_t lfnData[1024], *lfnDataHead = lfnData;
 	uint8_t data[32];//CLUSTER_SIZE_DECL(pFS)];
@@ -324,74 +324,103 @@ try_again:;
 	// if it's one of the "." or ".." entries, skip it.
 	if (pDirData->sfn[0] == '.') goto try_again;
 	
-	memset(pDirEnt, 0, sizeof (*pDirEnt));
-	if (lfnCount > 0)
+	if (pDirEnt)
 	{
-		FatParseLFN(pDirEnt->name, lfnData, lfnCount);
-	}
-	else
-	{
-		// There is no LFN, trim up the SFN
+		memset(pDirEnt, 0, sizeof (*pDirEnt));
 		
-		memcpy(pDirEnt->name, pDirData, 11);
-		pDirEnt->name[11] = 0;
-
-		char ext[4]; int i;
-
-		memcpy(ext, pDirEnt->name + 8, 3);
-
-		// trim spaces from extension
-		ext[3] = 0;
-		i = 2;
-		while (i >= 0 && ext[i] == ' ')
-			ext[i--] = 0;
-
-		// trim spaces from name
-		pDirEnt->name[8] = 0;
-		i = 7;
-		while (i >= 0 && pDirEnt->name[i] == ' ')
-			pDirEnt->name[i--] = 0;
-
-		if (strlen(ext) != 0)
+		if (lfnCount > 0)
 		{
-			strcat(pDirEnt->name, ".");
-			strcat(pDirEnt->name, ext);
+			FatParseLFN(pDirEnt->name, lfnData, lfnCount);
 		}
-
-		int nameLen = strlen(pDirEnt->name);
-
-		bool lowercase = (pEntry[12] & FAT_MSFLAGS_NAMELOWER) != 0;
-		for (int i = 0; i < nameLen; i++)
+		else
 		{
-			if (lowercase)
-				pDirEnt->name[i] = ToLower(pDirEnt->name[i]);
-			if (pDirEnt->name[i] == '.')
-				lowercase = (pEntry[12] & FAT_MSFLAGS_EXTELOWER) != 0;
+			// There is no LFN, trim up the SFN
+			
+			memcpy(pDirEnt->name, pDirData, 11);
+			pDirEnt->name[11] = 0;
+	
+			char ext[4]; int i;
+	
+			memcpy(ext, pDirEnt->name + 8, 3);
+	
+			// trim spaces from extension
+			ext[3] = 0;
+			i = 2;
+			while (i >= 0 && ext[i] == ' ')
+				ext[i--] = 0;
+	
+			// trim spaces from name
+			pDirEnt->name[8] = 0;
+			i = 7;
+			while (i >= 0 && pDirEnt->name[i] == ' ')
+				pDirEnt->name[i--] = 0;
+	
+			if (strlen(ext) != 0)
+			{
+				strcat(pDirEnt->name, ".");
+				strcat(pDirEnt->name, ext);
+			}
+	
+			int nameLen = strlen(pDirEnt->name);
+	
+			bool lowercase = (pEntry[12] & FAT_MSFLAGS_NAMELOWER) != 0;
+			for (int i = 0; i < nameLen; i++)
+			{
+				if (lowercase)
+					pDirEnt->name[i] = ToLower(pDirEnt->name[i]);
+				if (pDirEnt->name[i] == '.')
+					lowercase = (pEntry[12] & FAT_MSFLAGS_EXTELOWER) != 0;
+			}
 		}
+		
+		uint32_t cluster_id = pDirData->clusNumHigh << 16 | pDirData->clusNumLow;
+	
+		//pDirEnt->attributes       = pSFNEntry->attrib;
+		pDirEnt->file_id          = FS_MAKE_ID(pChain->pFS->fsID, cluster_id);
+		pDirEnt->file_length      = pDirData->fileSize;
+		pDirEnt->type             = FILE_TYPE_FILE;
+		//pDirEnt->perms            = (PERM_READ | PERM_WRITE | PERM_EXEC);
+		
+		//if (pDirData->attrib & FAT_READONLY)
+			//pDirEnt->perms &= ~PERM_WRITE;
+		
+		if (pDirData->attrib & FAT_DIRECTORY)
+			pDirEnt->type |= FILE_TYPE_DIRECTORY;
 	}
 	
-	uint32_t cluster_id = pDirData->clusNumHigh << 16 | pDirData->clusNumLow;
-
-	//pDirEnt->attributes       = pSFNEntry->attrib;
-	pDirEnt->file_id          = FS_MAKE_ID(pChain->pFS->fsID, cluster_id);
-	pDirEnt->file_length      = pDirData->fileSize;
-	pDirEnt->type             = FILE_TYPE_FILE;
-	//pDirEnt->perms            = (PERM_READ | PERM_WRITE | PERM_EXEC);
-	
-	//if (pDirData->attrib & FAT_READONLY)
-		//pDirEnt->perms &= ~PERM_WRITE;
-	
-	if (pDirData->attrib & FAT_DIRECTORY)
-		pDirEnt->type |= FILE_TYPE_DIRECTORY;
+	if (pStatResultOut)
+	{
+		memset(pStatResultOut, 0, sizeof (*pStatResultOut));
+		
+		pStatResultOut->m_type  = FILE_TYPE_FILE;
+		pStatResultOut->m_perms = (PERM_READ | PERM_WRITE | PERM_EXEC);
+		
+		if (pDirData->attrib & FAT_READONLY)
+			pStatResultOut->m_perms &= ~PERM_WRITE;
+		
+		if (pDirData->attrib & FAT_DIRECTORY)
+			pStatResultOut->m_type |= FILE_TYPE_DIRECTORY;
+		
+		uint32_t cluster_id = pDirData->clusNumHigh << 16 | pDirData->clusNumLow;
+		
+		pStatResultOut->m_size   = pDirData->fileSize;
+		pStatResultOut->m_inode  = cluster_id;
+		pStatResultOut->m_blocks = FsFat32CountClusters(pChain->pFS,  cluster_id) / FsFat32GetClusterSize(pChain->pFS);
+		pStatResultOut->m_modifyTime = 0;
+		pStatResultOut->m_createTime = 0;
+		pStatResultOut->m_flags = 0;
+		pStatResultOut->m_fs_id = pChain->pFS->fsID;
+		pStatResultOut->m_dev_type = 0;
+	}
 	
 	return true;
 }
-bool FsFat32DirectoryReadEntry(Directory* pDirBase, DirectoryEntry* pOut)
+bool FsFat32DirectoryReadEntry(Directory* pDirBase, DirectoryEntry* pOut, StatResult *pStatResultOut)
 {
 	FsFat32AssertDirectoryType(pDirBase);
 	Fat32Directory *pDir = (Fat32Directory*)pDirBase;
 	
-	bool b = FsFat32ReadDirEntry(pDir->file, pOut);
+	bool b = FsFat32ReadDirEntry(pDir->file, pOut, pStatResultOut);
 	if (b)
 		pDir->told++;
 	return b;
@@ -403,11 +432,12 @@ void FsFat32DirectorySeek(Directory* pDirBase, int position)
 	Fat32Directory *pDir = (Fat32Directory*)pDirBase;
 	
 	FsFileSeek((File*)pDir->file, 0, SEEK_SET, false);
+	pDir->told = 0;
 	
 	DirectoryEntry unused;
 	while (position--)
 	{
-		if (!FsDirectoryReadEntry((Directory*)pDir, &unused))
+		if (!FsDirectoryReadEntry((Directory*)pDir, &unused, NULL))
 			return;
 	}
 }
@@ -432,10 +462,10 @@ static inline void FsFat32AssertDirectoryType(Directory *dir)
 
 static inline void FsFat32AssertType(FileSystem *pFS)
 {
-	ASSERT(pFS->OpenInt         == FsFat32OpenInt          &&  "This is not a FAT32 file system.");
-	ASSERT(pFS->OpenDir         == FsFat32OpenDir          &&  "This is not a FAT32 file system.");
-	ASSERT(pFS->LocateFileInDir == FsFat32LocateFileInDir  &&  "This is not a FAT32 file system.");
-	ASSERT(pFS->GetRootDirID    == FsFat32GetRootDirID     &&  "This is not a FAT32 file system.");
+	ASSERT(pFS->OpenInt         == FsFat32OpenInt         &&  "This is not a FAT32 file system.");
+	ASSERT(pFS->OpenDir         == FsFat32OpenDir         &&  "This is not a FAT32 file system.");
+	ASSERT(pFS->LocateFileInDir == FsFat32LocateFileInDir &&  "This is not a FAT32 file system.");
+	ASSERT(pFS->GetRootDirID    == FsFat32GetRootDirID    &&  "This is not a FAT32 file system.");
 }
 void FsFat32ReadBpb(Fat32FileSystem *pFS)
 {
@@ -582,9 +612,10 @@ Fat32ClusterChain* FsFat32OpenIntInt (Fat32FileSystem *pFS, DirectoryEntry* entr
 	}
 	
 	Fat32ClusterChain *pChain = &pFS->fileHandles[freeArea];
-	pChain->taken = true;
-	pChain->pFS   = pFS;
-	pChain->entry = *entry;
+	pChain->taken  = true;
+	pChain->pFS    = pFS;
+	pChain->fileID = entry->file_id;
+	pChain->entry  = *entry;
 	pChain->currentCluster = pChain->firstCluster = firstCluster;
 	pChain->offsetBytes    = 0;
 	pChain->clusterCacheLoaded = 0;
@@ -698,7 +729,7 @@ uint32_t FsFat32GetRootDirID(FileSystem *pFSBase)
 	// Get the root directory itself.
 	return pFS->bpb.m_nRootDirStartCluster;
 }
-bool FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry)
+bool FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN, DirectoryEntry *pEntry, StatResult* result)
 {
 	// Check that the type is the same.
 	FsFat32AssertType (pFSBase);
@@ -710,10 +741,8 @@ bool FsFat32LocateFileInDir(FileSystem *pFSBase, uint32_t dirID, const char *pFN
 	Fat32Directory *pDirectory = (Fat32Directory*)pFS->OpenDir(pFSBase, dirID);
 	if (!pDirectory) return NULL;
 	
-	SLogMsg("Start reading entries...");
-	while (FsDirectoryReadEntry((Directory*)pDirectory, pEntry))
+	while (FsDirectoryReadEntry((Directory*)pDirectory, pEntry, result))
 	{
-		SLogMsg("Read Entry: %s...", pEntry->name);
 		if (strcmp (pEntry->name, pFN) == 0)
 		{
 			pDirectory->Close((Directory*)pDirectory);
