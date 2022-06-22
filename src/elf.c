@@ -269,7 +269,9 @@ const char *gElfErrorCodes[] =
 	"The image file %s could not be opened due to unspecified I/O error.",
 	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
 	"Insufficient memory to run this application. Quit one or more NanoShell applications and then try again.",
-	"Execution of this executable was killed.",
+	"The execution of this program was terminated.",
+	"The execution of this file is not permitted at the moment.",
+	"The execution of program files is not permitted. Please contact your system administrator.",
 };
 
 const char *ElfGetErrorMsg (int error_code)
