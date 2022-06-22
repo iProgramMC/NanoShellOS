@@ -252,6 +252,13 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			break;
 		}
+		case EVENT_DESTROY:
+		{
+			if (pWindow->m_data) MmFree(pWindow->m_data);
+			
+			pWindow->m_data = NULL;
+			break;
+		}
 		case EVENT_PAINT:
 		{
 			//Paint some dots

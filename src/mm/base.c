@@ -867,6 +867,8 @@ void *MmReAllocateUnsafeD(void* old_ptr, size_t size, const char* CallFile, int 
 	// If nothing else works, just allocate and memcpy().
 	
 	void* new_ptr = MmAllocateUnsafeD(size, CallFile, CallLine);
+	if (!new_ptr)
+		return NULL;
 	
 	size_t min_size = size;
 	if (min_size > old_size)

@@ -152,8 +152,8 @@ void* MmAllocateKD(size_t size, const char* callFile, int callLine);
  */
 void* MmReAllocateD (void* old_ptr, size_t size, const char* callFile, int callLine);
 void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callLine);
-#define MmReAllocate(old_ptr, size)  MmAllocateD (old_ptr, size, __FILE__, __LINE__)
-#define MmReAllocateK(old_ptr, size) MmAllocateKD(old_ptr, size, __FILE__, __LINE__)
+#define MmReAllocate(old_ptr, size)  MmReAllocateD (old_ptr, size, __FILE__, __LINE__)
+#define MmReAllocateK(old_ptr, size) MmReAllocateKD(old_ptr, size, __FILE__, __LINE__)
 
 /**
  * Frees a memory range allocated with MmAllocate. A NULL pointer is carefully ignored.

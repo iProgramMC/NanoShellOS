@@ -2425,6 +2425,8 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		//series: 2, 3, 4, 6, 9, 13, 19, 28, 42, ...
 		
 		size_t newSize = sizeof(Control) * cal;
+		
+		/*
 		Control* newCtlArray = (Control*)MmAllocateK(newSize);
 		if (!newCtlArray)
 		{
@@ -2441,6 +2443,19 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		
 		// then assign the new one
 		pWindow->m_pControlArray   = newCtlArray;
+		pWindow->m_controlArrayLen = cal;
+		*/
+		
+		SLogMsg("Expanding control array from %d to %d", pWindow->m_controlArrayLen, cal);
+		
+		Control* newCtlArray = MmReAllocateK(pWindow->m_pControlArray, sizeof(Control) * cal);
+		if (!newCtlArray)
+		{
+			SLogMsg("Oops, cannot add control %d to window %x", type, pWindow);
+			return -1;
+		}
+		pWindow->m_pControlArray = newCtlArray;
+		memset (&pWindow->m_pControlArray[pWindow->m_controlArrayLen], 0, sizeof(Control) * (cal - pWindow->m_controlArrayLen));
 		pWindow->m_controlArrayLen = cal;
 		
 		// last, re-search the thing
