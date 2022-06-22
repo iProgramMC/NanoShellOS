@@ -131,14 +131,29 @@ void MmFreePage(void* pAddr);
  * This returns the starting address of the memory range we obtained.  NULL can also be returned, if we have
  * no more address space to actually allocate anything, or there are no more memory ranges available.
  * 
- * You must call MmFree with the *EXACT* address MmAllocate returned.
+ * You must call MmFree or MmReAllocate with the *EXACT* address MmAllocate returned.
  *
- * See: MmFree
+ * See: MmFree, MmReAllocate
  */
 void* MmAllocateD (size_t size, const char* callFile, int callLine);
 void* MmAllocateKD(size_t size, const char* callFile, int callLine);
 #define MmAllocate(size)  MmAllocateD (size, __FILE__, __LINE__)
 #define MmAllocateK(size) MmAllocateKD(size, __FILE__, __LINE__)
+
+/**
+ * Resizes a MmAllocate'd memory range to the new `size`.
+ * 
+ * You must call MmFree or MmReAllocate (again) with the *EXACT* address
+ * MmReAllocate returns.
+ *
+ * MmReAllocate offers no guarantee that the old pointer will still be valid.
+ * It may be (and is quite optimistic about optimizing it to be as such), however,
+ * if it sees no option, it will move the whole block.
+ */
+void* MmReAllocateD (void* old_ptr, size_t size, const char* callFile, int callLine);
+void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callLine);
+#define MmReAllocate(old_ptr, size)  MmAllocateD (old_ptr, size, __FILE__, __LINE__)
+#define MmReAllocateK(old_ptr, size) MmAllocateKD(old_ptr, size, __FILE__, __LINE__)
 
 /**
  * Frees a memory range allocated with MmAllocate. A NULL pointer is carefully ignored.

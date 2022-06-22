@@ -22,12 +22,12 @@ Image *LoadBitmap (void* pBmpData, int *error)
 		*error = BMPERR_INVALID_HEADER;
 		return NULL;
 	}
-	if (pStruct->dibHeaderType != 40)
+	/*if (pStruct->dibHeaderType != 40)
 	{
 		SLogMsg("Invalid dibheadertype");
 		*error = BMPERR_INVALID_HEADER;
 		return NULL;
-	}
+	}*/
 	
 	int bpp = pStruct->imageBpp;
 	

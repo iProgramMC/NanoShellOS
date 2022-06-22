@@ -705,6 +705,7 @@ bool MmIsPageMapped(uint32_t pageAddr)
 	//TODO
 	return false;
 }
+
 //be sure to provide a decently sized physAddresses, or NULL
 void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uint32_t* physAddresses)
 {
@@ -784,6 +785,97 @@ void *MmAllocateUnsafePhyD (size_t size, const char* callFile, int callLine, uin
 		
 		return NULL; //no continuous addressed pages are left.
 	}
+}
+
+void *MmReAllocateUnsafeD(void* old_ptr, size_t size, const char* CallFile, int CallLine)
+{
+	// step 1: If the pointer is null, just allocate a new array of size `size`.
+	if (!old_ptr)
+		return MmAllocateUnsafeD(size, CallFile, CallLine);
+	
+	// step 2: get the first page's number
+	uint32_t addr = (uint32_t)old_ptr;
+	addr -= g_pageAllocationBase;
+	addr >>= 12;
+	if (addr >= (uint32_t)GetHeapSize()) return NULL;
+	
+	// step 3: figure out the old size of this block.
+	int* pSubsequentAllocs = &g_memoryAllocationSize[addr];
+	
+	size_t old_size = 4096 * (*pSubsequentAllocs + 1);
+	
+	// If the provided size is smaller, return the same block, but shrunk.
+	if (old_size >= size)
+	{
+		size_t numPagesNeeded =  ((size - 1) >> 12) + 1;
+		
+		int oldPages = *pSubsequentAllocs  + 1;
+		*pSubsequentAllocs = numPagesNeeded - 1;
+		
+		// where freeing pages starts:
+		uint8_t* addr = (uint8_t*)old_ptr + numPagesNeeded * 0x1000;
+		
+		for (int i = numPagesNeeded; i < oldPages; i++)
+		{
+			MmFreePageUnsafe(addr);
+			addr += 0x1000;
+		}
+		
+		return old_ptr;
+	}
+	else
+	{
+		// Check if there are this many free blocks available at all.
+		size_t numPagesNeeded =  ((size - 1) >> 12) + 1;
+		int oldPages = *pSubsequentAllocs  + 1;
+		
+		bool spaceAvailable = true;
+		
+		for (int i = oldPages; i < numPagesNeeded; i++)
+		{
+			if (g_pageEntries[addr + i].m_bPresent)
+			{
+				spaceAvailable = false;
+				break;
+			}
+		}
+		
+		if (spaceAvailable)
+		{
+			// Proceed with the expansion.
+			
+			for (int i = oldPages; i < numPagesNeeded; i++)
+			{
+				void *ptr = MmSetupPage (addr+i, NULL, CallFile, CallLine);
+				
+				// if not null, increment by 4.
+				if (!ptr)
+				{
+					// All, hell naw
+					//TODO: rollback
+					ASSERT(!"TODO: Roll back from failed MmReAllocate?");
+					return NULL;
+				}
+			}
+			
+			*pSubsequentAllocs = numPagesNeeded - 1;
+			
+			return old_ptr;
+		}
+	}
+	
+	// If nothing else works, just allocate and memcpy().
+	
+	void* new_ptr = MmAllocateUnsafeD(size, CallFile, CallLine);
+	
+	size_t min_size = size;
+	if (min_size > old_size)
+		min_size = old_size;
+	memcpy(new_ptr, old_ptr, min_size);
+	
+	MmFreeUnsafe(old_ptr);
+	
+	return new_ptr;
 }
 
 void MmFreeUnsafe(void* pAddr)

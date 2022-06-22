@@ -262,6 +262,8 @@ enum
 		VID_RENDER_ICON_SIZE_OUTLINE,
 		TM_GET_RANDOM,
 		
+	// System Calls V1.6
+		MM_REALLOCATE_D,
 };
 
 const void *WindowCall[] = {
@@ -407,6 +409,9 @@ const void *WindowCall[] = {
 		RenderIconForceSize,
 		RenderIconForceSizeOutline,
 		GetRandom,
+		
+	// System Calls V1.5 - 22/06/2022
+		MmReAllocateD,
 };
 
 

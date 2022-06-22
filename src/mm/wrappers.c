@@ -46,6 +46,7 @@ void *MmAllocateSinglePageUnsafeD    (const char* callFile, int callLine);
 void *MmAllocateUnsafePhyD           (size_t size, const char* callFile, int callLine, uint32_t* physAddresses);
 void *MmAllocateUnsafeD              (size_t size, const char* callFile, int callLine);
 void *MmAllocateUnsafeKD             (size_t size, const char* callFile, int callLine);
+void *MmReAllocateUnsafeD            (void* old_ptr, size_t size, const char* CallFile, int CallLine);
 
 
 void *MmAllocateSinglePagePhyD (uint32_t* pOut, const char* callFile, int callLine)
@@ -79,6 +80,14 @@ void *MmAllocateUnsafeKD (size_t size, const char* callFile, int callLine)
 	UseHeapUnsafe (pHeapBkp);
 	return toReturn;
 }
+void *MmReAllocateUnsafeKD (void *old_ptr, size_t size, const char* callFile, int callLine)
+{
+	Heap *pHeapBkp = g_pHeap;
+	ResetToKernelHeapUnsafe();
+	void* toReturn = MmReAllocateUnsafeD(old_ptr, size, callFile, callLine);
+	UseHeapUnsafe (pHeapBkp);
+	return toReturn;
+}
 
 void *MmAllocateD (size_t size, const char* callFile, int callLine)
 {
@@ -91,6 +100,20 @@ void *MmAllocateKD (size_t size, const char* callFile, int callLine)
 {
 	cli;
 	void* ptr = MmAllocateUnsafeKD (size, callFile, callLine);
+	sti;
+	return ptr;
+}
+void *MmReAllocateD(void* old_ptr, size_t size, const char* CallFile, int CallLine)
+{
+	cli;
+	void* ptr = MmReAllocateUnsafeD (old_ptr, size, CallFile, CallLine);
+	sti;
+	return ptr;
+}
+void *MmReAllocateKD (void* old_ptr, size_t size, const char* callFile, int callLine)
+{
+	cli;
+	void* ptr = MmReAllocateUnsafeKD (old_ptr, size, callFile, callLine);
 	sti;
 	return ptr;
 }
