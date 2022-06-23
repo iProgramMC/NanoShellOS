@@ -152,14 +152,23 @@ void MmFreeK (void* pAddr)
 // MMIO wrappers
 #if 1
 
-void *MmMapPhysMemFastUnsafe(uint32_t page);
-void *MmMapPhysMemFast(uint32_t page)
+void *MmMapPhysMemFastUnsafeRW(uint32_t page, bool bReadWrite);
+
+void *MmMapPhysMemFastRW(uint32_t page, bool bReadWrite)
 {
 	cli;
-	void* ptr = MmMapPhysMemFastUnsafe(page);
+	void* ptr = MmMapPhysMemFastUnsafeRW(page, bReadWrite);
 	sti;
 	return ptr;
 }
+void *MmMapPhysMemFast(uint32_t page)
+{
+	cli;
+	void* ptr = MmMapPhysMemFastUnsafeRW(page, true);
+	sti;
+	return ptr;
+}
+
 void MmUnmapPhysMemFastUnsafe(void* pMem);
 void MmUnmapPhysMemFast(void* pMem)
 {

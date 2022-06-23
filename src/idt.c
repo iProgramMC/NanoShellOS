@@ -139,7 +139,8 @@ extern Console *g_currentConsole, g_debugConsole;
 
 void IsrExceptionCommon(int code, Registers* pRegs)
 {
-	//TODO SEVERE FIXME: if a task fucks up the ESP you can easily triple fault the system.
+	SLogMsg("A task has messed up! Error number: %x", code);
+	//TODO SEVERE FIXME: if a task messes up the ESP you can easily triple fault the system.
 	//Don't let that happen to you.  Make the stack-segment-exception switch to an emergency
 	//stack to salvage what's left of the system.
 	

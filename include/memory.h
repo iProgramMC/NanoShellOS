@@ -96,6 +96,30 @@ uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys
 uint32_t MmMapPhysicalMemory  (uint32_t hint, uint32_t phys_start, uint32_t phys_end);
 
 /**
+ * Maps a single page of physical memory to virtual memory.
+ * Use MmUnmapPhysMemFastUnsafe to unmap such memory.
+ *
+ * The result address may be NULL.
+ *
+ * MmMapPhysMemFastUnsafe by default returns a _read-write_ section, use MmMapPhysMemFastUnsafeRW
+ * to lock it as read-only.
+ */
+void *MmMapPhysMemFastRW(uint32_t page, bool bReadWrite);
+void *MmMapPhysMemFast  (uint32_t page);
+void  MmUnmapPhysMemFast(void*    pMem);
+
+/**
+ * Maps a contiguous block of physical memory near the hint address.
+ *
+ * The result address will either be NULL, a kernel halt, or >= the hint address.
+ *
+ * MmMapPhysicalMemory by default returns a _read-only_ section, use MmMapPhysicalMemoryRW
+ * to be able to write to it.
+ */
+uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
+uint32_t MmMapPhysicalMemory  (uint32_t hint, uint32_t phys_start, uint32_t phys_end);
+
+/**
  * Allocates a single page (4096 bytes).
  * 
  * This returns the address of the new page, or NULL if we ran out of memory.

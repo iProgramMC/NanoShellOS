@@ -34,6 +34,7 @@ void MbReadCmdLine();
 void MbCheckMem();
 void MbCheckCmdLine();
 void MmInitPrimordial();
+void MmMarkStuffReadOnly();
 void FsFatInit();
 void FsInitRdInit();
 void CfgLoadFromCmdLine();
@@ -58,6 +59,7 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	MbReadCmdLine();
 	MbCheckMem();
 	MmInitPrimordial();
+	MmMarkStuffReadOnly();
 	KeCPUID();
 	PciInit();
 	KiTaskSystemInit();

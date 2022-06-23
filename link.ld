@@ -16,6 +16,9 @@ SECTIONS
 	. = 1M;
 	
 	_kernel_start = .;
+	
+	/* start blocking out writes from here */
+	l_code_and_rodata_start = 0xC0100000;
 
 	.multibootdata :
 	{
@@ -41,6 +44,8 @@ SECTIONS
 	
 	.data ALIGN (4K) : AT (ADDR (.data) - 0xC0000000)
 	{
+		/* place the end right where data starts to get that nice page alignment :) */
+		l_code_and_rodata_end = .;
 		*(.data)
 	}
 	

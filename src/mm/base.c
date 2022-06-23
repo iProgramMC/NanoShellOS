@@ -20,7 +20,7 @@
 extern bool g_interruptsAvailable;
 
 extern uint32_t g_kernelPageDirectory[];
-extern uint32_t g_pageTableArray[];
+extern PageEntry g_pageTableArray[];
 extern uint32_t* e_frameBitsetVirt;
 extern uint32_t e_frameBitsetSize;
 extern uint32_t e_placement;
@@ -52,6 +52,21 @@ void MmInitPrimordial()
 	e_frameBitsetVirt = g_frameBitset;
 }
 
+// Mark the code and rodata segments as read-only.
+extern char l_code_and_rodata_start[], l_code_and_rodata_end[];
+void MmMarkStuffReadOnly()
+{
+	LogMsg("Code and rodata: %p - %p",l_code_and_rodata_start,l_code_and_rodata_end);
+	
+	uint32_t crap;
+	for (crap = (uint32_t) l_code_and_rodata_start;
+		 crap < (uint32_t) l_code_and_rodata_end;
+		 crap += 4096)
+	{
+		g_pageTableArray[(crap >> 12) & 0x3FF].m_bReadWrite = 0;
+	}
+}
+
 int g_numPagesAvailable = 0;
 
 int GetNumPhysPages()
@@ -66,7 +81,7 @@ int GetNumPhysPages()
 PageEntry g_LastPageTable [1024] __attribute__((aligned(4096)));
 
 void MmInvalidateSinglePage(UNUSED uintptr_t add);
-void *MmMapPhysMemFastUnsafe(uint32_t page)
+void *MmMapPhysMemFastUnsafeRW(uint32_t page, bool bReadWrite)
 {
 	int free_spot = -1;
 	for (int i = 0; i < 1024; i++)
@@ -85,11 +100,11 @@ void *MmMapPhysMemFastUnsafe(uint32_t page)
 	
 	pEntry->m_pAddress = page >> 12;
 	
-	pEntry->m_bPresent       =
+	pEntry->m_bPresent       = 1;
 	pEntry->m_bWriteThrough  =
-	pEntry->m_bCacheDisabled =
-	pEntry->m_bUserSuper     =
-	pEntry->m_bReadWrite     = 1;
+	pEntry->m_bCacheDisabled = 0;
+	pEntry->m_bUserSuper     = 1;
+	pEntry->m_bReadWrite     = bReadWrite;
 	
 	pEntry->m_bAccessed      =
 	pEntry->m_bDirty         = 0;

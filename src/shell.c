@@ -195,6 +195,25 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
 	}
+	else if (strcmp (token, "lol") == 0)
+	{
+		// to test out whether a read only page would actually crash the shell
+		void *mem = MmMapPhysMemFastRW (0x7000, false);
+		
+		LogMsg("Mapped the single page.  Its address in virtual memory is %p. Can I write to it...?", mem);
+		
+		uint32_t* ptr = ((uint32_t*)mem);
+		
+		uint32_t read = *ptr;
+		
+		*ptr = 5;
+		
+		LogMsg("Seems like I can write there.");
+		
+		*ptr = read;
+		
+		MmUnmapPhysMemFast(mem);
+	}
 	else if (strcmp (token, "ta") == 0) // Test ANSI
 	{
 		LogMsg(
