@@ -10,6 +10,7 @@ build/*
 keep/*
 tools/*
 
+apps/PortNano/*
 apps/Calc/build/*
 apps/Calc/*.nse
 apps/Clock/build/*

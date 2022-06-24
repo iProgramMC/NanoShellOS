@@ -16,6 +16,8 @@
 #include <wmenu.h>
 #include <string.h>
 
+#define TAB_WIDTH 4
+
 void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 {
 	int c = CountLinesInText(this->m_textInputData.m_pText);
@@ -530,7 +532,11 @@ void CtlTextEditRecalcCurXY(Control *this)
 			continue;
 		}
 		
-		xPos++;
+		//TODO: proper tab ceils to next multiple of TAB_WIDTH instead
+		if (*text == '\t')
+			xPos += TAB_WIDTH;
+		else
+			xPos++;
 		text++;
 		index++;
 	}
@@ -566,7 +572,11 @@ void CtlTextEditRecalcIndex(Control *this)
 			return;
 		}
 		
-		xPos++;
+		//TODO: proper tab ceils to next multiple of TAB_WIDTH instead
+		if (*text == '\t')
+			xPos += TAB_WIDTH;
+		else
+			xPos++;
 		text++;
 		index++;
 	}
@@ -690,6 +700,8 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					
 				dont_bother:
 					//still increase xPos/yPos
+					
+					//TODO: proper tab ceils to next multiple of TAB_WIDTH instead
 					xPos +=  GetCharWidth (*text);
 					if (bBold) xPos++;
 					text++;
@@ -965,6 +977,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 					
 				dont_draw:
 					//still increase xPos/yPos
+					//TODO: proper tab ceils to next multiple of TAB_WIDTH instead
 					xPos +=  GetCharWidth (*text);
 					if (color & 0x01000000) xPos++;
 					text++;
