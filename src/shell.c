@@ -31,6 +31,24 @@
 char g_lastCommandExecuted[256] = {0};
 extern Console* g_currentConsole;
 
+static JumpBuffer g_setJumpTest_JumpBuffer;
+
+static void Foo(int count)
+{
+	LogMsg("Foo(%d) has been called.", count);
+	LongJump (g_setJumpTest_JumpBuffer, count + 1);
+}
+static void SetJumpTest()
+{
+	volatile int count = 0;
+	
+	if (SetJump(g_setJumpTest_JumpBuffer) != 5)
+	{
+		count++;
+		Foo(count);
+	}
+}
+
 void MemorySpy();
 void ShellTaskTest(int arg)
 {
@@ -175,6 +193,7 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ls           - list the current working directory (right now just /)");
 		LogMsg("lt           - list currently running threads (pauses them during the print)");
 		LogMsg("mode X       - change the screen mode");
+		LogMsg("mpt          - memory read/write bit test");
 		
 		//wait for new key
 		LogMsg("Strike a key to print more.");
@@ -187,6 +206,7 @@ void ShellExecuteCommand(char* p)
 		LogMsg("sysinfo      - dump system information");
 		LogMsg("sysinfoa     - dump advanced system information");
 		LogMsg("time         - get timing information");
+		LogMsg("sjt          - SetJump() and LongJump() test");
 		LogMsg("stt          - spawns a single thread that doesn't last forever");
 		LogMsg("st           - spawns a single thread that makes a random line forever");
 		LogMsg("tt           - spawns 64 threads that makes random lines forever");
@@ -195,12 +215,16 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
 	}
-	else if (strcmp (token, "lol") == 0)
+	else if (strcmp (token, "sjt") == 0)
+	{
+		SetJumpTest();
+	}
+	else if (strcmp (token, "mpt") == 0)
 	{
 		// to test out whether a read only page would actually crash the shell
 		void *mem = MmMapPhysMemFastRW (0x7000, false);
 		
-		LogMsg("Mapped the single page.  Its address in virtual memory is %p. Can I write to it...?", mem);
+		LogMsg("Mapped the single page.  Its address in virtual memory is %p. Testing write to it...", mem);
 		
 		uint32_t* ptr = ((uint32_t*)mem);
 		

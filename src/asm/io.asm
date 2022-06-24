@@ -482,6 +482,34 @@ loc_80000DC:                            ; CODE XREF: .text:08000047↑j
                 pop     ebx
                 pop     esi
                 retn
+;
+
+; https://github.com/jezze/subc
+global SetJump
+global LongJump
+SetJump:
+	mov  edx, [esp + 4]
+	mov  [edx], esp
+	add  dword [edx], 4
+	mov  [edx + 4], ebp
+	mov  eax, [esp]
+	mov  [edx + 8], eax
+	xor  eax, eax
+	retn
+	
+LongJump:
+	mov  eax, [esp + 8]
+	or   eax, eax
+	jnz  .crap
+	inc  eax
+.crap:
+	mov  edx, [esp + 4]
+	mov  esp, [edx]
+	mov  ebp, [edx + 4]
+	mov  edx, [edx + 8]
+	jmp  edx
+
+
 section .bss
 
 ; eax=0, eax's value:

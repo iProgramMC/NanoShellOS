@@ -47,6 +47,19 @@ typedef struct CPUSaveState
 }
 CPUSaveState;
 
+// https://github.com/jezze/subc
+typedef struct
+{
+	void *esp, *eax, *eip;
+}
+JumpBufferTag;
+
+typedef JumpBufferTag JumpBuffer[1];
+
+// The value passed into LongJump ends up in subsequent returns to SetJump on the same JumpBuffer.
+__attribute__((returns_twice)) int  SetJump (JumpBuffer env);
+__attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
+
 enum
 {
 	SEGMENT_NULL   = 0x0000,
