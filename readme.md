@@ -22,7 +22,7 @@ This software is licensed under the GNU General Public License version 3.
 This OS is entirely running in ring-0. I'm not particularly concerned with safety, as the OS isn't about safety, it's about having fun.
 The design is NOT the best, by ANY means, so you probably shouldn't imitate this design.
 
-Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/zP6xZmrnNQ "iProgramInCpp's Tavern").
+Feel free to submit issues you may have with this OS in the Issues tab.  To discuss other things, join the [Discord server](https://discord.gg/vs6yw2GtAc "iProgramInCpp's Tavern II").
 
 - [x] Hello World
 #### Primordial tasks
