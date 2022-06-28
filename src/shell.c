@@ -482,6 +482,131 @@ void ShellExecuteCommand(char* p)
 			LogMsg("Done");
 		}
 	}
+	else if (strcmp (token, "movedata") == 0)
+	{
+		LogMsg("Starting to copy...");
+		char* fileNameOut = Tokenize (&state, NULL, " ");
+		if (!fileNameOut)
+		{
+			LogMsg("Usage: movedata <output> <input>");
+			goto fail_movedata;
+		}
+		if (*fileNameOut == 0)
+		{
+			LogMsg("Usage: movedata <output> <input>");
+			goto fail_movedata;
+		}
+		
+		char* fileNameIn = Tokenize (&state, NULL, " ");
+		if (!fileNameIn)
+		{
+			LogMsg("Usage: movedata <output> <input>");
+			goto fail_movedata;
+		}
+		if (*fileNameIn == 0)
+		{
+			LogMsg("Usage: movedata <output> <input>");
+			goto fail_movedata;
+		}
+		
+		int fd_in = FiOpen (fileNameIn, O_RDONLY);
+		if (fd_in < 0)
+		{
+			LogMsg("movedata: Could not open %s for reading: %s", fileNameIn, GetErrNoString(fd_in));
+			goto fail_movedata;
+		}
+		
+		int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT);
+		if (fd_out < 0)
+		{
+			LogMsg("movedata: %s: Could not open %s for writing", fileNameOut, GetErrNoString(fd_out));
+			FiClose(fd_in);
+			goto fail_movedata;
+		}
+		
+		LogMsg("Progress...");
+		
+		#define MOVEDATA_PRECISION 4096
+		
+		uint8_t chunk_of_data[MOVEDATA_PRECISION];
+		size_t sz = FiTellSize(fd_in);
+		
+		//write 512 byte blocks
+		for (int i = 0; i < sz; i += MOVEDATA_PRECISION)
+		{
+			size_t read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
+			if ((int)read_in < 0)
+			{
+				LogMsg("movedata: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString((int)read_in));
+				FiClose(fd_in);
+				FiClose(fd_out);
+				goto fail_movedata;
+			}
+			
+			FiWrite(fd_out, chunk_of_data, read_in);
+			
+			LogMsgNoCr("\rProgress: %d/%d", i, sz);
+		}
+		
+		// write the last few bytes
+		int last_x_block_size = (sz % MOVEDATA_PRECISION);
+		for (int i = 0; i < last_x_block_size; i++)
+		{
+			size_t read_in = FiRead(fd_in, chunk_of_data, 1);
+			if ((int)read_in < 0)
+			{
+				LogMsg("movedata: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString((int)read_in));
+				FiClose(fd_in);
+				FiClose(fd_out);
+				goto fail_movedata;
+			}
+			
+			FiWrite(fd_out, chunk_of_data, read_in);
+			
+			LogMsgNoCr("\rProgress: %d/%d", i, sz);
+		}
+		
+		LogMsg("");
+		
+		FiClose(fd_out);
+		FiClose(fd_in);
+		LogMsg("Done");
+		
+	fail_movedata:;
+	}
+	else if (strcmp (token, "fts") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			int fd = FiOpen (fileName, O_WRONLY);
+			if (fd < 0)
+			{
+				LogMsg("fts: %s: %s", fileName, GetErrNoString(fd));
+				return;
+			}
+			
+			FiSeek(fd, 0, SEEK_END);
+			
+			size_t   sz;
+			void* data = SbTestGenerateSound(&sz);
+			
+			FiWrite(fd, data, sz);//do not also print the null terminator
+			
+			MmFree(data);
+			
+			FiClose (fd);
+			LogMsg("Done");
+		}
+	}
 	else if (strcmp (token, "ft") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
@@ -931,6 +1056,10 @@ void ShellInit()
 {
 	strcpy (g_cwd, "/");
 	g_pCwdNode = FsResolvePath (g_cwd);
+	
+	bool b = CbCopyText("movedata /Device/Sb16 /Fat0/sup/crap.raw\n");
+	if (!b)
+		LogMsg("Error copying text");
 }
 
 void ShellPrintMotd()

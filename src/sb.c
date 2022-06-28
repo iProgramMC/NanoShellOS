@@ -8,6 +8,7 @@
 #include <string.h>
 #include <print.h>
 #include <misc.h>
+#include <memory.h>
 #include <fpu.h>
 
 #define NUM_NOTES 1
@@ -110,29 +111,142 @@ typedef double f64;
 
 //#define SAMPLE_RATE     48000
 #define SAMPLE_RATE     44100
-#define BUFFER_MS       40 //increased latency, but fewer interrupts
+#define BUFFER_MS       100
+#define SQUEUE_MS       100000
 
 #define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 1000.0)))
+#define SQUEUE_SIZE ((size_t) (SAMPLE_RATE * (SQUEUE_MS / 1000.0)))
 
 static i16 gSoundBuffer[BUFFER_SIZE];
 static bool gBufferFlip = false;
 
 static UNUSED u8 gMasterVolume;
 
-static void SbFillBuffer(i16 *buf, size_t len) {
+// Buffered data that the file write function writes to.
+static u8  gSoundQueuedData[BUFFER_SIZE * 10 * 2];
+static int gSoundQueueTail, gSoundQueueHead;
+
+void SbWriteSingleByte (uint8_t data)
+{
+	// About to overflow?
+	while (((gSoundQueueHead + 1) % sizeof(gSoundQueuedData)) == gSoundQueueTail)
+	{
+		// Wait.  We can wait here, since we're not handling an IRQ.
+		KeTaskDone();
+	}
 	
-	// TODO: Read from a file called /Device/Sb16
-	memset_shorts (buf, 0, len);
+	gSoundQueuedData[gSoundQueueHead++] = data;
 	
+	gSoundQueueHead = gSoundQueueHead % sizeof(gSoundQueuedData);
 }
 
-static void DspWrite(u8 b) {
+SAI bool SbReadSingleByte(uint8_t* out)
+{
+	if (gSoundQueueTail == gSoundQueueHead)
+	{
+		*out = 0;
+		return false;
+	}
+	
+	*out = gSoundQueuedData[gSoundQueueTail++];
+	
+	gSoundQueueTail = gSoundQueueTail % sizeof(gSoundQueuedData);
+	
+	return true;
+}
+
+void* SbTestGenerateSound(size_t* size)
+{
+	// construct some size
+	size_t sz = 88200; // this many bytes to fill 1 second of audio
+	
+	uint16_t* data = MmAllocate(sz);
+	
+	//generate a 689.0625 Hz audio output.
+	for (size_t i = 0; i < sz/2; i++)
+	{
+		if (i%128 < 64)
+		{
+			data[i] = 10000;
+		}
+		else
+		{
+			data[i] = 0;
+		}
+	}
+	
+	*size = sz;
+	return data;
+}
+
+void SbWriteData (const void *pData, size_t sizeBytes)
+{
+	const uint8_t* pBuffer = (const uint8_t*)pData;
+	// Is the tail ahead of the head?
+	if (gSoundQueueTail > gSoundQueueHead)
+	{
+		// Yes. Check for overflow up until the tail.
+		if (gSoundQueueHead + (int)sizeBytes < gSoundQueueTail)
+		{
+			// No overflow. Great, now we can just memcpy the data.
+			memcpy(&gSoundQueuedData[gSoundQueueHead], pBuffer, sizeBytes);
+			gSoundQueueHead += sizeBytes;
+			
+			return;
+		}
+		// No. Write each byte one at a time, if we're about to overflow,
+		// wait until the tail advances.
+		for (size_t i = 0; i < sizeBytes; i++)
+		{
+			//TODO We could optimize this by memcpying up until the tail
+			SbWriteSingleByte(pBuffer[i]);
+		}
+	}
+	else
+	{
+		// No. Check if we're about to overflow the whole array
+		if (gSoundQueueHead + sizeBytes < sizeof(gSoundQueuedData))
+		{
+			// No overflow. Great, now we can just memcpy the data.
+			memcpy(&gSoundQueuedData[gSoundQueueHead], pBuffer, sizeBytes);
+			gSoundQueueHead += sizeBytes;
+			
+			return;
+		}
+		// No. Write each byte one at a time, if we're about to overflow,
+		// wait until the tail advances.
+		for (size_t i = 0; i < sizeBytes; i++)
+		{
+			//TODO We could optimize this by memcpying up until the tail
+			SbWriteSingleByte(pBuffer[i]);
+		}
+	}
+}
+
+static void SbFillBuffer(i16 *buf, size_t len)
+{
+	uint64_t a = ReadTSC();
+	for (int i = 0; i < (int)len; i++)
+	{
+		uint8_t lo = 0, hi = 0;
+		
+		SbReadSingleByte (&lo),
+		SbReadSingleByte (&hi);
+		
+		buf[i] = lo | hi << 8;
+	}
+	uint64_t b = ReadTSC();
+	SLogMsg("b-a: %l",b-a);
+}
+
+static void DspWrite(u8 b)
+{
     while (ReadPort(DSP_WRITE) & 0x80);
     WritePort(DSP_WRITE, b);
 }
 
-static bool SbReset() {
-	
+static bool SbReset()
+{
     WritePort(DSP_RESET, 1);
 
     // TODO: maybe not necessary
@@ -166,15 +280,16 @@ fail:
 	return false;
 }
 
-static void SbSetSampleRate(u16 hz) {
+static void SbSetSampleRate(u16 hz)
+{
     DspWrite(DSP_SET_RATE);
     DspWrite((u8) ((hz >> 8) & 0xFF));
     DspWrite((u8) (hz & 0xFF));
 }
 
 //note: this takes in a physical address
-static void SbSetupDma(uintptr_t buf1, u32 len) {
-	
+static void SbSetupDma(uintptr_t buf1, u32 len)
+{
     u8 mode = 0x48;
 
     // disable DMA channel
@@ -202,8 +317,8 @@ static void SbSetupDma(uintptr_t buf1, u32 len) {
     WritePort(0xD4, DMA_CHANNEL_16 % 4);
 }
 
-void SbIrqHandler() {
-	
+void SbIrqHandler()
+{
     gBufferFlip = !gBufferFlip;
 
     SbFillBuffer(
@@ -211,6 +326,9 @@ void SbIrqHandler() {
         (BUFFER_SIZE / 2)
     );
 
+	WritePort (0x20, 0x20);
+	WritePort (0xA0, 0x20);
+	
     ReadPort(DSP_READ_STATUS);
     ReadPort(DSP_ACK_16);
 }
