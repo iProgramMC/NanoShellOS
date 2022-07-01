@@ -536,11 +536,13 @@ void* MmAllocateSinglePageUnsafePhyD(uint32_t* pPhysOut, const char* callFile, i
 void *MmAllocateUnsafeD (size_t size, const char* callFile, int callLine);
 bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int callerLine)
 {
+	SLogMsg("Creating a heap with a size of %d", size);
+	
 	//PAGE_ENTRIES_PHYS_MAX_SIZE represents how many pagedirectories can we create at one time
-	if (size > PAGE_ENTRIES_PHYS_MAX_SIZE * 4096)
+	if (size > PAGE_ENTRIES_PHYS_MAX_SIZE * 1024)
 	{
 		//can't:
-		SLogMsg("Can't allocate a heap bigger than %d pages big.  That may change in a future update.", PAGE_ENTRIES_PHYS_MAX_SIZE * 4096);
+		SLogMsg("Can't allocate a heap bigger than %d pages big.  That may change in a future update.", PAGE_ENTRIES_PHYS_MAX_SIZE * 1024);
 		return false;
 	}
 	
@@ -563,6 +565,25 @@ bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int cal
 	pHeap->m_memoryAllocAuthorLine = MmAllocateUnsafeD(sizeof (int) * size, callerFile, callerLine);
 	pHeap->m_memoryAllocSize       = MmAllocateUnsafeD(sizeof (int) * size, callerFile, callerLine);
 	pHeap->m_pageDirectoryPhys     = phys;
+	
+	// check if we failed to allocate something
+	if (!pHeap->m_pageEntries           ||
+		!pHeap->m_pageDirectory         ||
+		!pHeap->m_memoryAllocAuthor     ||
+		!pHeap->m_memoryAllocAuthorLine ||
+		!pHeap->m_memoryAllocSize       ||
+		!pHeap->m_pageDirectoryPhys)
+	{
+		SLogMsg("Couldn't allocate heap of size %d pages, out of memory?", size);
+		//NULL frees do nothing, so it should be fine.
+		MmFreeUnsafe(pHeap->m_pageEntries);
+		MmFreeUnsafe(pHeap->m_pageDirectory);
+		MmFreeUnsafe(pHeap->m_memoryAllocAuthor);
+		MmFreeUnsafe(pHeap->m_memoryAllocAuthorLine);
+		MmFreeUnsafe(pHeap->m_memoryAllocSize);
+		MmFreeUnsafe(pHeap->m_pageDirectoryPhys);
+		return false;
+	}
 	
 	// copy everything from the kernel heap:
 	memcpy (pHeap->m_pageDirectory, g_kernelPageDirectory, 4096);
