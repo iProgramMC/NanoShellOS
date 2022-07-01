@@ -530,6 +530,9 @@ void UpdateTaskbar (Window* pWindow)
 	TimeStruct* time = TmReadTime();
 	sprintf(buffer, "  %02d:%02d:%02d", time->hours, time->minutes, time->seconds);
 	SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
+	
+	CallControlCallback(pWindow, TASKBAR_TIME_TEXT,  EVENT_PAINT, 0, 0);
+	CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
 }
 
 __attribute__((always_inline))
@@ -806,7 +809,6 @@ void RequestTaskbarUpdate()
 	if (!g_pTaskBarWindow) return;
 	
 	WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE, 0, 0);
-	WindowRegisterEvent(g_pTaskBarWindow, EVENT_PAINT,  0, 0);
 }
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
@@ -840,7 +842,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 		if (GetTickCount() > timeout)
 		{
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
+			//WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
 			timeout += 1000;
 		}
 	}

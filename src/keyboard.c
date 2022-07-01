@@ -430,7 +430,7 @@ char KbMapAtCodeToChar(char kc)
 {
 	return KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)];
 }
-
+extern void WmTest();
 void IrqKeyboard(UNUSED int e[50])
 {
 	// acknowledge interrupt:
@@ -471,6 +471,8 @@ void IrqKeyboard(UNUSED int e[50])
 		if (keycode == (SCANCODE_RELEASE | KEY_F11))
 		{
 			VidCorruptScreenForTesting();
+			
+			WmTest();
 		}
 		
 		if (g_virtualMouseEnabled && VidIsAvailable() && !g_ps2MouseAvail)

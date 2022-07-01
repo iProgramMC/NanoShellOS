@@ -54,6 +54,23 @@
  * my old self for going this way. :^)
 *****************************************************/
 
+void eRequestRepaint(Window* pWindow)
+{
+	RequestRepaint(pWindow);
+}
+void eRequestRepaintNew(Window* pWindow)
+{
+	RequestRepaintNew(pWindow);
+}
+void eWindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2)
+{
+	WindowRegisterEvent(pWindow, eventType, parm1, parm2);
+}
+void eWindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
+{
+	WindowRegisterEventUnsafe(pWindow, eventType, parm1, parm2);
+}
+
 // Miscellaneous utils
 int GetVersionNumber()
 {
@@ -298,7 +315,7 @@ const void *WindowCall[] = {
 		AddControl,
 	
 	// System Calls V1.1 -- 25/01/2022
-		RequestRepaint,
+		eRequestRepaint,
 		SetLabelText,
 		AddMenuBarItem,
 		SetScrollBarMin,
@@ -331,8 +348,8 @@ const void *WindowCall[] = {
 		SetTextInputText,
 		SetWindowIcon,
 		SetWindowTitle,
-		WindowRegisterEvent,
-		WindowRegisterEventUnsafe,
+		eWindowRegisterEvent,
+		eWindowRegisterEventUnsafe,
 		
 		GetTickCount,
 		TmReadTime,
@@ -366,7 +383,7 @@ const void *WindowCall[] = {
 		CheckboxSetChecked,
 		CcRunCCode,
 		FiRemoveFile2,
-		RequestRepaintNew,
+		eRequestRepaintNew,
 		ShellAbout,
 		InputBox,
 		ColorInputBox,

@@ -140,6 +140,9 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	int cpu_usage_total = 100 - cpu_idle_time;
 	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	int memUsedKB = (npp - nfpp) * 4;
+	int fps = 60 - GetWindowManagerFPS();
+	if (fps < 0)  fps = 0;
+	if (fps > 60) fps = 60;
 	
 	SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
 	Image *pImg = pInst->pImg;
@@ -156,6 +159,15 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	VidFillRect(0x000000, pImg->width - 4, 0, pImg->width, pImg->height);
 	
 	// draw lines:
+	
+	// memory usage
+	VidDrawLine(
+		// color
+		0xFF0000, 
+		// pos 1
+		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointWmFps, 60),
+		// pos 2
+		pImg->width - 1, ConvertToGraphPos(pImg, fps,                   61));
 	
 	// memory usage
 	VidDrawLine(
@@ -178,6 +190,7 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	//update the data points
 	pInst->dataPointCPUUsage = cpu_usage_total;
 	pInst->dataPointMemUsage = memUsedKB;
+	pInst->dataPointWmFps    = fps;
 	
 	VidSetVBEData(backup);
 }
@@ -212,6 +225,12 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 		case EVENT_UPDATE:
 		{
 			UpdateSystemMonitorGraph (pWindow, UpdateSystemMonitorLists (pWindow));
+			
+			CallControlCallback(pWindow, MEMORY_LABEL, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, UPTIME_LABEL, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, PROCESS_LISTVIEW, EVENT_PAINT, 0, 0);
+			SystemMonitorProc  (pWindow, EVENT_PAINT, 0, 0);
+			
 			break;
 		}
 		case EVENT_CREATE:
@@ -289,7 +308,6 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 		{
 			next_tick_in += 1000;
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-			WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
 		}
 	}
 #endif

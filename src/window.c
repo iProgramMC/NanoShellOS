@@ -14,6 +14,8 @@
 
 //#define ENABLE_MAXIMIZE
 
+#define PAINT_DEBUG_LOG
+
 #define THREADING_ENABLED 1 //0
 #if THREADING_ENABLED
 #define MULTITASKED_WINDOW_MANAGER
@@ -871,8 +873,13 @@ int g_windowEventQueueTails[WINDOWS_MAX];
 
 void OnWindowHung(Window *pWindow);
 
-void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
+void WindowAddEventToMasterQueue2(PWINDOW pWindow, int eventType, int parm1, int parm2, const char *a, int b)
 {
+	#ifdef PAINT_DEBUG_LOG
+	if (eventType == EVENT_PAINT)
+		SLogMsg("WindowAddEventToMasterQueue2 (%p, EVENT_PAINT, ..., %s, %d)", pWindow, a, b);
+	#endif
+	
 	if (pWindow->m_flags & WF_FROZEN)
 	{
 		// Can't send events to frozen objects! Just pretend it's handled already
@@ -943,8 +950,13 @@ bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, int *parm1, int *p
 }
 
 //Registers an event to a window.  Not recommended for use.
-void WindowRegisterEventUnsafe (Window* pWindow, short eventType, int parm1, int parm2)
+void WindowRegisterEventUnsafe2 (Window* pWindow, short eventType, int parm1, int parm2, const char *a, int b)
 {
+	#ifdef PAINT_DEBUG_LOG
+	if (eventType == EVENT_PAINT)
+		SLogMsg("WindowRegisterEventUnsafe2 (%p, EVENT_PAINT, ..., %s, %d)", pWindow, a, b);
+	#endif
+	
 	if (pWindow->m_flags & WF_FROZEN)
 	{
 		// Can't send events to frozen objects, so pretend it's handled already
@@ -1011,7 +1023,7 @@ void OnWindowHung(Window *pWindow)
 	pWindow->m_cursorID = CURSOR_WAIT;
 }
 //This is what you should use in most cases.
-void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
+void WindowRegisterEvent2 (Window* pWindow, short eventType, int parm1, int parm2, const char *a, int b)
 {
 	int queue_timeout = GetTickCount() + 5000;
 	while (pWindow->m_EventQueueLock.m_held)
@@ -1027,7 +1039,7 @@ void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2
 	
 	LockAcquire (&pWindow->m_EventQueueLock);
 	
-	WindowRegisterEventUnsafe (pWindow, eventType, parm1, parm2);
+	WindowRegisterEventUnsafe2 (pWindow, eventType, parm1, parm2, a, b);
 	
 	LockFree (&pWindow->m_EventQueueLock);
 }
@@ -1416,9 +1428,9 @@ void DestroyWindow (Window* pWindow)
 	// "yeah you're good to go" and call ReadyToDestroyWindow().
 }
 
-void RequestRepaint (Window* pWindow)
+void RequestRepaint2 (Window* pWindow, const char *a, int b)
 {
-	WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
+	WindowRegisterEventUnsafe2(pWindow, EVENT_PAINT, 0, 0, a, b);
 }
 
 extern void SetFocusedConsole(Console* console);
@@ -1434,7 +1446,7 @@ void SelectWindowUnsafe(Window* pWindow)
 				{
 					g_windows[i].m_isSelected = false;
 					WindowRegisterEventUnsafe(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
-					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
+//					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
 					g_windows[i].m_vbeData.m_dirty = true;
 					g_windows[i].m_renderFinished = true;
 				}
@@ -1445,7 +1457,7 @@ void SelectWindowUnsafe(Window* pWindow)
 		pWindow->m_isSelected = true;
 		UpdateDepthBuffer();
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
-		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
+//		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
@@ -1608,6 +1620,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
+	WindowRegisterEvent(pWnd, EVENT_PAINT, 0, 0);
 	
 	UseHeap (pHeapBackup);
 	
@@ -2554,6 +2567,17 @@ void RemoveControl (Window* pWindow, int controlIndex)
 	LockFree(&pWindow->m_EventQueueLock);
 }
 
+int CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* p = &pWindow->m_pControlArray[i];
+		if (p->m_active  &&  p->m_comboID == comboID)
+		{
+			p->OnEvent(p, eventType, parm1, parm2, pWindow);
+		}
+	}
+}
 void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 {
 	// Go backwards, because some controls might spawn other controls
@@ -3022,8 +3046,11 @@ void PaintWindowBackgroundAndBorder(Window* pWindow)
 	PaintWindowBorder(pWindow);
 }
 
-void RequestRepaintNew (Window* pWindow)
+void RequestRepaintNew2 (Window* pWindow, const char *a, int b)
 {
+	#ifdef PAINT_DEBUG_LOG
+	SLogMsg("RequestRepaintNew2(%p, %s, %d)", pWindow, a, b);
+	#endif
 	//paint the window background:
 	PaintWindowBackgroundAndBorder (pWindow);
 	
@@ -3388,11 +3415,27 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	return true;
 }
-
+void WmTest()
+{
+	for(int i=0; i<ARRAY_COUNT(g_windows); i++)
+	{
+		if(g_windows[i].m_used)
+		{
+			SLogMsg("WINDOW: %s", g_windows[i].m_title);
+		}
+	}
+}
 bool HandleMessages(Window* pWindow)
 {
 	if (!g_windowManagerRunning)
 		return false;
+	
+	if (!pWindow->m_used)
+	{
+		SLogMsg("Sir, this window is gone");
+		return false;
+	}
+	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	
 	// grab the lock
@@ -3522,6 +3565,9 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		case EVENT_SETFOCUS:
 		case EVENT_KILLFOCUS:
 			PaintWindowBorderNoBackgroundOverpaint(pWindow);
+			CallControlCallback (pWindow, 0xFFFF0000, EVENT_PAINT, 0, 0);
+			CallControlCallback (pWindow, 0xFFFF0001, EVENT_PAINT, 0, 0);
+			CallControlCallback (pWindow, 0xFFFF0002, EVENT_PAINT, 0, 0);
 			break;
 		case EVENT_CLOSE:
 			DestroyWindow(pWindow);

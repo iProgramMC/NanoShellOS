@@ -841,7 +841,7 @@ bool FsFatOpen (FileNode* pFileNode, UNUSED bool read, bool write)
 	pNode->bAllowWriting      = write;
 	pNode->bLoadedWorkCluster = false;
 	
-	bool cache_all = true || write;//Experimental
+	bool cache_all = false || write;//Experimental
 	pNode->bWasWrittenTo = false;
 	if (cache_all)
 	{
