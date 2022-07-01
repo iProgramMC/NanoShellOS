@@ -10,9 +10,7 @@
 #include <main.h>
 
 void SbInit();
-void SbSoundWave (uint8_t index, uint8_t wave);
-void SbSoundVolume (uint8_t index, uint8_t v);
-void SbSoundVolumeMaster (uint8_t v);
-void SbSoundNote (uint8_t index, uint8_t octave, uint8_t note);
+void SbWriteData (const void *pBuffer, size_t sz);
+void* SbTestGenerateSound(size_t *outSize);
 
 #endif//_SB_H

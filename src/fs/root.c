@@ -13,6 +13,7 @@
 #include <memory.h>
 #include <tar.h>
 #include <debug.h>
+#include <sb.h>
 
 
 static uint32_t OctToBin(char *data, uint32_t size)
@@ -85,6 +86,16 @@ static uint32_t FsTeletypeWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_
 	return size;
 }
 
+static uint32_t FsSoundBlasterRead (UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer)
+{
+	return 0;//This is a write only file
+}
+
+static uint32_t FsSoundBlasterWrite(UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer)
+{
+	//Offset will be ignored.
+	SbWriteData (pBuffer, size);
+}
 
 #endif
 
