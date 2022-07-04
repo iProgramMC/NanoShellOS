@@ -519,7 +519,7 @@ void ShellExecuteCommand(char* p)
 		int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT);
 		if (fd_out < 0)
 		{
-			LogMsg("movedata: %s: Could not open %s for writing", fileNameOut, GetErrNoString(fd_out));
+			LogMsg("movedata: Could not open %s for writing: %s", fileNameOut, GetErrNoString(fd_out));
 			FiClose(fd_in);
 			goto fail_movedata;
 		}
