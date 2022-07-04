@@ -18,6 +18,10 @@ void sprintf (char* OutBuffer, const char* FormatType, ...);
 void sleep(int ms);
 void exit (int errcode);
 
+// Execution control
+__attribute__((returns_twice)) int  SetJump (JumpBuffer env);
+__attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
+
 // Miscellanea
 int GetRandom();
 

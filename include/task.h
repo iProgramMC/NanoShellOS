@@ -60,6 +60,9 @@ typedef JumpBufferTag JumpBuffer[1];
 __attribute__((returns_twice)) int  SetJump (JumpBuffer env);
 __attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
 
+#define setjmp(buf)      SetJump ((JumpBuffer)(env))
+#define longjmp(buf,val) LongJump((JumpBuffer)(env),val)
+
 enum
 {
 	SEGMENT_NULL   = 0x0000,

@@ -1,10 +1,14 @@
-; NanoShell C-Runtime entry
+; NanoShell C-Runtime basics
 ; Copyright (C) 2022 iProgramInCpp
 
 BITS 32
 
 SECTION .data
 
+; The way we 'exit' on this is a bit unconventional. We do not have a syscall
+; to exit, instead, returning from the entry point actually kills the process/thread.
+; This is why we need to backup the EBP and ESP, so that we can return properly in
+; case of an exit().
 EbpBackup DD 1
 EspBackup DD 1
 
@@ -56,5 +60,29 @@ _NsExitPoint:
 	
 	ret  ; return to kernel
 	
+; Well, this is basically the same thing, but a bit more diverse
+; https://github.com/jezze/subc
+global SetJump
+global LongJump
+SetJump:
+	mov  edx, [esp + 4]
+	mov  [edx], esp
+	add  dword [edx], 4
+	mov  [edx + 4], ebp
+	mov  eax, [esp]
+	mov  [edx + 8], eax
+	xor  eax, eax
+	retn
 	
-	
+LongJump:
+	mov  eax, [esp + 8]
+	or   eax, eax
+	; the spec says to return 1 if there's no 'val' passed into longjmp().
+	jnz  .increment
+	inc  eax
+.increment:
+	mov  edx, [esp + 4]
+	mov  esp, [edx]
+	mov  ebp, [edx + 4]
+	mov  edx, [edx + 8]
+	jmp  edx

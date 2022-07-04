@@ -6,6 +6,15 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+// https://github.com/jezze/subc
+typedef struct
+{
+	void *esp, *eax, *ebp;
+}
+JumpBufferTag;
+
+typedef JumpBufferTag JumpBuffer[1], jmp_buf[1];
+
 //TODO
 
 typedef uint8_t BYTE;
