@@ -61,11 +61,11 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	MmInitPrimordial();
 	MmMarkStuffReadOnly();
 	KeCPUID();
-	PciInit();
 	KiTaskSystemInit();
 	KiIdtInit();
 	KiPicInit();
 	MmInit();
+	PciInit();
 	VidInit();
 	CbInit();
 	CfgInit();

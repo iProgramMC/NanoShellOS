@@ -101,8 +101,8 @@ void *MmMapPhysMemFastUnsafeRW(uint32_t page, bool bReadWrite)
 	pEntry->m_pAddress = page >> 12;
 	
 	pEntry->m_bPresent       = 1;
-	pEntry->m_bWriteThrough  =
-	pEntry->m_bCacheDisabled = 0;
+	pEntry->m_bWriteThrough  = 0;
+	pEntry->m_bCacheDisabled = 1;
 	pEntry->m_bUserSuper     = 1;
 	pEntry->m_bReadWrite     = bReadWrite;
 	

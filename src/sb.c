@@ -225,7 +225,7 @@ void SbWriteData (const void *pData, size_t sizeBytes)
 
 static void SbFillBuffer(i16 *buf, size_t len)
 {
-	uint64_t a = ReadTSC();
+	//uint64_t a = ReadTSC();
 	for (int i = 0; i < (int)len; i++)
 	{
 		uint8_t lo = 0, hi = 0;
@@ -235,8 +235,8 @@ static void SbFillBuffer(i16 *buf, size_t len)
 		
 		buf[i] = lo | hi << 8;
 	}
-	uint64_t b = ReadTSC();
-	SLogMsg("b-a: %l",b-a);
+	//uint64_t b = ReadTSC();
+	//SLogMsg("b-a: %l",b-a);
 }
 
 static void DspWrite(u8 b)

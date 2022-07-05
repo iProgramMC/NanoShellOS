@@ -8,6 +8,7 @@
 #include <string.h>
 #include <print.h>
 #include <pci.h>
+#include <storabs.h>
 
 //NOTE: The PCI driver will only use access mechanism #1 (ports 0xcf8 and 0xcfc)
 
@@ -112,7 +113,9 @@ void PciProbe ()
 				if (VendorID == 0xFFFF) continue;//Assume that no PCI device with a vendorID of 0xFFFF exists.
 				
 				uint16_t DeviceID = PciUGetDeviceID  (bus,slot,func);
-				LogMsg("Vendor: %x  Device: %x", VendorID, DeviceID);
+				uint16_t ClassID  = PciUGetClassID   (bus,slot,func);
+				uint16_t SClassID = PciUGetSubClassID(bus,slot,func);
+				LogMsg("Vendor: %x  Device: %x.  ClassID: %x, SubclassID: %x", VendorID, DeviceID,  ClassID,SClassID);
 
 				if ((VendorID == VENDORID_QEMU       && DeviceID == DEVICEID_BXGFX    ) || 
 					(VendorID == VENDORID_VIRTUALBOX && DeviceID == DEVICEID_BXGFXVBOX)
@@ -130,6 +133,11 @@ void PciProbe ()
 				pDevice->func = func;
 				pDevice->vendor = VendorID;
 				pDevice->device = DeviceID;
+				
+				if (ClassID == CLASSID_MASSSTORAGE && SClassID == SCLASSID_SATA)
+				{
+					AhciOnDeviceFound(pDevice);
+				}
 			}
 }
 

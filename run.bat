@@ -7,7 +7,19 @@ set NSPath=%CD%
 cd /d c:\Program Files\qemu
 set path=%path%;%NSPath%
 
-qemu-system-i386.exe -device sb16 -d cpu_reset -m 256M -boot d -cdrom %nspath%\build\image.iso -hda %nspath%\vdisk.vdi -debugcon stdio -display sdl -accel tcg
+qemu-system-i386.exe                            ^
+-device sb16                                    ^
+-d cpu_reset                                    ^
+-m 256M                                         ^
+-boot d                                         ^
+-cdrom %nspath%\build\image.iso                 ^
+-debugcon stdio                                 ^
+-display sdl                                    ^
+-accel tcg                                      ^
+-drive id=disk,file=%nspath%\vdisk.vdi,if=none  ^
+-device ahci,id=ahci                            ^
+-device ide-hd,drive=disk,bus=ahci.0
+
 : -s -S
 : -serial COM7
 : -kernel %nspath%/kernel.bin 

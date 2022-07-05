@@ -9,6 +9,7 @@
 
 #include <main.h>
 #include <string.h>
+#include <pci.h>
 
 // Enums
 enum {
@@ -73,12 +74,19 @@ DriveID StMountTestRamDisk (void);
  */
 void StIdeInit(void);
 
-// Internal
+// IDE
 #if 1
 
 DriveStatus StIdeDriveRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t nBlocks);
 DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, uint8_t nBlocks);
 bool StIdeIsAvailable (uint8_t did);
+
+#endif
+
+// AHCI
+#if 1
+
+#include <ahci.h>
 
 #endif
 

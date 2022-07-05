@@ -28,6 +28,98 @@ typedef struct PciDevice {
 void PciInit(void);
 void PciDump(void);
 
+// structure:
+//  CLASSID_XXXXX      = 0x??,
+//      SCLASSID_XXXXX = 0x??,
+//      SCLASSID_YYYYY = 0x??,
+//      ...,
+//  ...,
+
+enum
+{
+	//https://pci-ids.ucw.cz/read/PD/
+	CLASSID_UNCLASSIFIED = 0x00,
+	
+	CLASSID_MASSSTORAGE  = 0x01,
+		SCLASSID_SCSI    = 0x00,
+		SCLASSID_IDE     = 0x01,
+		SCLASSID_FLP     = 0x02,
+		SCLASSID_IPI     = 0x03,
+		SCLASSID_RAID    = 0x04,
+		SCLASSID_ATA     = 0x05,
+		SCLASSID_SATA    = 0x06,
+		SCLASSID_SASCSI  = 0x07,
+		SCLASSID_NVM     = 0x08,//NVMHCI, NVMe
+		
+	CLASSID_NETWORKING   = 0x02,
+	
+	CLASSID_DISPLAY      = 0x03,
+		SCLASSID_VGA     = 0x00,
+		SCLASSID_XGA     = 0x01,
+		SCLASSID_3D      = 0x02,
+	
+	CLASSID_MULTIMEDIA   = 0x04,
+	
+	CLASSID_MEMORY       = 0x05,
+	
+	CLASSID_BRIDGE       = 0x06,
+		SCLASSID_HOST    = 0x00,
+		SCLASSID_ISA     = 0x01,
+		SCLASSID_EISA    = 0x02,
+		SCLASSID_MCRCHNL = 0x03,
+		SCLASSID_PCI     = 0x04,
+		SCLASSID_PCMCIA  = 0x05,
+		SCLASSID_NUBUS   = 0x06,
+		SCLASSID_CARDBUS = 0x07,
+		SCLASSID_RACEWAY = 0x08,
+		SCLASSID_STPCIPCI= 0x09,
+		SCLASSID_INFBPCI = 0x0A,
+	
+	CLASSID_COMMS        = 0x07,
+	
+	CLASSID_GENERIC      = 0x08,
+	
+	CLASSID_INPUT        = 0x09,
+	
+	CLASSID_DOCKING      = 0x0A,
+	
+	CLASSID_PROCESSOR    = 0x0B,
+	
+	CLASSID_SERIAL_BUS   = 0x0C,
+		SCLASSID_FWIRE   = 0x00,
+		SCLASSID_ACCESS  = 0x01,
+		SCLASSID_SSA     = 0x02,
+		SCLASSID_USB     = 0x03, //XHCI, UHCI etc.
+		SCLASSID_FIBRE   = 0x04,
+		SCLASSID_SMBUS   = 0x05,
+		SCLASSID_INFINIB = 0x06,
+		SCLASSID_IPMI    = 0x07,
+		SCLASSID_SERCOS  = 0x08,
+		SCLASSID_CANBUS  = 0x09,
+	
+	CLASSID_WIRELESS     = 0x0D,
+	
+	CLASSID_INTELLIGENT  = 0x0E,
+	
+	CLASSID_SATELLITE    = 0x0F,
+	
+	CLASSID_ENCRYPTION   = 0x10,
+	
+	CLASSID_SIGNAL_PROC  = 0x11,
+	
+	CLASSID_PROC_ACCEL   = 0x12,
+	
+	CLASSID_NON_ESSENTIAL= 0x13,
+	
+	CLASSID_COPROCESSOR  = 0x40,
+	
+	CLASSID_UNASSIGNED   = 0xFF,
+	
+	
+	
+	SCLASSID_UNK = 0x80,
+};
+
 
 uint16_t PciUConfigReadWord   (uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 uint32_t PciUConfigReadDword  (uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
