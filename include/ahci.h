@@ -65,6 +65,7 @@ typedef struct
 	// DWORD 4
 	uint8_t  rsv1[4];	// Reserved
 }
+__attribute__((packed))
 FisRegH2D;
 
 typedef struct
@@ -100,6 +101,7 @@ typedef struct
 	// DWORD 4
 	uint8_t  rsv4[4];     // Reserved
 }
+__attribute__((packed))
 FisRegD2H;
 
 typedef struct
@@ -115,6 +117,7 @@ typedef struct
 	// DWORD 1 ~ N
 	uint32_t data[1];	// Payload
 }
+__attribute__((packed))
 FisData;
 
 typedef struct
@@ -153,6 +156,7 @@ typedef struct
 	uint16_t tc;		// Transfer count
 	uint8_t  rsv4[2];	// Reserved
 }
+__attribute__((packed))
 FisPioSetup;
 
 typedef struct
@@ -186,6 +190,7 @@ typedef struct
 	uint32_t resvd;          //Reserved
 	
 }
+__attribute__((packed))
 FisDmaSetup;
 
 typedef volatile struct
@@ -215,6 +220,7 @@ typedef volatile struct
 	// DW4 - 7
 	uint32_t rsv1[4];	// Reserved
 }
+__attribute__((packed))
 HbaCmdHeader;
 
 typedef volatile struct
@@ -228,6 +234,7 @@ typedef volatile struct
 	uint32_t rsv1:9;		// Reserved
 	uint32_t i:1;		// Interrupt on completion
 }
+__attribute__((packed))
 HbaPrdtEntry;
 
 typedef volatile struct
@@ -244,6 +251,7 @@ typedef volatile struct
 	// 0x80
 	HbaPrdtEntry	prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
 }
+__attribute__((packed))
 HbaCmdTable;
 
 typedef volatile struct
@@ -268,6 +276,7 @@ typedef volatile struct
 	uint32_t rsv1[11];	   // 0x44 ~ 0x6F, Reserved
 	uint32_t vendor[4];    // 0x70 ~ 0x7F, vendor specific
 }
+__attribute__((packed))
 HbaPort;
 
 typedef volatile struct
@@ -294,6 +303,7 @@ typedef volatile struct
 	// 0x100 - 0x10FF, Port control registers
 	HbaPort  m_ports[1]; // 1 ~ 32
 }
+__attribute__((packed))
 HbaMem;
 
 typedef struct
@@ -307,6 +317,8 @@ typedef struct
 	volatile HbaPort *m_pPort;
 	
 	volatile void *m_pClb, *m_pFb; //for now
+
+	int        m_nMaxCommands;
 }
 AhciDevice;
 
@@ -323,5 +335,6 @@ AhciController;
 
 
 void AhciOnDeviceFound (PciDevice *pPCI);
+void StAhciInit ();
 
 #endif

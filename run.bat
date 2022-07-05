@@ -18,7 +18,8 @@ qemu-system-i386.exe                            ^
 -accel tcg                                      ^
 -drive id=disk,file=%nspath%\vdisk.vdi,if=none  ^
 -device ahci,id=ahci                            ^
--device ide-hd,drive=disk,bus=ahci.0
+-device ide-hd,drive=disk,bus=ahci.0            ^
+-monitor telnet:127.0.0.1:55555,server,nowait
 
 : -s -S
 : -serial COM7

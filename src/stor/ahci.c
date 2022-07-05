@@ -97,7 +97,7 @@ static void AhciProbeController(AhciController *pController)
 					SLogMsg("Found SEMB device at port %d on a controller id %d", i, pController->m_nID);
 					break;
 				case AHCI_DEV_PM:
-					SLogMsg("Found SEMB device at port %d on a controller id %d", i, pController->m_nID);
+					SLogMsg("Found PM device at port %d on a controller id %d", i, pController->m_nID);
 					break;
 			}
 			
@@ -116,20 +116,32 @@ static void AhciProbeController(AhciController *pController)
 	}
 }
 
+static void AhciStopDevice(AhciDevice *pDev)
+{
+	SLogMsg("Setting flags.");
+	pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
+	pDev->m_pPort->m_cmdState &= ~PXCMD_FRE;
+	
+	SLogMsg("Waiting 500 ms.");
+	WaitMS(500); //TODO: is a wait needed here?
+	
+	SLogMsg("Waiting for PXCMD_CR and FR to go out. Intial flags: %x.", pDev->m_pPort->m_cmdState);
+	while (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR))
+	{
+		__asm__ volatile ("pause":::"memory");
+	}
+	SLogMsg("Done!");
+}
+
 static void AhciEnsureIdlePort (AhciDevice *pDev)
 {
+	SLogMsg("Ensuring that port is idle...");
 	if (!(pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST)))
 	{
 		// Place these inside an idle state.
-		pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
-		pDev->m_pPort->m_cmdState &= ~PXCMD_FRE;
 		
-		WaitMS(500);
-		
-		while (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR))
-		{
-			__asm__ volatile ("pause");
-		}
+		SLogMsg("Stopping device.");
+		AhciStopDevice (pDev);
 		
 		//TODO: if CR or FR do not clear correctly.
 	}
@@ -146,8 +158,11 @@ static void AhciEnsureIdlePorts (AhciController *pController)
 	}
 }
 
-static void AhciSetupCommandSlotsPort (AhciDevice *pDev)
+static void AhciSetupCommandSlotsPort (AhciDevice *pDev, int maxCommandSlots)
 {
+	pDev->m_nMaxCommands = maxCommandSlots;
+	SLogMsg("Max Commands:%d", pDev->m_nMaxCommands);
+	
 	// No need for S64A. We are on a 32-bit system.
 	pDev->m_pPort->clbu = pDev->m_pPort->fbu = 0;
 	
@@ -174,13 +189,38 @@ static void AhciSetupCommandSlotsPort (AhciDevice *pDev)
 	pDev->m_pPort->m_sErr = 0;
 }
 
-static void AhciSetupCommandSlots (AhciController *pController)
+static void AhciSetupCommandSlots (AhciController *pController, int maxCommandSlots)
 {
 	for (int i = 0; i < 30; i++)
 	{
 		if (pController->m_pDevices[i])
 		{
-			AhciSetupCommandSlotsPort(pController->m_pDevices[i]);
+			AhciSetupCommandSlotsPort(pController->m_pDevices[i], maxCommandSlots);
+		}
+	}
+}
+
+static void AhciStartUpDevice(AhciDevice *pDev)
+{
+	SLogMsg("DET: %x", pDev->m_pPort->m_sataStatus);
+	
+	SLogMsg("Starting up device...  Waiting for PXCMD_CR to go out... Currently state is %x",pDev->m_pPort->m_cmdState);
+	while (pDev->m_pPort->m_cmdState & PXCMD_CR)
+	{
+		__asm__ volatile ("pause":::"memory");
+	}
+	
+	SLogMsg("Setting start bit");
+	pDev->m_pPort->m_cmdState |= PXCMD_FRE;
+	pDev->m_pPort->m_cmdState |= PXCMD_ST;
+}
+static void AhciStartUpDevices(AhciController *pController)
+{
+	for (int i = 0; i < 30; i++)
+	{
+		if (pController->m_pDevices[i])
+		{
+			AhciStartUpDevice(pController->m_pDevices[i]);
 		}
 	}
 }
@@ -221,6 +261,11 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 	pDev->m_nID  = g_ahciControllerNum;
 	for (size_t i = 0; i < ARRAY_COUNT(pDev->m_pDevices); i++)
 		pDev->m_pDevices[i] = NULL;
+}
+
+void AhciSetupController(AhciController* pDev)
+{
+	volatile HbaMem *pHBA = pDev->m_pMem;
 	
 	// Indicate that system is aware of AHCI by setting GHC.AE to 1.
 	pHBA->m_globalHBACtl |= (1U << 31);
@@ -237,9 +282,22 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 	int nCommandSlots = (pHBA->m_capabilities >> 8) & 0xF;
 	
 	// For each implemented port, system software shall allocate memory for and program:
-	AhciSetupCommandSlots(nCommandSlots);
+	AhciSetupCommandSlots(pDev, nCommandSlots);
 	
 	// At this point the HBA is in a minimally initialized state. System software may provide additional 
 	// programming of the GHC register and port PxCMD and PxSCTL registers based on the policies of the 
 	// operating system and platform – these details are beyond the scope of this specification.
+	AhciStartUpDevices(pDev);	
+}
+
+void StAhciInit()
+{
+	if (!g_ahciControllerNum)
+	{
+		LogMsg("No AHCI controllers found.");
+	}
+	for (int i = 0; i < g_ahciControllerNum; i++)
+	{
+		AhciSetupController (&g_ahciControllers[i]);
+	}
 }

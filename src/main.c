@@ -78,6 +78,7 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	KbInit();
 	FsInit();
 	StIdeInit();
+	StAhciInit();
 	FsFatInit();
 	FsInitRdInit();
 	UartInit(0);
