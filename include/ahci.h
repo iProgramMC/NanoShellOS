@@ -260,14 +260,14 @@ typedef volatile struct
 	uint32_t clbu;         // 0x04, command list base address upper 32 bits
 	uint32_t fb;           // 0x08, FIS base address, 256-byte aligned
 	uint32_t fbu;          // 0x0C, FIS base address upper 32 bits
-	uint32_t is;           // 0x10, interrupt status
-	uint32_t ie;           // 0x14, interrupt enable
+	uint32_t m_intStatus;  // 0x10, interrupt status
+	uint32_t m_intEnable;  // 0x14, interrupt enable
 	uint32_t m_cmdState;   // 0x18, command and status
 	uint32_t rsv0;         // 0x1C, Reserved
-	uint32_t tfd;          // 0x20, task file data
+	uint32_t m_tfd;        // 0x20, task file data
 	uint32_t m_signature;  // 0x24, signature
 	uint32_t m_sataStatus; // 0x28, SATA status (SCR0:SStatus)
-	uint32_t sctl;         // 0x2C, SATA control (SCR2:SControl)
+	uint32_t m_sCtl;       // 0x2C, SATA control (SCR2:SControl)
 	uint32_t m_sErr;       // 0x30, SATA error (SCR1:SError)
 	uint32_t sact;         // 0x34, SATA active (SCR3:SActive)
 	uint32_t ci;           // 0x38, command issue
@@ -291,8 +291,8 @@ typedef volatile struct
 	uint32_t ccc_pts;            // 0x18, Command completion coalescing ports
 	uint32_t em_loc;             // 0x1C, Enclosure management location
 	uint32_t em_ctl;             // 0x20, Enclosure management control
-	uint32_t cap2;               // 0x24, Host capabilities extended
-	uint32_t bohc;               // 0x28, BIOS/OS handoff control and status
+	uint32_t m_capabilitiesExt;  // 0x24, Host capabilities extended
+	uint32_t m_BOHC;             // 0x28, BIOS/OS handoff control and status
  
 	// 0x2C - 0x9F, Reserved
 	uint8_t  rsv[0xA0-0x2C];

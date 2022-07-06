@@ -7,6 +7,7 @@
 
 #include <memory.h>
 #include <storabs.h>
+#include <misc.h>
 
 //! TODO: Use interrupts instead of polling for this driver.
 
@@ -18,10 +19,24 @@
 #define HBA_PORT_IPM_ACTIVE 1
 #define HBA_PORT_DET_PRESENT 3
 
-#define PXCMD_CR  (1 << 15)
-#define PXCMD_FR  (1 << 14)
-#define PXCMD_FRE (1 << 4)
-#define PXCMD_ST  (1 << 0)
+#define PXCMD_CR  (1 << 15) // Commands Running
+#define PXCMD_FR  (1 << 14) // FIS Receive Running
+#define PXCMD_FRE (1 << 4)  // FIS Receive Enable
+#define PXCMD_POD (1 << 2)  // Power On Device
+#define PXCMD_SUD (1 << 1)  // Spin Up Device
+#define PXCMD_ST  (1 << 0)  // Start
+
+#define PXSCTL_DET_INIT    (1 << 1)
+#define PXSSTS_DET_PRESENT (3)
+
+#define CAPSEXT_BOH (1 << 0)
+
+#define BOHC_BOS (1 << 0) // BIOS owned semphore
+#define BOHC_OOS (1 << 1) // OS owned semaphore
+#define BOHC_BB  (1 << 4) // BIOS Busy (polling bit while BIOS cleans things up for us)
+
+#define ATAS_DRQ (1 << 3)
+#define ATAS_BSY (1 << 7)
 
 //TODO: Allow handling port 30 and 31 too. Do this only if some weird hardware maps the AHCI devices there.
 //To be honest, I'm not sure it's worth the trouble of using MmMapPhysicalMemory instead of the fast version
@@ -116,116 +131,6 @@ static void AhciProbeController(AhciController *pController)
 	}
 }
 
-static void AhciStopDevice(AhciDevice *pDev)
-{
-	SLogMsg("Setting flags.");
-	pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
-	pDev->m_pPort->m_cmdState &= ~PXCMD_FRE;
-	
-	SLogMsg("Waiting 500 ms.");
-	WaitMS(500); //TODO: is a wait needed here?
-	
-	SLogMsg("Waiting for PXCMD_CR and FR to go out. Intial flags: %x.", pDev->m_pPort->m_cmdState);
-	while (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR))
-	{
-		__asm__ volatile ("pause":::"memory");
-	}
-	SLogMsg("Done!");
-}
-
-static void AhciEnsureIdlePort (AhciDevice *pDev)
-{
-	SLogMsg("Ensuring that port is idle...");
-	if (!(pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST)))
-	{
-		// Place these inside an idle state.
-		
-		SLogMsg("Stopping device.");
-		AhciStopDevice (pDev);
-		
-		//TODO: if CR or FR do not clear correctly.
-	}
-}
-
-static void AhciEnsureIdlePorts (AhciController *pController)
-{
-	for (int i = 0; i < 30; i++)
-	{
-		if (pController->m_pDevices[i])
-		{
-			AhciEnsureIdlePort(pController->m_pDevices[i]);
-		}
-	}
-}
-
-static void AhciSetupCommandSlotsPort (AhciDevice *pDev, int maxCommandSlots)
-{
-	pDev->m_nMaxCommands = maxCommandSlots;
-	SLogMsg("Max Commands:%d", pDev->m_nMaxCommands);
-	
-	// No need for S64A. We are on a 32-bit system.
-	pDev->m_pPort->clbu = pDev->m_pPort->fbu = 0;
-	
-	uint32_t clbPhys, fbPhys;
-	void *pClb, *pFb;
-	
-	// Good thing apparently the maximum size of this is a kilobyte.
-	// For now, waste 3 kib with this. However in the future this may be resolved.
-	pClb = MmAllocateSinglePagePhy(&clbPhys);
-	pFb  = MmAllocateSinglePagePhy(& fbPhys);
-	
-	pDev->m_pPort->clb = clbPhys;
-	pDev->m_pPort-> fb =  fbPhys;
-	
-	// It is good practice for system software to 'zero-out' the memory allocated and referenced by PxCLB and PxFB.
-	memset (pClb, 0, 4096);
-	memset (pFb,  0, 4096);
-	
-	// After setting PxFB and PxFBU to the physical address of the FIS receive
-	// area, system software shall set PxCMD.FRE to 1.
-	pDev->m_pPort->m_cmdState |= PXCMD_FRE;
-	
-	// For each implemented port, clear the PxSERR register, by writing 1s to each implemented bit location
-	pDev->m_pPort->m_sErr = 0;
-}
-
-static void AhciSetupCommandSlots (AhciController *pController, int maxCommandSlots)
-{
-	for (int i = 0; i < 30; i++)
-	{
-		if (pController->m_pDevices[i])
-		{
-			AhciSetupCommandSlotsPort(pController->m_pDevices[i], maxCommandSlots);
-		}
-	}
-}
-
-static void AhciStartUpDevice(AhciDevice *pDev)
-{
-	SLogMsg("DET: %x", pDev->m_pPort->m_sataStatus);
-	
-	SLogMsg("Starting up device...  Waiting for PXCMD_CR to go out... Currently state is %x",pDev->m_pPort->m_cmdState);
-	while (pDev->m_pPort->m_cmdState & PXCMD_CR)
-	{
-		__asm__ volatile ("pause":::"memory");
-	}
-	
-	SLogMsg("Setting start bit");
-	pDev->m_pPort->m_cmdState |= PXCMD_FRE;
-	pDev->m_pPort->m_cmdState |= PXCMD_ST;
-}
-static void AhciStartUpDevices(AhciController *pController)
-{
-	for (int i = 0; i < 30; i++)
-	{
-		if (pController->m_pDevices[i])
-		{
-			AhciStartUpDevice(pController->m_pDevices[i]);
-		}
-	}
-}
-
-//TODO: Properly communicate such error codes to the user.
 void AhciOnDeviceFound (PciDevice *pPCI)
 {
 	//AHCI Base Address is BAR5.
@@ -235,7 +140,7 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 	SLogMsg("The AHCI Controller's base address is %x.", nAHCIBaseAddr);
 	
 	// This BAR has additional flags.
-	uint16_t barFlags = (uint16_t)(nAHCIBaseAddr & 0xFFF);
+	UNUSED uint16_t barFlags = (uint16_t)(nAHCIBaseAddr & 0xFFF);
 	nAHCIBaseAddr &= ~0xFFF;
 	// bit 3: Prefetchable (PF)
 	// bits 2 and 1: Indicate that this range can be mapped anywhere in 32-bit address space.
@@ -263,12 +168,116 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 		pDev->m_pDevices[i] = NULL;
 }
 
-void AhciSetupController(AhciController* pDev)
+static void AhciPortCommandStop (AhciDevice *pDev)
+{
+	SLogMsg("STOPPING command engine...");
+	if (!(pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST)))
+	{
+		SLogMsg("Setting flags.");
+		pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
+		pDev->m_pPort->m_cmdState &= ~PXCMD_FRE;
+		
+		SLogMsg("Waiting 500 ms.");
+		WaitMS(500); //TODO: is a wait actually needed here? the spec says we need it
+		
+		SLogMsg("Waiting for PXCMD_CR and FR to go out. Intial flags: %x.", pDev->m_pPort->m_cmdState);
+		while (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR))
+		{
+			asm ("pause":::"memory");
+		}
+		SLogMsg("Done!");
+	}
+	SLogMsg("Stop Done");
+}
+
+static void AhciStopCommandEngine (AhciController *pController)
+{
+	for (int i = 0; i < 30; i++)
+	{
+		if (pController->m_pDevices[i])
+		{
+			AhciPortCommandStop(pController->m_pDevices[i]);
+		}
+	}
+}
+
+static bool AhciPortWait (AhciDevice *pDev)
+{
+	int timeout = 10000000;//some ridiculously high amount
+	while (timeout)
+	{
+		if (!(pDev->m_pPort->m_tfd & (ATAS_DRQ | ATAS_BSY)))
+			return true;
+		
+		timeout--;
+		
+		asm("pause":::"memory");
+	}
+	
+	return false;
+}
+
+static void AhciPortReset(AhciDevice *pDev)
+{
+	AhciPortCommandStop(pDev);
+
+	uint32_t state = pDev->m_pPort->m_intStatus;
+	asm("":::"memory");
+	pDev->m_pPort->m_intStatus = state;
+	
+	if (!AhciPortWait (pDev))
+	{
+		// Perform more 'intrusive' HBA<->Port comm reset (sec. 10.4.2 of spec).
+		pDev->m_pPort->m_sCtl = PXSCTL_DET_INIT;
+		
+		// Spec says 1 ms. Going to wait 2 instead, just to be safe.
+		WaitMS(2);
+		
+		pDev->m_pPort->m_sCtl = 0;
+	}
+	
+	while ((pDev->m_pPort->m_sataStatus & 0xF) != PXSSTS_DET_PRESENT)
+	{
+		asm ("pause":::"memory");
+	}
+	
+	pDev->m_pPort->m_sErr = ~0; // Write all 1s to SATA error register.
+}
+
+static void AhciPerformBiosHandoff(volatile HbaMem *pHBA)
+{
+	SLogMsg("Performing BIOS/OS handoff...");
+	if (pHBA->m_capabilitiesExt & CAPSEXT_BOH)
+	{
+		SLogMsg("Initting.");
+		pHBA->m_BOHC |= BOHC_OOS;
+		
+		SLogMsg("Waiting for BIOS to finish cleaning up.");
+		while (pHBA->m_BOHC & BOHC_BOS)
+		{
+			asm ("pause":::"memory");
+		}
+		
+		SLogMsg("More Waiting...");
+		
+		WaitMS(25);
+		
+		// if BIOS Busy is still set, give it a while (2 seconds)
+		if (pHBA->m_BOHC & BOHC_BB)
+			WaitMS(2000);
+	}
+	SLogMsg("Done.");
+}
+
+void AhciControllerInit(AhciController* pDev)
 {
 	volatile HbaMem *pHBA = pDev->m_pMem;
 	
 	// Indicate that system is aware of AHCI by setting GHC.AE to 1.
 	pHBA->m_globalHBACtl |= (1U << 31);
+	
+	// Transfer ownership from BIOS if supported.
+	AhciPerformBiosHandoff(pDev->m_pMem);
 	
 	// Determine which ports are implemented by the HBA, by reading the PI register.
 	AhciProbeController(pDev);
@@ -276,18 +285,35 @@ void AhciSetupController(AhciController* pDev)
 	// Ensure that the controller is not in the running state by reading and examining each
 	// implemented port's PxCMD register. If PxCMD.ST, PxCMD.CR, PxCMD.FRE and PxCMD.FR are
 	// all cleared, the port is in an idle state.
-	AhciEnsureIdlePorts(pDev);
+	AhciStopCommandEngine(pDev);
+}
+
+void AhciPortCommandStart(AhciDevice *pDev)
+{
+	while (pDev->m_pPort->m_cmdState & PXCMD_CR)
+	{
+		asm("pause":::"memory");
+	}
 	
-	// Determine how many command slots the HBA suppports by reading CAP.NCS
-	int nCommandSlots = (pHBA->m_capabilities >> 8) & 0xF;
+	pDev->m_pPort->m_cmdState |= PXCMD_FRE;
+	pDev->m_pPort->m_cmdState |= PXCMD_ST;
+}
+
+void AhciPortInit(AhciDevice *pDev)
+{
+	SLogMsg("Reset Port");
+	AhciPortReset (pDev);
+	SLogMsg("Commands start");
+	AhciPortCommandStart (pDev);
 	
-	// For each implemented port, system software shall allocate memory for and program:
-	AhciSetupCommandSlots(pDev, nCommandSlots);
+	// Spin up, power on device. If the capability isn't supported the bits
+	// will be read-only and this won't do anything.
+	SLogMsg("SpinUp, PowerOn device");
+	pDev->m_pPort->m_cmdState |= PXCMD_POD | PXCMD_SUD;
+	WaitMS(100); // Why?
 	
-	// At this point the HBA is in a minimally initialized state. System software may provide additional 
-	// programming of the GHC register and port PxCMD and PxSCTL registers based on the policies of the 
-	// operating system and platform – these details are beyond the scope of this specification.
-	AhciStartUpDevices(pDev);	
+	SLogMsg("Commands Stop");
+	AhciPortCommandStop (pDev);
 }
 
 void StAhciInit()
@@ -298,6 +324,10 @@ void StAhciInit()
 	}
 	for (int i = 0; i < g_ahciControllerNum; i++)
 	{
-		AhciSetupController (&g_ahciControllers[i]);
+		AhciControllerInit (&g_ahciControllers[i]);
+	}
+	for (int i = 0; i < g_ahciDeviceNum; i++)
+	{
+		AhciPortInit (&g_ahciDevices[i]);
 	}
 }
