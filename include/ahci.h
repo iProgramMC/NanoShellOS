@@ -8,6 +8,10 @@
 #define _AHCI_H
 
 //https://wiki.osdev.org/AHCI
+//https://zeal-operating-system.github.io/Kernel/BlkDev/DiskAHCI.ZC.html
+
+#define ATA_IDENTIFY            0xEC
+#define ATA_IDENTIFY_PACKET     0xA1 // IDENTIFY PACKET DEVICE, mirror of ATA_IDENTIFY for ATAPI
 
 typedef enum
 {
@@ -196,26 +200,34 @@ FisDmaSetup;
 typedef volatile struct
 {
 	// DW0
-	uint8_t  cfl:5;		// Command FIS length in DWORDS, 2 ~ 16
-	uint8_t  a:1;		// ATAPI
-	uint8_t  w:1;		// Write, 1: H2D, 0: D2H
-	uint8_t  p:1;		// Prefetchable
- 
-	uint8_t  r:1;		// Reset
-	uint8_t  b:1;		// BIST
-	uint8_t  c:1;		// Clear busy upon R_OK
-	uint8_t  rsv0:1;		// Reserved
-	uint8_t  pmp:4;		// Port multiplier port
- 
-	uint16_t prdtl;		// Physical region descriptor table length in entries
- 
+	union
+	{
+		struct
+		{
+			uint8_t  cfl:5;  // Command FIS length in DWORDS, 2 ~ 16
+			uint8_t  a:1;    // ATAPI
+			uint8_t  w:1;    // Write, 1: H2D, 0: D2H
+			uint8_t  p:1;    // Prefetchable
+			
+			uint8_t  r:1;    // Reset
+			uint8_t  b:1;    // BIST
+			uint8_t  c:1;    // Clear busy upon R_OK
+			uint8_t  rsv0:1; // Reserved
+			uint8_t  pmp:4;  // Port multiplier port
+		}
+		m_desc;
+		uint16_t m_descVal;
+	};
+	
+	uint16_t m_prdtLength;   // Physical region descriptor table length in entries
+	
 	// DW1
 	volatile
-	uint32_t prdbc;		// Physical region descriptor byte count transferred
+	uint32_t prdbc;   // Physical region descriptor byte count transferred
  
 	// DW2, 3
-	uint32_t ctba;		// Command table descriptor base address
-	uint32_t ctbau;		// Command table descriptor base address upper 32 bits
+	uint32_t m_cmdTableBase;   // Command table descriptor base address
+	uint32_t m_cmdTableBaseU;  // Command table descriptor base address upper 32 bits
  
 	// DW4 - 7
 	uint32_t rsv1[4];	// Reserved
@@ -225,14 +237,14 @@ HbaCmdHeader;
 
 typedef volatile struct
 {
-	uint32_t dba;		// Data base address
-	uint32_t dbau;		// Data base address upper 32 bits
-	uint32_t rsv0;		// Reserved
+	uint32_t m_dataBase;  // Data base address
+	uint32_t m_dataBaseU; // Data base address upper 32 bits
+	uint32_t rsv0;        // Reserved
  
 	// DW3
-	uint32_t dbc:22;		// Byte count, 4M max
-	uint32_t rsv1:9;		// Reserved
-	uint32_t i:1;		// Interrupt on completion
+	uint32_t m_dataBaseCount:22;   // Byte count, 4M max
+	uint32_t rsv1:9;   // Reserved
+	uint32_t i:1;      // Interrupt on completion
 }
 __attribute__((packed))
 HbaPrdtEntry;
@@ -256,25 +268,25 @@ HbaCmdTable;
 
 typedef volatile struct
 {
-	uint32_t clb;          // 0x00, command list base address, 1K-byte aligned
-	uint32_t clbu;         // 0x04, command list base address upper 32 bits
-	uint32_t fb;           // 0x08, FIS base address, 256-byte aligned
-	uint32_t fbu;          // 0x0C, FIS base address upper 32 bits
-	uint32_t m_intStatus;  // 0x10, interrupt status
-	uint32_t m_intEnable;  // 0x14, interrupt enable
-	uint32_t m_cmdState;   // 0x18, command and status
-	uint32_t rsv0;         // 0x1C, Reserved
-	uint32_t m_tfd;        // 0x20, task file data
-	uint32_t m_signature;  // 0x24, signature
-	uint32_t m_sataStatus; // 0x28, SATA status (SCR0:SStatus)
-	uint32_t m_sCtl;       // 0x2C, SATA control (SCR2:SControl)
-	uint32_t m_sErr;       // 0x30, SATA error (SCR1:SError)
-	uint32_t sact;         // 0x34, SATA active (SCR3:SActive)
-	uint32_t ci;           // 0x38, command issue
-	uint32_t sntf;         // 0x3C, SATA notification (SCR4:SNotification)
-	uint32_t fbs;          // 0x40, FIS-based switch control
-	uint32_t rsv1[11];	   // 0x44 ~ 0x6F, Reserved
-	uint32_t vendor[4];    // 0x70 ~ 0x7F, vendor specific
+	uint32_t m_cmdListBase; // 0x00, command list base address, 1K-byte aligned
+	uint32_t m_cmdListBaseU;// 0x04, command list base address upper 32 bits
+	uint32_t m_fisBase;     // 0x08, FIS base address, 256-byte aligned
+	uint32_t m_fisBaseU;    // 0x0C, FIS base address upper 32 bits
+	uint32_t m_intStatus;   // 0x10, interrupt status
+	uint32_t m_intEnable;   // 0x14, interrupt enable
+	uint32_t m_cmdState;    // 0x18, command and status
+	uint32_t rsv0;          // 0x1C, Reserved
+	uint32_t m_tfd;         // 0x20, task file data
+	uint32_t m_signature;   // 0x24, signature
+	uint32_t m_sataStatus;  // 0x28, SATA status (SCR0:SStatus)
+	uint32_t m_sCtl;        // 0x2C, SATA control (SCR2:SControl)
+	uint32_t m_sErr;        // 0x30, SATA error (SCR1:SError)
+	uint32_t m_sAct;        // 0x34, SATA active (SCR3:SActive)
+	uint32_t m_cmdIssue;    // 0x38, command issue
+	uint32_t sntf;          // 0x3C, SATA notification (SCR4:SNotification)
+	uint32_t fbs;           // 0x40, FIS-based switch control
+	uint32_t rsv1[11];	    // 0x44 ~ 0x6F, Reserved
+	uint32_t vendor[4];     // 0x70 ~ 0x7F, vendor specific
 }
 __attribute__((packed))
 HbaPort;
@@ -306,23 +318,28 @@ typedef volatile struct
 __attribute__((packed))
 HbaMem;
 
+struct AhciController;
+
 typedef struct
 {
 	int        m_nContID;
 	int        m_nDevID;
 	
-	PciDevice *m_pDev;
+	PciDevice             *m_pDev;
+	struct AhciController *m_pParent;
 	
 	volatile HbaMem  *m_pMem;
 	volatile HbaPort *m_pPort;
 	
-	volatile void *m_pClb, *m_pFb; //for now
-
-	int        m_nMaxCommands;
+	volatile void *m_pCommandListBase, *m_pFisBase; //for now
+	
+	volatile HbaCmdTable *m_pCommandTableBase[32];
+	
+	uint16_t m_pDevIDRecord[256];
 }
 AhciDevice;
 
-typedef struct
+typedef struct AhciController
 {
 	int        m_nID;
 	
@@ -330,6 +347,8 @@ typedef struct
 	AhciDevice*m_pDevices[30];
 	
 	volatile HbaMem *m_pMem;
+
+	int        m_nMaxCommands;
 }
 AhciController;
 

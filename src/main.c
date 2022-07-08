@@ -45,6 +45,7 @@ void VmwInitIfApplicable();
 void BgaInitIfApplicable();
 void KiIrqEnable();
 void KeCPUID();
+void KiTimingWait();
 void ShellInit();
 void CrashReporterCheckNoWindow();
 void KiLaunch(TaskedFunction func);
@@ -76,6 +77,8 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	KiPermitTaskSwitching();
 	SbInit();
 	KbInit();
+	KiIrqEnable();
+	KiTimingWait();
 	FsInit();
 	StIdeInit();
 	StAhciInit();
@@ -89,7 +92,6 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	#ifdef EXPERIMENTAL
 	VbInitIfApplicable();
 	#endif
-	KiIrqEnable();
 	MouseInit();
 	VmwInitIfApplicable();
 	ShellInit();

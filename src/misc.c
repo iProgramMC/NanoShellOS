@@ -227,13 +227,21 @@ uint64_t GetUsecCountUnsafe()
 		gEarliestUsecCount = newUsecCount;
 	return gEarliestUsecCount;
 }
+void KiTimingWait()
+{
+	// wait 1 second for system to initialize, so that we can wait and stuff
+	while (GetTickCount() < 1000)
+	{
+		asm("hlt":::"memory");
+	}
+}
 uint64_t GetUsecCount()
 {
 	if (!g_bRtcInitialized)
 		return 0;
 	
 	cli;
-	int tc = GetUsecCount();
+	uint64_t tc = GetUsecCountUnsafe();
 	sti;
 	return tc;
 }

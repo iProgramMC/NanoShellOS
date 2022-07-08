@@ -38,6 +38,8 @@
 #define ATAS_DRQ (1 << 3)
 #define ATAS_BSY (1 << 7)
 
+#define PXI_TFE (1 << 30)
+
 //TODO: Allow handling port 30 and 31 too. Do this only if some weird hardware maps the AHCI devices there.
 //To be honest, I'm not sure it's worth the trouble of using MmMapPhysicalMemory instead of the fast version
 //(which handles physical pages)
@@ -124,6 +126,7 @@ static void AhciProbeController(AhciController *pController)
 				pDev->m_pPort   = &pController->m_pMem->m_ports[i];
 				pDev->m_nContID = pController->m_nID;
 				pDev->m_nDevID  = i;
+				pDev->m_pParent = pController;
 				
 				pController->m_pDevices[i]   = pDev;
 			}
@@ -171,7 +174,7 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 static void AhciPortCommandStop (AhciDevice *pDev)
 {
 	SLogMsg("STOPPING command engine...");
-	if (!(pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST)))
+	if (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST))
 	{
 		SLogMsg("Setting flags.");
 		pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
@@ -201,6 +204,16 @@ static void AhciStopCommandEngine (AhciController *pController)
 	}
 }
 
+static void AhciPortWaitFull (AhciDevice *pDev)
+{
+	while (true)
+	{
+		if (!(pDev->m_pPort->m_tfd & (ATAS_DRQ | ATAS_BSY)))
+			return;
+		
+		asm("pause":::"memory");
+	}
+}
 static bool AhciPortWait (AhciDevice *pDev)
 {
 	int timeout = 10000000;//some ridiculously high amount
@@ -227,6 +240,7 @@ static void AhciPortReset(AhciDevice *pDev)
 	
 	if (!AhciPortWait (pDev))
 	{
+		SLogMsg("Intrusive reset");
 		// Perform more 'intrusive' HBA<->Port comm reset (sec. 10.4.2 of spec).
 		pDev->m_pPort->m_sCtl = PXSCTL_DET_INIT;
 		
@@ -276,6 +290,8 @@ void AhciControllerInit(AhciController* pDev)
 	// Indicate that system is aware of AHCI by setting GHC.AE to 1.
 	pHBA->m_globalHBACtl |= (1U << 31);
 	
+	pDev->m_nMaxCommands = (pHBA->m_capabilities & 0x1F00) >> 8;
+	
 	// Transfer ownership from BIOS if supported.
 	AhciPerformBiosHandoff(pDev->m_pMem);
 	
@@ -299,21 +315,212 @@ void AhciPortCommandStart(AhciDevice *pDev)
 	pDev->m_pPort->m_cmdState |= PXCMD_ST;
 }
 
+static int AhciGetCommandSlot(AhciDevice *pDevice)
+{
+	uint32_t slots = pDevice->m_pPort->m_sAct | pDevice->m_pPort->m_cmdIssue;
+	for (int i = 0; i < pDevice->m_pParent->m_nMaxCommands; i++)
+	{
+		if (!(slots & (1 << i))) return i;
+	}
+	
+	SLogMsg("NO empty command slots on port!");
+	return -1;
+}
+
+static HbaCmdHeader* AhciGetActiveHeader(AhciDevice *pDevice, int cmdSlot)
+{
+	return &(((HbaCmdHeader*)pDevice->m_pCommandListBase)[cmdSlot]);
+}
+
+static void AhciPortCommandWait (AhciDevice *pDev, int cmdSlot)
+{
+	// Wait on command completion after command issue, and double check any error.
+	
+	while (true)
+	{
+		// If command has been processed:
+		if (!(pDev->m_pPort->m_cmdIssue & (1 << cmdSlot)))
+			break;
+		
+		// If there's been an error:
+		if (pDev->m_pPort->m_intStatus & PXI_TFE) // Task File Error
+		{
+			SLogMsg("AHCI Port command %d failed!", cmdSlot);
+			return;
+		}
+		
+		asm ("pause":::"memory");
+		
+		KeTaskDone();
+	}
+	
+	if (pDev->m_pPort->m_intStatus & PXI_TFE)
+	{
+		SLogMsg("AHCI Port command %d failed!", cmdSlot);
+		return;
+	}
+}
+
+static void AhciDumpDevRecord(AhciDevice *pDev)
+{
+	char model_number[41];
+	model_number[40] = 0;
+	
+	memcpy (model_number, &pDev->m_pDevIDRecord[27], 20 * 2);
+	
+	for (int i = 0; i < 40; i += 2)
+	{
+		char aux;
+		aux = model_number[i+1];
+		model_number[i+1] = model_number[i];
+		model_number[i]   = aux;
+	}
+	
+	for (int i = 39; i > 0; i--)
+	{
+		if (model_number[i] != ' ') break;
+		
+		model_number[i] = 0;
+	}
+	
+	LogMsg("Found AHCI drive (address %x): '%s'", pDev, model_number);
+}
+
+static void AhciPortIdentify (AhciDevice *pDev)
+{
+	// Perform ATA_IDENTIFY command on an ATA/ATAPI drive, and store capacity and ID record.
+	uint32_t mem = 0;
+	
+	int cmdSlot = AhciGetCommandSlot (pDev);
+	if (cmdSlot < 0)
+	{
+		SLogMsg("Cannot run identify command (yet). No command slots are left. Might wanna wait first?");
+		return;
+	}
+	
+	HbaCmdHeader *pHeader = AhciGetActiveHeader(pDev, cmdSlot);
+	
+	// Reload the interrupt status;
+	uint32_t hold = pDev->m_pPort->m_intStatus;
+	asm("":::"memory");
+	pDev->m_pPort->m_intStatus = hold;
+	
+	uint8_t *devIdRecord = MmAllocateSinglePagePhy (&mem);
+	ASSERT(devIdRecord);
+	
+	HbaCmdTable *pTable = pDev->m_pCommandTableBase[cmdSlot];
+	memset (pTable, 0, sizeof *pTable);
+	
+	pTable->prdt_entry[0].m_dataBase  = mem;
+	pTable->prdt_entry[0].m_dataBaseU = 0;
+	pTable->prdt_entry[0].m_dataBaseCount = 512 - 1;
+	pHeader->m_prdtLength = 1; // 1 PRD.
+	
+	// Setup command FIS.
+	FisRegH2D* pCmdFis = (FisRegH2D*) &pTable->cfis;
+	pCmdFis->fis_type = FIS_TYPE_REG_H2D;
+	pCmdFis->c        = 1;
+	
+	if (pDev->m_pPort->m_signature == SATA_SIG_ATAPI)
+		pCmdFis->command = ATA_IDENTIFY_PACKET;
+	else
+		pCmdFis->command = ATA_IDENTIFY;
+	
+	pCmdFis->device = 0;
+	
+	// Wait on previous command to complete.
+	AhciPortWaitFull (pDev);
+	
+	// Issue the command.
+	SLogMsg("Issuing command ...");
+	pDev->m_pPort->m_cmdIssue |= (1 << cmdSlot);
+	
+	// Wait for it.
+	SLogMsg("Waiting for command ...");
+	AhciPortCommandWait (pDev, cmdSlot);
+	
+	// And there we go! We have an ID record now.
+	// Dump it all.
+	
+	SLogMsg("Dumping identify data obtained: ");
+	for (int i = 0; i < 512; i += 16)
+	{
+		for (int j = 0; j <  16; j++)
+		{
+			SLogMsgNoCr("%b ", devIdRecord[i+j]);
+		}
+		SLogMsgNoCr("    ");
+		for (int j = 0; j <  16; j++)
+		{
+			char c = devIdRecord[i+j];
+			if (c < 32) c = '.';
+			if (c == 127) c = '.';
+			SLogMsgNoCr("%c", c);
+		}
+		SLogMsg("");
+	}
+	
+	memcpy (pDev->m_pDevIDRecord, devIdRecord, sizeof (pDev->m_pDevIDRecord));
+	MmFree (devIdRecord);
+	
+	AhciDumpDevRecord(pDev);
+}
+
 void AhciPortInit(AhciDevice *pDev)
 {
-	SLogMsg("Reset Port");
 	AhciPortReset (pDev);
-	SLogMsg("Commands start");
 	AhciPortCommandStart (pDev);
 	
 	// Spin up, power on device. If the capability isn't supported the bits
 	// will be read-only and this won't do anything.
 	SLogMsg("SpinUp, PowerOn device");
 	pDev->m_pPort->m_cmdState |= PXCMD_POD | PXCMD_SUD;
+	
 	WaitMS(100); // Why?
 	
 	SLogMsg("Commands Stop");
 	AhciPortCommandStop (pDev);
+	
+	// 1kbyte align as per spec. Pages always allocate in 4096-byte alignment :)
+	
+	// Allocate the command list base.
+	
+	uint32_t mem;
+	
+	pDev->m_pCommandListBase = MmAllocateSinglePagePhy (&mem);
+	ASSERT(pDev->m_pCommandListBase && "Huh?");
+	memset(pDev->m_pCommandListBase, 0, 4096);
+	
+	pDev->m_pPort->m_cmdListBase  = mem;
+	pDev->m_pPort->m_cmdListBaseU = 0;
+	
+	// Allocate the place received FISes will be copied to.
+	pDev->m_pFisBase = MmAllocateSinglePagePhy (&mem);
+	ASSERT(pDev->m_pFisBase && "Huh?");
+	memset(pDev->m_pFisBase, 0, 4096);
+	
+	pDev->m_pPort->m_fisBase  = mem;
+	pDev->m_pPort->m_fisBaseU = 0;
+	
+	HbaCmdHeader* pTable = (HbaCmdHeader*)pDev->m_pCommandListBase;
+	
+	for (int i = 0; i < pDev->m_pParent->m_nMaxCommands; i++)
+	{
+		HbaCmdHeader *pHeader = &pTable[i];
+		
+		pHeader->m_desc.cfl =  sizeof (FisRegH2D) / sizeof (uint32_t);
+		
+		// Allocate a 
+		pDev->m_pCommandTableBase[i] = MmAllocateSinglePagePhy(&mem);
+		memset (pDev->m_pCommandTableBase[i], 0, 4096);
+		
+		pHeader->m_cmdTableBase  = mem;
+		pHeader->m_cmdTableBaseU = 0;
+	}
+	
+	AhciPortCommandStart(pDev);
+	
+	AhciPortIdentify(pDev);
 }
 
 void StAhciInit()
@@ -321,7 +528,9 @@ void StAhciInit()
 	if (!g_ahciControllerNum)
 	{
 		LogMsg("No AHCI controllers found.");
+		return;
 	}
+	LogMsg("Initializing AHCI controllers...");
 	for (int i = 0; i < g_ahciControllerNum; i++)
 	{
 		AhciControllerInit (&g_ahciControllers[i]);
