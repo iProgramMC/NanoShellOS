@@ -10,7 +10,7 @@
 //https://wiki.osdev.org/AHCI
 //https://zeal-operating-system.github.io/Kernel/BlkDev/DiskAHCI.ZC.html
 
-#define ATA_IDENTIFY            0xEC
+#define ATA_IDENTIFY            0xEC //! same as ATAPIO's CMD_GETID
 #define ATA_IDENTIFY_PACKET     0xA1 // IDENTIFY PACKET DEVICE, mirror of ATA_IDENTIFY for ATAPI
 
 typedef enum

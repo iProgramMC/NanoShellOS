@@ -10,6 +10,8 @@
 #include <misc.h>
 
 //! TODO: Use interrupts instead of polling for this driver.
+#define ATA_READ_DMA_EXT  0xC4
+#define ATA_WRITE_DMA_EXT 0x35
 
 #define	SATA_SIG_ATA	0x00000101	// SATA drive
 #define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive
@@ -39,6 +41,11 @@
 #define ATAS_BSY (1 << 7)
 
 #define PXI_TFE (1 << 30)
+
+#define CH_DESC_A (1 << 5) // ATAPI
+#define CH_DESC_W (1 << 6) // Write
+
+#define CF_DESC_C (1 << 7) // 'Command' bit. Set when FIS is an ATA command.
 
 //TODO: Allow handling port 30 and 31 too. Do this only if some weird hardware maps the AHCI devices there.
 //To be honest, I'm not sure it's worth the trouble of using MmMapPhysicalMemory instead of the fast version
@@ -466,6 +473,106 @@ static void AhciPortIdentify (AhciDevice *pDev)
 	AhciDumpDevRecord(pDev);
 }
 
+static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, uint8_t nCount, bool bWriteToMem)
+{
+	//TODO: allow batch operation with > 4 sectors.
+	//actually do we really use this functionality?
+	if (nCount > 4)
+	{
+		uint8_t *pBufByte = (uint8_t*)pBuf;
+		
+		bool b = true;
+		
+		for (int i = 0; i < nCount; i += 4)
+		{
+			b = AhciPortAtaReadWrite (pDev, pBufByte, nLBA, 4, bWriteToMem);
+			
+			if (!b) return b; //stop if an error occurred
+			
+			pBufByte += 2048;
+			nLBA += 4;
+		}
+		b = AhciPortAtaReadWrite (pDev, pBufByte, nLBA, nCount % 4, bWriteToMem);
+		
+		return b;
+	}
+	
+	if (pDev->m_pPort->m_signature != SATA_SIG_ATA)
+	{
+		SLogMsg("This ain't an ATA drive!");
+		return false;
+	}
+	
+	int cmdSlot = AhciGetCommandSlot (pDev);
+	
+	HbaCmdHeader *pHeader = AhciGetActiveHeader (pDev, cmdSlot);
+	
+	size_t bufferSize = 512 * nCount;
+	size_t prdtLen    = 1;
+	
+	pHeader->m_prdtLength = prdtLen;
+	
+	pHeader->m_desc.w = bWriteToMem;
+	
+	uint32_t mem;
+	//TODO: Allow allocating more than 1 page with continuity in physical memory space.
+	void *pMem = MmAllocateSinglePagePhy (&mem);
+	if (bWriteToMem)
+		memcpy (pMem, pBuf, bufferSize);
+	
+	// Obtain command table and zero it.
+	HbaCmdTable *pTable = pDev->m_pCommandTableBase[cmdSlot];
+	memset (pTable, 0, sizeof *pTable);
+	
+	pTable->prdt_entry[0].m_dataBase  = mem;
+	pTable->prdt_entry[0].m_dataBaseU = 0;
+	pTable->prdt_entry[0].m_dataBaseCount = bufferSize - 1;
+	
+	// Setup the command FIS.
+	
+	FisRegH2D *pFis = (FisRegH2D*)pTable->cfis;
+	
+	pFis->fis_type = FIS_TYPE_REG_H2D;
+	pFis->c        = 1;
+	
+	//! Assuming support for LBA48.
+	if (bWriteToMem)
+		pFis->command = ATA_WRITE_DMA_EXT;
+	else
+		pFis->command = ATA_READ_DMA_EXT;
+	
+	uint8_t* pBlockNum = (uint8_t*)&nLBA;
+	pFis->lba0 = pBlockNum[0];
+	pFis->lba1 = pBlockNum[1];
+	pFis->lba2 = pBlockNum[2];
+	pFis->lba3 = pBlockNum[3];
+	pFis->lba4 = pBlockNum[4];
+	pFis->lba5 = pBlockNum[5];
+	
+	pFis->device = 1 << 6; // Required as per ATA8-ACS section 7.25.3
+	pFis->countl = nCount;
+	pFis->counth = 0;
+	
+	// Wait on previous command to complete.
+	AhciPortWaitFull (pDev);
+	
+	// Issue this command.
+	pDev->m_pPort->m_cmdIssue |= (1 << cmdSlot);
+	
+	// Wait on command to finish.
+	AhciPortCommandWait (pDev, cmdSlot);
+	
+	// If we're reading...
+	if (!bWriteToMem)
+	{
+		// Write back to the arugment buffer.
+		memcpy (pBuf, pMem, bufferSize);
+	}
+	
+	// OK!
+	return true;
+}
+
 void AhciPortInit(AhciDevice *pDev)
 {
 	AhciPortReset (pDev);
@@ -521,6 +628,35 @@ void AhciPortInit(AhciDevice *pDev)
 	AhciPortCommandStart(pDev);
 	
 	AhciPortIdentify(pDev);
+	
+	// try reading sector 0 (MBR).
+	
+	uint8_t mbr[512];
+	bool b = AhciPortAtaReadWrite (pDev, mbr, 0, 1, false);
+	if (b)
+	{
+		SLogMsg("Dumping MBR data obtained: ");
+		for (int i = 0; i < 512; i += 16)
+		{
+			for (int j = 0; j <  16; j++)
+			{
+				SLogMsgNoCr("%b ", mbr[i+j]);
+			}
+			SLogMsgNoCr("    ");
+			for (int j = 0; j <  16; j++)
+			{
+				char c = mbr[i+j];
+				if (c < 32) c = '.';
+				if (c == 127) c = '.';
+				SLogMsgNoCr("%c", c);
+			}
+			SLogMsg("");
+		}
+	}
+	else
+	{
+		LogMsg("Reading Failed!");
+	}
 }
 
 void StAhciInit()
