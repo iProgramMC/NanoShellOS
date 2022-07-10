@@ -17,15 +17,12 @@
 #include <vga.h>
 #include <misc.h>
 
+extern uint32_t e_placement;
+
 extern bool g_interruptsAvailable;
 
 extern uint32_t g_kernelPageDirectory[];
 extern PageEntry g_pageTableArray[];
-extern uint32_t* e_frameBitsetVirt;
-extern uint32_t e_frameBitsetSize;
-extern uint32_t e_placement;
-
-uint32_t g_frameBitset [32768];//Enough to wrap the entirety of the address space
 
 uint32_t* g_pageDirectory = NULL;
 uint32_t* g_curPageDir = NULL;
@@ -35,21 +32,15 @@ void MmFreePageUnsafe(void* pAddr);
 void MmFreeUnsafe    (void* pAddr);
 void MmFreeUnsafeK   (void* pAddr);
 
-void MmTlbInvalidate() {
-	__asm__("movl %cr3, %ecx\n\tmovl %ecx, %cr3\n\t");
+void MmTlbInvalidate()
+{
+	__asm__("movl %%cr3, %%ecx\n\tmovl %%ecx, %%cr3\n\t":::"cx");
 }
 void MmUsePageDirectory(uint32_t* curPageDir, uint32_t phys)
 {
 	g_curPageDir = curPageDir;
 	g_curPageDirP = phys;
 	__asm__ volatile ("mov %0, %%cr3"::"r"((uint32_t*)phys));
-}
-extern void MmStartupStuff(); //io.asm
-void MmInitPrimordial()
-{
-	MmStartupStuff();
-	e_frameBitsetSize = 131072;
-	e_frameBitsetVirt = g_frameBitset;
 }
 
 // Mark the code and rodata segments as read-only.
@@ -67,12 +58,7 @@ void MmMarkStuffReadOnly()
 	}
 }
 
-int g_numPagesAvailable = 0;
-
-int GetNumPhysPages()
-{
-	return g_numPagesAvailable;
-}
+int GetNumPhysPages();
 
 /* Quick memory map one page trick */
 #if 1
@@ -175,140 +161,11 @@ uint32_t g_memoryStart;
  * by the virtual memory manager below this.
  */
 #if 1
-
-#define  INDEX_FROM_BIT(a) (a / 32)
-#define OFFSET_FROM_BIT(a) (a % 32)
-static void MmSetFrame (uint32_t frameAddr)
-{
-	uint32_t frame = frameAddr >> 12;
-	uint32_t idx = INDEX_FROM_BIT (frame),
-			 off =OFFSET_FROM_BIT (frame);
-	e_frameBitsetVirt[idx] |= (0x1 << off);
-}
-static void MmClrFrame (uint32_t frameAddr)
-{
-	uint32_t frame = frameAddr >> 12;
-	uint32_t idx = INDEX_FROM_BIT (frame),
-			 off =OFFSET_FROM_BIT (frame);
-	e_frameBitsetVirt[idx] &=~(0x1 << off);
-}
-
-static uint32_t MmFindFreeFrame()
-{
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
-	{
-		//Any bit free?
-		if (e_frameBitsetVirt[i] != 0xFFFFFFFF) {
-			//yes, which?
-			for (int j=0; j<32; j++)
-			{
-				if (!(e_frameBitsetVirt[i] & (1<<j)))
-				{
-					//FREE_LOCK (g_memoryPmmLock);
-					return i*32 + j;
-				}
-			}
-		}
-		//no, continue
-	}
-	//what
-	SLogMsg("No more physical memory page frames. This can and will go bad!!");
-	return 0xffffffffu;
-}
-int GetNumFreePhysPages()
-{
-	int result = 0;
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
-	{
-		//Any bit free?
-		if (e_frameBitsetVirt[i] != 0xFFFFFFFF) {
-			//yes, which?
-			for (int j=0; j<32; j++)
-			{
-				if (!(e_frameBitsetVirt[i] & (1<<j)))
-					result++;
-			}
-		}
-		//no, continue
-	}
-	
-	//what
-	return result;
-}
-
-void MmInitializePMM(multiboot_info_t* mbi)
-{
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
-	{
-		e_frameBitsetVirt[i] = 0xFFFFFFFF;
-	}
-	
-	//parse the multiboot mmap and mark the respective memory frames as free:
-	int len, addr;
-	len = mbi->mmap_length, addr = mbi->mmap_addr;
-	
-	//adding extra complexity is a no-go for now
-	if (addr >= 0x100000)
-	{
-		SwitchMode(0);
-		CoInitAsText(&g_debugConsole);
-		LogMsg("OS state not supported.  Mmap address: %x  Mmap len: %x", addr, len);
-		KeStopSystem();
-	}
-	
-	//turn this into a virt address:
-	addr += 0xC0000000;
-	
-	multiboot_memory_map_t* pMemoryMap;
-	
-	//logmsg's are for debugging and should be removed.
-	for (pMemoryMap = (multiboot_memory_map_t*)addr;
-		 (unsigned long) pMemoryMap < addr + mbi->mmap_length;
-		 pMemoryMap = (multiboot_memory_map_t*) ((unsigned long) pMemoryMap + pMemoryMap->size + sizeof(pMemoryMap->size)))
-	{
-		// if this memory range is not reserved AND it doesn't bother our kernel space, free it
-		if (pMemoryMap->type == MULTIBOOT_MEMORY_AVAILABLE)
-			for (int i = 0; i < (int)pMemoryMap->len; i += 0x1000)
-			{
-				uint32_t addr = pMemoryMap->addr + i;
-				if (addr >= e_placement)// || addr < 0x100000)
-					MmClrFrame (addr);
-			}
-	}
-	
-	// Clear out the kernel, from 0x100000 to 0x600000
-	for (int i = 0x100; i < (e_placement >> 12) + 1; i++)
-	{
-		MmSetFrame(i << 12); // Set frame as not allocatable
-	}
-	
-	multiboot_info_t* pInfo = KiGetMultibootInfo();
-	if (pInfo->mods_count > 0)
-	{
-		//Usually the mods table is below 1m.
-		if (pInfo->mods_addr >= 0x100000)
-		{
-			LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
-			KeStopSystem();
-		}
-		
-		//The initrd module is here.
-		multiboot_module_t *pModules = (void*) (pInfo->mods_addr + 0xc0000000);
-		for (int i = 0; i < pInfo->mods_count; i++)
-		{
-			SLogMsg("Blocking out frames from module");
-			// block out the frames this contains from being allocated by the PMM
-			for (uint32_t pg = pModules[i].mod_start;
-				          pg < pModules[i].mod_end + 0xFFF;
-						  pg += 4096)
-			{
-				MmSetFrame (pg);
-			}
-		}
-	}
-	
-	g_numPagesAvailable = GetNumFreePhysPages();
-}
+void MmSetFrame (uint32_t frameAddr);
+void MmClrFrame (uint32_t frameAddr);
+uint32_t MmFindFreeFrame();
+int GetNumFreePhysPages();
+void MmInitializePMM(multiboot_info_t* mbi);
 
 uint32_t MmMapPhysicalMemoryRWUnsafe(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite)
 {
@@ -581,7 +438,6 @@ bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int cal
 		MmFreeUnsafe(pHeap->m_memoryAllocAuthor);
 		MmFreeUnsafe(pHeap->m_memoryAllocAuthorLine);
 		MmFreeUnsafe(pHeap->m_memoryAllocSize);
-		MmFreeUnsafe(pHeap->m_pageDirectoryPhys);
 		return false;
 	}
 	
@@ -867,7 +723,7 @@ void *MmReAllocateUnsafeD(void* old_ptr, size_t size, const char* CallFile, int 
 		
 		bool spaceAvailable = true;
 		
-		for (int i = oldPages; i < numPagesNeeded; i++)
+		for (size_t i = oldPages; i < numPagesNeeded; i++)
 		{
 			if (g_pageEntries[addr + i].m_bPresent)
 			{
@@ -880,7 +736,7 @@ void *MmReAllocateUnsafeD(void* old_ptr, size_t size, const char* CallFile, int 
 		{
 			// Proceed with the expansion.
 			
-			for (int i = oldPages; i < numPagesNeeded; i++)
+			for (size_t i = oldPages; i < numPagesNeeded; i++)
 			{
 				void *ptr = MmSetupPage (addr+i, NULL, CallFile, CallLine);
 				
