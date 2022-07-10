@@ -17,6 +17,7 @@ enum {
 	DEVICE_IDE,
 	DEVICE_FLOPPY,
 	DEVICE_RAMDISK,
+	DEVICE_AHCI,
 	DEVICE_COUNT,
 };
 enum {
@@ -87,6 +88,11 @@ bool StIdeIsAvailable (uint8_t did);
 #if 1
 
 #include <ahci.h>
+
+DriveStatus StAhciRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t nBlocks);
+DriveStatus StAhciWrite(uint32_t lba, const void* pDest, uint8_t driveID, uint8_t nBlocks);
+bool StAhciIsAvailable (uint8_t did);
+
 
 #endif
 

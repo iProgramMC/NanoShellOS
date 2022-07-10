@@ -1934,6 +1934,8 @@ void FsFatInit ()
 	{
 		if (!StIsDriveAvailable(i)) continue;
 		
+		SLogMsg("Reading MBR from drive %x", i);
+		
 		// This drive is available.  Look at its MBR first.
 		// TODO handle cases where there's only one main partition across
 		// the whole disk

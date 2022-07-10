@@ -18,7 +18,7 @@
  *    - 0xF0 - 0xFF: RAM disk drives 
  *    - 0xE0 - 0xEF: USB flash drives (?)
  *    - 0xAA       : Special reserved flag. This drive ID is always empty.
- *    - 0x20 - 0x2F: AHCI drives (?)
+ *    - 0x20 - 0x5F: AHCI drives
  */
  
 #include <storabs.h>
@@ -31,6 +31,7 @@ static DriveType StGetDriveType(DriveID driveNum)
 {
 	if (                    driveNum <= 0x03) return DEVICE_IDE;
 	if (driveNum >= 0x10 && driveNum <= 0x11) return DEVICE_FLOPPY;
+	if (driveNum >= 0x20 && driveNum <= 0x5F) return DEVICE_AHCI;
 	if (driveNum >= 0xF0)                     return DEVICE_RAMDISK;
 	return DEVICE_UNKNOWN;
 }
@@ -118,11 +119,10 @@ static uint8_t StIdeGetSubID (DriveID did)
 {
 	return (int)did & 0x3;
 }
-#endif
-
-// ATA driver
-#if 1
-
+static uint8_t StAhciGetSubID(DriveID did)
+{
+	return (int)did - 0x20;
+}
 #endif
 
 // Abstracted out drive callbacks
@@ -132,28 +132,32 @@ static DriveReadCallback g_ReadCallbacks[] = {
 	StNoDriveRead, //Unknown
 	StIdeDriveRead, //IDE
 	StNoDriveRead, //Floppy - Scrapped
-	StRamDiskRead, //RAM disk,
+	StRamDiskRead, //RAM disk
+	StAhciRead,    //AHCI
 	StNoDriveRead, //Count
 };
 static DriveWriteCallback g_WriteCallbacks[] = {
 	StNoDriveWrite, //Unknown
 	StIdeDriveWrite, //IDE
 	StNoDriveWrite, //Floppy
-	StRamDiskWrite, //RAM disk,
+	StRamDiskWrite, //RAM disk
+	StAhciWrite,    //AHCI
 	StNoDriveWrite, //Count
 };
 static DriveGetSubIDCallback g_GetSubIDCallbacks[] = {
 	StNoDriveGetSubID, //Unknown
 	StIdeGetSubID,     //IDE
 	StNoDriveGetSubID, //Floppy
-	StRamDiskGetSubID, //RAM disk,
+	StRamDiskGetSubID, //RAM disk
+	StAhciGetSubID,    //AHCI
 	StNoDriveGetSubID, //Count
 };
 static DriveIsAvailableCallback g_IsAvailableCallbacks[] = {
 	StNoDriveIsAvailable, //Unknown
 	StIdeIsAvailable,     //IDE
 	StNoDriveIsAvailable, //Floppy
-	StRamDiskIsAvailable, //RAM disk,
+	StRamDiskIsAvailable, //RAM disk
+	StAhciIsAvailable,    //AHCI
 	StNoDriveIsAvailable, //Count
 };
 

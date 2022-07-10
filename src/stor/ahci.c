@@ -10,7 +10,7 @@
 #include <misc.h>
 
 //! TODO: Use interrupts instead of polling for this driver.
-#define ATA_READ_DMA_EXT  0xC4
+#define ATA_READ_DMA_EXT  0x25
 #define ATA_WRITE_DMA_EXT 0x35
 
 #define	SATA_SIG_ATA	0x00000101	// SATA drive
@@ -352,7 +352,7 @@ static void AhciPortCommandWait (AhciDevice *pDev, int cmdSlot)
 		// If there's been an error:
 		if (pDev->m_pPort->m_intStatus & PXI_TFE) // Task File Error
 		{
-			SLogMsg("AHCI Port command %d failed!", cmdSlot);
+			LogMsg("AHCI Port command %d failed!", cmdSlot);
 			return;
 		}
 		
@@ -363,7 +363,7 @@ static void AhciPortCommandWait (AhciDevice *pDev, int cmdSlot)
 	
 	if (pDev->m_pPort->m_intStatus & PXI_TFE)
 	{
-		SLogMsg("AHCI Port command %d failed!", cmdSlot);
+		LogMsg("AHCI Port command %d failed!", cmdSlot);
 		return;
 	}
 }
@@ -507,16 +507,21 @@ static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, ui
 	
 	HbaCmdHeader *pHeader = AhciGetActiveHeader (pDev, cmdSlot);
 	
+	// Reload the interrupt status;
+	uint32_t hold = pDev->m_pPort->m_intStatus;
+	asm("":::"memory");
+	pDev->m_pPort->m_intStatus = hold;
+	
 	size_t bufferSize = 512 * nCount;
 	size_t prdtLen    = 1;
-	
-	pHeader->m_prdtLength = prdtLen;
 	
 	pHeader->m_desc.w = bWriteToMem;
 	
 	uint32_t mem;
 	//TODO: Allow allocating more than 1 page with continuity in physical memory space.
 	void *pMem = MmAllocateSinglePagePhy (&mem);
+	ASSERT(pMem);
+	
 	if (bWriteToMem)
 		memcpy (pMem, pBuf, bufferSize);
 	
@@ -528,9 +533,11 @@ static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, ui
 	pTable->prdt_entry[0].m_dataBaseU = 0;
 	pTable->prdt_entry[0].m_dataBaseCount = bufferSize - 1;
 	
+	pHeader->m_prdtLength = prdtLen;
+	
 	// Setup the command FIS.
 	
-	FisRegH2D *pFis = (FisRegH2D*)pTable->cfis;
+	FisRegH2D *pFis = (FisRegH2D*) &pTable->cfis;
 	
 	pFis->fis_type = FIS_TYPE_REG_H2D;
 	pFis->c        = 1;
@@ -676,3 +683,29 @@ void StAhciInit()
 		AhciPortInit (&g_ahciDevices[i]);
 	}
 }
+
+// AHCI Storage Abstraction layer
+bool StAhciIsAvailable (DriveID driveID)
+{
+	return driveID < g_ahciDeviceNum;
+}
+
+DriveStatus StAhciRead(uint32_t lba, void *pDest, uint8_t driveID, uint8_t nBlocks)
+{
+	bool b = AhciPortAtaReadWrite (&g_ahciDevices[driveID], pDest, (uint64_t)lba, nBlocks, false);
+	if (!b)
+		return DEVERR_HARDWARE_ERROR;
+	
+	return DEVERR_SUCCESS;
+}
+DriveStatus StAhciWrite(uint32_t lba, const void *pSrc, uint8_t driveID, uint8_t nBlocks)
+{
+	//! Turning into void rather than const void, shouldn't be a problem because
+	//  we don't actually change what's at pSrc anyway
+	bool b = AhciPortAtaReadWrite (&g_ahciDevices[driveID], (void*)pSrc, (uint64_t)lba, nBlocks, true);
+	if (!b)
+		return DEVERR_HARDWARE_ERROR;
+	
+	return DEVERR_SUCCESS;
+}
+
