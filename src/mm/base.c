@@ -481,9 +481,9 @@ void MmInit()
 
 void MmInvalidateSinglePage(UNUSED uintptr_t add)
 {
-	//__asm__ volatile ("invlpg (%0)\n\t"::"r"(add):"memory");
-	(void)add;
-	MmTlbInvalidate();
+	__asm__ volatile ("invlpg (%0)\n\t"::"r"(add):"memory");
+	//(void)add;
+	//MmTlbInvalidate();
 }
 
 static void* MmSetupPage(int i, uint32_t* pPhysOut, const char* callFile, int callLine)
@@ -580,6 +580,8 @@ void MmFreePageUnsafe(void* pAddr)
 	
 	g_pageEntries[addr].m_bPresent = false;
 	g_memoryAllocationSize[addr] = 0;
+	
+	MmInvalidateSinglePage( (uintptr_t)pAddr );
 }
 bool MmIsPageMapped(uint32_t pageAddr)
 {
