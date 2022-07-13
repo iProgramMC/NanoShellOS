@@ -24,7 +24,7 @@ KERNEL_TARGET=$(BUILD_DIR)/kernel.bin
 INITRD_TARGET=$(BUILD_DIR)/initrd.tar
 IMAGE_TARGET=$(BUILD_DIR)/image.iso
 
-CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -DRANDOMIZE_MALLOCED_MEMORY -mno-sse2 -mno-sse
+CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -mno-sse2 -mno-sse
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000 -Map=$(KERNMAP_TARGET)
 ASFLAGS=-f elf32
 
