@@ -4,14 +4,6 @@
 
            Window Manager module
 ******************************************/
-
-// NOTE ABOUT PROCESSES:
-// This _should_ run in the kernel task!!!!
-// Why?
-
-// The action queues shall resort to using the unsafe versions if the caller running
-// Hide/Show/Nuke/ResizeWindow if it's called by window manager itself (i.e. menus)
-
 //#define ENABLE_MAXIMIZE
 
 #define PAINT_DEBUG_LOG
@@ -1449,6 +1441,7 @@ void SelectWindowUnsafe(Window* pWindow)
 //					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
 					g_windows[i].m_vbeData.m_dirty = true;
 					g_windows[i].m_renderFinished = true;
+					//todo: just draw the title bar
 				}
 			}
 		}
@@ -1460,6 +1453,7 @@ void SelectWindowUnsafe(Window* pWindow)
 //		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
+		pWindow->m_vbeData.m_drs.m_bIgnoreAndDrawAll = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 		g_focusedOnWindow = pWindow;
 	}
