@@ -46,25 +46,32 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+			
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -75,22 +82,29 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			break;
 		case EVENT_MOVECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (!this->m_bDisabled)
 			{
-				if (!this->m_buttonData.m_hovered)
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p))
 				{
-					this->m_buttonData.m_hovered = true;
+					if (!this->m_buttonData.m_hovered)
+					{
+						this->m_buttonData.m_hovered = true;
+						if (g_GlowOnHover)
+							WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+					}
+				}
+				else if (this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = false;
 					if (g_GlowOnHover)
 						WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 				}
 			}
-			else if (this->m_buttonData.m_hovered)
+			else
 			{
 				this->m_buttonData.m_hovered = false;
-				if (g_GlowOnHover)
-					WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			break;
 		}
@@ -103,6 +117,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
 				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
@@ -117,7 +132,23 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			else
 			{
 				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				
+				if (this->m_bDisabled)
+				{
+					//small hack
+					uint8_t b[4];
+					*((uint32_t*)b) = BUTTONMIDD;
+					b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+					
+					Rectangle r = this->m_rect;
+					r.left++; r.right++; r.top++; r.bottom++;
+					VidDrawText(this->m_text,       r     , TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+					VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, *((uint32_t*)b),         TRANSPARENT);
+				}
+				else
+				{
+					VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				}
 			}
 			VidSetClipRect (NULL);
 			
@@ -132,25 +163,31 @@ bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetButtonIcon_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -173,7 +210,20 @@ bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			}
 			
-			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			if (!this->m_bDisabled)
+			{
+				RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			}
+			else
+			{
+				//small hack
+				uint8_t b[4];
+				*((uint32_t*)b) = BUTTONMIDD;
+				b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+				
+				RenderIconForceSizeOutline (this->m_parm1, x + 1, y + 1, this->m_parm2, WINDOW_TEXT_COLOR_LIGHT);
+				RenderIconForceSizeOutline (this->m_parm1, x + 0, y + 0, this->m_parm2, *((uint32_t*)b));
+			}
 			
 			break;
 		}
@@ -186,15 +236,18 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_KILLFOCUS:
@@ -204,33 +257,39 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			break;
 		case EVENT_MOVECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (!this->m_bDisabled)
 			{
-				if (!this->m_buttonData.m_hovered)
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p))
 				{
-					this->m_buttonData.m_hovered = true;
+					if (!this->m_buttonData.m_hovered)
+					{
+						this->m_buttonData.m_hovered = true;
+						if (g_GlowOnHover)
+							WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+					}
+				}
+				else if (this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = false;
 					if (g_GlowOnHover)
 						WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 				}
-			}
-			else if (this->m_buttonData.m_hovered)
-			{
-				this->m_buttonData.m_hovered = false;
-				if (g_GlowOnHover)
-					WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetButtonIconBar_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -265,10 +324,23 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
 			}
 			
-			if (bRenderOutlineToo)
-				RenderIconForceSizeOutline (this->m_parm1, x + 2, y + 2, this->m_parm2, DARKEN(blue));
-			
-			RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			if (!this->m_bDisabled)
+			{
+				if (bRenderOutlineToo)
+					RenderIconForceSizeOutline (this->m_parm1, x + 2, y + 2, this->m_parm2, DARKEN(blue));
+				
+				RenderIconForceSize (this->m_parm1, x, y, this->m_parm2);
+			}
+			else
+			{
+				//small hack
+				uint8_t b[4];
+				*((uint32_t*)b) = BUTTONMIDD;
+				b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+				
+				RenderIconForceSizeOutline(this->m_parm1, x+1, y+1, this->m_parm2, WINDOW_TEXT_COLOR_LIGHT);
+				RenderIconForceSizeOutline(this->m_parm1, x+0, y+0, this->m_parm2, *((uint32_t*)b));
+			}
 			
 			break;
 		}
@@ -281,25 +353,31 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -310,22 +388,25 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			break;
 		case EVENT_MOVECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (!this->m_bDisabled)
 			{
-				if (!this->m_buttonData.m_hovered)
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p))
 				{
-					this->m_buttonData.m_hovered = true;
+					if (!this->m_buttonData.m_hovered)
+					{
+						this->m_buttonData.m_hovered = true;
+						if (g_GlowOnHover)
+							WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 1, pWindow);
+					}
+				}
+				else if (this->m_buttonData.m_hovered)
+				{
+					this->m_buttonData.m_hovered = false;
 					if (g_GlowOnHover)
 						WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 1, pWindow);
 				}
-			}
-			else if (this->m_buttonData.m_hovered)
-			{
-				this->m_buttonData.m_hovered = false;
-				if (g_GlowOnHover)
-					WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 1, pWindow);
 			}
 			break;
 		}
@@ -411,25 +492,31 @@ bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetButtonColor_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -461,26 +548,32 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				//CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
-				WindowRegisterEventUnsafe(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+				{
+					//send a command event to the window:
+					//CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+					WindowRegisterEventUnsafe(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+				}
+				this->m_buttonData.m_clicked = false;
+				WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
-			this->m_buttonData.m_clicked = false;
-			WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+			if (!this->m_bDisabled)
 			{
-				this->m_buttonData.m_clicked = true;
-				WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
+				{
+					this->m_buttonData.m_clicked = true;
+					WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				}
 			}
 			break;
 		}
@@ -515,13 +608,16 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (!this->m_bDisabled)
 			{
-				//send a command event to the window:
-				//WindowRegisterEvent(pWindow, EVENT_COMMAND, this->m_parm1, this->m_parm2);
-				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p))
+				{
+					//send a command event to the window:
+					//WindowRegisterEvent(pWindow, EVENT_COMMAND, this->m_parm1, this->m_parm2);
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+				}
 			}
 		}
 		//! fallthrough intentional - need the button to redraw itself as pushing back up
@@ -535,12 +631,15 @@ bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			Rectangle r = this->m_rect;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains (&r, &p))
+			if (!this->m_bDisabled)
 			{
-				//then fill in the text:
-				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_VCENTERED, 0x11, TRANSPARENT);
+				Rectangle r = this->m_rect;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains (&r, &p))
+				{
+					//then fill in the text:
+					VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_VCENTERED, 0x11, TRANSPARENT);
+				}
 			}
 			break;
 		}

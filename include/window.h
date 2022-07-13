@@ -423,6 +423,8 @@ typedef struct ControlStruct
 	// but due to some limitation m_triedRect may not match m_rect.
 	// The smallest rectangle a control can occupy is 10x10.
 	Rectangle m_triedRect;
+	
+	bool      m_bDisabled;
 }
 Control;
 

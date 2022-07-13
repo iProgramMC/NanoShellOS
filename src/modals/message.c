@@ -192,6 +192,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 			rect.right  = rect.left + buttonWidth;
 			rect.bottom = rect.top  + buttonHeight;
 			AddControl (pBox, CONTROL_BUTTON, rect, "OK", MBID_OK, 0, 0);
+			SetDisabledControl(pBox, MBID_OK, true);
 			break;
 		}
 		case MB_RESTART:

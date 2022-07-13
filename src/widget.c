@@ -27,6 +27,19 @@ void SetFocusedControl(Window *pWindow, int comboID)
 	}
 }
 
+void SetDisabledControl(Window *pWindow, int comboID, bool bDisabled)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control *pControl = &pWindow->m_pControlArray[i];
+		if (pControl->m_comboID == comboID)
+		{
+			pControl->m_bDisabled = bDisabled;
+			return;
+		}
+	}
+}
+
 /***************************************************************************
 	Explanation of how this is supposed to render:
 

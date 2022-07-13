@@ -202,6 +202,11 @@ void ImageCtlZoomToFill (Window *pWindow, int comboID);
  */
 void SetFocusedControl(Window *pWindow, int comboId);
 
+/**
+ * Sets the control with the comboid as disabled.
+ */
+void SetDisabledControl(Window *pWindow, int comboId, bool bDisabled);
+
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 
