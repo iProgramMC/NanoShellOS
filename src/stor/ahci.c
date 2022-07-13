@@ -576,6 +576,8 @@ static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, ui
 		memcpy (pBuf, pMem, bufferSize);
 	}
 	
+	MmFreeK(pMem);
+	
 	// OK!
 	return true;
 }

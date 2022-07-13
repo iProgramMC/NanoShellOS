@@ -203,7 +203,7 @@ FileNode* FsGetRootNode ()
 FileNode* CreateFileNode (FileNode* pParent)
 {
 	//Create the file node
-	FileNode* pNode = MmAllocateK (sizeof (FileNode));
+	FileNode* pNode = MakeFileNodeFromPool();//MmAllocateK (sizeof (FileNode));
 	if (!pNode)
 		return pNode;
 	
@@ -256,7 +256,7 @@ void EraseFileNode (FileNode* pFileNode)
 		pFileNode->next->prev = pFileNode->prev;
 	}
 	
-	MmFreeK (pFileNode);
+	FreeFileNode (pFileNode);
 }
 
 void FsInitializeDevicesDir();
@@ -281,6 +281,8 @@ void FsInit ()
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
 DirDescriptor  g_DirNodeToDescriptor [FD_MAX];
 
+void FiPoolDebugDump(void);
+
 void FiDebugDump()
 {
 	LogMsg("Listing opened files.");
@@ -293,6 +295,8 @@ void FiDebugDump()
 					p->m_bIsFIFO, p->m_pNode, p->m_openFile, p->m_openLine, p->m_sPath);
 		}
 	}
+	LogMsg("Listing pool usage.");
+	FiPoolDebugDump();
 	LogMsg("Done");
 }
 

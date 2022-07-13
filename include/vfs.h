@@ -49,6 +49,11 @@ typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
 
+// If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
+#define C_FILE_NODES_PER_POOL_UNIT 64
+
+struct tagFsPoolUnit;
+
 typedef struct FSNodeS
 {
 	struct FSNodeS
@@ -57,7 +62,9 @@ typedef struct FSNodeS
 	*next,
 	*prev;
 	
-	char 	           m_name[128]; //+nullterm, so 127 concrete chars
+	struct tagFsPoolUnit *m_pPoolUnit;//The pool unit this file node is part of.
+	
+	char 	           m_name[128]; //+nullterm, so actually 127 chars
 	uint32_t           m_type;
 	uint32_t           m_perms;
 	uint32_t           m_flags;
@@ -95,6 +102,20 @@ typedef struct FSNodeS
 	FileRemoveFileFunc RemoveFile;
 }
 FileNode;
+
+typedef struct tagFsPoolUnit
+{
+	uint64_t    m_bNodeFree; // Is this node free?
+	uint32_t    m_nNodeLA  [C_FILE_NODES_PER_POOL_UNIT]; // Node last accessed when?
+	
+	FileNode    m_nodes    [C_FILE_NODES_PER_POOL_UNIT]; // The nodes themselves
+	
+	struct tagFsPoolUnit* m_pNextUnit;
+}
+FsPoolUnit;
+
+FileNode* MakeFileNodeFromPool();
+void FreeFileNode(FileNode *pFileNode);
 
 typedef struct DirEntS
 {
