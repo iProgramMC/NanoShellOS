@@ -86,7 +86,7 @@ void* realloc (void* ptr, size_t sz)
 
 void sleep (int ms)
 {
-	_I_TmSleep (ms);
+	TmSleep (ms);
 }
 #endif
 void _I_FreeEverything()
@@ -173,46 +173,6 @@ int tellsz(int filedes)
 int FiOpenDir(const char* pFileName)
 {
 	return _I_FiOpenDirD(pFileName, "some process",2022);//TODO
-}
-int FiCloseDir(int dd)
-{
-	return _I_FiCloseDir(dd);
-}
-DirEnt* FiReadDir(int dd)
-{
-	return _I_FiReadDir(dd);
-}
-int FiSeekDir(int dd,int loc)
-{
-	return _I_FiSeekDir(dd, loc);
-}
-int FiRewindDir(int dd)
-{
-	return _I_FiRewindDir(dd);
-}
-int FiTellDir(int dd)
-{
-	return _I_FiTellDir(dd);
-}
-int FiStatAt(int dd,const char*pfn, StatResult* pres)
-{
-	return _I_FiStatAt(dd,pfn,pres);
-}
-int FiStat(const char*pfn, StatResult* pres)
-{
-	return _I_FiStat(pfn,pres);
-}
-const char* FiGetCwd()
-{
-	return _I_FiGetCwd();
-}
-int FiChDir(const char* pfn)
-{
-	return _I_FiChDir(pfn);
-}
-const char* ErrNoStr (int errno)
-{
-	return _I_ErrNoStr (errno);
 }
 #endif
 

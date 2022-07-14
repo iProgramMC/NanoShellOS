@@ -5,6 +5,8 @@
 // Type Definitions.
 #define CALL(funcName, funcIndex, retType, ...)\
 	typedef retType(* P_I_ ## funcName) (__VA_ARGS__);
+#define CALLI(funcName, funcIndex, retType, ...)\
+	typedef retType(* P_I_ ## funcName) (__VA_ARGS__);
 #define RARGS(...)
 #define SARGS(...)
 #define CALL_END
@@ -12,12 +14,21 @@
 #include "wincalls.h"
 
 #undef CALL
+#undef CALLI
 #undef RARGS
 #undef SARGS
 #undef CALL_END
 
 // Wrapper function definitions.
+// CALL  = Function that's available for use.
+// CALLI = Internal function that shouldn't be used.
 #define CALL(funcName, funcIndex, retType, ...)\
+	retType funcName (__VA_ARGS__)\
+	{\
+		*((uint32_t*)(WINDOW_CALL_BASE + 0xFC)) = funcIndex;\
+		P_I_ ## funcName p_func = (P_I_ ## funcName)WINDOW_CALL_BASE;\
+		
+#define CALLI(funcName, funcIndex, retType, ...)\
 	retType _I_ ## funcName (__VA_ARGS__)\
 	{\
 		*((uint32_t*)(WINDOW_CALL_BASE + 0xFC)) = funcIndex;\

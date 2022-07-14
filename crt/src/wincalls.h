@@ -121,51 +121,51 @@ CALL_END
 
 #ifdef USE_CONSOLE
 // Console I/O
-CALL (PutString, CON_PUTSTRING, void, const char* pText)
+CALLI(PutString, CON_PUTSTRING, void, const char* pText)
 	SARGS(pText)
 CALL_END
-CALL (ReadChar, CON_READCHAR, char, void)
+CALLI(ReadChar, CON_READCHAR, char, void)
 	RARGS()
 CALL_END
-CALL (ReadString, CON_READSTR, void, char* pOutBuffer, int maxSize)
+CALLI(ReadString, CON_READSTR, void, char* pOutBuffer, int maxSize)
 	SARGS(pOutBuffer, maxSize)
 CALL_END
 #endif
 
 #ifdef USE_MEMORY
 // Memory allocation
-CALL (AllocateDebug, MM_ALLOCATE_D, void*, size_t size, const char* callerFile, int callerLine)
+CALLI(AllocateDebug, MM_ALLOCATE_D, void*, size_t size, const char* callerFile, int callerLine)
 	RARGS(size, callerFile, callerLine)
 CALL_END
-CALL (Free, MM_FREE, void, void* ptr)
+CALLI(Free, MM_FREE, void, void* ptr)
 	SARGS(ptr)
 CALL_END
-CALL (MmDebugDump, MM_DEBUG_DUMP, void, void)
+CALLI(MmDebugDump, MM_DEBUG_DUMP, void, void)
 	SARGS()
 CALL_END
 #endif
 
 #ifdef USE_FILE
 // File I/O
-CALL (FiOpenDebug, FI_OPEN_D, int /* file descriptor or errcode if negative */, const char* pFileName, int oFlag, const char* pSrcFile, int nSrcLine)
+CALLI(FiOpenDebug, FI_OPEN_D, int /* file descriptor or errcode if negative */, const char* pFileName, int oFlag, const char* pSrcFile, int nSrcLine)
 	RARGS(pFileName, oFlag, pSrcFile, nSrcLine)
 CALL_END
-CALL (FiClose, FI_CLOSE, int /* err code */, int fd)
+CALLI(FiClose, FI_CLOSE, int /* err code */, int fd)
 	RARGS(fd)
 CALL_END
-CALL (FiRead, FI_READ, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+CALLI(FiRead, FI_READ, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
 	RARGS(fd, pBuf, nBytes)
 CALL_END
-CALL (FiWrite, FI_WRITE, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+CALLI(FiWrite, FI_WRITE, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
 	RARGS(fd, pBuf, nBytes)
 CALL_END
-CALL (FiTell, FI_TELL, int /* num bytes into file */, int fd)
+CALLI(FiTell, FI_TELL, int /* num bytes into file */, int fd)
 	RARGS(fd)
 CALL_END
-CALL (FiTellSize, FI_TELLSIZE, int /* num bytes into file */, int fd)
+CALLI(FiTellSize, FI_TELLSIZE, int /* num bytes into file */, int fd)
 	RARGS(fd)
 CALL_END
-CALL (FiSeek, FI_SEEK, int /* err code */, int fd, int offset, int whence)
+CALLI(FiSeek, FI_SEEK, int /* err code */, int fd, int offset, int whence)
 	RARGS(fd, offset, whence)
 CALL_END
 #endif
@@ -274,7 +274,7 @@ CALL_END
 #endif
 
 #ifdef USE_FILE
-CALL (FiRemoveFile, FI_REMOVE_FILE, int, const char* pName)
+CALLI(FiRemoveFile, FI_REMOVE_FILE, int, const char* pName)
 	RARGS(pName)
 CALL_END
 #endif
@@ -308,7 +308,7 @@ CALL_END
 #endif
 
 #ifdef USE_FILE
-CALL (FiOpenDirD, FI_OPEN_DIR_D, int, const char* pFileName, const char* srcFile, int srcLine)
+CALLI(FiOpenDirD, FI_OPEN_DIR_D, int, const char* pFileName, const char* srcFile, int srcLine)
 	RARGS(pFileName, srcFile, srcLine)
 CALL_END
 CALL (FiCloseDir, FI_CLOSE_DIR, int, int dd)

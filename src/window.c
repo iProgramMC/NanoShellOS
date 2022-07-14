@@ -1429,18 +1429,21 @@ extern void SetFocusedConsole(Console* console);
 void SelectWindowUnsafe(Window* pWindow)
 {
 	bool wasSelectedBefore = pWindow->m_isSelected;
-	if (!wasSelectedBefore) {
+	if (!wasSelectedBefore)
+	{
 		SetFocusedConsole (NULL);
 		g_focusedOnWindow = NULL;
-		for (int i = 0; i < WINDOWS_MAX; i++) {
-			if (g_windows[i].m_used) {
+		for (int i = 0; i < WINDOWS_MAX; i++)
+		{
+			if (g_windows[i].m_used)
+			{
 				if (g_windows[i].m_isSelected)
 				{
 					g_windows[i].m_isSelected = false;
 					WindowRegisterEventUnsafe(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
 //					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
-					g_windows[i].m_vbeData.m_dirty = true;
-					g_windows[i].m_renderFinished = true;
+					//g_windows[i].m_vbeData.m_dirty = true;
+					//g_windows[i].m_renderFinished = true;
 					//todo: just draw the title bar
 				}
 			}
