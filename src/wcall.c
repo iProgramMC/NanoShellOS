@@ -125,6 +125,15 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	g_vbeData = backup;
 }
 
+int ShellExecute(const char *pCommand)
+{
+	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);
+}
+int ShellExecuteResource(const char *pResource)
+{
+	SLogMsg("TODO ShellExecuteResource(\"%s\")", pResource);
+}
+
 // System call interface
 enum
 {
@@ -281,6 +290,8 @@ enum
 		
 	// System Calls V1.6
 		MM_REALLOCATE_D,
+		SH_EXECUTE,
+		SH_EXECUTE_RESOURCE,
 };
 
 const void *WindowCall[] = {
@@ -427,8 +438,10 @@ const void *WindowCall[] = {
 		RenderIconForceSizeOutline,
 		GetRandom,
 		
-	// System Calls V1.5 - 22/06/2022
+	// System Calls V1.6 - 14/07/2022
 		MmReAllocateD,
+		ShellExecute,
+		ShellExecuteResource
 };
 
 

@@ -3,7 +3,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 15
+#define WCALL_VERSION 16
 enum
 {
 	// System Calls V1.0
@@ -166,6 +166,13 @@ enum
 		VID_RENDER_ICON_SIZE,
 		VID_RENDER_ICON_SIZE_OUTLINE,
 		TM_GET_RANDOM,
+	#endif
+	
+	// System Calls V1.6
+	#if WCALL_VERSION >= 16
+		MM_REALLOCATE_D,
+		SH_EXECUTE,
+		SH_EXECUTE_RESOURCE,
 	#endif
 };
 

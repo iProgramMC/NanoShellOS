@@ -59,29 +59,26 @@ void* realloc (void* ptr, size_t sz)
 	if (!ptr) // why would you?!
 		return malloc(sz);
 	
-	// get the size of this block:
-	size_t szBlock = 0;
+	int found = -1;
 	for (int i = 0; i < MMMAX; i++)
 	{
 		if (g_AllocatedMemoryList[i] == ptr)
 		{
-			szBlock = g_AllocatedMemorySize[i];
+			found = i;
 			break;
 		}
 	}
-	if (szBlock == 0) // not found
-		return NULL;
-	void *pNewData = malloc(sz);
-	if (!pNewData) return NULL;
+	void* new = _I_ReAllocateDebug(ptr, sz, "usertask", 1);
+	if (new)
+	{
+		if (found >= 0)
+		{
+			g_AllocatedMemoryList[found] = new;
+			g_AllocatedMemorySize[found] = sz;
+		}
+	}
 	
-	size_t copy = szBlock;
-	if (copy > sz) //in case we want to shrink the block
-		copy = sz;
-	memcpy (pNewData, ptr, copy);
-	// free the old block as you don't need it anymore
-	free(ptr);
-	
-	return pNewData;
+	return new;
 }
 
 void sleep (int ms)

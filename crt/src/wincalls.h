@@ -424,3 +424,16 @@ CALL (GetRandom, TM_GET_RANDOM, int, void)
 	RARGS()
 CALL_END
 #endif
+
+// Calls V1.6
+#ifdef USE_MISC
+CALLI(ReAllocateDebug, MM_REALLOCATE_D, void*, void* o, size_t s, const char* f, int l)
+	RARGS(o, s, f, l)
+CALL_END
+CALL (ShellExecute, SH_EXECUTE, int, const char* p)
+	RARGS(p)
+CALL_END
+CALL (ShellExecuteResource, SH_EXECUTE_RESOURCE, int, const char* p)
+	RARGS(p)
+CALL_END
+#endif

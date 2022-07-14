@@ -176,4 +176,8 @@ const char* GetVersionString();
 TimeStruct *GetTime ();
 int GetTickCount();// Time since OS has started
 
+// Shell
+int ShellExecute        (const char *pCommand);    //for instance, "e <your favorite executable>"
+int ShellExecuteResource(const char *pResourceID); //for instance, shell:stuff
+
 #endif//_NSSTANDARD_H
