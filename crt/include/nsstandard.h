@@ -43,7 +43,7 @@ void*  memset     (void* bufptr, BYTE val, size_t size);
 size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
 int    strcmp     (const char* as, const char* bs);
-void   strcat     (char* dest, char* after);
+void   strcat     (char* dest, const char* after);
 void   strtolower (char* as);
 void   strtoupper (char* as);
 void   memtolower (char* as, int w);

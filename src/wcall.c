@@ -17,6 +17,7 @@
 #include <clip.h>
 #include <misc.h>
 #include <idt.h>
+#include <resource.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -125,13 +126,16 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	g_vbeData = backup;
 }
 
+void ShellExecuteCommand(char* p);
 int ShellExecute(const char *pCommand)
 {
-	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);
+	char* p = strdup (pCommand);
+	ShellExecuteCommand(p);
+	MmFree(p);
 }
 int ShellExecuteResource(const char *pResource)
 {
-	SLogMsg("TODO ShellExecuteResource(\"%s\")", pResource);
+	return LaunchResource (pResource);
 }
 
 // System call interface

@@ -11,6 +11,8 @@ keep/*
 tools/*
 
 apps/PortNano/*
+apps/Cabinet/build/*
+apps/Cabinet/*.nse
 apps/Calc/build/*
 apps/Calc/*.nse
 apps/Clock/build/*

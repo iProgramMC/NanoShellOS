@@ -528,7 +528,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				else
 				{
 					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
-					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CB$BACK + i, button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
+					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
 					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);
 				}

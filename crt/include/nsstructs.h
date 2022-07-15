@@ -460,6 +460,47 @@ enum
 	ICON_ACTION_OPEN,
 	ICON_ACTION_OPEN16,
 	ICON_PLUS,
+	//icons V1.7
+	ICON_PASTE,
+	ICON_PASTE16,
+	ICON_DELETE,
+	ICON_DELETE16,
+	ICON_COPY,
+	ICON_COPY16,
+	ICON_BACK,
+	ICON_BACK16,
+	ICON_FORWARD,
+	ICON_FORWARD16,
+	ICON_UNDO,
+	ICON_UNDO16,
+	ICON_REDO,
+	ICON_REDO16,
+	ICON_FILE_SEARCH,
+	ICON_FILE_SEARCH16,
+	ICON_FILE_PROPERTIES,
+	ICON_FILE_PROPERTIES16,
+	ICON_PROPERTIES,
+	ICON_PROPERTIES16,
+	ICON_WHATS_THIS,
+	ICON_WHATS_THIS16,
+	ICON_VIEW_ICON,
+	ICON_VIEW_ICON16,
+	ICON_VIEW_LIST,
+	ICON_VIEW_LIST16,
+	ICON_VIEW_TABLE,
+	ICON_VIEW_TABLE16,
+	ICON_SORT_ALPHA,
+	ICON_SORT_ALPHA16,
+	ICON_FORM,
+	ICON_FORM16,
+	ICON_JOURNAL,
+	ICON_JOURNAL16,
+	ICON_PACKAGER,
+	ICON_PACKAGER16,
+	//icons V1.71
+	ICON_BOX_CHECK,
+	ICON_BOX_UNCHECK,
+	ICON_FOLDER_SETTINGS16,
 	ICON_COUNT
 };
 
@@ -562,10 +603,16 @@ enum
 	//When creating the control, the image gets duplicated, so the caller may free/dispose of
 	//the old image.  The system will get rid of its own copy when the control gets destroyed.
 	CONTROL_IMAGE,
+	//Task list control
+	CONTROL_TASKLIST,
+	//Same as CONTROL_ICONVIEW but with draggable icons.
+	CONTROL_ICONVIEWDRAG,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
-	CONTROL_COUNT
+	CONTROL_COUNT,
+	
+	CONTROL_SIMPLE_VLINE = -CONTROL_SIMPLE_HLINE, // macro for CONTROL_SIMPLE_HLINE with parm1 = 1
 };
 
 enum
