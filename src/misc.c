@@ -252,6 +252,9 @@ uint64_t GetUsecCount()
 __attribute__((noreturn))
 void KeRestartSystem(void)
 {
+	SLogMsg("Flushing ALL cache units before rebooting!");
+	StFlushAllCaches();
+	
     uint8_t good = 0x02;
     while (good & 0x02)
         good = ReadPort(0x64);

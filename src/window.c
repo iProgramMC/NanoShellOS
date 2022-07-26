@@ -2069,6 +2069,37 @@ void WmOnTaskDied(Task *pTask)
 	}
 }
 
+#define SAVING_DATA_POPUP_WIDTH  (260)
+#define SAVING_DATA_POPUP_HEIGHT (24)
+
+void CALLBACK ShuttingDownWindowCallback (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	DefaultWindowProc (pWindow, messageType, parm1, parm2);
+	if (messageType == EVENT_CREATE)
+	{
+		Rectangle r;
+		RECT(r, 0, 0, SAVING_DATA_POPUP_WIDTH, SAVING_DATA_POPUP_HEIGHT);
+		
+		AddControl(pWindow, CONTROL_TEXTCENTER, r, "Please wait while unsaved data is written to disk.", 100, 0, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+	}
+}
+
+// Further shut down processing after closing all the windows.
+void FurtherShutdownProcessing()
+{
+	Window *pWindow = CreateWindow(
+		"Shutting down",
+		(GetScreenSizeX() - SAVING_DATA_POPUP_WIDTH) / 2, (GetScreenSizeY() - SAVING_DATA_POPUP_HEIGHT) / 2,
+		SAVING_DATA_POPUP_WIDTH, SAVING_DATA_POPUP_HEIGHT,
+		ShuttingDownWindowCallback, WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_NOTITLE | WF_SYSPOPUP
+	);
+	pWindow->m_bWindowManagerUpdated = true;
+	
+	StFlushAllCaches();
+	
+	DestroyWindow (pWindow);
+}
+
 void ShutdownProcessing(int parameter)
 {
 	KeTaskAssignTag(KeGetRunningTask(), "Shutting down");
@@ -2155,7 +2186,10 @@ void ShutdownProcessing(int parameter)
 		if (bReady)
 		{
 			// Lookin' good!
-			SLogMsg("All windows have shutdown gracefully! Quitting...");
+			SLogMsg("All windows have shutdown gracefully! Going to flush all caches and shut down now...");
+			
+			FurtherShutdownProcessing();
+			
 			g_shutdownDoneAll    = true;
 			g_shutdownProcessing = false;
 			g_shutdownRequest    = false;

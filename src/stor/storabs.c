@@ -23,7 +23,29 @@
  
 #include <storabs.h>
 
+#define ENABLE_CACHING
+
+#define CACHE_DEBUG
+
+#ifdef CACHE_DEBUG
+#define CLogMsg(...) SLogMsg(__VA_ARGS__)
+#else
+#define CLogMsg(...)
+#endif
+
 extern void KeTaskDone (void);
+
+// Caching interface
+#ifdef ENABLE_CACHING
+static CacheRegister s_cacheRegisters[0x100];//max driveID = 0xFF.
+static CacheRegister *GetCacheRegister(DriveID driveID)
+{
+	if (!s_cacheRegisters[driveID].m_bUsed)
+		StCacheInit(&s_cacheRegisters[driveID], driveID);
+	
+	return &s_cacheRegisters[driveID];
+}
+#endif
 
 // Resolving drive types
 #if 1
@@ -91,10 +113,10 @@ static DriveStatus StRamDiskWrite(uint32_t lba, const void* pSrc, uint8_t driveI
 		return DEVERR_NOWRITE;
 	
 	//get offset for a memcpy:
-	int offset = lba * SECTOR_SIZE;
+	int offset = lba * BLOCK_SIZE;
 	
 	//then write!
-	fast_memcpy (&(g_RAMDisks[driveID].m_pDriveContents[offset]), pSrc, nBlocks * SECTOR_SIZE);
+	fast_memcpy (&(g_RAMDisks[driveID].m_pDriveContents[offset]), pSrc, nBlocks * BLOCK_SIZE);
 	return DEVERR_SUCCESS;
 }
 static DriveStatus StRamDiskRead(uint32_t lba, void* pDest, uint8_t driveID, uint8_t nBlocks)
@@ -105,10 +127,10 @@ static DriveStatus StRamDiskRead(uint32_t lba, void* pDest, uint8_t driveID, uin
 	}
 	
 	//get offset for a memcpy:
-	int offset = lba * SECTOR_SIZE;
+	int offset = lba * BLOCK_SIZE;
 	
 	//then read!
-	fast_memcpy (pDest, &(g_RAMDisks[driveID].m_pDriveContents[offset]), nBlocks * SECTOR_SIZE);
+	fast_memcpy (pDest, &(g_RAMDisks[driveID].m_pDriveContents[offset]), nBlocks * BLOCK_SIZE);
 	return DEVERR_SUCCESS;
 }
 static uint8_t StRamDiskGetSubID (DriveID did)
@@ -161,7 +183,7 @@ static DriveIsAvailableCallback g_IsAvailableCallbacks[] = {
 	StNoDriveIsAvailable, //Count
 };
 
-DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBlocks)
+DriveStatus StDeviceReadNoCache(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBlocks)
 {
 	DriveType driveType = StGetDriveType(driveId);
 	if (driveType == DEVICE_UNKNOWN)
@@ -171,7 +193,7 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 	
 	return g_ReadCallbacks[driveType](lba, pDest, driveSubId, nBlocks);
 }
-DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
+DriveStatus StDeviceWriteNoCache(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
 {
 	DriveType driveType = StGetDriveType(driveId);
 	if (driveType == DEVICE_UNKNOWN)
@@ -191,4 +213,104 @@ bool StIsDriveAvailable (DriveID driveId)
 	
 	return g_IsAvailableCallbacks[driveType](driveSubId);
 }
+
+DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBlocks)
+{
+	#ifdef ENABLE_CACHING
+	uint8_t* pDestBytes = pDest;
+	
+	CacheRegister *pReg = &s_cacheRegisters[driveId];
+	if (!pReg->m_bUsed)
+	{
+		StCacheInit(pReg, driveId);
+	}
+	
+	// Ok, now perform the read itself.
+	uint32_t lastLbaRead = ~0; CacheUnit *pUnit = NULL;
+	for (uint32_t clba = lba, index = 0; index < nBlocks; clba++, index++)
+	{
+		if (lastLbaRead != (clba & ~7)  ||  !pUnit)
+		{
+			lastLbaRead  = (clba & ~7);
+			pUnit = StGetCacheUnit(pReg, StLookUpCacheUnit(pReg, clba));
+			if (!pUnit)
+			{
+				CLogMsg("caching unit %d", lastLbaRead);
+				pUnit = StAddCacheUnit(pReg, clba, NULL);
+			}
+		}
+		
+		ASSERT(pUnit && "huh?");
+		
+		int blockNo = clba & 7;
+		pUnit->m_lastAccess = GetTickCount();
+		memcpy (pDestBytes + index * BLOCK_SIZE, pUnit->m_pData + blockNo * BLOCK_SIZE, BLOCK_SIZE);
+	}
+	
+	#else
+	return StDeviceReadNoCache(lba, pDest, driveId, nBlocks);
+	#endif
+}
+DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
+{
+	#ifdef ENABLE_CACHING
+	uint8_t* pSrcBytes = pSrc;
+	
+	CacheRegister *pReg = &s_cacheRegisters[driveId];
+	if (!pReg->m_bUsed)
+	{
+		StCacheInit(pReg, driveId);
+	}
+	
+	// Ok, now perform the read itself.
+	uint32_t lastLbaRead = ~0; CacheUnit *pUnit = NULL;
+	for (uint32_t clba = lba, index = 0; index < nBlocks; clba++, index++)
+	{
+		if (lastLbaRead != (clba & ~7)  ||  !pUnit)
+		{
+			lastLbaRead  = (clba & ~7);
+			pUnit = StGetCacheUnit(pReg, StLookUpCacheUnit(pReg, clba));
+			if (!pUnit)
+			{
+				CLogMsg("caching unit %d", lastLbaRead);
+				pUnit = StAddCacheUnit(pReg, clba, NULL);
+			}
+		}
+		
+		ASSERT(pUnit && "huh?");
+		
+		int blockNo = clba & 7;
+		pUnit->m_bModified  = true;
+		pUnit->m_lastAccess = GetTickCount();
+		memcpy (pUnit->m_pData + blockNo * BLOCK_SIZE, pSrcBytes + index * BLOCK_SIZE, BLOCK_SIZE);
+	}
+	
+	#else
+	return StDeviceWriteNoCache(lba, pSrc, driveId, nBlocks);
+	#endif
+}
+
+void StFlushAllCaches()
+{
+	for (int id = 0; id < 0x100; id++)
+	{
+		CacheRegister *pReg = &s_cacheRegisters[id];
+		if (pReg->m_bUsed)
+			StFlushAllCacheUnits(pReg);
+	}
+}
+
+void StDebugDumpAll()
+{
+	for (int id = 0; id < 0x100; id++)
+	{
+		CacheRegister *pReg = &s_cacheRegisters[id];
+		if (pReg->m_bUsed)
+		{
+			LogMsg("Info for drive ID %b", id);
+			StDebugDump (pReg);
+		}
+	}
+}
+
 #endif

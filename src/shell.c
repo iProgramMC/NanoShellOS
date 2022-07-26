@@ -215,6 +215,14 @@ void ShellExecuteCommand(char* p)
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
 	}
+	else if (strcmp (token, "fac") == 0)
+	{
+		StFlushAllCaches();
+	}
+	else if (strcmp (token, "lh") == 0)
+	{
+		StDebugDumpAll();
+	}
 	else if (strcmp (token, "sjt") == 0)
 	{
 		SetJumpTest();
