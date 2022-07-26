@@ -162,6 +162,12 @@ uint64_t ReadTSC()
 	return ((uint64_t)hi << 32LL) | (uint64_t)(lo);
 }
 
+void KeOnShutDownSaveData()
+{
+	SLogMsg("Flushing ALL cache units before rebooting!");
+	StFlushAllCaches();
+}
+
 //not accurate at all, use GetTickCount() instead.
 int GetRtcBasedTickCount()
 {
@@ -252,8 +258,7 @@ uint64_t GetUsecCount()
 __attribute__((noreturn))
 void KeRestartSystem(void)
 {
-	SLogMsg("Flushing ALL cache units before rebooting!");
-	StFlushAllCaches();
+	KeOnShutDownSaveData();
 	
     uint8_t good = 0x02;
     while (good & 0x02)

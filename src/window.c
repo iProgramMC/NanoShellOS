@@ -52,7 +52,7 @@ static int          s_internal_action_queue_head,
 //
 
 Task *g_pWindowMgrTask;
-bool IsWindowManagerTask (Window *pWindow)
+bool IsWindowManagerTask ()
 {
 	return (KeGetRunningTask() == g_pWindowMgrTask);
 }
@@ -2095,7 +2095,7 @@ void FurtherShutdownProcessing()
 	);
 	pWindow->m_bWindowManagerUpdated = true;
 	
-	StFlushAllCaches();
+	KeOnShutDownSaveData();
 	
 	DestroyWindow (pWindow);
 }

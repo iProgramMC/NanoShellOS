@@ -159,6 +159,11 @@ TimeStruct* TmReadTime();
 NO_RETURN void KeStopSystem();
 
 /**
+ * Performs the cache flushing operation before shutting down the computer.
+ */
+void KeOnShutDownSaveData();
+
+/**
  * Get the multiboot_info_t passed into KiStartupSystem.
  */
 multiboot_info_t* KiGetMultibootInfo();
