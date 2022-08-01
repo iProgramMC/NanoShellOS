@@ -25,14 +25,16 @@
 extern Console* g_currentConsole;
 
 // tokens and classes (operators last and in precedence order)
-enum {
+enum
+{
     Num = 128, Fun, Sys, Glo, Loc, Id, FunPro,
     Char, Else, Enum, If, Int, Return, Sizeof, While,
     Assign, Cond, Lor, Lan, Or, Xor, And, Eq, Ne, Lt, Gt, Le, Ge, Shl, Shr, Add, Sub, Mul, Div, Mod, Inc, Dec, Brak
 };
 
 // opcodes
-enum {
+enum
+{
     LEA, IMM, JMP, JSR, BZ, BNZ, ENT, ADJ, LEV, LI, LC, SI, SC, PSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
     OPEN, READ, CLOS, PRTF, PRTN, MALC, FREE, MSET, MCMP, RAND, DRPX, EXSC, RDCH, RDIN, CLSC,
@@ -64,75 +66,104 @@ do {\
 	if (mach->g_pErrorExists)\
 		return;\
 } while(0)
-	
 
-void CcAdvanceOpc(CMachine* pMachine) { ++pMachine->pText; }
-void CcAdvanceImm(CMachine* pMachine) { ++pMachine->pText; }
-void CcSetOpCodeHere(CMachine* pMachine, int opc) { *pMachine->pText = opc; }
-void CcSetImmHere   (CMachine* pMachine, int imm) { *pMachine->pText = imm; }
+
+void CcAdvanceOpc(CMachine* pMachine)
+{
+    ++pMachine->pText;
+}
+void CcAdvanceImm(CMachine* pMachine)
+{
+    ++pMachine->pText;
+}
+void CcSetOpCodeHere(CMachine* pMachine, int opc)
+{
+    *pMachine->pText = opc;
+}
+void CcSetImmHere   (CMachine* pMachine, int imm)
+{
+    *pMachine->pText = imm;
+}
 
 bool CcOpcodeRequiresOptional (int opc)
 {
-	return opc <= ADJ;
+    return opc <= ADJ;
 }
 
-void CcPrintOpCode(int opc, int optional/*opc <= ADJ*/) {
+void CcPrintOpCode(int opc, int optional/*opc <= ADJ*/)
+{
     LogMsgNoCr("%s",
-        &"LEA \0IMM \0JMP \0JSR \0BZ  \0BNZ \0ENT \0ADJ \0LEV \0LI  \0LC  \0SI  \0SC  \0PSH \0"
-        "OR  \0XOR \0AND \0EQ  \0NE  \0LT  \0GT  \0LE  \0GE  \0SHL \0SHR \0ADD \0SUB \0MUL \0DIV \0MOD \0"
-        "OPEN\0READ\0CLOS\0PRTF\0PRTN\0MALC\0FREE\0MSET\0MCMP\0RAND\0DRPX\0EXSC\0RDCH\0RDIN\0CLSC\0"
-        "FLSC\0FLRC\0DRRC\0SSCY\0DRST\0SPTF\0MVCR\0SLEP\0EXIT\0"[opc * 5]);
-    if (CcOpcodeRequiresOptional (opc) && optional != (int)0xDDEEAAFF/*hack!!!*/) {
+               &"LEA \0IMM \0JMP \0JSR \0BZ  \0BNZ \0ENT \0ADJ \0LEV \0LI  \0LC  \0SI  \0SC  \0PSH \0"
+               "OR  \0XOR \0AND \0EQ  \0NE  \0LT  \0GT  \0LE  \0GE  \0SHL \0SHR \0ADD \0SUB \0MUL \0DIV \0MOD \0"
+               "OPEN\0READ\0CLOS\0PRTF\0PRTN\0MALC\0FREE\0MSET\0MCMP\0RAND\0DRPX\0EXSC\0RDCH\0RDIN\0CLSC\0"
+               "FLSC\0FLRC\0DRRC\0SSCY\0DRST\0SPTF\0MVCR\0SLEP\0EXIT\0"[opc * 5]);
+    if (CcOpcodeRequiresOptional (opc) && optional != (int)0xDDEEAAFF/*hack!!!*/)
+    {
         LogMsg(" %d (%x)", optional, optional);
     }
     else LogMsg("");
 }
 
 // equivalent to *++e = opc;
-void CcPushOpCode(CMachine* pMachine, int opc) {
+void CcPushOpCode(CMachine* pMachine, int opc)
+{
     CcAdvanceOpc(pMachine);
     CcSetOpCodeHere(pMachine, opc);
     //LogMsg("Pushed opcode: ");
     //CcPrintOpCode(opc, 0xDDEEAAFF);
 }
 // equivalent to *++e = imm;
-void CcPushImm(CMachine* pMachine, int imm) {
+void CcPushImm(CMachine* pMachine, int imm)
+{
     CcAdvanceImm(pMachine);
     CcSetImmHere(pMachine, imm);
     //LogMsg("Pushed immediate: %d\n", imm);
 }
-int CcGetOpCodeHere(CMachine* pMachine) { return *pMachine->pText; }
-int CcGetImmHere   (CMachine* pMachine) { return *pMachine->pText; }
-void CcGoBackOpc   (CMachine* pMachine) { pMachine->pText--; }
-void CcGoBackImm   (CMachine* pMachine) { pMachine->pText--; }
+int CcGetOpCodeHere(CMachine* pMachine)
+{
+    return *pMachine->pText;
+}
+int CcGetImmHere   (CMachine* pMachine)
+{
+    return *pMachine->pText;
+}
+void CcGoBackOpc   (CMachine* pMachine)
+{
+    pMachine->pText--;
+}
+void CcGoBackImm   (CMachine* pMachine)
+{
+    pMachine->pText--;
+}
 
 void CcNextToken(CMachine* pMachine)
 {
     char* pp;
 
-	// While the current token is not blank:
+    // While the current token is not blank:
     while ((pMachine->currentToken = *pMachine->pSource) != 0)
     {
         ++pMachine->pSource;
-		// Hit new-line ?
+        // Hit new-line ?
         if (pMachine->currentToken == '\n')
         {
-			// If there's a need to print asm-output
+            // If there's a need to print asm-output
             if (pMachine->printAssembly)
             {
-				char buffer[4096]; int size = pMachine->pSource - pMachine->pLastSource;
-				memcpy (buffer, pMachine->pLastSource, size);
-				buffer[size] = 0;
+                char buffer[4096];
+                int size = pMachine->pSource - pMachine->pLastSource;
+                memcpy (buffer, pMachine->pLastSource, size);
+                buffer[size] = 0;
                 LogMsg("%d: %s", pMachine->lineNum, buffer);
-				
+
                 pMachine->pLastSource = pMachine->pSource;
                 while (pMachine->pLastText < pMachine->pText)
                 {
                     int optional = 0, opcode = *++pMachine->pLastText;
-					
+
                     if (CcOpcodeRequiresOptional (opcode))
-						optional = *++pMachine->pLastText;
-					
+                        optional = *++pMachine->pLastText;
+
                     CcPrintOpCode(opcode, optional);
                 }
             }
@@ -978,29 +1009,35 @@ void CcStatement(CMachine *pMachine)
 
 bool CcBreakCheck(void)
 {
-	if (g_currentConsole == &g_debugConsole)
-	{
-		return(KbGetKeyState(KEY_CONTROL) == KEY_PRESSED && KbGetKeyState(KEY_C) == KEY_PRESSED);
-	}
-	
+    if (g_currentConsole == &g_debugConsole)
+    {
+        return(KbGetKeyState(KEY_CONTROL) == KEY_PRESSED && KbGetKeyState(KEY_C) == KEY_PRESSED);
+    }
+
     return 0;
 }
 
-void CcOnAllocateSomething(CMachine* pMachine, void* pJustAllocated) {
+void CcOnAllocateSomething(CMachine* pMachine, void* pJustAllocated)
+{
     // find a free spot in the current allocations
-    for (int i = 0; i < pMachine->g_memoryAllocCount; i++) {
+    for (int i = 0; i < pMachine->g_memoryAllocCount; i++)
+    {
         //! NOTE: Is this really necessary? g_memoryAllocCount would be 0 anyway :P
-        if (pMachine->g_memoryAllocatedPointers[i] == NULL) {
+        if (pMachine->g_memoryAllocatedPointers[i] == NULL)
+        {
             pMachine->g_memoryAllocatedPointers[i] = pJustAllocated;
             return;
         }
     }
     pMachine->g_memoryAllocatedPointers[pMachine->g_memoryAllocCount++] = pJustAllocated;
 }
-void CcOnDeallocateSomething(CMachine* pMachine, void* pJustAllocated) {
-    for (int i = 0; i < pMachine->g_memoryAllocCount; i++) {
+void CcOnDeallocateSomething(CMachine* pMachine, void* pJustAllocated)
+{
+    for (int i = 0; i < pMachine->g_memoryAllocCount; i++)
+    {
         //! NOTE: Is this really necessary? g_memoryAllocCount would be 0 anyway :P
-        if (pMachine->g_memoryAllocatedPointers[i] == pJustAllocated) {
+        if (pMachine->g_memoryAllocatedPointers[i] == pJustAllocated)
+        {
             pMachine->g_memoryAllocatedPointers[i] = NULL;
             if (i == pMachine->g_memoryAllocCount - 1) // is this the last element that we've got?
                 pMachine->g_memoryAllocCount--;
@@ -1019,20 +1056,24 @@ CCSTATUS CcInitMachine(CMachine* pMachine)
     pMachine->g_pErrorExists = false;
 
     pMachine->main_poolSize = 256 * 1024; // arbitrary size
-    if (!(pMachine->pStartOfSymbols = pMachine->pCurrSymbol = (int*)MmAllocateK(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocateK(%d) symbol area", pMachine->main_poolSize); 
-        return CCSTATUS_NO_MALLOC_POOL_AREA; 
+    if (!(pMachine->pStartOfSymbols = pMachine->pCurrSymbol = (int*)MmAllocateK(pMachine->main_poolSize)))
+    {
+        LogMsg("could not MmAllocateK(%d) symbol area", pMachine->main_poolSize);
+        return CCSTATUS_NO_MALLOC_POOL_AREA;
     }
-    if (!(pMachine->pTextStart = pMachine->pLastText = pMachine->pText = (int*)MmAllocateK(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocateK(%d) text area", pMachine->main_poolSize); 
+    if (!(pMachine->pTextStart = pMachine->pLastText = pMachine->pText = (int*)MmAllocateK(pMachine->main_poolSize)))
+    {
+        LogMsg("could not MmAllocateK(%d) text area", pMachine->main_poolSize);
         return CCSTATUS_NO_MALLOC_TEXT_AREA;
     }
-    if (!(pMachine->pDataStart = pMachine->pData = (char*)MmAllocateK(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocateK(%d) data area", pMachine->main_poolSize); 
+    if (!(pMachine->pDataStart = pMachine->pData = (char*)MmAllocateK(pMachine->main_poolSize)))
+    {
+        LogMsg("could not MmAllocateK(%d) data area", pMachine->main_poolSize);
         return CCSTATUS_NO_MALLOC_DATA_AREA;
     }
-    if (!(pMachine->main_stackStart = pMachine->main_stackPtr = (int*)MmAllocateK(pMachine->main_poolSize))) { 
-        LogMsg("could not MmAllocateK(%d) stack area", pMachine->main_poolSize); 
+    if (!(pMachine->main_stackStart = pMachine->main_stackPtr = (int*)MmAllocateK(pMachine->main_poolSize)))
+    {
+        LogMsg("could not MmAllocateK(%d) stack area", pMachine->main_poolSize);
         return CCSTATUS_NO_MALLOC_STACK_AREA;
     }
 
@@ -1052,27 +1093,32 @@ CCSTATUS CcInitMachine(CMachine* pMachine)
         ;
 
     pMachine->main_tempI = Char;
-    while (pMachine->main_tempI <= While) {
+    while (pMachine->main_tempI <= While)
+    {
         CcNextToken(pMachine);
         pMachine->pCurrIdentifier[Tk] = pMachine->main_tempI++;
     } // add keywords to symbol table
     pMachine->main_tempI = OPEN;
-    while (pMachine->main_tempI <= EXIT) {
+    while (pMachine->main_tempI <= EXIT)
+    {
         CcNextToken(pMachine);
         pMachine->pCurrIdentifier[Class] = Sys;
         pMachine->pCurrIdentifier[Type] = INT;
         pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
     } // add library to symbol table
-    CcNextToken(pMachine); pMachine->pCurrIdentifier[Tk] = Char; // handle void type
-    CcNextToken(pMachine); pMachine->main_idMain = pMachine->pCurrIdentifier; // keep track of main
+    CcNextToken(pMachine);
+    pMachine->pCurrIdentifier[Tk] = Char; // handle void type
+    CcNextToken(pMachine);
+    pMachine->main_idMain = pMachine->pCurrIdentifier; // keep track of main
 
     return 0;
 }
 CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
 {
     pMachine->main_tempI = length;
-	if (!length) pMachine->main_tempI = strlen(pCode);
-    if (!(pMachine->pLastSource = pMachine->pSource = pMachine->pSourceStart = (char*)MmAllocateK(pMachine->main_tempI+30))) {
+    if (!length) pMachine->main_tempI = strlen(pCode);
+    if (!(pMachine->pLastSource = pMachine->pSource = pMachine->pSourceStart = (char*)MmAllocateK(pMachine->main_tempI+30)))
+    {
         LogMsg("could not MmAllocateK(%d) source area", pMachine->main_poolSize);
         return CCSTATUS_NO_MALLOC_SRC_AREA;
     }
@@ -1080,101 +1126,174 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
     pMachine->pSource[pMachine->main_tempI] = 0;
     pMachine->pSource[pMachine->main_tempI+1] = 0;
     pMachine->pSource[pMachine->main_tempI+2] = 0;
-	//LogMsg("Source code:%s=====",pMachine->pSource);
-	//LogMsg("MainTempI: %d",pMachine->main_tempI);
+    //LogMsg("Source code:%s=====",pMachine->pSource);
+    //LogMsg("MainTempI: %d",pMachine->main_tempI);
 
     // parse declarations
     pMachine->lineNum = 1;
     CcNextToken(pMachine);
-    while (pMachine->currentToken) {
+    while (pMachine->currentToken)
+    {
         pMachine->main_baseType = INT; // basetype
         if (pMachine->currentToken == Int) CcNextToken(pMachine);
-        else if (pMachine->currentToken == Char) { CcNextToken(pMachine); pMachine->main_baseType = CHAR; }
-        else if (pMachine->currentToken == Enum) {
+        else if (pMachine->currentToken == Char)
+        {
+            CcNextToken(pMachine);
+            pMachine->main_baseType = CHAR;
+        }
+        else if (pMachine->currentToken == Enum)
+        {
             CcNextToken(pMachine);
             if (pMachine->currentToken != '{') CcNextToken(pMachine);
-            if (pMachine->currentToken == '{') {
+            if (pMachine->currentToken == '{')
+            {
                 CcNextToken(pMachine);
                 pMachine->main_tempI = 0;
-                while (pMachine->currentToken != '}') {
-                    if (pMachine->currentToken != Id) { LogMsg("%d: bad enum identifier %d", pMachine->lineNum, pMachine->currentToken); return CCSTATUS_BAD_ENUM_IDENTIFIER; }
+                while (pMachine->currentToken != '}')
+                {
+                    if (pMachine->currentToken != Id)
+                    {
+                        LogMsg("%d: bad enum identifier %d", pMachine->lineNum, pMachine->currentToken);
+                        return CCSTATUS_BAD_ENUM_IDENTIFIER;
+                    }
                     CcNextToken(pMachine);
-                    if (pMachine->currentToken == Assign) {
+                    if (pMachine->currentToken == Assign)
+                    {
                         CcNextToken(pMachine);
-                        if (pMachine->currentToken != Num) { LogMsg("%d: bad enum initializer", pMachine->lineNum); return CCSTATUS_BAD_ENUM_INITIALIZER; }
+                        if (pMachine->currentToken != Num)
+                        {
+                            LogMsg("%d: bad enum initializer", pMachine->lineNum);
+                            return CCSTATUS_BAD_ENUM_INITIALIZER;
+                        }
                         pMachine->main_tempI = pMachine->currentTokenValue;
                         CcNextToken(pMachine);
                     }
-                    pMachine->pCurrIdentifier[Class] = Num; pMachine->pCurrIdentifier[Type] = INT; pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
+                    pMachine->pCurrIdentifier[Class] = Num;
+                    pMachine->pCurrIdentifier[Type] = INT;
+                    pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
                     if (pMachine->currentToken == ',') CcNextToken(pMachine);
                 }
                 CcNextToken(pMachine);
             }
         }
-        while (pMachine->currentToken != ';' && pMachine->currentToken != '}') {
+        while (pMachine->currentToken != ';' && pMachine->currentToken != '}')
+        {
             pMachine->main_tokenType = pMachine->main_baseType;
-            while (pMachine->currentToken == Mul) { CcNextToken(pMachine); pMachine->main_tokenType = pMachine->main_tokenType + PTR; }
-            if (pMachine->currentToken != Id) { LogMsg("%d: bad global declaration", pMachine->lineNum); return CCSTATUS_BAD_GLOBAL_DECLARATION; }
-            if (pMachine->pCurrIdentifier[Class]) {
-                LogMsg("%d: duplicate global definition", pMachine->lineNum); return CCSTATUS_DUP_GLOBAL_DECLARATION;
+            while (pMachine->currentToken == Mul)
+            {
+                CcNextToken(pMachine);
+                pMachine->main_tokenType = pMachine->main_tokenType + PTR;
+            }
+            if (pMachine->currentToken != Id)
+            {
+                LogMsg("%d: bad global declaration", pMachine->lineNum);
+                return CCSTATUS_BAD_GLOBAL_DECLARATION;
+            }
+            if (pMachine->pCurrIdentifier[Class])
+            {
+                LogMsg("%d: duplicate global definition", pMachine->lineNum);
+                return CCSTATUS_DUP_GLOBAL_DECLARATION;
             }
             CcNextToken(pMachine);
             pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
-            if (pMachine->currentToken == '(') { // function
+            if (pMachine->currentToken == '(')   // function
+            {
                 pMachine->pCurrIdentifier[Class] = Fun;
                 pMachine->pCurrIdentifier[Val] = (int)(pMachine->pText + 1);
-                CcNextToken(pMachine); pMachine->main_tempI = 0;
-                while (pMachine->currentToken != ')') {
+                CcNextToken(pMachine);
+                pMachine->main_tempI = 0;
+                while (pMachine->currentToken != ')')
+                {
                     pMachine->main_tokenType = INT;
                     if (pMachine->currentToken == Int) CcNextToken(pMachine);
-                    else if (pMachine->currentToken == Char) { CcNextToken(pMachine); pMachine->main_tokenType = CHAR; }
-                    while (pMachine->currentToken == Mul) { CcNextToken(pMachine); pMachine->main_tokenType = pMachine->main_tokenType + PTR; }
-                    if (pMachine->currentToken != Id) { LogMsg("%d: bad parameter declaration", pMachine->lineNum); return CCSTATUS_BAD_PARM_DECLARATION; }
-                    if (pMachine->pCurrIdentifier[Class] == Loc) { LogMsg("%d: duplicate parameter definition", pMachine->lineNum); return CCSTATUS_DUP_PARM_DECLARATION; }
-                    pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class]; pMachine->pCurrIdentifier[Class] = Loc;
-                    pMachine->pCurrIdentifier[HType] = pMachine->pCurrIdentifier[Type];  pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
-                    pMachine->pCurrIdentifier[HVal] = pMachine->pCurrIdentifier[Val];   pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
+                    else if (pMachine->currentToken == Char)
+                    {
+                        CcNextToken(pMachine);
+                        pMachine->main_tokenType = CHAR;
+                    }
+                    while (pMachine->currentToken == Mul)
+                    {
+                        CcNextToken(pMachine);
+                        pMachine->main_tokenType = pMachine->main_tokenType + PTR;
+                    }
+                    if (pMachine->currentToken != Id)
+                    {
+                        LogMsg("%d: bad parameter declaration", pMachine->lineNum);
+                        return CCSTATUS_BAD_PARM_DECLARATION;
+                    }
+                    if (pMachine->pCurrIdentifier[Class] == Loc)
+                    {
+                        LogMsg("%d: duplicate parameter definition", pMachine->lineNum);
+                        return CCSTATUS_DUP_PARM_DECLARATION;
+                    }
+                    pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class];
+                    pMachine->pCurrIdentifier[Class] = Loc;
+                    pMachine->pCurrIdentifier[HType] = pMachine->pCurrIdentifier[Type];
+                    pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
+                    pMachine->pCurrIdentifier[HVal] = pMachine->pCurrIdentifier[Val];
+                    pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
                     CcNextToken(pMachine);
                     if (pMachine->currentToken == ',') CcNextToken(pMachine);
                 }
                 CcNextToken(pMachine);
-                if (pMachine->currentToken != '{') {
+                if (pMachine->currentToken != '{')
+                {
                     LogMsg("%d: bad function definition", pMachine->lineNum);
                     return CCSTATUS_BAD_FUNC_DECLARATION;
                 }
                 pMachine->localVariableOffset = ++pMachine->main_tempI;
                 CcNextToken(pMachine);
-                while (pMachine->currentToken == Int || pMachine->currentToken == Char) {
+                while (pMachine->currentToken == Int || pMachine->currentToken == Char)
+                {
                     pMachine->main_baseType = (pMachine->currentToken == Int) ? INT : CHAR;
                     CcNextToken(pMachine);
-                    while (pMachine->currentToken != ';') {
+                    while (pMachine->currentToken != ';')
+                    {
                         pMachine->main_tokenType = pMachine->main_baseType;
-                        while (pMachine->currentToken == Mul) { CcNextToken(pMachine); pMachine->main_tokenType = pMachine->main_tokenType + PTR; }
-                        if (pMachine->currentToken != Id) { LogMsg("%d: bad local declaration", pMachine->lineNum); return CCSTATUS_BAD_LOCAL_DECLARATION; }
-                        if (pMachine->pCurrIdentifier[Class] == Loc) {
-                            LogMsg("%d: duplicate local definition", pMachine->lineNum); return CCSTATUS_DUP_LOCAL_DECLARATION;
+                        while (pMachine->currentToken == Mul)
+                        {
+                            CcNextToken(pMachine);
+                            pMachine->main_tokenType = pMachine->main_tokenType + PTR;
                         }
-                        pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class]; pMachine->pCurrIdentifier[Class] = Loc;
-                        pMachine->pCurrIdentifier[HType] = pMachine->pCurrIdentifier[Type];  pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
-                        pMachine->pCurrIdentifier[HVal] = pMachine->pCurrIdentifier[Val];   pMachine->pCurrIdentifier[Val] = ++pMachine->main_tempI;
+                        if (pMachine->currentToken != Id)
+                        {
+                            LogMsg("%d: bad local declaration", pMachine->lineNum);
+                            return CCSTATUS_BAD_LOCAL_DECLARATION;
+                        }
+                        if (pMachine->pCurrIdentifier[Class] == Loc)
+                        {
+                            LogMsg("%d: duplicate local definition", pMachine->lineNum);
+                            return CCSTATUS_DUP_LOCAL_DECLARATION;
+                        }
+                        pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class];
+                        pMachine->pCurrIdentifier[Class] = Loc;
+                        pMachine->pCurrIdentifier[HType] = pMachine->pCurrIdentifier[Type];
+                        pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
+                        pMachine->pCurrIdentifier[HVal] = pMachine->pCurrIdentifier[Val];
+                        pMachine->pCurrIdentifier[Val] = ++pMachine->main_tempI;
                         CcNextToken(pMachine);
                         if (pMachine->currentToken == ',') CcNextToken(pMachine);
                     }
                     CcNextToken(pMachine);
                 }
-                CcPushOpCode(pMachine, ENT); CcPushImm(pMachine, pMachine->main_tempI - pMachine->localVariableOffset);
-                while (pMachine->currentToken != '}') {
+                CcPushOpCode(pMachine, ENT);
+                CcPushImm(pMachine, pMachine->main_tempI - pMachine->localVariableOffset);
+                while (pMachine->currentToken != '}')
+                {
                     CcStatement(pMachine);
 
-                    if (pMachine->g_pErrorExists) {
+                    if (pMachine->g_pErrorExists)
+                    {
                         pMachine->m_halted = true;// goto _cleanup;
                         return CCSTATUS_ERROR_FOUND;
                     }
                 }
                 CcPushOpCode(pMachine, LEV);
                 pMachine->pCurrIdentifier = pMachine->pCurrSymbol; // unwind symbol table locals
-                while (pMachine->pCurrIdentifier[Tk]) {
-                    if (pMachine->pCurrIdentifier[Class] == Loc) {
+                while (pMachine->pCurrIdentifier[Tk])
+                {
+                    if (pMachine->pCurrIdentifier[Class] == Loc)
+                    {
                         pMachine->pCurrIdentifier[Class] = pMachine->pCurrIdentifier[HClass];
                         pMachine->pCurrIdentifier[Type] = pMachine->pCurrIdentifier[HType];
                         pMachine->pCurrIdentifier[Val] = pMachine->pCurrIdentifier[HVal];
@@ -1182,7 +1301,8 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                     pMachine->pCurrIdentifier = pMachine->pCurrIdentifier + Idsz;
                 }
             }
-            else {
+            else
+            {
                 pMachine->pCurrIdentifier[Class] = Glo;
                 pMachine->pCurrIdentifier[Val] = (int)pMachine->pData;
                 pMachine->pData += sizeof(int);
@@ -1191,13 +1311,18 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
         }
         CcNextToken(pMachine);
     }
-    if (!(pMachine->main_instPtr = (int*)pMachine->main_idMain[Val])) { LogMsg("main() not defined"); return CCSTATUS_MAIN_NOT_DEFINED; }
+    if (!(pMachine->main_instPtr = (int*)pMachine->main_idMain[Val]))
+    {
+        LogMsg("main() not defined");
+        return CCSTATUS_MAIN_NOT_DEFINED;
+    }
     //if (src) return 0;
 
     // setup stack
     pMachine->main_basePtr = pMachine->main_stackPtr = (int*)((int)pMachine->main_stackPtr + pMachine->main_poolSize);
     *--pMachine->main_stackPtr = EXIT; // call exit if main returns
-    *--pMachine->main_stackPtr = PSH; pMachine->main_tempT = pMachine->main_stackPtr;
+    *--pMachine->main_stackPtr = PSH;
+    pMachine->main_tempT = pMachine->main_stackPtr;
     *--pMachine->main_stackPtr = 0;
     *--pMachine->main_stackPtr = (int)NULL;
     *--pMachine->main_stackPtr = (int)pMachine->main_tempT;
@@ -1210,9 +1335,11 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
 }
 void CcRunMachine(CMachine* pMachine, int cycs_per_run)
 {
-    while (cycs_per_run != 0) {
+    while (cycs_per_run != 0)
+    {
         cycs_per_run--;
-        if (CcBreakCheck()) {
+        if (CcBreakCheck())
+        {
             LogMsg("Ctrl-C, exit at cycle %d", pMachine->main_cycle);
             pMachine->retnVal = CCSTATUS_CTRL_C;
             pMachine->m_halted = 1;
@@ -1220,14 +1347,17 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
             //goto _cleanup;
         }
 
-        pMachine->main_tempI = *pMachine->main_instPtr++; ++pMachine->main_cycle;
-        if (pMachine->printCycles) {
+        pMachine->main_tempI = *pMachine->main_instPtr++;
+        ++pMachine->main_cycle;
+        if (pMachine->printCycles)
+        {
             LogMsgNoCr("%d> %s", pMachine->main_cycle,
-                &"LEA \0IMM \0JMP \0JSR \0BZ  \0BNZ \0ENT \0ADJ \0LEV \0LI  \0LC  \0SI  \0SC  \0PSH \0"
-                "OR  \0XOR \0AND \0EQ  \0NE  \0LT  \0GT  \0LE  \0GE  \0SHL \0SHR \0ADD \0SUB \0MUL \0DIV \0MOD \0"
-                "OPEN\0READ\0CLOS\0PRTF\0PRTN\0MALC\0FREE\0MSET\0MCMP\0RAND\0DRPX\0EXSC\0RDCH\0RDIN\0CLSC\0"
-                "FLSC\0FLRC\0DRRC\0SSCY\0DRST\0SPTF\0MVCR\0SLEP\0EXIT\0"[pMachine->main_tempI * 5]);
-            if (pMachine->main_tempI <= ADJ) {
+                       &"LEA \0IMM \0JMP \0JSR \0BZ  \0BNZ \0ENT \0ADJ \0LEV \0LI  \0LC  \0SI  \0SC  \0PSH \0"
+                       "OR  \0XOR \0AND \0EQ  \0NE  \0LT  \0GT  \0LE  \0GE  \0SHL \0SHR \0ADD \0SUB \0MUL \0DIV \0MOD \0"
+                       "OPEN\0READ\0CLOS\0PRTF\0PRTN\0MALC\0FREE\0MSET\0MCMP\0RAND\0DRPX\0EXSC\0RDCH\0RDIN\0CLSC\0"
+                       "FLSC\0FLRC\0DRRC\0SSCY\0DRST\0SPTF\0MVCR\0SLEP\0EXIT\0"[pMachine->main_tempI * 5]);
+            if (pMachine->main_tempI <= ADJ)
+            {
                 void* ptr = (void*)(*pMachine->main_instPtr);
                 LogMsg(" %#x", (int)ptr);
             }
@@ -1236,12 +1366,26 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
         if (pMachine->main_tempI == LEA) pMachine->main_theAReg = (int)(pMachine->main_basePtr + *pMachine->main_instPtr++);                             // load local address
         else if (pMachine->main_tempI == IMM) pMachine->main_theAReg = *pMachine->main_instPtr++;                                         // load global address or immediate
         else if (pMachine->main_tempI == JMP) pMachine->main_instPtr = (int*)*pMachine->main_instPtr;                                   // jump
-        else if (pMachine->main_tempI == JSR) { *--pMachine->main_stackPtr = (int)(pMachine->main_instPtr + 1); pMachine->main_instPtr = (int*)*pMachine->main_instPtr; }        // jump to subroutine
+        else if (pMachine->main_tempI == JSR)
+        {
+            *--pMachine->main_stackPtr = (int)(pMachine->main_instPtr + 1);    // jump to subroutine
+            pMachine->main_instPtr = (int*)*pMachine->main_instPtr;
+        }
         else if (pMachine->main_tempI == BZ)  pMachine->main_instPtr = pMachine->main_theAReg ? pMachine->main_instPtr + 1 : (int*)*pMachine->main_instPtr;                      // branch if zero
         else if (pMachine->main_tempI == BNZ) pMachine->main_instPtr = pMachine->main_theAReg ? (int*)*pMachine->main_instPtr : pMachine->main_instPtr + 1;                      // branch if not zero
-        else if (pMachine->main_tempI == ENT) { *--pMachine->main_stackPtr = (int)pMachine->main_basePtr; pMachine->main_basePtr = pMachine->main_stackPtr; pMachine->main_stackPtr = pMachine->main_stackPtr - *pMachine->main_instPtr++; }     // enter subroutine
+        else if (pMachine->main_tempI == ENT)
+        {
+            *--pMachine->main_stackPtr = (int)pMachine->main_basePtr;    // enter subroutine
+            pMachine->main_basePtr = pMachine->main_stackPtr;
+            pMachine->main_stackPtr = pMachine->main_stackPtr - *pMachine->main_instPtr++;
+        }
         else if (pMachine->main_tempI == ADJ) pMachine->main_stackPtr = pMachine->main_stackPtr + *pMachine->main_instPtr++;                                   // stack adjust
-        else if (pMachine->main_tempI == LEV) { pMachine->main_stackPtr = pMachine->main_basePtr; pMachine->main_basePtr = (int*)*pMachine->main_stackPtr++; pMachine->main_instPtr = (int*)*pMachine->main_stackPtr++; } // leave subroutine
+        else if (pMachine->main_tempI == LEV)
+        {
+            pMachine->main_stackPtr = pMachine->main_basePtr;    // leave subroutine
+            pMachine->main_basePtr = (int*)*pMachine->main_stackPtr++;
+            pMachine->main_instPtr = (int*)*pMachine->main_stackPtr++;
+        }
         else if (pMachine->main_tempI == LI)  pMachine->main_theAReg = *(int*)pMachine->main_theAReg;                                     // load int
         else if (pMachine->main_tempI == LC)  pMachine->main_theAReg = *(char*)pMachine->main_theAReg;                                    // load char
         else if (pMachine->main_tempI == SI)  *(int*)*pMachine->main_stackPtr++ = pMachine->main_theAReg;                                 // store int
@@ -1268,14 +1412,24 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
         else if (pMachine->main_tempI == OPEN) LogMsg("Not supported!");
         else if (pMachine->main_tempI == READ) LogMsg("Not supported!");
         else if (pMachine->main_tempI == CLOS) LogMsg("Not supported!");
-        else if (pMachine->main_tempI == PRTF) { pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1]; LogMsg    ((char*)pMachine->main_tempT[-1], pMachine->main_tempT[-2], pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]); }
-        else if (pMachine->main_tempI == PRTN) { pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1]; LogMsgNoCr((char*)pMachine->main_tempT[-1], pMachine->main_tempT[-2], pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]); }
-        else if (pMachine->main_tempI == MALC) {
-            if (pMachine->g_memoryAllocCount < MAX_ALLOCS - 2) {
+        else if (pMachine->main_tempI == PRTF)
+        {
+            pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1];
+            LogMsg    ((char*)pMachine->main_tempT[-1], pMachine->main_tempT[-2], pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]);
+        }
+        else if (pMachine->main_tempI == PRTN)
+        {
+            pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1];
+            LogMsgNoCr((char*)pMachine->main_tempT[-1], pMachine->main_tempT[-2], pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]);
+        }
+        else if (pMachine->main_tempI == MALC)
+        {
+            if (pMachine->g_memoryAllocCount < MAX_ALLOCS - 2)
+            {
                 pMachine->main_theAReg = (int)MmAllocateK(*pMachine->main_stackPtr);
-				
-				if (pMachine->main_theAReg)
-					CcOnAllocateSomething(pMachine, (void*)pMachine->main_theAReg);
+
+                if (pMachine->main_theAReg)
+                    CcOnAllocateSomething(pMachine, (void*)pMachine->main_theAReg);
             }
             else
             {
@@ -1283,13 +1437,15 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
                 pMachine->main_theAReg = (int)NULL;
             }
         }
-        else if (pMachine->main_tempI == FREE) {
+        else if (pMachine->main_tempI == FREE)
+        {
             CcOnDeallocateSomething(pMachine, (void*)*pMachine->main_stackPtr);
             MmFree((void*)*pMachine->main_stackPtr);
         }
         else if (pMachine->main_tempI == MSET) pMachine->main_theAReg = (int)memset((char*)pMachine->main_stackPtr[2], pMachine->main_stackPtr[1], *pMachine->main_stackPtr);
         else if (pMachine->main_tempI == MCMP) pMachine->main_theAReg = memcmp((char*)pMachine->main_stackPtr[2], (char*)pMachine->main_stackPtr[1], *pMachine->main_stackPtr);
-        else if (pMachine->main_tempI == RAND) {
+        else if (pMachine->main_tempI == RAND)
+        {
             int x = *pMachine->main_stackPtr;
             int rng = GetRandom();
             rng = rng & 0xFFFF;//make sure it is unsigned
@@ -1297,82 +1453,97 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
             else pMachine->main_theAReg = rng;
             //LogMsg("[DEBUG] Random(%d) returned %d", x,a);
         }
-        else if (pMachine->main_tempI == RDCH) {
-			while(CoInputBufferEmpty()) hlt;
-			pMachine->main_theAReg = CoGetChar();
+        else if (pMachine->main_tempI == RDCH)
+        {
+            while(CoInputBufferEmpty()) hlt;
+            pMachine->main_theAReg = CoGetChar();
         }
-        else if (pMachine->main_tempI == RDIN) {
-			/*if (pMachine->m_bHookedConsole)  //Did we hook the console?
-				pMachine->main_theAReg = KeReadIntDebug();
-			else
-				pMachine->main_theAReg = -1;*/
-			
-			char buffer [11];
-			LogMsgNoCr("?");
-			CoGetString(buffer, 11);
-			
-			int num = atoi (buffer);
-			
-			pMachine->main_theAReg = num;
+        else if (pMachine->main_tempI == RDIN)
+        {
+            /*if (pMachine->m_bHookedConsole)  //Did we hook the console?
+            	pMachine->main_theAReg = KeReadIntDebug();
+            else
+            	pMachine->main_theAReg = -1;*/
+
+            char buffer [11];
+            LogMsgNoCr("?");
+            CoGetString(buffer, 11);
+
+            int num = atoi (buffer);
+
+            pMachine->main_theAReg = num;
         }
-        else if (pMachine->main_tempI == CLSC) {
+        else if (pMachine->main_tempI == CLSC)
+        {
 #ifndef _WIN32
             CoClearScreen(g_currentConsole);
             g_currentConsole->curX = 0;
             g_currentConsole->curY = 0;
 #endif
         }
-        else if (pMachine->main_tempI == MVCR) {
+        else if (pMachine->main_tempI == MVCR)
+        {
 #ifndef _WIN32
             g_currentConsole->curX = (int)pMachine->main_stackPtr[1];
             g_currentConsole->curY = (int)pMachine->main_stackPtr[0];
 #endif
         }
-        else if (pMachine->main_tempI == SLEP) {
+        else if (pMachine->main_tempI == SLEP)
+        {
 #ifndef _WIN32
             WaitMS((int)pMachine->main_stackPtr[0]);
 #else
-			Sleep ((int)pMachine->main_stackPtr[0]);
+            Sleep ((int)pMachine->main_stackPtr[0]);
 #endif
         }
         else if (pMachine->main_tempI == DRPX) VidPlotPixel((int)pMachine->main_stackPtr[2], (int)pMachine->main_stackPtr[1], (int)*pMachine->main_stackPtr);
-        else if (pMachine->main_tempI == FLRC) {
+        else if (pMachine->main_tempI == FLRC)
+        {
 #ifndef _WIN32
             Rectangle r;
-            r.left = (int)pMachine->main_stackPtr[4]; r.top = (int)pMachine->main_stackPtr[3];
+            r.left = (int)pMachine->main_stackPtr[4];
+            r.top = (int)pMachine->main_stackPtr[3];
             r.right = (int)pMachine->main_stackPtr[2], r.bottom = (int)pMachine->main_stackPtr[1];
             uint32_t color = (uint32_t)pMachine->main_stackPtr[0];
             VidFillRectangle(color, r);
 #endif
         }
-        else if (pMachine->main_tempI == DRRC) {
+        else if (pMachine->main_tempI == DRRC)
+        {
 #ifndef _WIN32
             Rectangle r;
-            r.left = (int)pMachine->main_stackPtr[4]; r.top = (int)pMachine->main_stackPtr[3];
+            r.left = (int)pMachine->main_stackPtr[4];
+            r.top = (int)pMachine->main_stackPtr[3];
             r.right = (int)pMachine->main_stackPtr[2], r.bottom = (int)pMachine->main_stackPtr[1];
             uint32_t color = (uint32_t)pMachine->main_stackPtr[0];
             VidDrawRectangle(color, r);
 #endif
         }
-        else if (pMachine->main_tempI == FLSC) {
+        else if (pMachine->main_tempI == FLSC)
+        {
             uint32_t color = (int)pMachine->main_stackPtr[0];
             VidFillScreen(color);
         }
-        else if (pMachine->main_tempI == SSCY) {
+        else if (pMachine->main_tempI == SSCY)
+        {
             //int howMuch = (int)pMachine->main_stackPtr[0];
             //VidShiftScreen(howMuch);
         }
-        else if (pMachine->main_tempI == DRST) {
-            int color = (int)pMachine->main_stackPtr[3], px = (int)pMachine->main_stackPtr[2], py = (int)pMachine->main_stackPtr[1]; const char* pText = (char*)pMachine->main_stackPtr[0];
+        else if (pMachine->main_tempI == DRST)
+        {
+            int color = (int)pMachine->main_stackPtr[3], px = (int)pMachine->main_stackPtr[2], py = (int)pMachine->main_stackPtr[1];
+            const char* pText = (char*)pMachine->main_stackPtr[0];
             VidTextOut(pText, px, py, color, TRANSPARENT);
         }
-        else if (pMachine->main_tempI == SPTF) {
+        else if (pMachine->main_tempI == SPTF)
+        {
             pMachine->main_tempT = pMachine->main_stackPtr + pMachine->main_instPtr[1];
             char* pBuf = (char*)pMachine->main_tempT[-1], * pFormat = (char*)pMachine->main_tempT[-2];
 
             sprintf(pBuf, pFormat, pMachine->main_tempT[-3], pMachine->main_tempT[-4], pMachine->main_tempT[-5], pMachine->main_tempT[-6]);
         }
-        else if (pMachine->main_tempI == EXSC) {
+        else if (pMachine->main_tempI == EXSC)
+        {
             /*const char* pFileName = (const char*)*sp;
 
             uint8_t* data = NULL; int size = 0;
@@ -1385,29 +1556,35 @@ void CcRunMachine(CMachine* pMachine, int cycs_per_run)
             if (data) FreeMem(data);*/
             LogMsg("Not supported yet!");
         }
-        else if (pMachine->main_tempI == EXIT) {
+        else if (pMachine->main_tempI == EXIT)
+        {
             if (pMachine->printCycles)
-				LogMsg("exit(%d) cycle = %d", *pMachine->main_stackPtr, pMachine->main_cycle);
-			
+                LogMsg("exit(%d) cycle = %d", *pMachine->main_stackPtr, pMachine->main_cycle);
+
             pMachine->retnVal = *pMachine->main_stackPtr;
             pMachine->m_halted = 1;
             return;
             //goto _cleanup;
         }
-        else {
-            LogMsg("ERROR: Unknown instruction %d! cycle = %d", pMachine->main_tempI, pMachine->main_cycle); 
+        else
+        {
+            LogMsg("ERROR: Unknown instruction %d! cycle = %d", pMachine->main_tempI, pMachine->main_cycle);
             pMachine->retnVal = CCSTATUS_UNKNOWN_INSTRUCTION;
             pMachine->m_halted = 1;
-            return;//goto _cleanup; 
+            return;//goto _cleanup;
         }
     }
 }
 void CcKillMachine(CMachine* pMachine)
 {
-    bool printedMemleakAlert = true; int memLeakCount = 0;
-    for (int i = 0; i < pMachine->g_memoryAllocCount; i++) {
-        if (pMachine->g_memoryAllocatedPointers[i] != NULL) {
-            if (printedMemleakAlert) {
+    bool printedMemleakAlert = true;
+    int memLeakCount = 0;
+    for (int i = 0; i < pMachine->g_memoryAllocCount; i++)
+    {
+        if (pMachine->g_memoryAllocatedPointers[i] != NULL)
+        {
+            if (printedMemleakAlert)
+            {
                 LogMsg("WARNING: Memory leak detected, automatically freed.");
                 printedMemleakAlert = false;
             }
@@ -1432,26 +1609,29 @@ CCSTATUS CcRunCCode(const char* pCode, int length)
 {
     CMachine* pMachine;
     pMachine = (CMachine*)MmAllocateK(sizeof(CMachine));
-    if (!pMachine) {
+    if (!pMachine)
+    {
         LogMsg("Wtf?! (16)");
         return 1;
     }
     memset(pMachine, 0, sizeof(CMachine));
-	
-	pMachine->m_bHookedConsole = true;
+
+    pMachine->m_bHookedConsole = true;
 
     //int c = CcRunCCode(pMachine, lol);
     int state;
     state = CcInitMachine(pMachine);
-    if (state != 0) {
-		CcKillMachine(pMachine);
-		return state;
-	}
+    if (state != 0)
+    {
+        CcKillMachine(pMachine);
+        return state;
+    }
     state = CcCompileCode(pMachine, pCode, length);
-    if (state != 0) {
-		CcKillMachine(pMachine);
-		return state;
-	}
+    if (state != 0)
+    {
+        CcKillMachine(pMachine);
+        return state;
+    }
 
     while (!pMachine->m_halted)
         CcRunMachine(pMachine, 1000);
@@ -1459,6 +1639,6 @@ CCSTATUS CcRunCCode(const char* pCode, int length)
     int rv = pMachine->retnVal;
 
     CcKillMachine(pMachine);
-	MmFree(pMachine);
+    MmFree(pMachine);
     return rv;
 }
