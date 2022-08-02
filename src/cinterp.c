@@ -53,19 +53,12 @@ enum { Tk, Hash, Name, Class, Type, Val, HClass, HType, HVal, Idsz };
 	return;\
 } while (0)
 
-#define Except(mach, lo) do {\
+#define Except(mach, eno) do {\
 	mach->g_pErrorExists = true;\
 	mach->g_pErrorLine = __LINE__;\
-	mach->g_pErrorString = lo;\
     mach->m_halted = true;\
-	return;\
+	LongJump(mach->m_jumpError, eno);\
 } while (0)
-
-#define ExitIfAnythingWrong(mach) \
-do {\
-	if (mach->g_pErrorExists)\
-		return;\
-} while(0)
 
 
 void CcAdvanceOpc(CMachine* pMachine)
@@ -365,7 +358,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
     if (!pMachine->currentToken)
     {
         LogMsg("%d: unexpected eof in expression", pMachine->lineNum);
-        Except(pMachine, "Error in CcOnExpression");
+        Except(pMachine, CCSTATUS_UNEXPECTED_EOF);
     }
     else if (pMachine->currentToken == Num)
     {
@@ -391,7 +384,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
         else
         {
             LogMsg("%d: open paren expected in sizeof", pMachine->lineNum);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_OPEN_PAREN_EXPECTED);
         }
         pMachine->currentExprType = INT;
         if (pMachine->currentToken == Int) CcNextToken(pMachine);
@@ -409,7 +402,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
         else
         {
             LogMsg("%d: close paren expected in sizeof", pMachine->lineNum);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_CLOSE_PAREN_EXPECTED);
         }
         CcPushOpCode(pMachine, IMM);
         CcPushImm(pMachine, (pMachine->currentExprType == CHAR) ? sizeof(char) : sizeof(int));
@@ -426,7 +419,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             while (pMachine->currentToken != ')')
             {
                 CcOnExpression(pMachine, Assign);
-                ExitIfAnythingWrong(pMachine);
+                //ExitIfAnythingWrong(pMachine);
                 CcPushOpCode(pMachine, PSH);
                 ++t;
                 if (pMachine->currentToken == ',')
@@ -442,7 +435,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             else
             {
                 LogMsg("%d: bad function call", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_BAD_FUNCTION_CALL);
             }
             if (t)
             {
@@ -472,7 +465,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             else
             {
                 LogMsg("%d: undefined variable", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_UNDEFINED_VARIABLE);
             }
             CcPushImm(pMachine, ((pMachine->currentExprType = d[Type]) == CHAR) ? LC : LI);
         }
@@ -489,25 +482,31 @@ void CcOnExpression(CMachine* pMachine, int lev)
                 CcNextToken(pMachine);
                 t = t + PTR;
             }
-            if (pMachine->currentToken == ')') CcNextToken(pMachine);
+            if (pMachine->currentToken == ')')
+			{
+				CcNextToken(pMachine);
+			}
             else
             {
                 LogMsg("%d: bad cast", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_BAD_CAST);
             }
             CcOnExpression(pMachine, Inc);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             pMachine->currentExprType = t;
         }
         else
         {
             CcOnExpression(pMachine, Assign);
-            ExitIfAnythingWrong(pMachine);
-            if (pMachine->currentToken == ')') CcNextToken(pMachine);
+            //ExitIfAnythingWrong(pMachine);
+            if (pMachine->currentToken == ')')
+			{
+				CcNextToken(pMachine);
+			}
             else
             {
                 LogMsg("%d: close paren expected", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_CLOSE_PAREN_EXPECTED);
             }
         }
     }
@@ -515,12 +514,12 @@ void CcOnExpression(CMachine* pMachine, int lev)
     {
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (pMachine->currentExprType > INT) pMachine->currentExprType = pMachine->currentExprType - PTR;
         else
         {
             LogMsg("%d: bad dereference", pMachine->lineNum);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_BAD_DEREFERENCE);
         }
         CcPushOpCode(pMachine, (pMachine->currentExprType == CHAR) ? LC : LI);
     }
@@ -528,13 +527,13 @@ void CcOnExpression(CMachine* pMachine, int lev)
     {
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (CcGetOpCodeHere(pMachine) == LC || CcGetOpCodeHere(pMachine) == LI)
             CcGoBackOpc(pMachine);
         else
         {
             LogMsg("%d: bad address-of", pMachine->lineNum);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_BAD_REFERENCE);
         }
         pMachine->currentExprType = pMachine->currentExprType + PTR;
     }
@@ -542,7 +541,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
     {
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, PSH);
         CcPushOpCode(pMachine, IMM);
         CcPushImm(pMachine, 0);
@@ -553,7 +552,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
     {
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, PSH);
         CcPushOpCode(pMachine, IMM);
         CcPushImm(pMachine, -1);
@@ -564,7 +563,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
     {
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         pMachine->currentExprType = INT;
     }
     else if (pMachine->currentToken == Sub)
@@ -581,7 +580,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcPushImm(pMachine, -1);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Inc);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, MUL);
         }
         pMachine->currentExprType = INT;
@@ -591,7 +590,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
         t = pMachine->currentToken;
         CcNextToken(pMachine);
         CcOnExpression(pMachine, Inc);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (CcGetOpCodeHere(pMachine) == LC)
         {
             CcSetOpCodeHere(pMachine, PSH);
@@ -605,7 +604,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
         else
         {
             LogMsg("%d: bad lvalue in pre-increment", pMachine->lineNum);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_BAD_LVALUE);
         }
         CcPushOpCode(pMachine, PSH);
         CcPushOpCode(pMachine, IMM);
@@ -616,7 +615,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
     else
     {
         LogMsg("%d: bad expression", pMachine->lineNum);
-        Except(pMachine, "Error in CcOnExpression");
+        Except(pMachine, CCSTATUS_BAD_EXPRESSION);
     }
 
     while (pMachine->currentToken >= lev)   // "precedence climbing" or "Top Down Operator Precedence" method
@@ -629,10 +628,10 @@ void CcOnExpression(CMachine* pMachine, int lev)
             else
             {
                 LogMsg("%d: bad lvalue in assignment", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_BAD_LVALUE);
             }
             CcOnExpression(pMachine, Assign);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, ((pMachine->currentExprType = t) == CHAR) ? SC : SI);
         }
         else if (pMachine->currentToken == Cond)
@@ -641,18 +640,18 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcPushOpCode(pMachine, BZ);
             d = ++pMachine->pText;
             CcOnExpression(pMachine, Assign);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             if (pMachine->currentToken == ':') CcNextToken(pMachine);
             else
             {
                 LogMsg("%d: conditional missing colon", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_COND_MISSING_COLON);
             }
             *d = (int)(pMachine->pText + 3);
             CcPushOpCode(pMachine, JMP);
             d = ++pMachine->pText;
             CcOnExpression(pMachine, Cond);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             *d = (int)(pMachine->pText + 1);
         }
         else if (pMachine->currentToken == Lor)
@@ -662,7 +661,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcAdvanceOpc(pMachine);
             d = pMachine->pText;
             CcOnExpression(pMachine, Lan);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             *d = (int)(pMachine->pText + 1);
             pMachine->currentExprType = INT;
         }
@@ -673,7 +672,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcAdvanceOpc(pMachine);
             d = pMachine->pText;
             CcOnExpression(pMachine, Or);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             *d = (int)(pMachine->pText + 1);
             pMachine->currentExprType = INT;
         }
@@ -682,7 +681,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Xor);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, OR);
             pMachine->currentExprType = INT;
         }
@@ -691,7 +690,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, And);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, XOR);
             pMachine->currentExprType = INT;
         }
@@ -700,7 +699,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Eq);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, AND);
             pMachine->currentExprType = INT;
         }
@@ -709,7 +708,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Lt);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, EQ);
             pMachine->currentExprType = INT;
         }
@@ -718,7 +717,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Lt);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, NE);
             pMachine->currentExprType = INT;
         }
@@ -727,7 +726,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Shl);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, LT);
             pMachine->currentExprType = INT;
         }
@@ -736,7 +735,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Shl);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, GT);
             pMachine->currentExprType = INT;
         }
@@ -745,7 +744,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Shl);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, LE);
             pMachine->currentExprType = INT;
         }
@@ -754,7 +753,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Shl);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, GE);
             pMachine->currentExprType = INT;
         }
@@ -763,7 +762,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Add);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, SHL);
             pMachine->currentExprType = INT;
         }
@@ -772,7 +771,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Add);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, SHR);
             pMachine->currentExprType = INT;
         }
@@ -781,7 +780,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Mul);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             if ((pMachine->currentExprType = t) > PTR)
             {
                 CcPushOpCode(pMachine, PSH);
@@ -796,7 +795,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Mul);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             if (t > PTR && t == pMachine->currentExprType)
             {
                 CcPushOpCode(pMachine, SUB);
@@ -821,7 +820,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Inc);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, MUL);
             pMachine->currentExprType = INT;
         }
@@ -830,7 +829,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Inc);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, DIV);
             pMachine->currentExprType = INT;
         }
@@ -839,7 +838,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Inc);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             CcPushOpCode(pMachine, MOD);
             pMachine->currentExprType = INT;
         }
@@ -858,7 +857,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             else
             {
                 LogMsg("%d: bad lvalue in post-increment", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_BAD_LVALUE);
             }
             CcPushOpCode(pMachine, PSH);
             CcPushOpCode(pMachine, IMM);
@@ -876,12 +875,12 @@ void CcOnExpression(CMachine* pMachine, int lev)
             CcNextToken(pMachine);
             CcPushOpCode(pMachine, PSH);
             CcOnExpression(pMachine, Assign);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
             if (pMachine->currentToken == ']') CcNextToken(pMachine);
             else
             {
                 LogMsg("%d: close bracket expected", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_CLOSE_BRACK_EXPECTED);
             }
             if (t > PTR)
             {
@@ -893,7 +892,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
             else if (t < PTR)
             {
                 LogMsg("%d: pointer type expected", pMachine->lineNum);
-                Except(pMachine, "Error in CcOnExpression");
+                Except(pMachine, CCSTATUS_POINTER_TYPE_EXPECTED);
             }
             CcPushOpCode(pMachine, ADD);
             CcPushImm(pMachine, ((pMachine->currentExprType = t - PTR) == CHAR) ? LC : LI);
@@ -901,7 +900,7 @@ void CcOnExpression(CMachine* pMachine, int lev)
         else
         {
             LogMsg("%d: compiler error pMachine->currentToken=%d", pMachine->lineNum, pMachine->currentToken);
-            Except(pMachine, "Error in CcOnExpression");
+            Except(pMachine, CCSTATUS_COMPILER_ERROR);
         }
     }
 }
@@ -916,21 +915,21 @@ void CcStatement(CMachine *pMachine)
         else
         {
             LogMsg("%d: open paren expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_OPEN_PAREN_EXPECTED);
         }
         CcOnExpression(pMachine, Assign);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (pMachine->currentToken == ')') CcNextToken(pMachine);
         else
         {
             LogMsg("%d: close paren expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_CLOSE_PAREN_EXPECTED);
         }
         CcPushOpCode(pMachine, BZ);
         CcAdvanceOpc(pMachine);
         b = pMachine->pText;
         CcStatement(pMachine);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (pMachine->currentToken == Else)
         {
             *b = (int)(pMachine->pText + 3);
@@ -939,7 +938,7 @@ void CcStatement(CMachine *pMachine)
             b = pMachine->pText;
             CcNextToken(pMachine);
             CcStatement(pMachine);
-            ExitIfAnythingWrong(pMachine);
+            //ExitIfAnythingWrong(pMachine);
         }
         *b = (int)(pMachine->pText + 1);
     }
@@ -951,21 +950,21 @@ void CcStatement(CMachine *pMachine)
         else
         {
             LogMsg("%d: open paren expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_OPEN_PAREN_EXPECTED);
         }
         CcOnExpression(pMachine, Assign);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (pMachine->currentToken == ')') CcNextToken(pMachine);
         else
         {
             LogMsg("%d: close paren expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_CLOSE_PAREN_EXPECTED);
         }
         CcPushOpCode(pMachine, BZ);
         CcAdvanceOpc(pMachine);
         b = pMachine->pText;
         CcStatement(pMachine);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, JMP);
         CcPushImm(pMachine, (int)a);
         *b = (int)(pMachine->pText + 1);
@@ -974,20 +973,20 @@ void CcStatement(CMachine *pMachine)
     {
         CcNextToken(pMachine);
         if (pMachine->currentToken != ';') CcOnExpression(pMachine, Assign);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         CcPushOpCode(pMachine, LEV);
         if (pMachine->currentToken == ';') CcNextToken(pMachine);
         else
         {
             LogMsg("%d: semicolon expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_SEMICOLON_EXPECTED);
         }
     }
     else if (pMachine->currentToken == '{')
     {
         CcNextToken(pMachine);
         while (pMachine->currentToken != '}') CcStatement(pMachine);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         CcNextToken(pMachine);
     }
     else if (pMachine->currentToken == ';')
@@ -997,12 +996,12 @@ void CcStatement(CMachine *pMachine)
     else
     {
         CcOnExpression(pMachine, Assign);
-        ExitIfAnythingWrong(pMachine);
+        //ExitIfAnythingWrong(pMachine);
         if (pMachine->currentToken == ';') CcNextToken(pMachine);
         else
         {
             LogMsg("%d: semicolon expected", pMachine->lineNum);
-            Except(pMachine, "Error in CcStatement");
+            Except(pMachine, CCSTATUS_SEMICOLON_EXPECTED);
         }
     }
 }
@@ -1126,8 +1125,14 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
     pMachine->pSource[pMachine->main_tempI] = 0;
     pMachine->pSource[pMachine->main_tempI+1] = 0;
     pMachine->pSource[pMachine->main_tempI+2] = 0;
-    //LogMsg("Source code:%s=====",pMachine->pSource);
-    //LogMsg("MainTempI: %d",pMachine->main_tempI);
+	
+	// Error Handling
+	int error = SetJump (pMachine->m_jumpError);
+	if (error != 0)
+	{
+		LogMsg("Got ERROR during compilation: %x", error);
+		return error;
+	}
 
     // parse declarations
     pMachine->lineNum = 1;
@@ -1154,7 +1159,7 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                     if (pMachine->currentToken != Id)
                     {
                         LogMsg("%d: bad enum identifier %d", pMachine->lineNum, pMachine->currentToken);
-                        return CCSTATUS_BAD_ENUM_IDENTIFIER;
+                        LongJump (pMachine->m_jumpError, CCSTATUS_BAD_ENUM_IDENTIFIER);
                     }
                     CcNextToken(pMachine);
                     if (pMachine->currentToken == Assign)
@@ -1163,15 +1168,18 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                         if (pMachine->currentToken != Num)
                         {
                             LogMsg("%d: bad enum initializer", pMachine->lineNum);
-                            return CCSTATUS_BAD_ENUM_INITIALIZER;
+                            LongJump(pMachine->m_jumpError, CCSTATUS_BAD_ENUM_INITIALIZER);
                         }
                         pMachine->main_tempI = pMachine->currentTokenValue;
                         CcNextToken(pMachine);
                     }
+					
                     pMachine->pCurrIdentifier[Class] = Num;
                     pMachine->pCurrIdentifier[Type] = INT;
                     pMachine->pCurrIdentifier[Val] = pMachine->main_tempI++;
-                    if (pMachine->currentToken == ',') CcNextToken(pMachine);
+					
+                    if (pMachine->currentToken == ',')
+						CcNextToken(pMachine);
                 }
                 CcNextToken(pMachine);
             }
@@ -1187,12 +1195,12 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
             if (pMachine->currentToken != Id)
             {
                 LogMsg("%d: bad global declaration", pMachine->lineNum);
-                return CCSTATUS_BAD_GLOBAL_DECLARATION;
+                LongJump(pMachine->m_jumpError, CCSTATUS_BAD_GLOBAL_DECLARATION);
             }
             if (pMachine->pCurrIdentifier[Class])
             {
                 LogMsg("%d: duplicate global definition", pMachine->lineNum);
-                return CCSTATUS_DUP_GLOBAL_DECLARATION;
+                LongJump(pMachine->m_jumpError, CCSTATUS_DUP_GLOBAL_DECLARATION);
             }
             CcNextToken(pMachine);
             pMachine->pCurrIdentifier[Type] = pMachine->main_tokenType;
@@ -1219,12 +1227,12 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                     if (pMachine->currentToken != Id)
                     {
                         LogMsg("%d: bad parameter declaration", pMachine->lineNum);
-                        return CCSTATUS_BAD_PARM_DECLARATION;
+                        LongJump(pMachine->m_jumpError, CCSTATUS_BAD_PARM_DECLARATION);
                     }
                     if (pMachine->pCurrIdentifier[Class] == Loc)
                     {
                         LogMsg("%d: duplicate parameter definition", pMachine->lineNum);
-                        return CCSTATUS_DUP_PARM_DECLARATION;
+                        LongJump(pMachine->m_jumpError, CCSTATUS_DUP_PARM_DECLARATION);
                     }
                     pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class];
                     pMachine->pCurrIdentifier[Class] = Loc;
@@ -1239,7 +1247,7 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                 if (pMachine->currentToken != '{')
                 {
                     LogMsg("%d: bad function definition", pMachine->lineNum);
-                    return CCSTATUS_BAD_FUNC_DECLARATION;
+                    LongJump(pMachine->m_jumpError, CCSTATUS_BAD_FUNC_DECLARATION);
                 }
                 pMachine->localVariableOffset = ++pMachine->main_tempI;
                 CcNextToken(pMachine);
@@ -1258,12 +1266,12 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                         if (pMachine->currentToken != Id)
                         {
                             LogMsg("%d: bad local declaration", pMachine->lineNum);
-                            return CCSTATUS_BAD_LOCAL_DECLARATION;
+                            LongJump(pMachine->m_jumpError, CCSTATUS_BAD_LOCAL_DECLARATION);
                         }
                         if (pMachine->pCurrIdentifier[Class] == Loc)
                         {
                             LogMsg("%d: duplicate local definition", pMachine->lineNum);
-                            return CCSTATUS_DUP_LOCAL_DECLARATION;
+                            LongJump(pMachine->m_jumpError, CCSTATUS_DUP_LOCAL_DECLARATION);
                         }
                         pMachine->pCurrIdentifier[HClass] = pMachine->pCurrIdentifier[Class];
                         pMachine->pCurrIdentifier[Class] = Loc;
@@ -1285,7 +1293,7 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
                     if (pMachine->g_pErrorExists)
                     {
                         pMachine->m_halted = true;// goto _cleanup;
-                        return CCSTATUS_ERROR_FOUND;
+                        LongJump(pMachine->m_jumpError, CCSTATUS_ERROR_FOUND);
                     }
                 }
                 CcPushOpCode(pMachine, LEV);
@@ -1313,8 +1321,8 @@ CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length)
     }
     if (!(pMachine->main_instPtr = (int*)pMachine->main_idMain[Val]))
     {
-        LogMsg("main() not defined");
-        return CCSTATUS_MAIN_NOT_DEFINED;
+        LogMsg("Error: main() not defined");
+        LongJump(pMachine->m_jumpError, CCSTATUS_MAIN_NOT_DEFINED);
     }
     //if (src) return 0;
 
