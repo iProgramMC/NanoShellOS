@@ -450,6 +450,7 @@ enum CURSORTYPE
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 
+#define WI_NOHIDDEN 0x01000000//Internal flag: This window wasn't hidden at the time of resizing.
 #define WI_MESSGBOX 0x02000000//Internal flag: This is a message box. Wait for it
 #define WI_FROZENRM 0x04000000//Internal flag: Remove the 'frozen' flag when the window is no longer hung
 #define WI_HUNGWIND 0x08000000//Internal flag: The window is hung (won't respond to events)
@@ -458,7 +459,7 @@ enum CURSORTYPE
 #define WI_INITGOOD 0x40000000//If the initialization process succeeded
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
-#define WI_INTEMASK 0xCC000000//Internal flag mask that CreateWindow will filter
+#define WI_INTEMASK 0xCD000000//Internal flag mask that CreateWindow will filter
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
@@ -536,6 +537,9 @@ typedef struct WindowStruct
 	//(we can optimize drawing by just VidBitBlitting it directly
 	//to the screen, instead of taking occlusion into account)
 	bool       m_bForemost;
+	
+	//avoid a data race while resizing the screen
+	SafeLock   m_screenLock;
 } Window;
 
 /**
@@ -708,7 +712,7 @@ int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
 /**
  * Call the ControlCallback of a specific control inside a window
  */
-int CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2);
+void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2);
 
 /**
  * Requests an event for that window in the master queue.  The window will still get it at some point.

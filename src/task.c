@@ -706,6 +706,7 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 
 void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 {
+	int tries = 0;
 	while (true)
 	{
 		// Clear interrupts: we need the following to be atomic
@@ -719,6 +720,13 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 			pLock->m_task_owning_it = KeGetRunningTask ();
 			sti;
 			return;
+		}
+		
+		tries++;
+		
+		if (tries == 10000)
+		{
+			SLogMsg("Tried to acquire a lock 10000 times. Is something wrong?");
 		}
 		
 		// Restore interrupts and let other threads run
@@ -737,5 +745,17 @@ void LockFree (SafeLock *pLock)
 	}
 	else
 		SLogMsg("Cannot release lock %x held by task %x as task %x", pLock, pLock->m_task_owning_it, KeGetRunningTask ());
+}
+
+void KeTaskTest()
+{
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		Task *pTask = &g_runningTasks[i];
+		if (!pTask->m_bExists) continue;
+		
+		//to get a rough idea of what a task is doing
+		SLogMsg("TASK %p  EIP:%p  ESP:%p  %s:%d", pTask, pTask->m_state.eip, pTask->m_state.esp, pTask->m_authorFile, pTask->m_authorLine);
+	}
 }
 

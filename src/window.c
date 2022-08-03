@@ -1235,10 +1235,15 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 		newWidth = WINDOW_MIN_WIDTH;
 	if (newHeight< WINDOW_MIN_HEIGHT)
 		newHeight= WINDOW_MIN_HEIGHT;
+	
+	//acquire the screen lock
+	LockAcquire(&pWindow->m_screenLock);
+	
 	uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
 	if (!pNewFb)
 	{
 		SLogMsg("Cannot resize window to %dx%d, out of memory", newWidth, newHeight);
+		LockFree(&pWindow->m_screenLock);
 		return;
 	}
 	
@@ -1277,16 +1282,27 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 	
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  MAKE_MOUSE_PARM(newWidth, newHeight), MAKE_MOUSE_PARM(oldWidth, oldHeight));
-	WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
+	//WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
+	
+	LockFree(&pWindow->m_screenLock);
 }
 
 static void ResizeWindowUnsafe(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
-	HideWindowUnsafe (pWindow);
+	if (!pWindow->m_hidden)
+	{
+		pWindow->m_hidden |= WI_NOHIDDEN;
+		HideWindowUnsafe (pWindow);
+	}
+	else
+	{
+		pWindow->m_hidden &= ~WI_NOHIDDEN;
+	}
 	
 	ResizeWindowInternal (pWindow, newPosX, newPosY, newWidth, newHeight);
 	
-	ShowWindowUnsafe (pWindow);
+	//going to show up later by itself
+	//ShowWindowUnsafe (pWindow);
 }
 
 void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
@@ -1599,6 +1615,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_eventQueueSize = 0;
 	
+	pWnd->m_screenLock.m_held = false;
+	
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
 	size_t controlArraySize = sizeof(Control) * pWnd->m_controlArrayLen;
@@ -1629,6 +1647,16 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 }
 #endif 
 
+/*void WmTest()
+{
+	for(int i=0; i<ARRAY_COUNT(g_windows); i++)
+	{
+		if(g_windows[i].m_used)
+		{
+			SLogMsg("WINDOW (%p): %s", &g_windows[i], g_windows[i].m_title);
+		}
+	}
+}*/
 // Mouse event handlers
 #if 1
 int g_prevMouseX, g_prevMouseY;
@@ -2100,7 +2128,7 @@ void FurtherShutdownProcessing()
 	DestroyWindow (pWindow);
 }
 
-void ShutdownProcessing(int parameter)
+void ShutdownProcessing(UNUSED int parameter)
 {
 	KeTaskAssignTag(KeGetRunningTask(), "Shutting down");
 	g_shutdownProcessing = true;
@@ -2213,7 +2241,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	
 	int timeout = 10;
 	#define UPDATE_TIMEOUT 50
-	int UpdateTimeout = UPDATE_TIMEOUT, shutdownTimeout = 500;
+	int UpdateTimeout = UPDATE_TIMEOUT;
 	
 	while (true)
 	{
@@ -2468,28 +2496,6 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		cal += cal / 2;
 		//series: 2, 3, 4, 6, 9, 13, 19, 28, 42, ...
 		
-		size_t newSize = sizeof(Control) * cal;
-		
-		/*
-		Control* newCtlArray = (Control*)MmAllocateK(newSize);
-		if (!newCtlArray)
-		{
-			SLogMsg("Cannot add control %d to window %x", type, pWindow);
-			return -1;
-		}
-		memset(newCtlArray, 0, newSize);
-		
-		// copy stuff into the new control array:
-		memcpy(newCtlArray, pWindow->m_pControlArray, sizeof(Control) * pWindow->m_controlArrayLen);
-		
-		// free the previous array:
-		MmFreeK(pWindow->m_pControlArray);
-		
-		// then assign the new one
-		pWindow->m_pControlArray   = newCtlArray;
-		pWindow->m_controlArrayLen = cal;
-		*/
-		
 		SLogMsg("Expanding control array from %d to %d", pWindow->m_controlArrayLen, cal);
 		
 		Control* newCtlArray = MmReAllocateK(pWindow->m_pControlArray, sizeof(Control) * cal);
@@ -2598,7 +2604,7 @@ void RemoveControl (Window* pWindow, int controlIndex)
 	LockFree(&pWindow->m_EventQueueLock);
 }
 
-int CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
+void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -2767,7 +2773,7 @@ void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, in
 // Event processors called by user processes.
 #if 1
 
-void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, int th, int szx, int szy)
+void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, UNUSED int th, int szx, int szy)
 {
 	//TODO: clean up this function!
 	
@@ -2991,7 +2997,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		rectc.bottom--;
 		
 		//Cut out the gap stuff so that the animation looks good
-		int iconGap = 0;
+		//int iconGap = 0;
 		
 		//draw the window title:
 		rectb.left   ++;
@@ -3197,8 +3203,12 @@ char WinReadFromInputQueue (Window* this)
 	else return 0;
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLock)
 {
+	if (!bLock)
+		LockAcquire (&pWindow->m_screenLock);
+	//if bLock is true, we can assume that we already have the lock
+	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	//setup paint stuff so the window can only paint in their little box
 	VidSetVBEData (&pWindow->m_vbeData);
@@ -3221,7 +3231,8 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pWindow->m_cursorID = pWindow->m_cursorID_backup;
 	}
 	
-	//todo: switch case much?
+	// Perform operations before calling the window's event handler function
+	
 	if (eventType == EVENT_MINIMIZE)
 	{
 		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
@@ -3273,7 +3284,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		VidSetVBEData (&pWindow->m_vbeData);
 		PaintWindowBackgroundAndBorder(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -3403,10 +3414,16 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		//PaintWindowBorderNoBackgroundOverpaint(pWindow);
 	}
 	
+	// Perform the actual call to the user application here.
+	VidSetVBEData (&pWindow->m_vbeData);
+	
 	someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
 	
-	//reset to main screen
+	// Reset to main screen data.
 	VidSetVBEData (NULL);
+	
+	// Perform operations after calling into the user application.
+	
 	if (!pWindow->m_minimized)
 	{
 		if (pWindow->m_vbeData.m_dirty)
@@ -3415,7 +3432,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		}
 	}
 	else
+	{
 		pWindow->m_renderFinished = true;
+	}
 	
 	//if the contents of this window have been modified, redraw them:
 	//if (pWindow->m_vbeData.m_dirty && !pWindow->m_hidden)
@@ -3423,9 +3442,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	if (eventType == EVENT_SIZE)
 	{
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true);
 		
 		pWindow->m_renderFinished = true;
+		
+		ShowWindow (pWindow);
 	}
 	else if (eventType == EVENT_CREATE)
 	{
@@ -3442,20 +3463,18 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		NukeWindow(pWindow);
 		
+		if (!bLock)
+			LockFree (&pWindow->m_screenLock);
+		
 		return false;
 	}
+	
+	if (!bLock)
+		LockFree (&pWindow->m_screenLock);
+	
 	return true;
 }
-void WmTest()
-{
-	for(int i=0; i<ARRAY_COUNT(g_windows); i++)
-	{
-		if(g_windows[i].m_used)
-		{
-			SLogMsg("WINDOW: %s", g_windows[i].m_title);
-		}
-	}
-}
+
 bool HandleMessages(Window* pWindow)
 {
 	if (!g_windowManagerRunning)
@@ -3485,7 +3504,7 @@ bool HandleMessages(Window* pWindow)
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, et, p1, p2))
+		if (!OnProcessOneEvent(pWindow, et, p1, p2, false))
 			return false;
 	}
 	
@@ -3493,7 +3512,7 @@ bool HandleMessages(Window* pWindow)
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i]))
+		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], false))
 			return false;
 	}
 	pWindow->m_eventQueueSize = 0;
@@ -3506,7 +3525,7 @@ bool HandleMessages(Window* pWindow)
 		
 		unsigned char out = WinReadFromInputQueue(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0);
+		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false);
 		
 		// if the key was just pressed:
 		if ((out & 0x80) == 0)
@@ -3515,7 +3534,7 @@ bool HandleMessages(Window* pWindow)
 			char sensible = KbMapAtCodeToChar (out & 0x7F);
 			
 			if (sensible)
-				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
+				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false);
 		}
 	}
 	
