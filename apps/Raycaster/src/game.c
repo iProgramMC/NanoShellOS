@@ -11,7 +11,11 @@
 
 //include sprites
 
-#define ASPECT_RATIO ((double)ScreenWidth / ScreenHeight)
+#define SCREEN_WIDTH (ScreenWidth * 2 / 4)
+
+#define ASPECT_RATIO ((double)SCREEN_WIDTH / ScreenHeight)
+
+#define TILE_SIZE 16 // for the minimap
 
 #define MAP_WIDTH  16
 #define MAP_HEIGHT 16
@@ -84,13 +88,13 @@ void Normalize(double *x, double *y)
 }
 
 // returns the length of the casted ray
-double CastRay (double rayAngle, char *pTileFoundOut)
+double CastRay (double rayAngle, char *pTileFoundOut, double *pIntersectionXOut, double *pIntersectionYOut)
 {
 	double distance  = 0.0;
 	
 	
 	double dirX = cos(rayAngle), dirY = sin(rayAngle);
-	Normalize (&dirX, &dirY);
+	//Normalize (&dirX, &dirY);--- no need to normalize, already normalized
 	
 	double stepX = sqrt(1 + (dirY / dirX) * (dirY / dirX)),
 	       stepY = sqrt(1 + (dirX / dirY) * (dirX / dirY));
@@ -141,7 +145,7 @@ double CastRay (double rayAngle, char *pTileFoundOut)
 		}
 		
 		//check if the tile is solid
-		if (tileX >= 0 && tileY >= 0 && tileX <= MAP_WIDTH && tileY <= MAP_HEIGHT)
+		if (tileX >= 0 && tileY >= 0 && tileX < MAP_WIDTH && tileY < MAP_HEIGHT)
 		{
 			if (IsRender(GetTile(tileX, tileY)))
 			{
@@ -151,17 +155,56 @@ double CastRay (double rayAngle, char *pTileFoundOut)
 	}
 	
 	*pTileFoundOut = cTileFound;
+	
+	if (cTileFound)
+	{
+		//hack: lower the distance so that we don't pierce into the walls)
+		*pIntersectionXOut = playerX + dirX * (distance - 0.005);
+		*pIntersectionYOut = playerY + dirY * (distance - 0.005);
+	}
+	
 	return distance;
 }
+
+uint32_t ColorDarken (uint32_t color, double brightness)
+{
+	uint32_t result = 0;
+	
+	result |= (int)(((color >> 16) & 0xFF) * brightness) << 16;
+	result |= (int)(((color >>  8) & 0xFF) * brightness) <<  8;
+	result |= (int)(((color >>  0) & 0xFF) * brightness) <<  0;
+	
+	return result;
+}
+
+void DrawMmapDot(double x, double y, uint32_t color)
+{
+	int mmapX = ScreenWidth - MAP_WIDTH * TILE_SIZE, mmapY = ScreenHeight - MAP_HEIGHT * TILE_SIZE;
+	
+	VidPlotPixel (mmapX + x * TILE_SIZE, mmapY + y * TILE_SIZE, color);	
+}
+
+double Trim2 (double d)
+{
+	double td = Trim(d);
+	if (td > 0.5)
+		return td - 1;
+	return td;
+}
+
 
 void DrawColumn (int x)
 {
 	
-	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)ScreenWidth) * fov;
+	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)SCREEN_WIDTH) * fov;
+	
+	//clamp the ray angle
+	rayAngle = fmod(rayAngle, 2*PI);
 	
 	//Perform a ray cast
 	char cTileFound = '\0';
-	double distToWall = CastRay(rayAngle, &cTileFound);
+	double intersectX = 0.0, intersectY = 0.0;
+	double distToWall = CastRay(rayAngle, &cTileFound, &intersectX, &intersectY);
 	
 	//if we didn't hit a tile, just show nothing at all
 	if (!cTileFound)
@@ -181,28 +224,75 @@ void DrawColumn (int x)
 	
 	int project = 2;
 	
-	uint32_t colors[4] = { 0x000000, 0x0000FF, 0x00FF00, 0xFF0000 };
+	uint32_t colors[4] = { 0xFF8000, 0x0FF800, 0x00FF80, 0x000FF8 };
 	
+	// give it a little bit of texturing
 	int endPoints[5];
 	endPoints[0] = ceiling;
 	endPoints[4] = floor;
 	endPoints[1] = ceiling + (floor - ceiling) * 0.25;
-	endPoints[2] = ceiling + (floor - ceiling) * 0.5;
+	endPoints[2] = ceiling + (floor - ceiling) * 0.50;
 	endPoints[3] = ceiling + (floor - ceiling) * 0.75;
 	
 	VidDrawVLine(0x008080, 0, ceiling, x);
+	
+	// Determine the progress inside the wall. This will be useful for texturing.
+	double texProgress = 0.5;
+	if (Abs(Trim2(intersectX)) <= 0.01) // intersecting on the X axis
+	{
+		texProgress = Trim(intersectY);
+		if (rayAngle > PI/2 && rayAngle < 3*PI/2)
+			texProgress = 1.0f - texProgress;
+	}
+	else if (Abs(Trim2(intersectY)) <= 0.01) // intersecting on the Y axis
+	{
+		texProgress = Trim(intersectX);
+		if (rayAngle < PI)
+			texProgress = 1.0f - texProgress;
+	}
+	
+	//if the ray angle is more than PI/2, flip the texture
+	//double dirX = cos(playerAngle), dirY = sin(playerAngle);
+	//if (dirY>0)
+	{
+		//texProgress = 1.0f - texProgress;
+	}
+	
+	double progress = 0.7 * texProgress + 0.3;
+	
+	//for debugging, draw all the intersections
+	DrawMmapDot(intersectX, intersectY, 0xFFFFFF);
 	
 	//VidDrawVLine(colors[project], ceiling, floor, x);
 	
 	for (int i = 0; i < 4; i++)
 	{
-		VidDrawVLine(colors[i], endPoints[i], endPoints[i + 1], x);
+		VidDrawVLine(ColorDarken(colors[i], progress), endPoints[i], endPoints[i + 1], x);
 	}
 	
 	VidDrawVLine(0x808000, floor, ScreenHeight, x);
 }
 
-
+void DrawMiniMap()
+{
+	int mmapX = ScreenWidth - MAP_WIDTH * TILE_SIZE, mmapY = ScreenHeight - MAP_HEIGHT * TILE_SIZE;
+	
+	for (int y = 0; y < MAP_HEIGHT; y++)
+	{
+		for (int x = 0; x < MAP_WIDTH; x++)
+		{
+			char c = GetTile(x, y);
+			
+			uint32_t color = 0;
+			
+			if (c == '#') color = 0xFF0000;
+			
+			VidFillRect(color, mmapX + x * TILE_SIZE, mmapY + y * TILE_SIZE, mmapX + x * TILE_SIZE + TILE_SIZE - 1, mmapY + y * TILE_SIZE + TILE_SIZE - 1);
+			
+			DrawMmapDot(playerX,playerY,0xFF00);
+		}
+	}
+}
 
 int fc;
 void DisplayDebug(int deltaTime)
@@ -264,7 +354,9 @@ void Update (UNUSED int deltaTime)
 }
 void Render (int deltaTime)
 {
-	for (int x = 0; x < ScreenWidth; x++)
+	DrawMiniMap();
+	
+	for (int x = 0; x < SCREEN_WIDTH; x++)
 		DrawColumn (x);
 	
 	// show FPS

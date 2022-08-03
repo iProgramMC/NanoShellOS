@@ -14,10 +14,22 @@ extern int ScreenWidth;
 extern int ScreenHeight;
 
 // from game engine:
+int Classify(double x);
+#define FP_INFINITE 1
+#define FP_NAN 2
+#define FP_NORMAL 4
+#define FP_SUBNORMAL 8
+#define FP_ZERO 16
+#define isnan(x) (Classify(x) == FP_NAN)
+
+
 double sin(double x);
 double cos(double x);
 double sqrt(double x);
+double Abs(double x);
+double Trim(double x);
 
+double fmod(double x, double y);
 double atan2l(double y, double x);
 float  atan2f(float  y, float  x);
 
