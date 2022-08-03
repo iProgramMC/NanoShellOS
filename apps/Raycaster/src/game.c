@@ -10,9 +10,15 @@
 #include "game.h"
 
 //include sprites
-#include "sand.h"
+#include "textures/sand.h"
+#include "textures/bricks.h"
+#include "textures/crate.h"
+#include "textures/dungeon.h"
+#include "textures/gateway.h"
+#include "textures/ceiling.h"
+#include "textures/tile.h"
 
-#define SCREEN_WIDTH (ScreenWidth * 2 / 4)
+#define SCREEN_WIDTH (ScreenWidth * 3 / 4)
 
 #define ASPECT_RATIO ((double)SCREEN_WIDTH / ScreenHeight)
 
@@ -27,23 +33,57 @@ const char* GetGameName()
 
 // Definitions
 #if 1
-char map[MAP_WIDTH * MAP_HEIGHT] = 
+char map_wall[MAP_WIDTH * MAP_HEIGHT] = 
 	"################"
-	"#..............#"
-	"#..#...#########"
-	"#..#...#.......#"
-	"#..#...#...#...#"
-	"#..#.......#...#"
-	"#..........#...#"
-	"############...#"
-	"#...#....#.....#"
-	"#...#....#.....#"
-	"#...#....#.....#"
-	"#...#....#.....#"
-	"#..............#"
-	"#..............#"
-	"#..............#"
+	"#..............$"
+	"#..#...#X###X##$"
+	"#..#...#.......$"
+	"#..#...#...#...$"
+	"#..#.......#...$"
+	"#..........#...$"
+	"######^#####...$"
+	"#...#....#.....$"
+	"#...#....#.....$"
+	"#...#....#.....$"
+	"#...#....#.....$"
+	"#..............$"
+	"#..............$"
+	"#..............$"
 	"################";
+char map_floor[MAP_WIDTH * MAP_HEIGHT] = 
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"````````````````"
+	"`___`____`_____`"
+	"`___`____`_____`"
+	"`___`____`_____`"
+	"`___`____`_____`"
+	"`______________`"
+	"`______________`"
+	"`______________`"
+	"````````````````";
+char map_ceiling[MAP_WIDTH * MAP_HEIGHT] = 
+	"________________"
+	"_``````````````_"
+	"_``_```_________"
+	"_``_```_```````_"
+	"_``_```_```_```_"
+	"_``_```````_```_"
+	"_``````````_```_"
+	"____________```_"
+	"_```_````_`````_"
+	"_```_````_`````_"
+	"_```_````_`````_"
+	"_```_````_`````_"
+	"_``````````````_"
+	"_``````````````_"
+	"_``````````````_"
+	"________________";
 
 double playerX = 12.0, playerY = 11.0, playerAngle = 0.0;
 double fov = PI;
@@ -56,19 +96,46 @@ double rayMoveDistance = 0.05;
 
 // Basic utilities
 #if 1
-char GetTile (int x, int y)
+char GetWall (int x, int y)
 {
 	if (x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT) return ' ';
-	return map[y * MAP_WIDTH + x];
+	return map_wall[y * MAP_WIDTH + x];
+}
+char GetFloor (int x, int y)
+{
+	if (x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT) return ' ';
+	return map_floor[y * MAP_WIDTH + x];
+}
+char GetCeiling (int x, int y)
+{
+	if (x < 0 || y < 0 || x >= MAP_WIDTH || y >= MAP_HEIGHT) return ' ';
+	return map_ceiling[y * MAP_WIDTH + x];
 }
 bool IsCollidable (char c)
 {
 	return c != '.';
 }
+
+Image *GetImage(char tile)
+{
+	switch (tile)
+	{
+		case '=': return &g_sand_icon;
+		case '#': return &g_bricks_icon;
+		case '^': return &g_gateway_icon;
+		case 'X': return &g_crate_icon;
+		case '`': return &g_ceiling_icon;
+		case '_': return &g_tile_icon;
+		case '$': return &g_dungeon_icon;
+	}
+	return NULL;
+}
+
 bool IsRender (char c)
 {
-	return c != '.';
+	return GetImage(c) != NULL;
 }
+
 #endif
 
 void Normalize(double *x, double *y)
@@ -148,9 +215,9 @@ double CastRay (double rayAngle, char *pTileFoundOut, double *pIntersectionXOut,
 		//check if the tile is solid
 		if (tileX >= 0 && tileY >= 0 && tileX < MAP_WIDTH && tileY < MAP_HEIGHT)
 		{
-			if (IsRender(GetTile(tileX, tileY)))
+			if (IsRender(GetWall(tileX, tileY)))
 			{
-				cTileFound = GetTile(tileX, tileY);
+				cTileFound = GetWall(tileX, tileY);
 			}
 		}
 	}
@@ -222,6 +289,8 @@ void DrawColumn (int x)
 	double distToWall = CastRay(rayAngle, &cTileFound, &intersectX, &intersectY);
 	
 	//if we didn't hit a tile, just show nothing at all
+	double rayFix = 0;
+	
 	if (!cTileFound)
 	{
 		distToWall = 0;
@@ -231,11 +300,15 @@ void DrawColumn (int x)
 		double rd = playerAngle - rayAngle;
 		if (rd < 0)       rd += 2 * PI;
 		if (rd >= 2 * PI) rd -= 2 * PI;
-		distToWall *= cos(rd); // fish eye effect fix
+		rayFix = cos(rd);
+		distToWall *= rayFix; // fish eye effect fix
 	}
 	
 	int ceiling = (int)((double)(ScreenHeight / 2.0) - ScreenHeight / distToWall);
 	int floor = ScreenHeight - ceiling;
+	
+	float cosRayAngle = cos (rayAngle);
+	float sinRayAngle = sin (rayAngle);
 	
 	int project = 2;
 	
@@ -264,6 +337,10 @@ void DrawColumn (int x)
 		shading = 1.0f;
 	}
 	
+	//TODO: why does floor go into the huge negative (-2.1 billion? dahell?)
+	if (floor < 0)
+		floor = 0;
+	
 	//for debugging, draw all the intersections
 	DrawMmapDot(intersectX, intersectY, 0xFFFFFF);
 	
@@ -271,18 +348,54 @@ void DrawColumn (int x)
 	SetupEndPoints(ceiling, floor);
 	
 	int textureHeight = (int)ARRAY_COUNT(g_endPoints) - 1; // the height that's used by this renderer
+		
+	Image *pWallImg = GetImage (cTileFound);
 	
-	for (size_t i = 0; i < textureHeight; i++)
+	if (pWallImg)
 	{
-		int texX = 32 * texProgress;
-		uint32_t pixel;
-		
-		pixel = g_sand_icon.framebuffer[i * g_sand_icon.width + texX];
-		
-		VidDrawVLine(ColorDarken(pixel, shading), g_endPoints[i], g_endPoints[i + 1], x);
+		for (size_t i = 0; i < textureHeight; i++)
+		{
+			int texX = 32 * texProgress;
+			uint32_t pixel;
+			
+			pixel = pWallImg->framebuffer[i * pWallImg->width + texX];
+			
+			VidDrawVLine(ColorDarken(pixel, shading), g_endPoints[i], g_endPoints[i + 1], x);
+		}
 	}
 	
 	VidDrawVLine(0x808000, floor, ScreenHeight, x);
+	
+	for (int y = floor; y < ScreenHeight; y++)
+	{
+		
+		//calculate depth into screen
+		double planeZ = (ScreenHeight / 2.0) / ((double)y - (ScreenHeight / 2.0));
+		
+		//project polar coordinate (r, theta) from camera into screen (x, y), compensating with cosine to remove the fish eye effect
+		
+		double planeX = playerX + cosRayAngle * planeZ * 2 / rayFix;
+		double planeY = playerY + sinRayAngle * planeZ * 2 / rayFix;
+		
+		//which planar tile are we in?
+		int tileX = (int)planeX;
+		int tileY = (int)planeY;
+		
+		char floorTile = GetFloor(tileX, tileY);
+		Image *pFloorImg = GetImage (floorTile);
+		if (!pFloorImg)
+			pFloorImg = &g_sand_icon;
+		
+		//normalize offset into planar tile
+		double sampleX = planeX - tileX;
+		double sampleY = planeY - tileY;
+		
+		int texX = (int)(sampleX * 32);
+		int texY = (int)(sampleY * 32);
+		
+		
+		VidPlotPixel(x, y, pFloorImg->framebuffer[texY * pFloorImg->width + texX]);
+	}
 }
 
 void DrawMiniMap()
@@ -293,7 +406,7 @@ void DrawMiniMap()
 	{
 		for (int x = 0; x < MAP_WIDTH; x++)
 		{
-			char c = GetTile(x, y);
+			char c = GetWall(x, y);
 			
 			uint32_t color = 0;
 			

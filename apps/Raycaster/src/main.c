@@ -12,7 +12,7 @@ Window* g_pWindow = NULL;
 
 void RequestRepaint(Window* pWindow);
 
-int ScreenWidth = 1000 /* 640 */, ScreenHeight = 240;
+int ScreenWidth = 854 /* 640 */, ScreenHeight = 240;
 
 uint32_t* g_screenBitmap = NULL;
 Image   g_GameImage;
@@ -46,7 +46,9 @@ double sqrt(double x)
 }
 double cos(double x)
 {
-    return sin(x + PI / 2.0);
+    double result;
+    __asm__ volatile("fcos" : "=t"(result) : "0"(x));
+    return result;
 }
 
 //trims off the bit over 1
