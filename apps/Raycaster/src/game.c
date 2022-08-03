@@ -66,84 +66,140 @@ bool IsRender (char c)
 }
 #endif
 
-void DrawColumn (int x)
+void Normalize(double *x, double *y)
 {
-	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)ScreenWidth) * fov;
-	double distToWall  = 0.0;
-	bool   hitWall = false;
-	char   wallHit = '.';
-	//bool   boundary = false;
-	double eyeX = sin (rayAngle), eyeY = cos (rayAngle);
-	double sampleX = 0;
-	int    project = 0;
+	//calculate the distance
+	double dist = ((*x) * (*x)) + ((*y) * (*y));
 	
-	while (!hitWall)
+	if (dist < 0.0001) //too small to normalize - would divide by zero
 	{
-		if (distToWall > farPlane)
+		*x = *y = 0;
+		return;
+	}
+	
+	dist = sqrt(dist);
+	
+	*x /= dist;
+	*y /= dist;
+}
+
+// returns the length of the casted ray
+double CastRay (double rayAngle, char *pTileFoundOut)
+{
+	double distance  = 0.0;
+	
+	
+	double dirX = cos(rayAngle), dirY = sin(rayAngle);
+	Normalize (&dirX, &dirY);
+	
+	double stepX = sqrt(1 + (dirY / dirX) * (dirY / dirX)),
+	       stepY = sqrt(1 + (dirX / dirY) * (dirX / dirY));
+	
+	int    tileX   = (int)playerX,
+	       tileY   = (int)playerY; //tile to check
+	double raylenX = 0, raylenY = 0;
+	int    istepX  = 0, istepY  = 0;
+	
+	//perform the starting check
+	if (dirX < 0)
+	{
+		istepX  = -1;
+		raylenX = (playerX - tileX) * stepX;
+	}
+	else
+	{
+		istepX = 1;
+		raylenX = (tileX + 1 - playerX) * stepX;
+	}
+	
+	if (dirY < 0)
+	{
+		istepY = -1;
+		raylenY = (playerY - tileY) * stepY;
+	}
+	else
+	{
+		istepY = 1;
+		raylenY = (tileY + 1 - playerY) * stepY;
+	}
+	
+	char cTileFound = '\0';
+	while (!cTileFound && distance < farPlane)
+	{
+		//perform a walk
+		if (raylenX < raylenY)
 		{
-			// Too far out!
-			distToWall = 100000000;
-			break;
+			tileX += istepX;
+			distance = raylenX;
+			raylenX += stepX;
+		}
+		else
+		{
+			tileY += istepY;
+			distance = raylenY;
+			raylenY += stepY;
 		}
 		
-		//WORK: You can optimize this by jumping only until you reach a new x/y coordinate instead of
-		//doing intermediary steps like these.
-		distToWall += rayMoveDistance;
-		
-		int testX = (int)(playerX + eyeX * distToWall);
-		int testY = (int)(playerY + eyeY * distToWall);
-		char tileGot = GetTile(testX, testY);
-		
-		if (IsRender(tileGot))
+		//check if the tile is solid
+		if (tileX >= 0 && tileY >= 0 && tileX <= MAP_WIDTH && tileY <= MAP_HEIGHT)
 		{
-			hitWall = true;
-			wallHit = tileGot;
-			
-			// Lighting goes here.
-			double blockMidX = (double)testX + 0.5;
-			double blockMidY = (double)testY + 0.5;
-
-			double testPointX = playerX + eyeX * distToWall;
-			double testPointY = playerY + eyeY * distToWall;
-
-			float testAngleF = atan2f((float)(testPointY - blockMidY), (float)(testPointX - blockMidX));
-			double testAngle = (double)testAngleF;
-
-			if (testAngle >= -PI * 0.25 && testAngle < PI * 0.25)
+			if (IsRender(GetTile(tileX, tileY)))
 			{
-				sampleX = testPointY - (double)testY;
-				project = 4;
-			}
-			if (testAngle >= PI * 0.25 && testAngle < PI * 0.75)
-			{
-				sampleX = testPointX - (double)testX;
-				project = 3;
-			}
-			if (testAngle < -PI * 0.25 && testAngle >= -PI * 0.75)
-			{
-				sampleX = testPointX - (double)testX;
-				project = 2;
-			}
-			if (testAngle >= PI * 0.75 || testAngle < -PI * 0.75)
-			{
-				sampleX = testPointY - (double)testY;
-				project = 1;
+				cTileFound = GetTile(tileX, tileY);
 			}
 		}
 	}
 	
-	double rd = playerAngle - rayAngle;
-	if (rd < 0)       rd += 2 * PI;
-	if (rd >= 2 * PI) rd -= 2 * PI;
-	distToWall *= cos(rd);
+	*pTileFoundOut = cTileFound;
+	return distance;
+}
+
+void DrawColumn (int x)
+{
+	
+	double rayAngle = (playerAngle - fov / 2) + ((double)x / (double)ScreenWidth) * fov;
+	
+	//Perform a ray cast
+	char cTileFound = '\0';
+	double distToWall = CastRay(rayAngle, &cTileFound);
+	
+	//if we didn't hit a tile, just show nothing at all
+	if (!cTileFound)
+	{
+		distToWall = 0;
+	}
+	else
+	{
+		double rd = playerAngle - rayAngle;
+		if (rd < 0)       rd += 2 * PI;
+		if (rd >= 2 * PI) rd -= 2 * PI;
+		distToWall *= cos(rd); // fish eye effect fix
+	}
 	
 	int ceiling = (int)((double)(ScreenHeight / 2.0) - ScreenHeight / distToWall);
 	int floor = ScreenHeight - ceiling;
 	
+	int project = 2;
+	
 	uint32_t colors[4] = { 0x000000, 0x0000FF, 0x00FF00, 0xFF0000 };
-	VidDrawVLine(0x8080,          0,       ceiling,       x);
-	VidDrawVLine(colors[project], ceiling, floor,         x);
-	VidDrawVLine(0x808000,        floor,   ScreenHeight, x);
+	
+	int endPoints[5];
+	endPoints[0] = ceiling;
+	endPoints[4] = floor;
+	endPoints[1] = ceiling + (floor - ceiling) * 0.25;
+	endPoints[2] = ceiling + (floor - ceiling) * 0.5;
+	endPoints[3] = ceiling + (floor - ceiling) * 0.75;
+	
+	VidDrawVLine(0x008080, 0, ceiling, x);
+	
+	//VidDrawVLine(colors[project], ceiling, floor, x);
+	
+	for (int i = 0; i < 4; i++)
+	{
+		VidDrawVLine(colors[i], endPoints[i], endPoints[i + 1], x);
+	}
+	
+	VidDrawVLine(0x808000, floor, ScreenHeight, x);
 }
 
 
@@ -161,18 +217,18 @@ void DisplayDebug(int deltaTime)
 void Init()
 {
 	LogMsg("Init!");
-	fov = PI / ASPECT_RATIO;
+	fov = PI / (640.0/240.0);    //TODO: adjust FOV depending on the screen width
 }
 void OnSize(UNUSED int width, UNUSED int height)
 {
 	//TODO: Why are you stretching out the walls
 	LogMsg("Size!");
-	fov = PI / ASPECT_RATIO;
+	fov = PI / (640.0/240.0);
 }
 void Update (UNUSED int deltaTime)
 {
-	double mx = sin (playerAngle) / 10;
-	double my = cos (playerAngle) / 10;
+	double mx = cos (playerAngle) / 10;
+	double my = sin (playerAngle) / 10;
 	if (IsKeyDown(KEY_W))
 	{
 		playerX += mx;
@@ -185,13 +241,13 @@ void Update (UNUSED int deltaTime)
 	}
 	if (IsKeyDown(KEY_A))
 	{
-		playerX -= my;
-		playerY += mx;
+		playerX += my;
+		playerY -= mx;
 	}
 	if (IsKeyDown(KEY_D))
 	{
-		playerX += my;
-		playerY -= mx;
+		playerX -= my;
+		playerY += mx;
 	}
 	if (IsKeyDown(KEY_ARROW_LEFT))
 	{

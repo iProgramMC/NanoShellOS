@@ -16,6 +16,7 @@ extern int ScreenHeight;
 // from game engine:
 double sin(double x);
 double cos(double x);
+double sqrt(double x);
 
 double atan2l(double y, double x);
 float  atan2f(float  y, float  x);

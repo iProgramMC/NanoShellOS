@@ -36,6 +36,12 @@ double sin(double x)
     __asm__ volatile("fsin" : "=t"(result) : "0"(x));
     return result;
 }
+double sqrt(double x)
+{
+    double result;
+    __asm__ volatile("fsqrt" : "=t"(result) : "0"(x));
+    return result;
+}
 double cos(double x)
 {
     return sin(x + PI / 2.0);
@@ -81,6 +87,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			break;
 		}
 		case EVENT_PAINT:
+		case EVENT_UPDATE:
 		{
 			VidBlitImageResize(&g_GameImage, 3, 2 + TITLE_BAR_HEIGHT, ScreenWidth,ScreenHeight);
 			break;
@@ -167,7 +174,8 @@ int NsMain (UNUSED int argc, UNUSED char **argv)
 		nextTickIn = GetTickCount() + target - (GetTickCount()-lastTC);
 		
 		// repaint the window
-		RequestRepaint (g_pWindow);
+		//RequestRepaint (g_pWindow);
+		RegisterEvent (g_pWindow, EVENT_UPDATE, 0, 0);
 		
 		// Handle window messages.
 		bool result = HandleMessages (g_pWindow);
