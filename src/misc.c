@@ -584,7 +584,7 @@ NO_RETURN void KeStopSystem()
 }
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), July 2022 - " VersionString);
+	LogMsg("NanoShell (TM), August 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper,
 				 GetNumPhysPages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
