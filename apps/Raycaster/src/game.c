@@ -10,12 +10,13 @@
 #include "game.h"
 
 //include sprites
+#include "sand.h"
 
 #define SCREEN_WIDTH (ScreenWidth * 2 / 4)
 
 #define ASPECT_RATIO ((double)SCREEN_WIDTH / ScreenHeight)
 
-#define TILE_SIZE 16 // for the minimap
+#define TILE_SIZE 12 // for the minimap
 
 #define MAP_WIDTH  16
 #define MAP_HEIGHT 16
@@ -192,6 +193,20 @@ double Trim2 (double d)
 	return td;
 }
 
+//the array's count specifies the resolution
+//note. The bigger the texture, the heavier the calculations, so don't make your textures too big
+int g_endPoints[33];
+
+void SetupEndPoints(int ceiling, int floor)
+{
+	int gap =  (floor - ceiling);
+	g_endPoints[0] = ceiling;
+	g_endPoints[ARRAY_COUNT(g_endPoints)-1] = floor;
+	for (size_t i = 1; i < ARRAY_COUNT(g_endPoints) - 1; i++)
+	{
+		g_endPoints[i] = ceiling + gap * i / ARRAY_COUNT(g_endPoints);
+	}
+}
 
 void DrawColumn (int x)
 {
@@ -224,50 +239,47 @@ void DrawColumn (int x)
 	
 	int project = 2;
 	
-	uint32_t colors[4] = { 0xFF8000, 0x0FF800, 0x00FF80, 0x000FF8 };
-	
 	// give it a little bit of texturing
-	int endPoints[5];
-	endPoints[0] = ceiling;
-	endPoints[4] = floor;
-	endPoints[1] = ceiling + (floor - ceiling) * 0.25;
-	endPoints[2] = ceiling + (floor - ceiling) * 0.50;
-	endPoints[3] = ceiling + (floor - ceiling) * 0.75;
 	
 	VidDrawVLine(0x008080, 0, ceiling, x);
 	
 	// Determine the progress inside the wall. This will be useful for texturing.
 	double texProgress = 0.5;
+	
+	double shading = 0.7;
 	if (Abs(Trim2(intersectX)) <= 0.01) // intersecting on the X axis
 	{
 		texProgress = Trim(intersectY);
 		if (rayAngle > PI/2 && rayAngle < 3*PI/2)
 			texProgress = 1.0f - texProgress;
+		
+		shading = 0.8;
 	}
 	else if (Abs(Trim2(intersectY)) <= 0.01) // intersecting on the Y axis
 	{
 		texProgress = Trim(intersectX);
 		if (rayAngle < PI)
 			texProgress = 1.0f - texProgress;
+		
+		shading = 1.0f;
 	}
-	
-	//if the ray angle is more than PI/2, flip the texture
-	//double dirX = cos(playerAngle), dirY = sin(playerAngle);
-	//if (dirY>0)
-	{
-		//texProgress = 1.0f - texProgress;
-	}
-	
-	double progress = 0.7 * texProgress + 0.3;
 	
 	//for debugging, draw all the intersections
 	DrawMmapDot(intersectX, intersectY, 0xFFFFFF);
 	
 	//VidDrawVLine(colors[project], ceiling, floor, x);
+	SetupEndPoints(ceiling, floor);
 	
-	for (int i = 0; i < 4; i++)
+	int textureHeight = (int)ARRAY_COUNT(g_endPoints) - 1; // the height that's used by this renderer
+	
+	for (size_t i = 0; i < textureHeight; i++)
 	{
-		VidDrawVLine(ColorDarken(colors[i], progress), endPoints[i], endPoints[i + 1], x);
+		int texX = 32 * texProgress;
+		uint32_t pixel;
+		
+		pixel = g_sand_icon.framebuffer[i * g_sand_icon.width + texX];
+		
+		VidDrawVLine(ColorDarken(pixel, shading), g_endPoints[i], g_endPoints[i + 1], x);
 	}
 	
 	VidDrawVLine(0x808000, floor, ScreenHeight, x);
