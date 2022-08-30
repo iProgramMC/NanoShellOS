@@ -12,6 +12,10 @@
 
 NO_RETURN void KeStopSystem()
 {
+	SLogMsg("System has been stopped!");
+	
+	PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+	
 	__asm__ ("cli");
 	
 	while (1)
@@ -118,19 +122,19 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 #define MAX_FRAMES 12
 void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag)
 {
-	LogMsg("Stack trace:");
-	LogMsg("-> 0x%x %s", eip, TransformTag (pTag, eip), GetMemoryRangeString (eip));
+	SLogMsg("Stack trace:");
+	SLogMsg("-> 0x%x %s", eip, TransformTag (pTag, eip), GetMemoryRangeString (eip));
 	int count = 10;
 	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
 	{
-		LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
+		SLogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
 		// TODO: addr2line implementation?
-		LogMsg("");
+		SLogMsg("");
 		stk = stk->ebp;
 		count--;
 		if (count == 0)
 		{
-			LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
+			SLogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
 			break;
 		}
 	}

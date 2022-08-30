@@ -73,90 +73,6 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_
 	
 	memset((void*)virtHint, 0, sizePages * PAGE_SIZE);
 	memcpy(virt, data, fileSize);
-	
-	/*
-	uint32_t* pageDir = pProc->m_pageDirectory;
-	uint32_t sizeToCopy = fileSize;
-	size = (((size-1) >> 12) + 1) << 12;
-	
-	uint32_t pdIndex =  (uint32_t)virt >> 22;
-	uint32_t ptIndex = ((uint32_t)virt >> 12) & 0x3FF;
-	uint32_t piIndex = ((uint32_t)virt      ) & 0xFFF;
-	
-	// A page table maps 4 MB of memory, or (1 << 22) bytes.
-	//uint32_t pageTablesNecessary = ((size1 - 1) >> 22) + 1;
-	
-	uintptr_t start = (uintptr_t)virt & ~0xFFF;
-	uintptr_t end   = ((uintptr_t)virt + size);
-	//ceil it
-	end = ((end >> 12) + !!(end & 0xFFF)) << 12;
-	
-	uint32_t pagesNecessary      = 1 + (end >> 12) - (start >> 12) - 1;
-	uint32_t pageTablesNecessary = 1 + (end >> 22) - (start >> 22);
-	
-	EDLogMsg("Virt: %x size: %x (%d)",virt,size,size);
-	EDLogMsg("Pages necessary: %d   Page Tables necessary: %d", pagesNecessary, pageTablesNecessary);
-	
-	uint8_t* pointer = (uint8_t*)data;
-	
-	while (pageTablesNecessary)
-	{
-		EDLogMsg("Requesting page table %x.  Page Tables Left: %x", pdIndex, pageTablesNecessary);
-		uint32_t phys = 0;
-		PageEntry *pageTVirt;
-		if (pProc->m_pageTablesList[pdIndex])
-		{
-			pageTVirt = (PageEntry*)pProc->m_pageTablesList[pdIndex];
-		}
-		else 
-		{
-			pageTVirt = (PageEntry*)MmAllocateSinglePagePhy(&phys);
-			pageDir[pdIndex] = phys | 0x3; //present and read/write
-			pProc->m_pageTablesList[pdIndex] = (uint32_t*)pageTVirt;
-			ZeroMemory (pageTVirt, 4096);
-		}
-		
-		uint32_t min = 1024;
-		if (min > pagesNecessary+ptIndex)
-			min = pagesNecessary+ptIndex;
-		
-		int pagesAllocated = min - ptIndex;
-		for (uint32_t i = ptIndex; i < min; i++)
-		{
-			EDLogMsg("Requesting page %x. Place to copy data from: %x", i, pointer);
-			
-			uint32_t phys2 = 0;
-			void *pageVirt = MmAllocateSinglePagePhy(&phys2);
-			ZeroMemory (pageVirt, 4096);
-			pageTVirt[i].m_pAddress = phys2 >> 12;
-			pageTVirt[i].m_bPresent = true;
-			pageTVirt[i].m_bUserSuper = true;
-			pageTVirt[i].m_bReadWrite = true;
-			
-			//register our new page in the elfprocess:
-			pProc->m_pagesAllocated[pProc->m_pageAllocationCount++] = pageVirt;
-			
-			uint32_t me = 4096 - piIndex;
-			piIndex = 0;
-			
-			int minSize = sizeToCopy > me ? me : sizeToCopy;
-			if (minSize > 0)
-			{
-				memcpy (pageVirt + piIndex, pointer, minSize);
-				sizeToCopy -= minSize;
-			}
-			
-			//if we have copied everything, just reserve the pages,
-			//I'm sure the executable will put them to good use :)
-			
-			pointer += minSize;
-		}
-		pageTablesNecessary--; 
-		pagesNecessary -= pagesAllocated;
-		ptIndex = 0;
-		pdIndex++;
-	}
-	*/
 }
 
 void ElfDumpInfo(ElfHeader* pHeader)
@@ -303,6 +219,7 @@ static void ElfExecThread(int pnLoaderBlock)
 	ElfLoaderBlock block = *((ElfLoaderBlock*)pnLoaderBlock);
 	
 	// Make a clone of the elf data, so that in the event that this thread dies, it won't leak memory
+	// TODO: Use MmMapMemory here
 	void *pMem = MmAllocate (block.nFileSize);
 	memcpy (pMem, block.pFileData, block.nFileSize);
 	MmFreeK(block.pFileData);
@@ -404,6 +321,8 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	pBlock->nElfErrorCode     = 0;
 	pBlock->nElfErrorCodeExec = 0;
 	
+	SLogMsg("Block : %p", pBlock);
+	
 	// Create a new process
 	int erc = 0;
 	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc);
@@ -425,6 +344,7 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	int error_code_obtained = pBlock->nElfErrorCode;
 	*pElfErrorCodeOut = pBlock->nElfErrorCodeExec;
 	
+	SLogMsg("Freeing pBlock from within the ElfRunProgram check");
 	MmFreeK (pBlock);
 	
 	return error_code_obtained;

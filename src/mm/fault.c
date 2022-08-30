@@ -17,13 +17,13 @@
 //#define DAI_DEBUG
 
 #ifdef COW_DEBUG
-#define CowDebugLogMsg(...) LogMsg(__VA_ARGS__)
+#define CowDebugLogMsg(...) SLogMsg(__VA_ARGS__)
 #else
 #define CowDebugLogMsg(...)
 #endif
 
 #ifdef DAI_DEBUG
-#define DaiDebugLogMsg(...) LogMsg(__VA_ARGS__)
+#define DaiDebugLogMsg(...) SLogMsg(__VA_ARGS__)
 #else
 #define DaiDebugLogMsg(...)
 #endif
@@ -36,6 +36,7 @@ int MmGetNumPageFaults()
 }
 
 uint32_t* MuiGetPageEntryAt(UserHeap* pHeap, uintptr_t address, bool bGeneratePageTable);
+void IsrExceptionCommon(int code, Registers* pRegs);
 
 void MmOnPageFault(Registers *pRegs)
 {
@@ -84,6 +85,7 @@ void MmOnPageFault(Registers *pRegs)
 			if (*pPageEntry & PAGE_BIT_PRESENT)
 			{
 				// Hrm? But the error code said it wasn't present, whatever
+				SLogMsg("The page entry said you were present");
 				return;
 			}
 			
@@ -188,9 +190,11 @@ void MmOnPageFault(Registers *pRegs)
 	}
 	
 _INVALID_PAGE_FAULT:
-	LogMsg("Invalid page fault at EIP: %x. CR2: %x. ErrorCode: %x", pRegs->eip, pRegs->cr2, pRegs->error_code);
-	LogMsg("Registers:");
-	LogMsg("EAX: %x  EBX: %x  ECX: %x  EDX: %x  ESP: %x  EBP: %x",pRegs->eax, pRegs->ebx, pRegs->ecx, pRegs->edx, pRegs->esp, pRegs->ebp);
-	KeStopSystem();
+	SLogMsg("Invalid page fault at EIP: %x. CR2: %x. ErrorCode: %x", pRegs->eip, pRegs->cr2, pRegs->error_code);
+	SLogMsg("Registers:");
+	SLogMsg("EAX: %x  EBX: %x  ECX: %x  EDX: %x  ESP: %x  EBP: %x  EIP: %x",pRegs->eax, pRegs->ebx, pRegs->ecx, pRegs->edx, pRegs->esp, pRegs->ebp, pRegs->eip);
+	
+	// No Problem. Just trigger an bug check
+	IsrExceptionCommon(BC_EX_PAGE_FAULT, pRegs);
 }
 

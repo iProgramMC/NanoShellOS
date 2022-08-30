@@ -156,7 +156,7 @@ void* MhAllocateSinglePage(uint32_t* pPhysOut)
 	// Find a free page frame.
 	for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
 	{
-		if (!(g_KernelPageEntries[i] & PAGE_BIT_PRESENT))
+		if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 		{
 			return MhSetupPage(i, pPhysOut);
 		}
@@ -179,7 +179,7 @@ void MhFreePage(void* pPage)
 	uint32_t index = (pAddr - KERNEL_HEAP_BASE) >> 12;
 	
 	// don't free a page if it was marked as demand-paged but was never actually demanded
-	if (g_KernelPageEntries[index] & PAGE_BIT_PRESENT)
+	if (g_KernelPageEntries[index] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
 	{
 		// MMIO needn't keep track of reference counts as it's always "there" in physical memory
 		if ((g_KernelPageEntries[index] & PAGE_BIT_MMIO) == 0)
@@ -226,7 +226,10 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 	
 	if (size <= PAGE_SIZE)
 	{
-		return MhAllocateSinglePage(pPhysOut);
+		void *pMem = MhAllocateSinglePage(pPhysOut);
+		
+		//SLogMsg("Allocation of %d bytes resulted in %p", size, pMem);
+		return pMem;
 	}
 	else
 	{
@@ -238,14 +241,14 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
 		{
 			// A non-allocated pageframe?
-			if (!(g_KernelPageEntries[i] & PAGE_BIT_PRESENT))
+			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 			{
 				// Yes.  Are there at least numPagesNeeded holes?
 				int jfinal = i + numPagesNeeded;
 				for (int j = i; j < jfinal; j++)
 				{
 					//Are there any already taken pages before we reach the end.
-					if (g_KernelPageEntries[j] & PAGE_BIT_PRESENT)
+					if (g_KernelPageEntries[j] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
 					{
 						//Yes.  This hole isn't large enough.
 						i = j;
@@ -324,7 +327,7 @@ void* MhReAllocate(void *oldPtr, size_t newSize)
 		
 		for (size_t i = oldPages; i < numPagesNeeded; i++)
 		{
-			if (g_KernelPageEntries[index + i] & PAGE_BIT_PRESENT)
+			if (g_KernelPageEntries[index + i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
 			{
 				spaceAvailable = false;
 				break;
@@ -376,8 +379,6 @@ void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite)
 {
 	KeVerifyInterruptsDisabled;
 	
-	SLogMsg("MhMapPhysicalMemory(%p, %d, %d)", physMem, numPages, bReadWrite);
-	
 	int nPages = (int)(numPages);
 	
 	if (nPages == 1)
@@ -386,7 +387,7 @@ void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite)
 		// Find a free page frame.
 		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
 		{
-			if (!(g_KernelPageEntries[i] & PAGE_BIT_PRESENT))
+			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 			{
 				return MhSetupPagePMem(i, physMem, bReadWrite);
 			}
@@ -402,14 +403,14 @@ void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite)
 		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
 		{
 			// A non-allocated pageframe?
-			if (!(g_KernelPageEntries[i] & PAGE_BIT_PRESENT))
+			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 			{
 				// Yes.  Are there at least nPages holes?
 				int jfinal = i + nPages;
 				for (int j = i; j < jfinal; j++)
 				{
 					//Are there any already taken pages before we reach the end.
-					if (g_KernelPageEntries[j] & PAGE_BIT_PRESENT)
+					if (g_KernelPageEntries[j] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
 					{
 						//Yes.  This hole isn't large enough.
 						i = j;

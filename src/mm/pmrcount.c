@@ -16,6 +16,12 @@
 
 #include "memoryi.h"
 
+#ifdef PMR_DEBUG
+#define RSLogMsg(...) SLogMsg(__VA_ARGS__)
+#else
+#define RSLogMsg(...) do { } while (0)
+#endif
+
 RefCountTableLevel0 g_root;
 
 uint32_t MrGetReferenceCount(uintptr_t page)
@@ -49,7 +55,7 @@ uint32_t MrGetReferenceCount(uintptr_t page)
 // Returns the new reference count
 uint32_t MrReferencePage(uintptr_t page)
 {
-	SLogMsg("MrReferencePage(%p)",page);
+	RSLogMsg("MrReferencePage(%p)",page);
 	// Split the address up into chunks
 	union
 	{
@@ -74,7 +80,7 @@ uint32_t MrReferencePage(uintptr_t page)
 		// 4m cluster
 		g_root.m_level1[aSplit.level1] = MhAllocateSinglePage(NULL);
 		
-		SLogMsg("g_root.m_level1[%d] = %p", aSplit.level1, g_root.m_level1[aSplit.level1]);
+		RSLogMsg("g_root.m_level1[%d] = %p", aSplit.level1, g_root.m_level1[aSplit.level1]);
 		
 		if (!g_root.m_level1[aSplit.level1])
 		{
@@ -93,7 +99,7 @@ uint32_t MrReferencePage(uintptr_t page)
 
 uint32_t MrUnreferencePage(uintptr_t page)
 {
-	SLogMsg("MrUnreferencePage(%p)",page);
+	RSLogMsg("MrUnreferencePage(%p)",page);
 	// Split the address up into chunks
 	union
 	{
@@ -113,7 +119,8 @@ uint32_t MrUnreferencePage(uintptr_t page)
 	if (!g_root.m_level1[aSplit.level1])
 	{
 		// No
-		LogMsg("Couldn't unreference physical page %x, was never referenced?", page);
+		SLogMsg("Couldn't unreference physical page %x, was never referenced?", page);
+		 LogMsg("Couldn't unreference physical page %x, was never referenced?", page);
 		KeStopSystem();
 	}
 	
@@ -122,7 +129,8 @@ uint32_t MrUnreferencePage(uintptr_t page)
 	if (!*pRefCount)
 	{
 		// No
-		LogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
+		SLogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
+		 LogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
 		KeStopSystem();
 	}
 	
@@ -144,7 +152,7 @@ uint32_t MrUnreferencePage(uintptr_t page)
 		if (!bNotAllZeroes)
 		{
 			// we can free this!!
-			SLogMsg("Freeing empty level1 at %x (%p)", aSplit.level1, page);
+			RSLogMsg("Freeing empty level1 at %x (%p)", aSplit.level1, page);
 			MhFree(g_root.m_level1[aSplit.level1]);
 			g_root.m_level1[aSplit.level1] = NULL;
 		}

@@ -3450,8 +3450,8 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		NukeWindow(pWindow);
 		
-		if (!bLock)
-			LockFree (&pWindow->m_screenLock);
+		//if (!bLock)
+		//	LockFree (&pWindow->m_screenLock);
 		
 		return false;
 	}

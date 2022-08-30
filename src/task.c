@@ -392,6 +392,7 @@ bool KeKillTask(Task* pTask)
 	if (pTask->m_pProcess)
 		ExOnThreadExit ((Process*)pTask->m_pProcess, pTask);
 	
+	KeVerifyInterruptsEnabled;
 	cli;
 	if (pTask == NULL)
 	{
@@ -401,7 +402,8 @@ bool KeKillTask(Task* pTask)
 	{
 		sti; return false;
 	}
-	KeResetTask(pTask, true, false);
+	KeResetTask(pTask, true, true);
+	KeVerifyInterruptsDisabled;
 	sti;
 	return true;
 }
@@ -755,6 +757,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 		if (tries == 10000)
 		{
 			SLogMsg("Tried to acquire a lock 10000 times. Is something wrong?");
+			PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
 		}
 		
 		// Restore interrupts and let other threads run
@@ -776,7 +779,10 @@ void LockFree (SafeLock *pLock)
 		sti;
 	}
 	else
+	{
 		SLogMsg("Cannot release lock %x held by task %x as task %x", pLock, pLock->m_task_owning_it, KeGetRunningTask ());
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+	}
 }
 
 void KeTaskTest()

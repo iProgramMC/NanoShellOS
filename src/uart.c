@@ -106,7 +106,7 @@ void UartOnInterrupt(uint8_t com_num)
 	
 	uint8_t status = ReadPort (S_IIR);
 	
-	SLogMsg("Got uart interrupt on COM%d. Status: %b", com_num + 1, status);
+	//SLogMsg("Got uart interrupt on COM%d. Status: %b", com_num + 1, status);
 	
 	status &= 0xF;
 	

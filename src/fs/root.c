@@ -278,11 +278,8 @@ void FsInitializeInitRd(void* pRamDisk)
 	pRoot->ReadDir = FsRootFsReadDir;
 	pRoot->FindDir = FsRootFsFindDir;
 	
-	SLogMsg("Adding Files...");
-	
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
-		SLogMsg("Adding file %s...", ramDiskTar->name);
 		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
 		uint32_t pathLength = strlen(ramDiskTar->name);
 		bool hasDotSlash = false;
@@ -301,7 +298,7 @@ void FsInitializeInitRd(void* pRamDisk)
 			strcpy (full_file_name, pname);
 			pname = full_file_name;
 			
-			SLogMsg("Adding %s", full_file_name);
+			//SLogMsg("Adding %s", full_file_name);
 			
 			// While we have slashes, proceed
 			char *pname2 = pname; bool set = false;
@@ -384,7 +381,7 @@ void FsInitializeInitRd(void* pRamDisk)
 		// Advance to the next entry
 		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
 	}
-	SLogMsg("Adding files done");
+	SLogMsg("Init ramdisk is fully setup!");
 }
 
 void FsInitRdInit()

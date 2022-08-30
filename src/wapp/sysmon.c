@@ -34,6 +34,8 @@ enum
 	TASKSOPEN_LABEL,
 	CPUPERCENT_LABEL,
 	UPTIME_LABEL,
+	FPS_LABEL,
+	PFCOUNT_LABEL,
 };
 
 const char *GetTaskSuspendStateStr (int susp_type)
@@ -112,10 +114,16 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	sprintf(buffer, "Memory: %d / %d KB (%d / %d pages)     ", (npp-nfpp)*4, npp*4, npp-nfpp, npp);
 	SetLabelText(pWindow, MEMORY_LABEL, buffer);
 	
-	sprintf(buffer, "FPS: %d           Uptime: ", GetWindowManagerFPS());
+	strcpy(buffer, "Uptime: ");
 	FormatTime(buffer, FORMAT_TYPE_VAR, GetTickCount() / 1000);
 	strcat (buffer, "      ");
 	SetLabelText(pWindow, UPTIME_LABEL, buffer);
+	
+	sprintf(buffer, "FPS: %d        ", GetWindowManagerFPS());
+	SetLabelText(pWindow, FPS_LABEL, buffer);
+	
+	sprintf(buffer, "Page Faults: %d        ", MmGetNumPageFaults());
+	SetLabelText(pWindow, PFCOUNT_LABEL, buffer);
 	
 	return cpu_usage_idle_percent;
 }
@@ -225,6 +233,8 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			CallControlCallback(pWindow, MEMORY_LABEL, EVENT_PAINT, 0, 0);
 			CallControlCallback(pWindow, UPTIME_LABEL, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, FPS_LABEL, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, PFCOUNT_LABEL, EVENT_PAINT, 0, 0);
 			CallControlCallback(pWindow, PROCESS_LISTVIEW, EVENT_PAINT, 0, 0);
 			SystemMonitorProc  (pWindow, EVENT_PAINT, 0, 0);
 			
@@ -252,7 +262,11 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 124, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 144, listview_width, 20);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", FPS_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			RECT (r, PADDING_AROUND_LISTVIEW + 150, listview_y + listview_height + 144, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", UPTIME_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 164, listview_width, 20);
+			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", PFCOUNT_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
 		}
