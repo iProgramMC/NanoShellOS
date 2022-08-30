@@ -80,8 +80,12 @@ void CabinetMountRamDisk(Window *pwnd, const char *pfn)
 		
 		FiClose(fd);
 		
+		KeVerifyInterruptsEnabled;
 		cli;
+		
 		FsMountRamDisk(pData);
+		
+		KeVerifyInterruptsDisabled;
 		sti;
 	}
 }

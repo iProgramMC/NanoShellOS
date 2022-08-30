@@ -69,6 +69,7 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
     }
 	
 	// After the task was created, give it a tag.
+	KeVerifyInterruptsEnabled;
 	cli;
 	KeTaskAssignTag(pTask, pFileName);
 	sti;
@@ -95,6 +96,7 @@ RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 	}
 	
 	// After the task was created, give it a tag.
+	KeVerifyInterruptsEnabled;
 	cli;
 	KeTaskAssignTag(pTask, "Notepad");
 	sti;

@@ -9,6 +9,8 @@
 
 #include <syscall.h>
 
+#define EFLAGS_IF  (1 << 9)
+
 enum {
 	BC_EX_DIV_BY_ZERO,
 	BC_EX_DEBUG,
@@ -50,17 +52,23 @@ enum {
 	BC_EX_ASSERTION_FAILED,
 };
 
-/* Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble. */
-typedef struct StackFrame {
+// Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble.
+typedef struct StackFrame
+{
 	struct StackFrame* ebp;
 	uint32_t eip;
-} StackFrame;
+}
+StackFrame;
 
 typedef int BugCheckReason;
+
+uint32_t KeGetEIP();
+uint32_t KeGetEBP();
 void KeBugCheck (BugCheckReason reason, Registers* pRegs);
 void DumpRegisters (Registers*);
 //WORK: make sure the string you pass in here is large enough!!!
 void DumpRegistersToString (char* pStr, Registers* pRegs);
+void PrintBackTrace (StackFrame* pFrame, uintptr_t eip, const char* pTag);
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs);
 
 #endif//_DEBUG_H

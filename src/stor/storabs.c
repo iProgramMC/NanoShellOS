@@ -22,6 +22,7 @@
  */
  
 #include <storabs.h>
+#include <misc.h>
 
 #define ENABLE_CACHING
 
@@ -38,7 +39,8 @@ extern void KeTaskDone (void);
 // Caching interface
 #ifdef ENABLE_CACHING
 static CacheRegister s_cacheRegisters[0x100];//max driveID = 0xFF.
-static CacheRegister *GetCacheRegister(DriveID driveID)
+
+UNUSED static CacheRegister *GetCacheRegister(DriveID driveID)
 {
 	if (!s_cacheRegisters[driveID].m_bUsed)
 		StCacheInit(&s_cacheRegisters[driveID], driveID);
@@ -247,6 +249,8 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 		memcpy (pDestBytes + index * BLOCK_SIZE, pUnit->m_pData + blockNo * BLOCK_SIZE, BLOCK_SIZE);
 	}
 	
+	return DEVERR_SUCCESS;
+	
 	#else
 	return StDeviceReadNoCache(lba, pDest, driveId, nBlocks);
 	#endif
@@ -254,7 +258,7 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
 {
 	#ifdef ENABLE_CACHING
-	uint8_t* pSrcBytes = pSrc;
+	uint8_t* pSrcBytes = (uint8_t*)pSrc;
 	
 	CacheRegister *pReg = &s_cacheRegisters[driveId];
 	if (!pReg->m_bUsed)
@@ -284,6 +288,8 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 		pUnit->m_lastAccess = GetTickCount();
 		memcpy (pUnit->m_pData + blockNo * BLOCK_SIZE, pSrcBytes + index * BLOCK_SIZE, BLOCK_SIZE);
 	}
+	
+	return DEVERR_SUCCESS;
 	
 	#else
 	return StDeviceWriteNoCache(lba, pSrc, driveId, nBlocks);

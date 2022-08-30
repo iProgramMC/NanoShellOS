@@ -208,6 +208,7 @@ int GetTickCount()
 	if (!g_bRtcInitialized)
 		return 0;
 	
+	KeVerifyInterruptsEnabled;
 	cli;
 	int tc = GetTickCountUnsafe();
 	sti;
@@ -246,6 +247,7 @@ uint64_t GetUsecCount()
 	if (!g_bRtcInitialized)
 		return 0;
 	
+	KeVerifyInterruptsEnabled;
 	cli;
 	uint64_t tc = GetUsecCountUnsafe();
 	sti;
@@ -510,7 +512,7 @@ void KePrintSystemInfoAdvanced()
 	LogMsg("\x01\x09[CPU] Name: %s", GetCPUName());
 	LogMsg("\x01\x09[CPU] x86 Family %d Model %d Stepping %d.  Feature bits: %d",
 			g_cpuidFeatureBits.m_familyID, g_cpuidFeatureBits.m_model, g_cpuidFeatureBits.m_steppingID);
-	LogMsg("\x01\x0A[RAM] PageSize: 4K. Physical pages: %d. Total usable RAM: %d Kb", GetNumPhysPages(), GetNumPhysPages()*4);
+	LogMsg("\x01\x0A[RAM] PageSize: 4K. Physical pages: %d. Total usable RAM: %d Kb", MpGetNumAvailablePages(), MpGetNumAvailablePages()*4);
 	LogMsg("\x01\x0A[VID] Screen resolution: %dx%d.  Textmode size: %dx%d characters, of type %d.", GetScreenSizeX(), GetScreenSizeY(), 
 																						g_debugConsole.width, g_debugConsole.height, g_debugConsole.type);
 	LogMsg("\x01\x0F");
@@ -519,7 +521,7 @@ void KePrintSystemInfoAdvanced()
 void KePrintSystemInfo()
 {
 	//neofetch style:
-	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
+	int npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
 	
 	char timingInfo[128];
 	timingInfo[0] = 0;
@@ -576,17 +578,10 @@ multiboot_info_t *g_pMultibootInfo;
 
 char g_cmdline [1024];
 
-NO_RETURN void KeStopSystem()
-{
-	cli;
-	while (1)
-		hlt;
-}
 void KePrintSystemVersion()
 {
 	LogMsg("NanoShell (TM), August 2022 - " VersionString);
-	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper,
-				 GetNumPhysPages() * 4);
+	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper, MpGetNumAvailablePages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
 }
 void MbSetup (uint32_t check, uint32_t mbaddr)
@@ -598,7 +593,7 @@ void MbSetup (uint32_t check, uint32_t mbaddr)
 	}
 	
 	// Read the multiboot data:
-	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + BASE_ADDRESS);
+	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + KERNEL_BASE_ADDRESS);
 	g_pMultibootInfo = mbi;
 }
 multiboot_info_t* KiGetMultibootInfo()

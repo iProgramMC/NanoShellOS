@@ -32,8 +32,8 @@ extern void KeTaskDone();
 #define cli __asm__ volatile("cli\n\t")//do{__asm__("cli\n\t");SLogMsg("CLI request at " __FILE__ ":%d",__LINE__);}while(0)
 #define sti __asm__ volatile("sti\n\t")//do{__asm__("sti\n\t");SLogMsg("STI request at " __FILE__ ":%d",__LINE__);}while(0)
 
-#define VersionNumber 92
-#define VersionString "V0.92"
+#define VersionNumber 93
+#define VersionString "V0.93"
 
 #define UNUSED __attribute__((unused))
 
@@ -51,6 +51,7 @@ extern void KeTaskDone();
 //SAI = Static and Always Inlined
 #define SAI static ALWAYS_INLINE inline
 
+// The function that gets called when an assertion fails.
 bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, int nLine);
 #define ASSERT(condition) ((condition) || OnAssertionFail(#condition, __FILE__, __FUNCTION__, __LINE__))
 
@@ -61,9 +62,25 @@ extern unsigned short ReadPortW(unsigned short port);
 extern void WritePortL(unsigned short port, unsigned int data);
 extern unsigned int ReadPortL(unsigned int port);
 
+// Stops the system immediately.
 __attribute__((noreturn))
 void KeStopSystem();
+
 void KePrintSystemVersion();
+
+// Gets the contents of the EFLAGS register.
+uint32_t KeGetEFlags(void);
+
+// Checks if interrupts are disabled right now.
+bool KeCheckInterruptsDisabled(void);
+
+// Asserts if interrupts are disabled.
+void KeVerifyInterruptsDisabledD(const char * file, int line);
+#define KeVerifyInterruptsDisabled KeVerifyInterruptsDisabledD(__FILE__, __LINE__)
+
+// Asserts if interrupts are enabled.
+void KeVerifyInterruptsEnabledD(const char * file, int line);
+#define KeVerifyInterruptsEnabled KeVerifyInterruptsEnabledD(__FILE__, __LINE__)
 
 #include <console.h>
 

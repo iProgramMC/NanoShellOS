@@ -30,11 +30,6 @@ void KeTaskDone(void);
 #include <image.h>
 #include <config.h>
 
-#undef cli
-#undef sti
-#define cli
-#define sti
-
 #define LOCK_FPS
 #define LOCK_MS 16 // roughly 60 hz
 #define LAG_DEBUG
@@ -1262,7 +1257,7 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 	
 	// Free the old framebuffer.  This action should be done atomically.
 	// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
-	cli;
+	
 	MmFree(pWindow->m_vbeData.m_framebuffer32);
 	pWindow->m_vbeData.m_framebuffer32 = pNewFb;
 	pWindow->m_vbeData.m_width   = newWidth;
@@ -1270,7 +1265,6 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 	pWindow->m_vbeData.m_pitch16 = newWidth*2;
 	pWindow->m_vbeData.m_pitch   = newWidth*4;
 	pWindow->m_vbeData.m_height  = newHeight;
-	sti;
 	
 	pWindow->m_rect.left   = newPosX;
 	pWindow->m_rect.top    = newPosY;
@@ -1329,8 +1323,6 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
-extern Heap* g_pHeap;
-
 Cursor g_windowDragCursor;
 int g_currentlyClickedWindow = -1;
 
@@ -1345,8 +1337,8 @@ void NukeWindowUnsafe (Window* pWindow)
 		SetCursor(NULL);
 	}
 	
-	Heap *pHeapBackup = g_pHeap;
-	ResetToKernelHeap ();
+	UserHeap *pHeapBackup = MuGetCurrentHeap();
+	MuResetHeap();
 	
 	if (pWindow->m_vbeData.m_framebuffer32)
 	{
@@ -1360,7 +1352,7 @@ void NukeWindowUnsafe (Window* pWindow)
 		pWindow->m_controlArrayLen = 0;
 	}
 	memset (pWindow, 0, sizeof (*pWindow));
-	UseHeap (pHeapBackup);
+	MuUseHeap (pHeapBackup);
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
@@ -1563,9 +1555,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (strl >= WINDOW_TITLE_MAX) strl = WINDOW_TITLE_MAX - 1;
 	memcpy (pWnd->m_title, title, strl + 1);
 	
-	Heap *pHeapBackup  = g_pHeap;
-	ResetToKernelHeap ();
-	
 	pWnd->m_renderFinished = false;
 	pWnd->m_hidden         = true;//false;
 	pWnd->m_isBeingDragged = false;
@@ -1636,8 +1625,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
 	WindowRegisterEvent(pWnd, EVENT_PAINT, 0, 0);
-	
-	UseHeap (pHeapBackup);
 	
 	LockFree (&g_CreateLock);
 	
@@ -2334,7 +2321,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		#endif
 			if (!pWindow->m_hidden)
 			{
-				//cli;
 				if (pWindow->m_renderFinished && !g_BackgdLock.m_held)
 				{
 					pWindow->m_renderFinished = false;
@@ -2348,7 +2334,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					if (RectangleContains (&pWindow->m_rect, &p))
 						RenderCursor ();
 				}
-				//sti;
 			}
 			
 			if (pWindow->m_markedForDeletion)
@@ -2836,9 +2821,11 @@ void RenderWindow (Window* pWindow)
 	//to avoid clashes with other threads printing, TODO use a safelock!!
 #ifdef DIRTY_RECT_TRACK
 	cli;
+	
 	DsjRectSet local_copy;
 	memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
 	DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
+	
 	sti;
 #endif
 	

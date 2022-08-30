@@ -509,6 +509,23 @@ LongJump:
 	mov  edx, [edx + 8]
 	jmp  edx
 
+; uint32 KeGetEFlags()
+
+global KeGetEFlags
+KeGetEFlags:
+	pushf                  ; Push the eflags register
+	pop eax                ; Pop it into EAX
+	ret
+
+global KeGetEIP
+KeGetEIP:
+	mov eax, [esp]
+	ret
+
+global KeGetEBP
+KeGetEBP:
+	mov eax, ebp
+	ret
 
 section .bss
 

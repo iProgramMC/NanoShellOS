@@ -7,6 +7,7 @@
 #include <elf.h>
 #include <string.h>
 #include <memory.h>
+#include "mm/memoryi.h"
 #include <vfs.h>
 #include <task.h>
 #include <process.h>
@@ -29,18 +30,9 @@ int GetDefaultHeapSize()
 #define EDLogMsg(...)
 #endif
 
-extern Heap *g_pHeap;
-
 typedef struct 
 {
-	uint32_t* m_pageDirectory;
-	uint32_t  m_pageDirectoryPhys;
-	uint32_t* m_pageTablesList[1024];
-	#define MAX_PAGE_ALLOC_COUNT 4096 //max: 16 MB, should be plenty.
-	uint32_t  m_pageAllocationCount;
-	uint32_t* m_pagesAllocated[MAX_PAGE_ALLOC_COUNT];
-	
-	Heap* m_heap;
+	UserHeap* m_heap;
 }
 ElfProcess;
 
@@ -73,6 +65,16 @@ void ElfCleanup (UNUSED ElfProcess* pProcess)
 }
 void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
 {
+	size_t sizePages = (((size-1) >> 12) + 1);
+	
+	uintptr_t virtHint = (uintptr_t)virt & ~(PAGE_SIZE - 1);
+	
+	MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, true, false);
+	
+	memset((void*)virtHint, 0, sizePages * PAGE_SIZE);
+	memcpy(virt, data, fileSize);
+	
+	/*
 	uint32_t* pageDir = pProc->m_pageDirectory;
 	uint32_t sizeToCopy = fileSize;
 	size = (((size-1) >> 12) + 1) << 12;
@@ -154,6 +156,7 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_
 		ptIndex = 0;
 		pdIndex++;
 	}
+	*/
 }
 
 void ElfDumpInfo(ElfHeader* pHeader)
@@ -170,7 +173,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 	EDLogMsg("Loading elf file");
 	
 	// The heap associated with this process
-	Heap *pHeap  = g_pHeap;
+	UserHeap *pHeap  = MuGetCurrentHeap();
 	
 	ElfProcess proc;
 	memset(&proc, 0, sizeof(proc));
@@ -187,9 +190,6 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		LogMsg("Got error %d while loading the elf.", errCode);
 		return errCode;
 	}
-	
-	proc.m_pageDirectory     = proc.m_heap->m_pageDirectory;
-	proc.m_pageDirectoryPhys = proc.m_heap->m_pageDirectoryPhys;
 	
 	bool failed = false;
 	
@@ -224,7 +224,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 	if (!failed)
 	{
 		EDLogMsg("(loaded and mapped everything, activating heap!)");
-		UseHeap (pHeap);
+		MuUseHeap (pHeap);
 		
 		EDLogMsg("(looking for NOBITS sections to zero out...)");
 		for (int i = 0; i < pHeader->m_shNum; i++)

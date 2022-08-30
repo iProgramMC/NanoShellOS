@@ -10,12 +10,12 @@ SafeLock gProcessLock;
 
 Process gProcesses[64];
 
-void UseHeapUnsafe  (Heap* pHeap);
-void FreeHeapUnsafe (Heap* pHeap);
-void ResetToKernelHeapUnsafe();
+UserHeap* MuiGetCurrentHeap();
+void MuiUseHeap(UserHeap* pHeap);
+bool MuiKillHeap(UserHeap* pHeap);
+void MuiResetHeap();
 
 Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine);
-bool AllocateHeapUnsafeD (Heap* pHeap, int size, const char* callerFile, int callerLine);
 
 Process* ExMakeUpAProcess()
 {
@@ -26,8 +26,6 @@ Process* ExMakeUpAProcess()
 	}
 	return NULL;
 }
-
-extern Heap *g_pHeap;
 
 void ExDisposeProcess(Process *pProc)
 {
@@ -41,7 +39,7 @@ void ExDisposeProcess(Process *pProc)
 	
 	// If the current heap is this process' heap (which we hope it isn't),
 	// disposing of this heap will automatically switch to the kernel heap :^)
-	FreeHeapUnsafe (&pProc->sHeap);
+	MuiKillHeap(pProc->pHeap);
 	
 	// Deactivate this process
 	pProc->bActive = false;
@@ -108,12 +106,12 @@ void ExOnThreadExit (Process* pProc, Task* pTask)
 				// Let the process free its stuff first
 				if (pProc->OnDeath)
 				{
-					UseHeap (&pProc->sHeap);
+					MuiUseHeap (pProc->pHeap);
 					
 					pProc->OnDeath(pProc);
 					pProc->OnDeath = NULL;
 					
-					ResetToKernelHeap ();
+					MuiResetHeap ();
 				}
 				
 				
@@ -136,6 +134,7 @@ Process* ExGetRunningProc()
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode)
 {
 	LockAcquire (&gProcessLock);
+	KeVerifyInterruptsEnabled;
 	cli;
 	
 	Process* pProc = ExMakeUpAProcess();
@@ -153,7 +152,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	if (nHeapSize < 128)
 		nHeapSize = 128;
 	
-	if (!AllocateHeapUnsafeD (&pProc->sHeap, nHeapSize, pIdent, 10000))
+	pProc->pHeap = MuCreateHeap();
+	if (!pProc->pHeap)
 	{
 		*pErrCode = EX_PROC_CANT_MAKE_HEAP;
 		LockFree (&gProcessLock);
@@ -161,8 +161,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	}
 	
 	// Use the heap, so that it can be used in the task
-	Heap* pBkp = g_pHeap;
-	UseHeapUnsafe (&pProc->sHeap);
+	UserHeap* pBkp = MuiGetCurrentHeap();
+	MuiUseHeap (pProc->pHeap);
 	
 	strcpy (pProc->sIdentifier, pIdent);
 	
@@ -170,7 +170,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pProc->sIdentifier, "[Process]", 0);
 	if (!pTask)
 	{
-		SLogMsg("crap");
+		SLogMsg("Uh oh!");
 		sti;
 		//error code was already set
 		LockFree (&gProcessLock);
@@ -183,10 +183,13 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->nTasks = 1;
 	pProc->sTasks[0] = pTask;
 	
-	UseHeapUnsafe (pBkp);
+	MuiUseHeap (pBkp);
+	
+	KeVerifyInterruptsDisabled;
+	sti;
 	
 	LockFree (&gProcessLock);
-	sti;
+	
 	return pProc;
 }
 

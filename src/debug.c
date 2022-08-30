@@ -10,6 +10,13 @@
 #include <print.h>
 #include <icon.h>
 
+NO_RETURN void KeStopSystem()
+{
+	__asm__ ("cli");
+	
+	while (1)
+		hlt;
+}
 void DumpRegisters (Registers* pRegs)
 {
 	LogMsg("Registers:");
@@ -108,7 +115,27 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 	return false;
 }
 
-#define MAX_FRAMES 10
+#define MAX_FRAMES 12
+void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag)
+{
+	LogMsg("Stack trace:");
+	LogMsg("-> 0x%x %s", eip, TransformTag (pTag, eip), GetMemoryRangeString (eip));
+	int count = 10;
+	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
+	{
+		LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
+		// TODO: addr2line implementation?
+		LogMsg("");
+		stk = stk->ebp;
+		count--;
+		if (count == 0)
+		{
+			LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
+			break;
+		}
+	}
+}
+
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 {
 	LogMsg("*** STOP: %x", reason);
@@ -135,23 +162,7 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 	{
 		// navigate the stack:
 		StackFrame* stk = (StackFrame*)(pRegs->ebp);
-		//__asm__ volatile ("movl %%ebp, %0"::"r"(stk));
-		LogMsg("Stack trace:");
-		LogMsg("-> 0x%x %s", pRegs->eip, TransformTag (pTag, pRegs->eip), GetMemoryRangeString (pRegs->eip));
-		int count = 40;
-		for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
-		{
-			LogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
-			// TODO: addr2line implementation?
-			LogMsg("");
-			stk = stk->ebp;
-			count--;
-			if (count == 0)
-			{
-				LogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
-				break;
-			}
-		}
+		PrintBackTrace(stk, pRegs->eip, pTag);
 	}
 	else
 		LogMsg("No stack trace is available.");
@@ -239,4 +250,70 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	
 	LogMsg("System halted.");
 	while (1) hlt;
+}
+
+bool KeCheckInterruptsDisabled()
+{
+	// TODO FIXME: Don't use this hacky method, keep track of
+	// it ourselves. Unfortunately that wouldn't work with the
+	// page fault handler since, you know, it can call itself
+	// (due to the phys mem reference counter being utter ass)
+	
+	return !(KeGetEFlags() & EFLAGS_IF);
+	//return !g_bAreInterruptsEnabled;
+}
+
+void KeVerifyInterruptsDisabledD(const char * file, int line)
+{
+	if (!KeCheckInterruptsDisabled())
+	{
+		SLogMsg("Interrupts are NOT disabled! (called from %s:%d)", file, line);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		ASSERT(!"Hmm, interrupts shouldn't be enabled here");
+	}
+}
+
+void KeVerifyInterruptsEnabledD(const char * file, int line)
+{
+	if (KeCheckInterruptsDisabled())
+	{
+		SLogMsg("Interrupts are disabled, but they should be enabled! (called from %s:%d)", file, line);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		ASSERT(!"Hmm, interrupts shouldn't be enabled here");
+	}
+}
+
+void KeDisableInterruptsD(const char * file, int line)
+{
+	//on debug, also check if we've already disabled the interrupts
+	/*
+	if (!g_bAreInterruptsEnabled)
+	{
+		SLogMsg("Interrupts are already disabled! (called from %s:%d, but they have already been disabled from %s:%d)", file, line, g_pInterruptDisablerFile, g_nInterruptDisablerLine);
+		KeStopSystem();
+	}
+	*/
+	__asm__ volatile ("cli");
+	/*
+	g_bAreInterruptsEnabled = false;
+	g_pInterruptDisablerFile = file;
+	g_nInterruptDisablerLine = line;
+	*/
+}
+
+void KeEnableInterruptsD(const char * file, int line)
+{
+	//on debug, also check if we've already enabled the interrupts
+	/*
+	if (g_bAreInterruptsEnabled)
+	{
+		SLogMsg("Interrupts are already enabled! (called from %s:%d, but they have already been enabled from %s:%d)", file, line, g_pInterruptEnablerFile, g_nInterruptEnablerLine);
+		KeStopSystem();
+	}
+	
+	g_pInterruptEnablerFile = file;
+	g_nInterruptEnablerLine = line;
+	g_bAreInterruptsEnabled = true;
+	*/
+	__asm__ volatile ("sti");
 }

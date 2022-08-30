@@ -126,7 +126,22 @@ IsrStub%+%1:
 	jmp .mht
 	; This function shouldn't return
 %endmacro
-	
+
+; Special handler for interrupt 0xE (page fault)
+global IsrStub14
+extern MmOnPageFault
+IsrStub14:
+	; the error code has already been pushed
+	pusha                         ; back up all registers
+	mov eax, cr2                  ; push cr2 (the faulting address), to complete the 'registers' struct
+	push eax
+	push esp                      ; push esp - a pointer to the registers* struct
+	call MmOnPageFault            ; call the page fault handler
+	add  esp, 8                   ; pop away esp and cr2
+	popa                          ; restore the registers, then return from the page fault
+	add  esp, 4                   ; pop away the error code
+	iretd
+
 ExceptionNoErrorCode 0
 ExceptionNoErrorCode 1
 ExceptionNoErrorCode 2
@@ -141,7 +156,6 @@ ExceptionErrorCode   10
 ExceptionErrorCode   11
 ExceptionErrorCode   12
 ExceptionErrorCode   13
-ExceptionErrorCode   14
 ExceptionNoErrorCode 15
 ExceptionNoErrorCode 16
 ExceptionErrorCode   17

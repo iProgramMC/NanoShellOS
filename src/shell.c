@@ -95,7 +95,7 @@ void TemporaryTask(__attribute__((unused)) int arg)
 
 void HeapTest()
 {
-	Heap heap;
+	/*Heap heap;
 	memset(&heap, 0, sizeof heap);
 	
 	AllocateHeap (&heap, 1024);
@@ -105,7 +105,7 @@ void HeapTest()
 	void*ptr = MmAllocate(100000);
 	LogMsg("Allocated %x on %x", ptr, &heap);
 	
-	FreeHeap (&heap);
+	FreeHeap (&heap);*/
 }
 
 extern void KeTaskDone();
@@ -152,7 +152,7 @@ bool CoPrintCharInternal (Console* this, char c, char next);
 extern char g_cwd[PATH_MAX+2];
 FileNode* g_pCwdNode = NULL;
 
-extern Heap* g_pHeap;
+//extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 uint64_t ReadTSC();
@@ -288,7 +288,7 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "ph") == 0)
 	{
-		LogMsg("Current Heap: %x",g_pHeap);
+		LogMsg("Current Heap: %p", MuGetCurrentHeap());
 	}
 	else if (strcmp (token, "cd") == 0)
 	{

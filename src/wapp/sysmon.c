@@ -59,6 +59,7 @@ static uint64_t s_cpu_time[C_MAX_TASKS], s_cpu_time_total = 0, s_idle_time_total
 void MonitorSystem()
 {
 	//pause everything while we get timing information from these tasks
+	KeVerifyInterruptsDisabled;
 	cli;
 	s_cpu_time_total = s_idle_time_total = g_kernelCpuTimeTotal;
 	
@@ -70,11 +71,7 @@ void MonitorSystem()
 		if (g_runningTasks[i].m_bExists)
 			s_cpu_time_total += s_cpu_time[i];
 	}
-	sti;
 }
-
-int GetNumPhysPages(void);
-int GetNumFreePhysPages(void);
 
 //returns the amount of time the CPU spent idling
 int UpdateSystemMonitorLists(Window* pWindow)
@@ -111,7 +108,7 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	}
 	
 	
-	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
+	int npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
 	sprintf(buffer, "Memory: %d / %d KB (%d / %d pages)     ", (npp-nfpp)*4, npp*4, npp-nfpp, npp);
 	SetLabelText(pWindow, MEMORY_LABEL, buffer);
 	
@@ -138,7 +135,7 @@ SAI int ConvertToGraphPos(Image *pImg, int y, int ymax)
 void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 {
 	int cpu_usage_total = 100 - cpu_idle_time;
-	int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
+	int npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
 	int memUsedKB = (npp - nfpp) * 4;
 	int fps = 60 - GetWindowManagerFPS();
 	if (fps < 0)  fps = 0;

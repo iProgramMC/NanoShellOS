@@ -7,11 +7,11 @@
 #include <main.h>
 #include <vga.h>
 #include <video.h>
-#include <memory.h>
 #include <string.h>
 #include <icon.h>
 #include <task.h>
 #include <misc.h>
+#include "mm/memoryi.h"
 
 #define VISIBLE_DRAW_BORDER_THICKNESS 1
 
@@ -233,6 +233,7 @@ void SetCursor(Cursor* pCursor)
 	if (!pCursor) pCursor = g_pDefaultCursor;
 	if (g_currentCursor == pCursor) return;
 	
+	KeVerifyInterruptsEnabled;
 	cli;
 	
 	VBEData* backup = g_vbeData;
@@ -261,6 +262,7 @@ void SetCursor(Cursor* pCursor)
 	
 	g_vbeData = backup;
 	
+	KeVerifyInterruptsDisabled;
 	sti;
 }
 
@@ -1704,7 +1706,7 @@ void SetMousePos (unsigned newX, unsigned newY)
 
 // Video initialization
 #if 1
-void VidInitializeVBEData(multiboot_info_t* pInfo, uintptr_t address)
+void VidInitializeVBEData(multiboot_info_t* pInfo, void* address)
 {
 	int bpp = pInfo->framebuffer_bpp;
 	g_vbeData->m_version   = VBEDATA_VERSION_1;
@@ -1799,7 +1801,7 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 		{
 			MmFree(g_framebufferCopy);
 		}
-		g_framebufferCopy = (uint32_t*)MmAllocate(xSize * ySize * 32);
+		g_framebufferCopy = (uint32_t*)MhAllocate(xSize * ySize * 32, NULL);
 		
 		return true;
 	}
@@ -1834,13 +1836,13 @@ void BgaInitIfApplicable()
 }
 
 //present, read/write, user/supervisor, writethrough
-#define VBE_PAGE_BITS (1 | 2 | 4 | 16)
+void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite);
+
 void VidInit()
 {
 	multiboot_info_t* pInfo = KiGetMultibootInfo();
 	
 	g_vbeData = &g_mainScreenVBEData;
-	
 	g_vbeData->m_version = 0;
 	
 	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
@@ -1851,57 +1853,27 @@ void VidInit()
 			sti;
 			return;
 		}
-		// map this to 0xE0000000 or above
-		int index = VBE_FRAMEBUFFER_HINT >> 22;
-		uint32_t pointer = pInfo->framebuffer_addr;
-		uint32_t final_address = VBE_FRAMEBUFFER_HINT;
-		final_address += pointer & 0xFFF;
-		pointer &= ~0xFFF;
 		
-		//LogMsg("VBE Pointer: %x", pointer);
-		//LogMsg("Bitdepth: %d", pInfo->framebuffer_bpp);
-		for (int i = 0; i < MAX_VIDEO_PAGES; i++)
-		{
-			g_vbePageEntries[i] = pointer | VBE_PAGE_BITS;
-			pointer += 0x1000;
-		}
-		for (int i = 0; i < MAX_VIDEO_PAGES; i += 1024)
-		{
-			//LogMsg("Mapping %d-%d to %dth page table pointer", i,i+1023, index);
-			uint32_t pageTable = ((uint32_t)&g_vbePageEntries[i]) - BASE_ADDRESS;
-			
-			g_curPageDir[index] = pageTable | VBE_PAGE_BITS;
-			index++;
-		}
+		uint32_t pointer = pInfo->framebuffer_addr;
+		void *final_address = MhMapPhysicalMemory(pointer, MAX_VIDEO_PAGES, true);
 		
 		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
-		g_framebufferCopy = MmAllocateK (p);
-		
-		MmTlbInvalidate();
+		g_framebufferCopy = MhAllocate (p, NULL);
 		
 		// initialize the VBE data:
 		VidInitializeVBEData (pInfo, final_address);
+		
 		VidPrintTestingPattern();
 		
-		// initialize the console:
-		//LogMsg("Setting font.");
 		VidSetFont (FONT_TAMSYN_REGULAR);
-		//VidSetFont (FONT_FAMISANS);
-		//VidSetFont (FONT_BASIC);
 		
-		//int fontID = CreateFont (fnt_text, fnt_data, 128,128, 15);
-		//VidSetFont(fontID);
-		//LogMsg("Re-initializing debug console with graphics");
 		CoInitAsGraphics(&g_debugConsole);
-		//sti;
 	}
 	else
 	{
 		SLogMsg("Sorry, didn't pass in VBE info.");
 		SwitchMode (1);
 		CoInitAsText(&g_debugConsole);
-		//LogMsg("Warning: no VBE mode specified.");
-		//sti;
 	}
 }
 #endif
@@ -1935,19 +1907,18 @@ void DisjointRectSetClear (DsjRectSet *pSet)
 
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
+	//TODO FIXME: Data race
 #ifdef DIRTY_RECT_TRACK
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
 	if (rect.bottom >= GetScreenSizeY()) rect.bottom = GetScreenSizeY();
 	
-	cli;
 	for (int i = 0; i != pSet->m_rectCount; i++)
 	{
 		Rectangle* arect = &pSet->m_rects[i];
 		if (RectangleFullyInside(arect, &rect))
 		{
-			sti;
 			return; //nothing changed
 		}
 
@@ -1964,8 +1935,7 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 			arect->top    = top;
 			arect->right  = right;
 			arect->bottom = bottom;
-
-			sti;
+			
 			return;
 		}
 	}
@@ -1977,12 +1947,11 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 		// Bail and draw everything.
 		pSet->m_bIgnoreAndDrawAll = true;
 		DisjointRectSetClear(pSet);
-		sti;
+		
 		return;
 	}
 	//merging will be done by the window manager itself
 	pSet->m_rects[pSet->m_rectCount++] = rect;
-	sti;
 #endif
 }
 // The function a vbedata will use to let us know of changes

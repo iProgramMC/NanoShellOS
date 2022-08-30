@@ -115,7 +115,6 @@ void SetMouseSampleRate(int spd)
 #if 1
 void IrqMouse()
 {
-	cli;//sti is called automatically upon the iret.
 	//acknowledge interrupt
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20); // irq 12!!!

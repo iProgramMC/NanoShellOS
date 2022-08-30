@@ -1,99 +1,94 @@
-/*****************************************
-		NanoShell Operating System
-		  (C) 2021 iProgramInCpp
+//  ***************************************************************
+//  memory.h - Creation date: 11/08/2022
+//  -------------------------------------------------------------
+//  NanoShell Copyright (C) 2022 - Licensed under GPL V3
+//
+//  ***************************************************************
+//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
+//  ***************************************************************
 
-    Memory Manager module header file
-******************************************/
 #ifndef _MEMORY_H
 #define _MEMORY_H
 
-#define BASE_ADDRESS 0xC0000000
-#include <main.h>
-#include <multiboot.h>
+#define KERNEL_BASE_ADDRESS (0xC0000000)
+#define KERNEL_HEAP_BASE    (0x80000000)
+#define USER_HEAP_BASE      (0x40000000)
+#define PAGE_SIZE           (0x1000)
 
 #define USER_EXEC_MAPPING_START    0x00C00000
-
 #define USER_HEAP_DYNAMEM_START    0x40000000
-
 #define KERNEL_HEAP_DYNAMEM_START  0x80000000
-
 #define KERNEL_CODE_AND_DATA_START 0xC0000000
-
 #define MMIO_AREA_0                0xD0000000
-
 #define VBE_FRAMEBUFFER_HINT       0xE0000000
-
 #define MMIO_AREA_1                0xF0000000
 	#define MMIO_VBOX_HINT         0xFF000000
 
-//TODO: Proper heap so we won't use 4kb per small allocation.
+#define PAGE_BIT_PRESENT      (0x1)
+#define PAGE_BIT_READWRITE    (0x2)
+#define PAGE_BIT_USERSUPER    (0x4)
+#define PAGE_BIT_WRITETHRU    (0x8)
+#define PAGE_BIT_CACHEDISABLE (0x10)
+#define PAGE_BIT_ACCESSED     (0x20)
 
-typedef struct {
-	bool m_bPresent:1;
-	bool m_bReadWrite:1;
-	bool m_bUserSuper:1;
-	bool m_bWriteThrough:1;
-	bool m_bCacheDisabled:1;
-	bool m_bAccessed:1;
-	bool m_bDirty:1;
-	int m_unused:5;
-	uint32_t m_pAddress:20;
-} 
-__attribute__((packed))
-PageEntry;
+// Page bits that the kernel uses, and are marked as 'available' by the spec
+#define PAGE_BIT_MMIO         (0x800) // (1 << 11). If this is MMIO, set this bit to let the kernel know that this shouldn't be unmapped
+#define PAGE_BIT_COW          (0x400) // (1 << 10). Copy On Write. If a fault occurs here, copy the specified page.
+#define PAGE_BIT_DAI          (0x200) // (1 <<  9). Don't Allocate Instantly. If a fault occurs here, allocate a physical page.
 
-typedef struct {
-	PageEntry m_entries[1024];
-} PageTable;
+#define PAGE_BIT_ADDRESS_MASK (0xFFFFF000)
 
-typedef struct {
-	// page tables (virtual address)
-	PageTable *m_pTables[1024];
-	
-	// page tables (physical address)
-	uint32_t   m_pRealTables[1024];
-	
-	// this table's real address
-	uint32_t   m_pThisPhysical;
-} PageDirectory;
+#include <main.h>
+#include <multiboot.h>
+#include <lock.h>
 
-#define PAGE_ENTRIES_PHYS_MAX_SIZE 128
 typedef struct
 {
-	uint32_t *m_pageDirectory;
-	PageEntry* m_pageEntries;
-	int* m_memoryAllocSize;
-	const char** m_memoryAllocAuthor;
-	int *m_memoryAllocAuthorLine;
-	
-	uint32_t m_pageEntriesPhysical[PAGE_ENTRIES_PHYS_MAX_SIZE];
-	
-	//note: everything will be allocated dynamically about this heap, so let's add a size var too:
-	int m_pageEntrySize;
-	
-	uint32_t m_pageDirectoryPhys;
+	uint32_t m_pageEntries[PAGE_SIZE / 4];
 }
-Heap;
+PageTable;
 
+// User heap structure
+typedef struct UserHeap
+{
+	SafeLock   m_lock;             // The lock associated with this heap object
+	
+	int        m_nRefCount;        // The reference count. If it goes to zero, this gets killed
+	
+	uint32_t*  m_pPageDirectory;   // The virtual  address of the page directory
+	uint32_t   m_nPageDirectory;   // The physical address of the page directory
+	PageTable* m_pPageTables[512]; // The user half's page tables referenced by the page directory.
+	uint32_t   m_nMappingHint;     // The hint to use when mapping with no hint next.
+}
+UserHeap;
 
-void MmFirstThingEver();
-
+// Exposed memory functions
 
 /**
- * Initializes the memory manager and heap.
+ * Initialize the physical memory manager.
  */
-void MmInit();
+void MpInitialize(multiboot_info_t* pInfo);
 
 /**
- * Maps a contiguous block of physical memory near the hint address.
- *
- * The result address will either be NULL, a kernel halt, or >= the hint address.
- *
- * MmMapPhysicalMemory by default returns a _read-only_ section, use MmMapPhysicalMemoryRW
- * to be able to write to it.
+ * Initialize the kernel heap.
  */
-uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
-uint32_t MmMapPhysicalMemory  (uint32_t hint, uint32_t phys_start, uint32_t phys_end);
+void MhInitialize();
+
+/**
+ * Gets the number of page faults that have occurred since the system has started.
+ */
+int MmGetNumPageFaults();
+
+/**
+ * Gets the number of free physical memory pages, which can be used to calculate
+ * the total amount of free memory available to the system.
+ */
+int MpGetNumFreePages();
+
+/**
+ * Gets the number of available physical memory pages.
+ */
+int MpGetNumAvailablePages();
 
 /**
  * Maps a single page of physical memory to virtual memory.
@@ -109,15 +104,20 @@ void *MmMapPhysMemFast  (uint32_t page);
 void  MmUnmapPhysMemFast(void*    pMem);
 
 /**
- * Maps a contiguous block of physical memory near the hint address.
+ * Maps a contiguous block of physical memory.
  *
- * The result address will either be NULL, a kernel halt, or >= the hint address.
+ * The result address will either be NULL or valid memory.
  *
  * MmMapPhysicalMemory by default returns a _read-only_ section, use MmMapPhysicalMemoryRW
  * to be able to write to it.
  */
-uint32_t MmMapPhysicalMemoryRW(uint32_t hint, uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
-uint32_t MmMapPhysicalMemory  (uint32_t hint, uint32_t phys_start, uint32_t phys_end);
+void* MmMapPhysicalMemoryRW(uint32_t phys_start, uint32_t phys_end, bool bReadWrite);
+void* MmMapPhysicalMemory  (uint32_t phys_start, uint32_t phys_end);
+
+/**
+ * Removes a physical memory mapping.
+ */
+void MmUnmapPhysicalMemory(void *pMem);
 
 /**
  * Allocates a single page (4096 bytes).
@@ -191,75 +191,14 @@ void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callL
 void MmFree (void* pAddr);
 void MmFreeK(void* pAddr);
 
-/**
- * Uses a certain page directory address (and its physical one) as the current page directory.
- * 
- * This is an _internal_ kernel function and should not be used by any non-memory code.
- */
-void MmUsePageDirectory(uint32_t* curPageDir, uint32_t phys);
 
-/**
- * Reloads CR3, invalidating the TLB.
- */
-void MmTlbInvalidate();
 
-/**
- * Reverts to the kernel's default page directory.  Useful if you're returning from an ELF executable.
- */
-void MmRevertToKernelPageDir();
-
-/**
- * Gets the kernel's default page directory's virtual address.
- */
-uint32_t* MmGetKernelPageDir();
-
-/**
- * Gets the kernel's default page directory's physical address.
- */
-uint32_t MmGetKernelPageDirP();
-
-/**
- * Dumps all information about the memory manager to the console.  Useful for debugging
- */
+UserHeap* MuGetCurrentHeap();
+UserHeap* MuCreateHeap();
+UserHeap* MuCloneHeap(UserHeap* pHeapToClone);
+void MuKillHeap(UserHeap* pHeap);
+void MuUseHeap (UserHeap *pHeap);
+void MuResetHeap();
 void MmDebugDump();
-
-/**
- * Creates a new heap.  You can also allocate this heap on the stack, it's not a problem.
- */
-bool AllocateHeapD (Heap* pHeap, int size, const char* callerFile, int callerLine);
-#define AllocateHeap(pHeap, size) AllocateHeapD(pHeap, size, "[HEAP] " __FILE__, __LINE__)
-
-/**
- * Get how many pages we can allocate on this heap.
- */
-int GetHeapSize();
-
-/**
- * Get total number of allocatable pages.
- */
-int GetNumPhysPages();
-
-/**
- * Get total number of free allocatable pages.
- */
-int GetNumFreePhysPages();
-
-/**
- * Use this heap pointer as our heap.  
- */
-void UseHeap (Heap* pHeap);
-
-/**
- * Revert back to kernel heap.  Need to do this if you want to get rid of the heap.
- */
-void ResetToKernelHeap();
-
-/**
- * Gets rid of a heap.  Does not delete the pointer, but it deinitializes the heap within.
- */
-void FreeHeap(Heap* pHeap);
-
-
-
 
 #endif//_MEMORY_H

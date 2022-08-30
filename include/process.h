@@ -39,7 +39,7 @@ struct Proc
 	
 	DeathProc OnDeath;
 	
-	Heap  sHeap;
+	UserHeap* pHeap;
 };
 typedef struct Proc Process;
 

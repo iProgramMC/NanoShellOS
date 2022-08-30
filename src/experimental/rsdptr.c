@@ -114,6 +114,7 @@ void RsdpAnalyze(RsdpDesc* pDesc)
 	
 	ASSERT (pMem && "Error mapping RSDT Address. Who know's what's going to happen now!");
 	LogMsg("Mapped. pMem: %x", pMem);
+	
 	g_pRSDTTable = pMem;
 	
 	LogMsg("RSDT signature: %c%c%c%c",

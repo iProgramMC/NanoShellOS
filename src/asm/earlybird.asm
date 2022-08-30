@@ -13,7 +13,7 @@ bits 32
 %define VIRT_TO_PHYS(k) ((k) - BASE_ADDRESS)
 	
 ; variables to load from other c/asm files
-extern g_kernelPageDirectory
+extern g_KernelPageDirectory
 extern g_pageTableArray
 extern e_placement
 extern e_frameBitsetSize
@@ -61,13 +61,13 @@ KeEntry:
 .label3:
 	
 	; Map the two pagetables required to both virtual addresses 0x0 and 0xC0000000
-	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) +   0*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03
-	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) +   1*4], VIRT_TO_PHYS(g_pageTableArray+4096) + 0x03
-	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) + 768*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03
-	mov dword [VIRT_TO_PHYS(g_kernelPageDirectory) + 769*4], VIRT_TO_PHYS(g_pageTableArray+4096) + 0x03
+	mov dword [VIRT_TO_PHYS(g_KernelPageDirectory) +   0*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03
+	mov dword [VIRT_TO_PHYS(g_KernelPageDirectory) +   1*4], VIRT_TO_PHYS(g_pageTableArray+4096) + 0x03
+	mov dword [VIRT_TO_PHYS(g_KernelPageDirectory) + 768*4], VIRT_TO_PHYS(g_pageTableArray+0000) + 0x03
+	mov dword [VIRT_TO_PHYS(g_KernelPageDirectory) + 769*4], VIRT_TO_PHYS(g_pageTableArray+4096) + 0x03
 	
-	; Set CR3 to the physical address of the g_kernelPageDirectory
-	mov ecx, VIRT_TO_PHYS(g_kernelPageDirectory)
+	; Set CR3 to the physical address of the g_KernelPageDirectory
+	mov ecx, VIRT_TO_PHYS(g_KernelPageDirectory)
 	mov cr3, ecx
 	
 	; Set PG and WP bit
@@ -82,8 +82,8 @@ KeEntry:
 section .text
 KeHigherHalfEntry:
 	; Unmap the identity mapping, we don't need it anymore
-	mov dword [g_kernelPageDirectory+0], 0
-	mov dword [g_kernelPageDirectory+4], 0
+	mov dword [g_KernelPageDirectory+0], 0
+	mov dword [g_KernelPageDirectory+4], 0
 	
 	; Reload CR3 to force a TLB flush (we updated the PDT but TLB isn't aware of that)
 	; NOTE: you can probably also use invlpg.  We won't use that
@@ -205,7 +205,7 @@ GDT_TSS_StackSegFault:
 	dd 0x00000010            ; SS1
 	dd g_EmergencyStack      ;ESP2
 	dd 0x00000010            ; SS2
-	dd g_kernelPageDirectory ; CR3
+	dd g_KernelPageDirectory ; CR3
 	dd KeHandleSsFailure     ; EIP
 	dd 0x00000000            ; EFLAGS.  To be filled in by system later
 	dd 0x12345678            ; EAX

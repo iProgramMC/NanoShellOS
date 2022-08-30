@@ -332,6 +332,8 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 	
 	//Create a new window
 	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_MENUITEM | WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ | WF_SYSPOPUP);
+	
+	KeVerifyInterruptsEnabled;
 	cli;
 	pMenuWnd->m_bWindowManagerUpdated = true;
 	pMenuWnd->m_data = pRoot;

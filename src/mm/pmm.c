@@ -1,102 +1,122 @@
-/*****************************************
-		NanoShell Operating System
-	   (C) 2021, 2022 iProgramInCpp
+//  ***************************************************************
+//  mm/pmm.c - Creation date: 11/08/2022
+//  -------------------------------------------------------------
+//  NanoShell Copyright (C) 2022 - Licensed under GPL V3
+//
+//  ***************************************************************
+//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
+//  ***************************************************************
 
-           Memory Manager module
-******************************************/
+// Namespace: Mp (Memory manager, Physical memory manager)
+
 #include <memory.h>
-#include <print.h>
-#include <string.h>
-#include <vga.h>
-#include <misc.h>
+#include "memoryi.h"
 
-uint32_t g_frameBitset [32768];//Enough to wrap the entirety of the address space
-
-extern uint32_t* e_frameBitsetVirt;
-extern uint32_t e_frameBitsetSize;
 extern uint32_t e_placement;
 
-extern void MmStartupStuff(); //io.asm
+#define FRAME_BITSET_SIZE_INTS  (32768)   //Enough to wrap the entirety of the address space
+#define FRAME_BITSET_SIZE_BYTES (32768*4)
+#define FRAME_BITSET_SIZE_BITS  (32768*32)
 
-void MmInitPrimordial()
-{
-	MmStartupStuff();
-	e_frameBitsetSize = 131072;
-	e_frameBitsetVirt = g_frameBitset;
-}
+uint32_t g_frameBitset [FRAME_BITSET_SIZE_INTS];
 
 int g_numPagesAvailable = 0;
 
-int GetNumPhysPages()
+int MpGetNumAvailablePages()
 {
 	return g_numPagesAvailable;
 }
 
 #define  INDEX_FROM_BIT(a) (a / 32)
 #define OFFSET_FROM_BIT(a) (a % 32)
-void MmSetFrame (uint32_t frameAddr)
+
+void MpSetFrame (uint32_t frameAddr)
 {
 	uint32_t frame = frameAddr >> 12;
-	uint32_t idx = INDEX_FROM_BIT (frame),
-			 off =OFFSET_FROM_BIT (frame);
-	e_frameBitsetVirt[idx] |= (0x1 << off);
+	uint32_t idx =  INDEX_FROM_BIT (frame),
+			 off = OFFSET_FROM_BIT (frame);
+	g_frameBitset[idx] |= (1 << off);
 }
-void MmClrFrame (uint32_t frameAddr)
+void MpClearFrame (uint32_t frameAddr)
 {
 	uint32_t frame = frameAddr >> 12;
 	uint32_t idx = INDEX_FROM_BIT (frame),
-			 off =OFFSET_FROM_BIT (frame);
-	e_frameBitsetVirt[idx] &=~(0x1 << off);
+			 off = OFFSET_FROM_BIT (frame);
+	g_frameBitset[idx] &= ~(1 << off);
 }
 
-uint32_t MmFindFreeFrame()
+uint32_t MpFindFreeFrame()
 {
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
+	for (uint32_t i = 0; i < FRAME_BITSET_SIZE_INTS; i++)
 	{
 		//Any bit free?
-		if (e_frameBitsetVirt[i] != 0xFFFFFFFF) {
+		if (g_frameBitset[i] != 0xFFFFFFFF)
+		{
 			//yes, which?
-			for (int j=0; j<32; j++)
+			for (int j = 0; j < 32; j++)
 			{
-				if (!(e_frameBitsetVirt[i] & (1<<j)))
+				if (!(g_frameBitset[i] & (1 << j)))
 				{
-					//FREE_LOCK (g_memoryPmmLock);
 					return i*32 + j;
 				}
 			}
 		}
 		//no, continue
 	}
-	//what
-	SLogMsg("No more physical memory page frames. This can and will go bad!!");
+	// Out of memory!
 	return 0xffffffffu;
 }
-int GetNumFreePhysPages()
+
+int MpGetNumFreePages()
 {
 	int result = 0;
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
+	for (uint32_t i = 0; i < FRAME_BITSET_SIZE_INTS; i++)
 	{
-		//Any bit free?
-		if (e_frameBitsetVirt[i] != 0xFFFFFFFF) {
-			//yes, which?
-			for (int j=0; j<32; j++)
+		// Any bit free?
+		if (g_frameBitset[i] != 0xFFFFFFFF)
+		{
+			// yes, which?
+			for (int j = 0; j < 32; j++)
 			{
-				if (!(e_frameBitsetVirt[i] & (1<<j)))
+				if (!(g_frameBitset[i] & (1 << j)))
 					result++;
 			}
 		}
 		//no, continue
 	}
 	
-	//what
 	return result;
 }
 
-void MmInitializePMM(multiboot_info_t* mbi)
+uintptr_t MpRequestFrame(bool bIsKernelHeap)
 {
-	for (uint32_t i=0; i<INDEX_FROM_BIT(e_frameBitsetSize); i++)
+	uint32_t frame = MpFindFreeFrame();
+	if (frame == 0xFFFFFFFFu)
 	{
-		e_frameBitsetVirt[i] = 0xFFFFFFFF;
+		// Out of memory.
+		LogMsg("Out of memory in MpRequestFrame");
+		return 0;
+	}
+	
+	uintptr_t result = frame << 12;
+	MpSetFrame(result);
+	
+	// kernel heap doesn't do COW or anything so we don't need to track reference counts to it
+	if (!bIsKernelHeap)
+		MrReferencePage(result);
+	
+	return result;
+}
+
+void MmStartupStuff();
+
+void MpInitialize(multiboot_info_t* mbi)
+{
+	MmStartupStuff();
+	
+	for (uint32_t i = 0; i < ARRAY_COUNT(g_frameBitset); i++)
+	{
+		g_frameBitset[i] = 0xFFFFFFFF;
 	}
 	
 	//parse the multiboot mmap and mark the respective memory frames as free:
@@ -106,8 +126,6 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	//adding extra complexity is a no-go for now
 	if (addr >= 0x100000)
 	{
-		SwitchMode(0);
-		CoInitAsText(&g_debugConsole);
 		LogMsg("OS state not supported.  Mmap address: %x  Mmap len: %x", addr, len);
 		KeStopSystem();
 	}
@@ -124,44 +142,45 @@ void MmInitializePMM(multiboot_info_t* mbi)
 	{
 		// if this memory range is not reserved AND it doesn't bother our kernel space, free it
 		if (pMemoryMap->type == MULTIBOOT_MEMORY_AVAILABLE)
+		{
 			for (int i = 0; i < (int)pMemoryMap->len; i += 0x1000)
 			{
 				uint32_t addr = pMemoryMap->addr + i;
 				if (addr >= e_placement)// || addr < 0x100000)
-					MmClrFrame (addr);
+					MpClearFrame (addr);
 			}
+		}
 	}
 	
 	// Clear out the kernel, from 0x100000 to 0x600000
-	for (int i = 0x100; i < (e_placement >> 12) + 1; i++)
+	for (uint32_t i = 0x100; i < (e_placement >> 12) + 1; i++)
 	{
-		MmSetFrame(i << 12); // Set frame as not allocatable
+		MpSetFrame(i << 12); // Set frame as not allocatable
 	}
 	
-	multiboot_info_t* pInfo = KiGetMultibootInfo();
-	if (pInfo->mods_count > 0)
+	if (mbi->mods_count > 0)
 	{
 		//Usually the mods table is below 1m.
-		if (pInfo->mods_addr >= 0x100000)
+		if (mbi->mods_addr >= 0x100000)
 		{
-			LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
+			LogMsg("Module table starts at %x.  OS state not supported", mbi->mods_addr);
 			KeStopSystem();
 		}
 		
 		//The initrd module is here.
-		multiboot_module_t *pModules = (void*) (pInfo->mods_addr + 0xc0000000);
-		for (int i = 0; i < pInfo->mods_count; i++)
+		multiboot_module_t *pModules = (void*) (mbi->mods_addr + 0xc0000000);
+		for (MultibootUInt32 i = 0; i < mbi->mods_count; i++)
 		{
-			SLogMsg("Blocking out frames from module");
+			LogMsg("Blocking out frames from module");
 			// block out the frames this contains from being allocated by the PMM
 			for (uint32_t pg = pModules[i].mod_start;
 				          pg < pModules[i].mod_end + 0xFFF;
 						  pg += 4096)
 			{
-				MmSetFrame (pg);
+				MpSetFrame (pg);
 			}
 		}
 	}
 	
-	g_numPagesAvailable = GetNumFreePhysPages();
+	g_numPagesAvailable = MpGetNumFreePages();
 }

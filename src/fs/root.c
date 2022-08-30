@@ -95,6 +95,7 @@ static uint32_t FsSoundBlasterWrite(UNUSED FileNode *pNode, UNUSED uint32_t offs
 {
 	//Offset will be ignored.
 	SbWriteData (pBuffer, size);
+	return size;
 }
 
 #endif
@@ -278,6 +279,7 @@ void FsInitializeInitRd(void* pRamDisk)
 	pRoot->FindDir = FsRootFsFindDir;
 	
 	SLogMsg("Adding Files...");
+	
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
 		SLogMsg("Adding file %s...", ramDiskTar->name);
@@ -298,6 +300,8 @@ void FsInitializeInitRd(void* pRamDisk)
 			char *pname = ramDiskTar->name + hasDotSlash;
 			strcpy (full_file_name, pname);
 			pname = full_file_name;
+			
+			SLogMsg("Adding %s", full_file_name);
 			
 			// While we have slashes, proceed
 			char *pname2 = pname; bool set = false;
@@ -400,7 +404,7 @@ void FsInitRdInit()
 	multiboot_module_t *initRdModule = (void*) (pInfo->mods_addr + 0xc0000000);
 
 	//Precalculate an address we can use
-	uint32_t pInitrdAddress = 0xc0000000 + initRdModule->mod_start;
+	void* pInitrdAddress = (void*)(0xc0000000 + initRdModule->mod_start);
 	
 	// We should no longer have the problem of it hitting our frame bitset.
 	
@@ -409,13 +413,13 @@ void FsInitRdInit()
 	if (initRdModule->mod_end >= 0x100000)
 	{
 		//Actually go to the effort of mapping the initrd to be used.
-		pInitrdAddress = MmMapPhysicalMemory (0x30000000, initRdModule->mod_start, initRdModule->mod_end);
+		pInitrdAddress = MmMapPhysicalMemory (initRdModule->mod_start, initRdModule->mod_end);
 	}
 	
 	SLogMsg("Physical address that we should load from: %x", pInitrdAddress);
 	
 	// Load the initrd last so its entries show up last when we type 'ls'.
-	FsInitializeInitRd((void*)pInitrdAddress);
+	FsInitializeInitRd(pInitrdAddress);
 }
 
 #endif

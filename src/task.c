@@ -5,7 +5,7 @@
           Task Scheduler  module
 ******************************************/
 #include <task.h>
-#include <memory.h>
+#include "mm/memoryi.h"
 #include <process.h>
 #include <string.h>
 #include <print.h>
@@ -33,13 +33,13 @@ static uint64_t       g_kernelLastSwitchTime;
 __attribute__((aligned(16)))
 static int            g_kernelFPUState[128];
 static VBEData*       g_kernelVBEContext = NULL;
-static Heap*          g_kernelHeapContext = NULL;
+static UserHeap*      g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
 static const uint8_t* g_kernelFontContext = NULL;
 static char           g_kernelCwd[PATH_MAX+2];
 static uint32_t       g_kernelSysCallNum; //honestly, kind of useless since the kernel task will never be an ELF trying to call into the system :^)
 
-extern Heap*          g_pHeap;
+extern UserHeap*      g_pCurrentUserHeap;
 extern Console*       g_currentConsole; //logmsg
 extern const uint8_t* g_pCurrentFont;
 extern char           g_cwd[PATH_MAX+2];
@@ -47,6 +47,9 @@ extern char           g_cwd[PATH_MAX+2];
 extern bool           g_interruptsAvailable;
 
 uint64_t g_onePitIntAgo, g_twoPitIntsAgo;
+
+void MuiUseHeap(UserHeap* pHeap);
+void MuiResetHeap(void);
 
 SAI void KeReviveTask (Task *pTask)
 {
@@ -93,6 +96,7 @@ void KeTaskDone(void)
 
 void KeTaskDebugDump(void)
 {
+	KeVerifyInterruptsEnabled;
 	cli;
 	bool any_tasks = false;
 	LogMsg("Listing tasks.");
@@ -105,6 +109,8 @@ void KeTaskDebugDump(void)
 	}
 	if (!any_tasks)
 		LogMsg("No tasks currently running.");
+	
+	KeVerifyInterruptsDisabled;
 	sti;
 }
 void KeTaskAssignTag(Task* pTask, const char* pTag)
@@ -129,11 +135,16 @@ const char* KeTaskGetTag(Task* pTask)
 // This function (in asm/task.asm) prepares the initial task for
 // execution.
 extern void KeTaskStartup();
-extern uint32_t g_curPageDirP; //memory.c
+
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 void KeFxSave(int *fpstate);
+
+uint32_t* MhGetKernelPageDirectory();
+
 void KeConstructTask (Task* pTask)
 {
+	KeVerifyInterruptsDisabled;
+	
 	pTask->m_state.esp = ((int)pTask->m_pStack + C_STACK_BYTES_PER_TASK) & ~0xF; //Align to 4 bits
 	pTask->m_state.ebp = 0;
 	pTask->m_state.eip = (int)KeTaskStartup;
@@ -154,7 +165,15 @@ void KeConstructTask (Task* pTask)
 	pTask->m_state.ss  = SEGMENT_KEDATA;
 	
 	pTask->m_state.eflags = 0x297; //same as our own EFL register
-	pTask->m_state.cr3 = g_curPageDirP; //same as our own CR3 register
+	
+	if (MuGetCurrentHeap())
+	{
+		pTask->m_state.cr3 = MuGetCurrentHeap()->m_nPageDirectory; //same as our own CR3 register
+	}
+	else
+	{
+		pTask->m_state.cr3 = (uintptr_t)MhGetKernelPageDirectory() - KERNEL_BASE_ADDRESS;
+	}
 	
 	ZeroMemory (pTask->m_fpuState, sizeof(pTask->m_fpuState));
 	
@@ -166,7 +185,7 @@ void KeConstructTask (Task* pTask)
 	memcpy ((void*)(pTask->m_state.esp), &pTask->m_state.eip, sizeof(int)*3);
 	
 	pTask->m_pVBEContext     = &g_mainScreenVBEData;
-	pTask->m_pCurrentHeap    = g_pHeap;//default kernel heap.
+	pTask->m_pCurrentHeap    = g_pCurrentUserHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
 	pTask->m_pFontContext    = g_pCurrentFont;
 	strcpy (pTask->m_cwd, g_cwd); // inherit from parent
@@ -175,14 +194,13 @@ void KeConstructTask (Task* pTask)
 	KeFxSave (pTask->m_fpuState);
 }
 
-void MmFreeUnsafeK(void *ptr);
 void ExOnThreadExit (Process* pProc, Task* pTask);
 
 Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	Process *pProc = (Process*)pProcVoid;
 	// Pre-allocate the stack, since it depends on interrupts being on
-	void *pStack = MmAllocateK(C_STACK_BYTES_PER_TASK);
+	void *pStack = MhAllocate(C_STACK_BYTES_PER_TASK, NULL);
 	if (!pStack)
 	{
 		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
@@ -204,7 +222,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		
 		// Pre-free the pre-allocated stack. Don't need it lying around
 		if (pStack)
-			MmFreeUnsafeK(pStack);
+			MhFree(pStack);
 		
 		return NULL;
 	}
@@ -225,12 +243,12 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		pTask->m_bMarkedForDeletion = false;
 		pTask->m_pProcess = pProc;
 		
-		Heap* pBkp = g_pHeap;
+		UserHeap* pBkp = MuGetCurrentHeap();
 		
 		// This replacement is purely symbolic: while it won't use the
 		// page directory of this heap, it will apply it to the new task.
 		if (pProc)
-			g_pHeap = &pProc->sHeap;
+			MuiUseHeap(pProc->pHeap);
 		
 		char buffer[32];
 		sprintf(buffer, "<task no. %d>", i);
@@ -238,7 +256,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		KeConstructTask(pTask);
 		
 		// Restore Old Heap
-		g_pHeap = pBkp;
+		MuiUseHeap(pBkp);
 		
 		if (pErrorCodeOut)
 			*pErrorCodeOut = TASK_SUCCESS;
@@ -256,6 +274,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 }
 Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
+	KeVerifyInterruptsEnabled;
 	cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
 	Task* pResult = KeStartTaskExUnsafeD (function, argument, pErrorCodeOut, pProcVoid, authorFile, authorFunc, authorLine);
 	sti;
@@ -302,7 +321,11 @@ void KeUnsuspendTasksWaitingForWM()
 void WmOnTaskDied(Task *pTask); // 💀
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
-	if (!interrupt) cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
+	if (!interrupt)
+	{
+		KeVerifyInterruptsEnabled;
+		cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
+	}
 	
 	WmOnTaskDied(pTask);
 	
@@ -331,6 +354,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 			SLogMsg("KEResetTask: WTF?");
 			KeStopSystem ();
 		}
+		KeVerifyInterruptsDisabled;
 		sti;//if we didn't restore interrupts here would be our death point
 		KeTaskDone();
 		while (1) hlt;
@@ -339,7 +363,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 	{
 		if (killing && pTask->m_pStack)
 		{
-			MmFreeUnsafeK(pTask->m_pStack);
+			MhFree(pTask->m_pStack);
 		}
 		pTask->m_pStack = NULL;
 		
@@ -353,7 +377,11 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_argument   = 0;
 		pTask->m_featuresArgs = false;
 		pTask->m_bMarkedForDeletion = false;
-		if (!interrupt) sti;//if we didn't restore interrupts here would be our death point
+		if (!interrupt)
+		{
+			KeVerifyInterruptsDisabled;
+			sti;//if we didn't restore interrupts here would be our death point
+		}
 	}
 }
 bool KeKillTask(Task* pTask)
@@ -464,8 +492,6 @@ void KeCheckDyingTasks(Task* pTaskToAvoid)
 // Every 10 milliseconds the task switches continue
 ///int g_TaskSwitchingAggressiveness = 10;
 
-void ResetToKernelHeapUnsafe();
-void UseHeapUnsafe (Heap* pHeap);
 void ExCheckDyingProcesses();
 Process* ExGetRunningProc();
 
@@ -616,7 +642,7 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		memcpy   (pTask -> m_cwd,   g_cwd,      sizeof(g_cwd));
 		KeFxSave (pTask -> m_fpuState);
 		pTask->m_pVBEContext     = g_vbeData;
-		pTask->m_pCurrentHeap    = g_pHeap;
+		pTask->m_pCurrentHeap    = g_pCurrentUserHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
 		pTask->m_pFontContext    = g_pCurrentFont;
 		pTask->m_sysCallNum      = *pSysCallNum;
@@ -627,12 +653,12 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		memcpy   (g_kernelCwd,      g_cwd,      sizeof(g_cwd));
 		KeFxSave (g_kernelFPUState); //perhaps we won't use this.
 		g_kernelVBEContext     = g_vbeData;
-		g_kernelHeapContext    = g_pHeap;
+		g_kernelHeapContext    = g_pCurrentUserHeap;
 		g_kernelConsoleContext = g_currentConsole;
 		g_kernelFontContext    = g_pCurrentFont;
 		g_kernelSysCallNum     = *pSysCallNum;
 	}
-	ResetToKernelHeapUnsafe();
+	MuiResetHeap();
 	
 	void *pProc = NULL;
 	if (pTask) pProc = pTask->m_pProcess;
@@ -682,7 +708,7 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		
 		g_pProcess = (Process*)pNewTask->m_pProcess;
 		
-		UseHeapUnsafe (pNewTask->m_pCurrentHeap);
+		MuiUseHeap (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
 	else
@@ -699,7 +725,7 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		
 		g_pProcess = NULL;
 		
-		UseHeapUnsafe (g_kernelHeapContext);
+		MuiUseHeap (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}
 }
@@ -710,6 +736,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 	while (true)
 	{
 		// Clear interrupts: we need the following to be atomic
+		KeVerifyInterruptsEnabled;
 		cli;
 		
 		// If the lock's value is false (i.e. it has been freed) then we can grab it.
@@ -718,6 +745,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 			// So grab it.
 			pLock->m_held = true;
 			pLock->m_task_owning_it = KeGetRunningTask ();
+			KeVerifyInterruptsDisabled;
 			sti;
 			return;
 		}
@@ -730,6 +758,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 		}
 		
 		// Restore interrupts and let other threads run
+		KeVerifyInterruptsDisabled;
 		sti;
 		KeTaskDone();
 	}
@@ -740,8 +769,11 @@ void LockFree (SafeLock *pLock)
 	if (pLock->m_task_owning_it == KeGetRunningTask())
 	{
 		// The lock is ours: free it
+		KeVerifyInterruptsEnabled;
+		cli;
 		pLock->m_task_owning_it =  NULL;
 		pLock->m_held = false;
+		sti;
 	}
 	else
 		SLogMsg("Cannot release lock %x held by task %x as task %x", pLock, pLock->m_task_owning_it, KeGetRunningTask ());

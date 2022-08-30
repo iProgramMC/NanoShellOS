@@ -110,7 +110,7 @@ typedef struct
 	int 		   m_authorLine;
 	
 	VBEData*       m_pVBEContext;
-	Heap *         m_pCurrentHeap;
+	UserHeap *     m_pCurrentHeap;
 	Console*       m_pConsoleContext;
 	const uint8_t* m_pFontContext;
 	
@@ -246,13 +246,6 @@ void KeUnsuspendTasksWaitingForProc(void *pProc);
 ***********************************************************/
 void KeUnsuspendTasksWaitingForWM();
 
-typedef struct
-{
-	bool  m_held;
-	void* m_task_owning_it;
-}
-SafeLock;
-void LockAcquire (SafeLock *pLock);
-void LockFree (SafeLock *pLock);
+#include <lock.h>
 
 #endif//_TASK_H
