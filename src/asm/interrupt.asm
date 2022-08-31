@@ -18,6 +18,9 @@ extern IsrSoftware
 extern UartOnInterrupt
 extern SbIrqHandler
 
+extern KeOnEnterInterrupt
+extern KeOnExitInterrupt
+
 global IrqTimerA
 global IrqClockA
 global IrqMouseA
@@ -33,52 +36,75 @@ section .text
 
 IrqSb16A:
 	pusha
+	call KeOnEnterInterrupt
 	call SbIrqHandler
+	call KeOnExitInterrupt
 	popa
 	iretd
+
 IrqVirtualBoxA:
 	;pusha
 	;call IrqVirtualBox
 	;popa
 	iretd
+
 IrqSerialCom1A:
 	pusha
 	push 0
+	call KeOnEnterInterrupt
 	call UartOnInterrupt
+	call KeOnExitInterrupt
 	add  esp, 4
 	popa
 	iretd
+
 IrqSerialCom2A:
 	pusha
 	push 1
+	call KeOnEnterInterrupt
 	call UartOnInterrupt
+	call KeOnExitInterrupt
 	add  esp, 4
 	popa
 	iretd
+
 IrqTimerA:
 	pusha
+	call KeOnEnterInterrupt
 	call IrqTimer
+	call KeOnExitInterrupt
 	popa
 	iretd
+
 IrqKeyboardA:
 	pusha
 	push esp
+	call KeOnEnterInterrupt
 	call IrqKeyboard
+	call KeOnExitInterrupt
 	add esp, 4
 	popa
 	iretd
+
 IrqClockA:
 	pusha
+	call KeOnEnterInterrupt
 	call IrqClock
+	call KeOnExitInterrupt
 	popa
 	iretd
+
 IrqMouseA:
 	pusha
+	call KeOnEnterInterrupt
 	call IrqMouse
+	call KeOnExitInterrupt
 	popa
 	iretd
+
 IrqCascadeA:
 	iretd
+
 OnSyscallReceivedA:
 	; Allow interrupts to come in again. Nested interrupts are supported by the CPU
 	push 0
@@ -86,12 +112,14 @@ OnSyscallReceivedA:
 	
 	; call isrSoftware with our one and only parm:
 	push esp
+	call KeOnEnterInterrupt
 	call OnSyscallReceived
+	call KeOnExitInterrupt
 	add esp, 4
 	
 	popa
 	add esp, 4 ;remove the zero from the stack
-	sti
+	
 	iretd
 	
 extern IsrExceptionCommon
@@ -104,6 +132,7 @@ IsrStub%+%1:
 	push eax
 	push esp
 	push %1
+	call KeOnEnterInterrupt
 	call IsrExceptionCommon
 .mht:
 	hlt
@@ -120,6 +149,7 @@ IsrStub%+%1:
 	push eax
 	push esp
 	push %1
+	call KeOnEnterInterrupt
 	call IsrExceptionCommon
 .mht:
 	hlt
@@ -136,7 +166,9 @@ IsrStub14:
 	mov eax, cr2                  ; push cr2 (the faulting address), to complete the 'registers' struct
 	push eax
 	push esp                      ; push esp - a pointer to the registers* struct
+	call KeOnEnterInterrupt       ; tell us we entered some interrupt
 	call MmOnPageFault            ; call the page fault handler
+	call KeOnExitInterrupt        ; tell us we exited that interrupt
 	add  esp, 8                   ; pop away esp and cr2
 	popa                          ; restore the registers, then return from the page fault
 	add  esp, 4                   ; pop away the error code

@@ -10,13 +10,17 @@
 #include <print.h>
 #include <icon.h>
 
+bool g_bAreInterruptsEnabled       = false;
+bool g_bAreInterruptsEnabledBackup = false;
+int  g_nInterruptRecursionCount    = 0;
+
 NO_RETURN void KeStopSystem()
 {
 	SLogMsg("System has been stopped!");
 	
 	PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
 	
-	__asm__ ("cli");
+	asm ("cli");
 	
 	while (1)
 		hlt;
@@ -256,18 +260,27 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	while (1) hlt;
 }
 
-bool KeCheckInterruptsDisabled()
+void KeInterruptSanityCheck()
 {
-	// TODO FIXME: Don't use this hacky method, keep track of
-	// it ourselves. Unfortunately that wouldn't work with the
-	// page fault handler since, you know, it can call itself
-	// (due to the phys mem reference counter being utter ass)
+	// if debug:
+	uint32_t eFlags = KeGetEFlags();
+	bool bAreInterruptsActuallyOn = !!(eFlags & EFLAGS_IF);
 	
-	return !(KeGetEFlags() & EFLAGS_IF);
-	//return !g_bAreInterruptsEnabled;
+	if (bAreInterruptsActuallyOn != g_bAreInterruptsEnabled)
+	{
+		LogMsg("bAreInterruptsActuallyOn: %d  g_bAreInterruptsEnabled: %d  EFLAGS: %x", bAreInterruptsActuallyOn, g_bAreInterruptsEnabled, eFlags);
+		ASSERT(false);
+	}
 }
 
-void KeVerifyInterruptsDisabledD(const char * file, int line)
+bool KeCheckInterruptsDisabled()
+{
+	//KeInterruptSanityCheck();
+	
+	return !g_bAreInterruptsEnabled;
+}
+
+void KeVerifyInterruptsDisabledD(const char *file, int line)
 {
 	if (!KeCheckInterruptsDisabled())
 	{
@@ -277,7 +290,7 @@ void KeVerifyInterruptsDisabledD(const char * file, int line)
 	}
 }
 
-void KeVerifyInterruptsEnabledD(const char * file, int line)
+void KeVerifyInterruptsEnabledD(const char *file, int line)
 {
 	if (KeCheckInterruptsDisabled())
 	{
@@ -287,37 +300,62 @@ void KeVerifyInterruptsEnabledD(const char * file, int line)
 	}
 }
 
-void KeDisableInterruptsD(const char * file, int line)
+void KeDisableInterrupts()
 {
 	//on debug, also check if we've already disabled the interrupts
-	/*
 	if (!g_bAreInterruptsEnabled)
 	{
-		SLogMsg("Interrupts are already disabled! (called from %s:%d, but they have already been disabled from %s:%d)", file, line, g_pInterruptDisablerFile, g_nInterruptDisablerLine);
-		KeStopSystem();
-	}
-	*/
-	__asm__ volatile ("cli");
-	/*
-	g_bAreInterruptsEnabled = false;
-	g_pInterruptDisablerFile = file;
-	g_nInterruptDisablerLine = line;
-	*/
-}
-
-void KeEnableInterruptsD(const char * file, int line)
-{
-	//on debug, also check if we've already enabled the interrupts
-	/*
-	if (g_bAreInterruptsEnabled)
-	{
-		SLogMsg("Interrupts are already enabled! (called from %s:%d, but they have already been enabled from %s:%d)", file, line, g_pInterruptEnablerFile, g_nInterruptEnablerLine);
+		SLogMsg("Interrupts are already disabled!");
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
 		KeStopSystem();
 	}
 	
-	g_pInterruptEnablerFile = file;
-	g_nInterruptEnablerLine = line;
-	g_bAreInterruptsEnabled = true;
-	*/
-	__asm__ volatile ("sti");
+	asm("cli");
+	g_bAreInterruptsEnabled = false;
 }
+
+void KeEnableInterrupts()
+{
+	//on debug, also check if we've already enabled the interrupts
+	if (g_bAreInterruptsEnabled)
+	{
+		SLogMsg("Interrupts are already enabled!");
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		KeStopSystem();
+	}
+	
+	g_bAreInterruptsEnabled = true;
+	asm("sti");
+}
+
+void KeOnEnterInterrupt()
+{
+	// if we only entered once so far
+	if (++g_nInterruptRecursionCount == 1)
+	{
+		// save the interrupt state
+		g_bAreInterruptsEnabledBackup = g_bAreInterruptsEnabled;
+	}
+	
+	if (g_nInterruptRecursionCount > 10)
+	{
+		SLogMsg("WARNING: Interrupt nesting too deep at %d levels?", g_nInterruptRecursionCount);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+	}
+	
+	g_bAreInterruptsEnabled = false;
+}
+
+void KeOnExitInterrupt()
+{
+	// If we're going to return to normal execution rather
+	// than to an interrupt handler...
+	if (--g_nInterruptRecursionCount == 0)
+	{
+		g_bAreInterruptsEnabled = g_bAreInterruptsEnabledBackup;
+	}
+	
+	ASSERT(g_nInterruptRecursionCount >= 0);
+}
+
+

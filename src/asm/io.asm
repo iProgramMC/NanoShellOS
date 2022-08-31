@@ -192,7 +192,6 @@ KeIdtLoad:
 	mov  esp, ebp
 	pop  ebp
 	
-	sti
 	ret
 
 extern _kernel_end

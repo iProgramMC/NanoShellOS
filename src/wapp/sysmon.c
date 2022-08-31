@@ -62,7 +62,6 @@ void MonitorSystem()
 {
 	//pause everything while we get timing information from these tasks
 	KeVerifyInterruptsDisabled;
-	cli;
 	s_cpu_time_total = s_idle_time_total = g_kernelCpuTimeTotal;
 	
 	g_kernelCpuTimeTotal = 0;

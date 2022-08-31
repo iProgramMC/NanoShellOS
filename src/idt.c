@@ -207,6 +207,8 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 			}
 			
 			//Let a task switch come in
+			KeOnExitInterrupt();
+			
 			sti;
 			
 			// Wait for a switch
@@ -447,7 +449,6 @@ void KiIrqEnable()
  */
 void KeClockInit()
 {
-	cli;
 	WritePort(0x70, 0x8A);
 	WritePort(0x71, 0x20);
 	

@@ -13,8 +13,12 @@ BITS 32
 section .text
 
 extern KeSwitchTask
+extern KeOnEnterInterrupt
+extern KeOnExitInterrupt
+
 global IrqTaskA
 global IrqTaskB
+
 IrqTaskA:
 	cli
 	; Preserve basic registers
@@ -60,8 +64,13 @@ IrqTaskA:
 	
 	; push a 1, because this came from the PIT
 	push 1
+	
+	call KeOnEnterInterrupt
 	; call the re-schedule function
 	call KeSwitchTask
+	
+	call KeOnExitInterrupt
+	
 	add esp, 4 ; get rid of what we had on the stack
 	
 	; Restore the seg registers
@@ -135,7 +144,9 @@ IrqTaskB:
 	; push a 0, because this came from software, rather than the PIT itself.
 	push 0
 	; call the re-schedule function
+	call KeOnEnterInterrupt
 	call KeSwitchTask
+	call KeOnExitInterrupt
 	add esp, 4 ; get rid of what we had on the stack
 	
 	; Restore the seg registers

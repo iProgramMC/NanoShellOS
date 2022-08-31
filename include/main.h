@@ -28,9 +28,19 @@ extern void KeTaskDone();
 
 #define asm __asm__ volatile
 
-#define hlt __asm__ volatile("hlt\n\t")
-#define cli __asm__ volatile("cli\n\t")//do{__asm__("cli\n\t");SLogMsg("CLI request at " __FILE__ ":%d",__LINE__);}while(0)
-#define sti __asm__ volatile("sti\n\t")//do{__asm__("sti\n\t");SLogMsg("STI request at " __FILE__ ":%d",__LINE__);}while(0)
+#define hlt asm("hlt")
+
+/*
+void KeDisableInterruptsD(const char * file, int line);
+void KeEnableInterruptsD(const char * file, int line);
+#define cli KeDisableInterruptsD(__FILE__, __LINE__)  //asm("cli")
+#define sti KeEnableInterruptsD (__FILE__, __LINE__)  //asm("sti")
+*/
+
+void KeDisableInterrupts();
+void KeEnableInterrupts();
+#define cli KeDisableInterrupts()  //asm("cli")
+#define sti KeEnableInterrupts ()  //asm("sti")
 
 #define VersionNumber 93
 #define VersionString "V0.93"

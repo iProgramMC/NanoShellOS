@@ -212,9 +212,12 @@ int GetTickCount()
 	cli;
 	int tc = GetTickCountUnsafe();
 	sti;
+	
 	return tc;
 }
+
 uint64_t gEarliestUsecCount;
+
 uint64_t GetUsecCountUnsafe()
 {
 	uint64_t tscNow     = ReadTSC();
@@ -234,6 +237,7 @@ uint64_t GetUsecCountUnsafe()
 		gEarliestUsecCount = newUsecCount;
 	return gEarliestUsecCount;
 }
+
 void KiTimingWait()
 {
 	// wait 1 second for system to initialize, so that we can wait and stuff

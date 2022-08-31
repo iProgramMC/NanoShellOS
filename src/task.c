@@ -326,6 +326,10 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		KeVerifyInterruptsEnabled;
 		cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
 	}
+	else
+	{
+		KeVerifyInterruptsDisabled;
+	}
 	
 	WmOnTaskDied(pTask);
 	
@@ -421,13 +425,16 @@ void KiTaskSystemInit()
 CPUSaveState* g_saveStateToRestore1 = NULL;
 extern void KeStartedNewKernelTask();
 extern void KeStartedNewTask();
+extern void KeOnExitInterrupt();
 void KeRestoreKernelTask()
 {
+	KeOnExitInterrupt();
 	g_saveStateToRestore1 = &g_kernelSaveState;
 	KeStartedNewKernelTask();
 }
 void KeRestoreStandardTask(Task* pTask)
 {
+	KeOnExitInterrupt();
 	g_saveStateToRestore1 = &pTask->m_state;
 	KeStartedNewTask();
 }
