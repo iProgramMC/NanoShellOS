@@ -59,4 +59,11 @@ void CoWndUpdateCursor(Console* this)
 void CoWndInit(Console *this)
 {
 }
-
+void CoWndKill(Console *this)
+{
+	if (this->textBuffer)
+	{
+		MmFree(this->textBuffer);
+		this->textBuffer = NULL;
+	}
+}

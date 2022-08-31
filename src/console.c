@@ -48,11 +48,16 @@ Console* g_currentConsole = &g_debugConsole;
 uint16_t* g_pBufferBase = (uint16_t*)(KERNEL_MEM_START + 0xB8000);
 int g_textWidth = 80, g_textHeight = 25;
 
-void SetConsole(Console* pConsole) {
+void SetConsole(Console* pConsole)
+{
 	g_currentConsole = pConsole;
 }
-void ResetConsole() {
+void ResetConsole()
+{
 	g_currentConsole = &g_debugConsole;
+}
+void CoNopKill(UNUSED Console *this)
+{
 }
 
 void CoColorFlip (Console *this);
@@ -72,6 +77,9 @@ void CoColorFlip (Console *this);
 		void CoVbeInit         (Console *this);
 		void CoVgaInit         (Console *this);
 		void CoWndInit         (Console *this);
+		void CoNopKill         (Console *this);
+		void CoVbeKill         (Console *this);
+		void CoWndKill         (Console *this);
 		void CoE9xPlotChar     (Console *this, int,  int,  char);
 		void CoSerPlotChar     (Console *this, int,  int,  char);
 		void CoVbePlotChar     (Console *this, int,  int,  char);
@@ -101,6 +109,7 @@ void CoColorFlip (Console *this);
 	#if 1
 		typedef void (*tCoClearScreen)  (Console *this);
 		typedef void (*tCoInit)         (Console *this);
+		typedef void (*tCoKill)         (Console *this);
 		typedef void (*tCoPlotChar)     (Console *this, int,  int,  char);
 		typedef bool (*tCoPrintCharInt) (Console *this, char, char, bool);
 		typedef void (*tCoRefreshChar)  (Console *this, int,  int);
@@ -125,6 +134,14 @@ void CoColorFlip (Console *this);
 			CoSerInit,
 			CoE9xInit,
 			CoWndInit,
+		};
+		static tCoKill g_kill[] = {
+			NULL,
+			CoNopKill,
+			CoVbeKill,
+			CoNopKill,
+			CoNopKill,
+			CoWndKill,
 		};
 		static tCoPlotChar g_plot_char[] = {
 			NULL,
@@ -176,6 +193,10 @@ void CoColorFlip (Console *this);
 	void CoInit(Console *this)
 	{
 		g_init[this->type](this);
+	}
+	void CoKill(Console *this)
+	{
+		g_kill[this->type](this);
 	}
 	void CoInitAsText(Console *this)
 	{

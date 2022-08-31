@@ -192,7 +192,9 @@ void MmOnPageFault(Registers *pRegs)
 _INVALID_PAGE_FAULT:
 	SLogMsg("Invalid page fault at EIP: %x. CR2: %x. ErrorCode: %x", pRegs->eip, pRegs->cr2, pRegs->error_code);
 	SLogMsg("Registers:");
-	SLogMsg("EAX: %x  EBX: %x  ECX: %x  EDX: %x  ESP: %x  EBP: %x  EIP: %x",pRegs->eax, pRegs->ebx, pRegs->ecx, pRegs->edx, pRegs->esp, pRegs->ebp, pRegs->eip);
+	SLogMsg("EAX: %x  EBX: %x  ECX: %x  EDX: %x  ESP: %x  EBP: %x",pRegs->eax, pRegs->ebx, pRegs->ecx, pRegs->edx, pRegs->esp, pRegs->ebp);
+	
+	PrintBackTrace(pRegs->ebp, pRegs->eip, "bruh");
 	
 	// No Problem. Just trigger an bug check
 	IsrExceptionCommon(BC_EX_PAGE_FAULT, pRegs);

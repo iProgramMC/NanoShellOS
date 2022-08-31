@@ -8,7 +8,9 @@
 #include <main.h>
 #include <console.h>
 #include <video.h>
-#include <window.h>
+#include "../mm/memoryi.h"
+
+uint16_t TextModeMakeChar(uint8_t fgbg, uint8_t chr);
 
 extern uint32_t g_vgaColorsToRGB [];
 extern bool g_uses8by16Font;
@@ -18,22 +20,34 @@ void CoVbeClearScreen(Console *this)
 {
 	VidFillScreen (g_vgaColorsToRGB[this->color >> 4]);
 }
+
 void CoVbePlotChar (Console *this, int x, int y, char c)
 {
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
 	this->m_dirty = true;
 	
+	uint16_t chr = TextModeMakeChar (this->color, c);
+	this->textBuffer [x + y * this->width] = chr;
+	
 	VBEData* backup = g_vbeData;
 	g_vbeData = &g_mainScreenVBEData;
-	this->offX = this->offY = 0;
+	
 	VidPlotChar (c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 	g_vbeData = backup;
 }
-void CoVbeRefreshChar (UNUSED Console *this, UNUSED int x, UNUSED int y)
+
+void CoVbeRefreshChar (Console *this, int x, int y)
 {
+	uint16_t cd = this->textBuffer[y * this->width + x];
 	
+	VBEData* backup = g_vbeData;
+	g_vbeData = &g_mainScreenVBEData;
+	
+	VidPlotChar(cd & 0xFF, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[(cd >> 8) & 0xF], g_vgaColorsToRGB[cd >> 12]);
+	g_vbeData = backup;
 }
-void CoVbeScrollUpByOne(UNUSED Console *this)
+
+void CoVbeScrollUpByOne(Console *this)
 {
 	if (this->pushOrWrap)
 	{
@@ -42,15 +56,35 @@ void CoVbeScrollUpByOne(UNUSED Console *this)
 	}
 	else
 	{
-		int htChar = 1 << (3 + g_uses8by16Font);
-		VidShiftScreen (htChar);
-		VidFillRect (g_vgaColorsToRGB[this->color >> 4], 0, (this->height - 1) * htChar, GetScreenSizeX() - 1, GetScreenSizeY() - 1);
+		//NOTE: This is actually slower than the VidShiftScreen method on qemu... probably because I have to re-render a lot.
+		for (int y = 0; y < this->height - 1; y++)
+		{
+			for (int x = 0; x < this->width; x++)
+			{
+				//if there's any difference...
+				uint16_t* dst = &this->textBuffer[x + (y + 0) * this->width];
+				uint16_t* src = &this->textBuffer[x + (y + 1) * this->width];
+				
+				if (*dst != *src)
+				{
+					*dst = *src;
+					CoVbeRefreshChar(this, x, y);
+				}
+			}
+		}
+		
+		for (int x = 0; x < this->width; x++)
+		{
+			CoVbePlotChar (this, x, this->height - 1, '\0');
+		}
 	}
 }
+
 void CoVbeUpdateCursor(UNUSED Console* this)
 {
 	
 }
+
 void CoVbeInit(Console *this)
 {
 	this->curX = this->curY = 0;
@@ -58,6 +92,30 @@ void CoVbeInit(Console *this)
 	this->height = GetScreenSizeY() / (g_uses8by16Font ? 16 : 8);
 	this->color = DefaultConsoleColor;//default
 	this->pushOrWrap = 0;//push
+	
+	// setup a text buffer
+	bool bIntsDisabled = KeCheckInterruptsDisabled();
+	if (!bIntsDisabled)
+		cli;
+	
+	this->textBuffer = MhAllocate(sizeof(short) * this->width * this->height, NULL);
+	if (!this->textBuffer)
+	{
+		VidTextOut("ERROR: Could not initialize fullscreen console. :^(", 0, 0, 0xFFFFFF, 0x000000);
+		KeStopSystem();
+	}
+	
+	if (!bIntsDisabled)
+		sti;
+	
 	CoVbeClearScreen (this);
 }
 
+void CoVbeKill(Console* this)
+{
+	if (this->textBuffer)
+	{
+		MmFree(this->textBuffer);
+		this->textBuffer = NULL;
+	}
+}

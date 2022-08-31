@@ -677,6 +677,11 @@ Window* GetWindowFromIndex(int i)
 
 bool g_windowManagerRunning = false;
 
+bool IsWindowManagerRunning()
+{
+	return g_windowManagerRunning;
+}
+
 extern ClickInfo g_clickQueue [CLICK_INFO_MAX];
 extern int       g_clickQueueSize;
 extern SafeLock  g_ClickQueueLock;

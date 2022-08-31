@@ -737,4 +737,9 @@ void ChangeCursor (Window* pWindow, int cursorID);
  */
 Control* GetControlByComboID(Window* pWindow, int comboID);
 
+/**
+ * Check if the window manager is running right now.
+ */
+bool IsWindowManagerRunning(void);
+
 #endif//_WINDOW_H

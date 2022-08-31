@@ -109,6 +109,7 @@ void CoInitAsText (Console* this);
 void CoInitAsGraphics (Console* this);
 void CoInitAsSerial (Console* this);
 void CoInitAsE9Hack (Console *this);
+void CoKill(Console *this);
 void CoAddToInputQueue     (Console *this, char input);
 bool CoAnythingOnInputQueue(Console* this);
 char CoReadFromInputQueue  (Console* this);

@@ -471,9 +471,9 @@ void IrqKeyboard()
 		
 		if (keycode == (SCANCODE_RELEASE | KEY_F11))
 		{
-			KeTaskTest();
+			//KeTaskTest();
 			
-			//VidCorruptScreenForTesting();
+			VidCorruptScreenForTesting();
 			
 			//WmTest();
 		}

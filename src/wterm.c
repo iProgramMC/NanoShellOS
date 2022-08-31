@@ -47,11 +47,8 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			}
 			pWindow->m_pSubThread = NULL;
 			
-			if (pConsole->textBuffer)
-			{
-				MmFree(pConsole->textBuffer);
-				pConsole->textBuffer = NULL;
-			}
+			CoKill(pConsole);
+			
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			
 			break;

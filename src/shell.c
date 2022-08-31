@@ -273,8 +273,10 @@ void ShellExecuteCommand(char* p)
 		{
 			if (strcmp (fileName, "--force") == 0) force = true;
 		}
-		if (KeGetRunningTask() == NULL)
+		if (!IsWindowManagerRunning())
+		{
 			KeRestartSystem();
+		}
 		else if (force)
 		{
 			WindowManagerShutdown ();
