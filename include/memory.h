@@ -42,6 +42,25 @@
 #include <multiboot.h>
 #include <lock.h>
 
+// mmap() flags
+#define PROT_NONE  (0 << 0)
+#define PROT_READ  (1 << 0)
+#define PROT_WRITE (1 << 1)
+#define PROT_EXEC  (1 << 2) //not applicable here
+
+#define MAP_FAILED ((void*) -1) //not NULL
+
+#define MAP_FILE      (0 << 0) //retroactive, TODO
+#define MAP_SHARED    (1 << 0) //means changes in the mmapped region will be written back to the file on unmap/close
+#define MAP_PRIVATE   (1 << 1) //means changes won't be committed back to the source file
+#define MAP_FIXED     (1 << 4) //fixed memory mapping means that we really want it at 'addr'.
+#define MAP_ANONYMOUS (1 << 5) //anonymous mapping, means that there's no file backing this mapping :)
+#define MAP_ANON      (1 << 5) //synonymous with "MAP_ANONYMOUS"
+#define MAP_NORESERVE (0 << 0) //don't reserve swap space, irrelevent here
+
+#define MAP_DONTREPLACE (1 << 30) //don't clobber preexisting fixed mappings there. Used with MAP_FIXED to create...
+#define MAP_FIXED_NOREPLACE (MAP_DONTREPLACE | MAP_FIXED)
+
 typedef struct
 {
 	uint32_t m_pageEntries[PAGE_SIZE / 4];
@@ -191,8 +210,7 @@ void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callL
 void MmFree (void* pAddr);
 void MmFreeK(void* pAddr);
 
-
-
+// TODO: Add helpful comments here too.
 UserHeap* MuGetCurrentHeap();
 UserHeap* MuCreateHeap();
 UserHeap* MuCloneHeap(UserHeap* pHeapToClone);
@@ -200,5 +218,7 @@ void MuKillHeap(UserHeap* pHeap);
 void MuUseHeap (UserHeap *pHeap);
 void MuResetHeap();
 void MmDebugDump();
+int MmMapMemoryUser(void *pAddr, size_t lengthBytes, int protectionFlags, int mapFlags, int fileDes, size_t fileOffset, void **pOut);
+int MmUnMapMemoryUser(void *pAddr, size_t lengthBytes);
 
 #endif//_MEMORY_H

@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <memory.h>
+#include <errors.h>
 #include "memoryi.h"
 
 // THREADING: These functions are currently thread-unsafe. Please use the wrapper functions.
@@ -679,3 +680,107 @@ bool MuUnMap(UserHeap *pHeap, uintptr_t address, size_t numPages)
 	LockFree (&pHeap->m_lock);
 	return b;
 }
+
+// User exposed functions
+
+int MmMapMemoryUser(void *pAddr, size_t lengthBytes, int protectionFlags, int mapFlags, int fileDes, size_t fileOffset, void **pOut)
+{
+	if (!(mapFlags & MAP_ANON))
+	{
+		SLogMsg("MmMapMemoryUser tried to map file-backed memory, but that isn't supported!");
+		*pOut = MAP_FAILED;
+		
+		return ERR_INVALID_PARM; //for now
+	}
+	
+	// check page alignment
+	if (((uintptr_t)pAddr & (PAGE_SIZE - 1)) != 0)
+	{
+		*pOut = MAP_FAILED;
+		
+		return ERR_INVALID_PARM;
+	}
+	
+	UserHeap *pHeap = MuGetCurrentHeap();
+	if (!pHeap)
+	{
+		SLogMsg("There's no heap available here?");
+		*pOut = MAP_FAILED;
+		
+		return ERR_INVALID_PARM;
+	}
+	
+	// Get the number of pages required
+	size_t numPages = ((lengthBytes - 1) / PAGE_SIZE) + 1;
+	bool bWrite = protectionFlags & PROT_WRITE;
+	
+	if (mapFlags & MAP_FIXED)
+	{
+		bool bAllowClobbering = !(mapFlags & MAP_DONTREPLACE);
+		
+		bool bResult = MuMapMemoryFixedHint(pHeap, (uintptr_t)pAddr, numPages, NULL, bWrite, bAllowClobbering, false);
+		
+		if (!bResult)
+		{
+			*pOut = MAP_FAILED;
+			
+			if (bAllowClobbering)
+				return ERR_NO_MEMORY;
+			else
+				return ERR_FILE_EXISTS; // EEXIST
+		}
+		else
+		{
+			return ERR_NOTHING; // Success!
+		}
+	}
+	// Take the pAddr parm as a hint
+	else if (pAddr)
+	{
+		bool b = MuMapMemoryNonFixedHint(pHeap, (uintptr_t)pAddr, numPages, NULL, pOut, bWrite, false);
+		if (!b)
+		{
+			*pOut = MAP_FAILED;
+			return ERR_NO_MEMORY;
+		}
+		else
+		{
+			return ERR_NOTHING; // Success!
+		}
+	}
+	else
+	{
+		bool b = MuMapMemory(pHeap, numPages, NULL, pOut, bWrite, false);
+		if (!b)
+		{
+			*pOut = MAP_FAILED;
+			return ERR_NO_MEMORY;
+		}
+		else
+		{
+			return ERR_NOTHING; // Success!
+		}
+	}
+}
+
+int MmUnMapMemoryUser(void *pAddr, size_t lengthBytes)
+{
+	// Get the number of pages required
+	size_t numPages = ((lengthBytes - 1) / PAGE_SIZE) + 1;
+	
+	UserHeap *pHeap = MuGetCurrentHeap();
+	if (!pHeap)
+	{
+		SLogMsg("There's no heap available here?");
+		return ERR_INVALID_PARM;
+	}
+	
+	bool bResult = MuUnMap (pHeap, (uintptr_t)pAddr, numPages);
+	
+	if (bResult)
+		return ERR_INVALID_PARM;
+	
+	return ERR_NOTHING; // Success!
+}
+
+

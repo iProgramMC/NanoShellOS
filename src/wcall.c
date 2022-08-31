@@ -50,38 +50,38 @@
  * compatibility.
  *
  * Of course this will be difficult since arguments
- * are passed on the stack, so I just want to punch
- * my old self for going this way. :^)
+ * are passed on the stack.
 *****************************************************/
 
-void eRequestRepaint(Window* pWindow)
+extern VBEData * g_vbeData;
+extern Console* g_currentConsole;
+
+// Miscellaneous utils
+void UserRequestRepaint(Window* pWindow)
 {
 	RequestRepaint(pWindow);
 }
-void eRequestRepaintNew(Window* pWindow)
+void UserRequestRepaintNew(Window* pWindow)
 {
 	RequestRepaintNew(pWindow);
 }
-void eWindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2)
+void UserWindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2)
 {
 	WindowRegisterEvent(pWindow, eventType, parm1, parm2);
 }
-void eWindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
+void UserWindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
 {
 	WindowRegisterEventUnsafe(pWindow, eventType, parm1, parm2);
 }
 
-// Miscellaneous utils
 int GetVersionNumber()
 {
 	return VersionNumber;
 }
-extern Console* g_currentConsole;
 Console* GetCurrentConsole()
 {
 	return g_currentConsole;
 }
-int FiRemoveFile2(const char* pText);
 
 void VidSetClipRectP (Rectangle rect)
 {
@@ -91,25 +91,29 @@ void VidSetClipRectP (Rectangle rect)
 	else
 		VidSetClipRect(&rect);
 }
+
 const char* FiGetCwd ()
 {
 	extern char g_cwd[PATH_MAX + 2];
 	return g_cwd;
 }
+
 void LogString(const char* pText)
 {
 	LogMsgNoCr("%s", pText);
 }
+
 int FiRemoveFile2(UNUSED const char* pText)
 {
 	// TODO
 	return  -ENXIO;
 }
+
 void SetWindowIcon (Window* pWindow, int icon)
 {
 	pWindow->m_iconID = icon;
 }
-extern VBEData * g_vbeData;
+
 void SetWindowTitle(Window* pWindow, const char* pTitle)
 {
 	int len = strlen (pTitle);
@@ -121,17 +125,22 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	
 	VBEData * backup = g_vbeData;
 	VidSetVBEData (&pWindow->m_vbeData);
+	
 	RequestRepaintNew(pWindow);
+	
 	g_vbeData = backup;
 }
 
 int ShellExecute(const char *pCommand)
 {
 	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);
+	return -1;
 }
+
 int ShellExecuteResource(const char *pResource)
 {
 	SLogMsg("TODO ShellExecuteResource(\"%s\")", pResource);
+	return -1;
 }
 
 // System call interface
@@ -184,9 +193,9 @@ enum
 		CON_READCHAR,
 		CON_READSTR,
 		
-		MM_ALLOCATE_D,
-		MM_FREE,
-		MM_DEBUG_DUMP,
+		MM_ALLOCATE_D, //legacy
+		MM_FREE,       //legacy
+		MM_DEBUG_DUMP, //legacy
 		
 		FI_OPEN_D,
 		FI_CLOSE,
@@ -289,9 +298,13 @@ enum
 		TM_GET_RANDOM,
 		
 	// System Calls V1.6
-		MM_REALLOCATE_D,
+		MM_REALLOCATE_D, //legacy
 		SH_EXECUTE,
 		SH_EXECUTE_RESOURCE,
+		
+	// System Calls V1.7
+		MM_MAP_MEMORY_USER,
+		MM_UNMAP_MEMORY_USER,
 };
 
 const void *WindowCall[] = {
@@ -326,7 +339,7 @@ const void *WindowCall[] = {
 		AddControl,
 	
 	// System Calls V1.1 -- 25/01/2022
-		eRequestRepaint,
+		UserRequestRepaint,
 		SetLabelText,
 		AddMenuBarItem,
 		SetScrollBarMin,
@@ -359,8 +372,8 @@ const void *WindowCall[] = {
 		SetTextInputText,
 		SetWindowIcon,
 		SetWindowTitle,
-		eWindowRegisterEvent,
-		eWindowRegisterEventUnsafe,
+		UserWindowRegisterEvent,
+		UserWindowRegisterEventUnsafe,
 		
 		GetTickCount,
 		TmReadTime,
@@ -394,7 +407,7 @@ const void *WindowCall[] = {
 		CheckboxSetChecked,
 		CcRunCCode,
 		FiRemoveFile2,
-		eRequestRepaintNew,
+		UserRequestRepaintNew,
 		ShellAbout,
 		InputBox,
 		ColorInputBox,
@@ -441,7 +454,11 @@ const void *WindowCall[] = {
 	// System Calls V1.6 - 14/07/2022
 		MmReAllocateD,
 		ShellExecute,
-		ShellExecuteResource
+		ShellExecuteResource,
+		
+	// System Calls V1.7 - 31/08/2022
+		MmMapMemoryUser,
+		MmUnMapMemoryUser,
 };
 
 
