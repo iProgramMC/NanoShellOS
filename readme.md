@@ -10,6 +10,12 @@ NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed
 
 This software is licensed under the GNU General Public License version 3.
 
+## Want to contribute?
+
+[JUST DO IT!](https://www.youtube.com/watch?v=ZXsQAXx_ao0) Kidding aside, feel free to make a pull request! (I'd like it even more if you could help me clean up the source!)
+
+[Coding style guidelines](coding_style.md)
+
 ## Demo Screenshots
 
 <img src="images/2022_05_20_22_58_20.png"/>
