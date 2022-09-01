@@ -4,20 +4,15 @@
 SRC_DIR=src
 INC_DIR=include
 BLD_DIR=build
-LIS_DIR=../../crt/src
-LII_DIR=../../crt/include
 
 CC=clang
 LD=ld
 AS=nasm
 
-FEATURES=\
-	-DUSE_CONSOLE    \
-	-DUSE_FILE       \
-	-DUSE_MEMORY     \
-	-DUSE_MISC
+LIS_DIR=../../crt/src
+LII_DIR=../../crt/include
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) $(FEATURES) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 

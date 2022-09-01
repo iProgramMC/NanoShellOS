@@ -1,19 +1,9 @@
-//  ***************************************************************
-//  crtlib.h - Creation date: 21/04/2022
-//  -------------------------------------------------------------
-//  NanoShell C Runtime Library
-//  Copyright (C) 2022 iProgramInCpp - Licensed under GPL V3
-//
-//  ***************************************************************
-//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
-//  ***************************************************************
-
 #ifndef _CRTLIB_H
 #define _CRTLIB_H
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 17
+#define WCALL_VERSION 16
 enum
 {
 	// System Calls V1.0
@@ -184,12 +174,6 @@ enum
 		SH_EXECUTE,
 		SH_EXECUTE_RESOURCE,
 	#endif
-	
-	// System Calls V1.7
-	#if WCALL_VERSION >= 17
-		MM_MAP_MEMORY_USER,
-		MM_UNMAP_MEMORY_USER,
-	#endif
 };
 
 int    memcmp     (const void* ap, const void* bp, size_t size);
@@ -208,18 +192,7 @@ size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
 char*  Tokenize   (TokenState* pState, char* pString, char* separator);
 
-void*  malloc     (size_t size);
-void   free       (void*  ptr);
-
 void LogMsg     ( const char *pfmt, ... );
 void LogMsgNoCr ( const char *pfmt, ... );
-
-int  SetErrorNumber(int errno);
-int  GetErrorNumber();
-int* GetErrorNumberPointer();
-
-#define errno (*GetErrorNumberPointer())
-
-size_t sprintf(char* buf, const char* fmt, ...);
 
 #endif//_CRTLIB_H

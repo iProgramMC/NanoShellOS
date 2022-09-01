@@ -1,5 +1,5 @@
 //  ***************************************************************
-//  crtinternal.h - Creation date: 21/04/2022
+//  a_error.c - Creation date: 01/09/2022
 //  -------------------------------------------------------------
 //  NanoShell C Runtime Library
 //  Copyright (C) 2022 iProgramInCpp - Licensed under GPL V3
@@ -8,21 +8,22 @@
 //  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
 //  ***************************************************************
 
-#ifndef _CRTINTERNAL_H
-#define _CRTINTERNAL_H
+#include "crtlib.h"
+#include "crtinternal.h"
 
-#define CALL(funcName, funcIndex, retType, ...) retType funcName (__VA_ARGS__);
-#define CALLI(funcName, funcIndex, retType, ...) retType _I_ ## funcName (__VA_ARGS__);
-#define RARGS(...)
-#define SARGS(...)
-#define CALL_END
+int g_errorNum = 0;
 
-#include "calldefs.h"
+int SetErrorNumber(int err)
+{
+	return g_errorNum = err;
+}
 
-#undef CALL
-#undef CALLI
-#undef RARGS
-#undef SARGS
-#undef CALL_END
+int* GetErrorNumberPointer()
+{
+	return &g_errorNum;
+}
 
-#endif//_CRTINTERNAL_H
+int GetErrorNumber()
+{
+	return errno;
+}

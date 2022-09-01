@@ -1,12 +1,12 @@
-//  ***************************************************************
-//  entry.c - Creation date: 21/04/2022
-//  -------------------------------------------------------------
-//  NanoShell C Runtime Library
-//  Copyright (C) 2022 iProgramInCpp - Licensed under GPL V3
 //
-//  ***************************************************************
-//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
-//  ***************************************************************
+// log.c
+//
+// Copyright (C) 2022 iProgramInCpp.
+//
+// The standard NanoShell library internal implementation.
+// DO NOT MODIFY!  Changing these files may affect the stability of programs.
+// -- Entry Point.
+//
 
 #include "crtlib.h"
 #include "crtinternal.h"

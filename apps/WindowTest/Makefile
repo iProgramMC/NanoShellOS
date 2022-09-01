@@ -12,13 +12,7 @@ LD=ld
 AS=nasm
 STRIP=strip
 
-FEATURES=\
-	-DUSE_CONSOLE    \
-	-DUSE_VIDEO      \
-	-DUSE_MISC       \
-	-DUSE_WINDOW
-
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) $(FEATURES) -ffreestanding -target i686-elf -O2 -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -O2 -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 

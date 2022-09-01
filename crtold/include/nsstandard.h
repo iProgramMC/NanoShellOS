@@ -11,8 +11,8 @@
 #include <nsstructs.h>
 
 // Formatting
-size_t vsprintf(char* OutBuffer, const char* FormatType, va_list list);
-size_t sprintf(char* buf, const char* fmt, ...);
+void vsprintf(char* OutBuffer, const char* FormatType, va_list list);
+void sprintf (char* OutBuffer, const char* FormatType, ...);
 
 // Threading
 void sleep(int ms);
@@ -172,19 +172,12 @@ int CcRunCCode(const char* pCode, int length);
 int NsGetVersion ();
 const char* GetVersionString();
 
-// Timing
+// Time
 TimeStruct *GetTime ();
 int GetTickCount();// Time since OS has started
 
 // Shell
 int ShellExecute        (const char *pCommand);    //for instance, "e <your favorite executable>"
 int ShellExecuteResource(const char *pResourceID); //for instance, shell:stuff
-
-// Errors
-int  SetErrorNumber(int errno);
-int  GetErrorNumber();
-int* GetErrorNumberPointer();
-
-#define errno (*GetErrorNumberPointer())
 
 #endif//_NSSTANDARD_H
