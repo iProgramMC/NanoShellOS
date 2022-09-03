@@ -414,3 +414,26 @@ int remove (const char* filename)
 {
 	return _I_FiRemoveFile(filename);
 }
+
+int getc (FILE* pFile)
+{
+	char chr = 0;
+	size_t sz = fread(&chr, 1, 1, pFile);
+	if (sz == 0)
+		return EOF;
+	
+	return chr;
+}
+
+int feof(FILE* f)
+{
+	//TODO: kernel side implementation
+	int chr = getc(f);
+	if (chr == EOF)
+		return EOF;
+	
+	//seek back
+	fseek(f, ftell(f) - 1, SEEK_SET);
+	
+	return 0;
+}

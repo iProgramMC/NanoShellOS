@@ -238,3 +238,99 @@ char *strdup (const char *pText)
 		memcpy (p, pText, len);
 	return p;
 }
+
+int toupper(int c)
+{
+	if (c >= 'a' && c <= 'z')
+		return c + 'A' - 'a';
+	return c;
+}
+int tolower(int c)
+{
+	if (c >= 'A' && c <= 'Z')
+		return c + 'a' - 'A';
+	return c;
+}
+
+char * strncpy(char *dst, const char *src, size_t n)
+{
+	if (n != 0)
+	{
+		register char *d = dst;
+		register const char *s = src;
+
+		do
+		{
+			if ((*d++ = *s++) == 0)
+			{
+				// null-pad the remaining n-1 bytes
+				while (--n != 0)
+					*d++ = 0;
+				break;
+			}
+		}
+		while (--n != 0);
+	}
+	return (dst);
+}
+
+char * strstr(char *string, char *substring)
+{
+    char *a, *b;
+
+    b = substring;
+    if (*b == 0)
+		return string;
+	
+    for ( ; *string != 0; string += 1)
+	{
+		if (*string != *b)
+			continue;
+		
+		a = string;
+		while (1)
+		{
+			if (*b == 0)
+				return string;
+			
+			if (*a++ != *b++)
+				break;
+		}
+		
+		b = substring;
+    }
+    return NULL;
+}
+
+char* itoa(int value, char* buffer, int radix)
+{
+	assert(radix > 1 && radix < 37);
+	const char* lut = "0123456789abcdefghijklmnopqrstuvwxyz";
+	
+	char temp[50];
+	int i = 0;
+	
+	if (value < 0)
+	{
+		value = -value;
+		*buffer++ = '-';
+	}
+	
+	do
+	{
+		temp[i++] = lut[value % radix];
+		value /= radix;
+	}
+	while (value);
+	
+	// store it as reversed
+	for (int j = 0; j < i; j++)
+		buffer[j] = temp[i - j - 1];
+	
+	return buffer;
+}
+
+char* ltoa(long value, char* buffer, int radix)
+{
+	return itoa((int)value, buffer, radix);
+}

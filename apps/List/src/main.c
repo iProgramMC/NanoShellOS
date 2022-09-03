@@ -20,7 +20,6 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 	char revert_color[3] = { 0x1, 0xF, 0x0 };
 	revert_color[1] = 0x10 + (old_color & 0xF);
 	
-	
 	int dd = FiOpenDir (FiGetCwd());
 	if (dd < 0)
 	{

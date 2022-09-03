@@ -30,6 +30,11 @@ void LogMsg    (const char* Format, ...);
 void LogMsgNoCr(const char* Format, ...);
 #define printf LogMsgNoCr
 
+// Assertion
+void OnAssertionFail(const char *cond_msg, const char *file, int line);
+#define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__)); } while (0)
+#define ASSERT assert
+
 // Memory management
 void* malloc (size_t size);
 void  free   (void*  ptr);
@@ -51,6 +56,12 @@ void   memtoupper (char* as, int w);
 size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
 char*  strdup     (const char *pText);
+char*  strstr     (char *string, char *substring);
+char*  strncpy    (char *dst, const char *src, size_t n);
+int    toupper    (int c);
+int    tolower    (int c);
+char*  itoa       (int value, char* buffer, int radix);
+char*  ltoa       (long value, char* buffer, int radix);
 
 // Optimized memory operations to word width
 

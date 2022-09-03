@@ -312,7 +312,7 @@ char * strncpy(char *dst, const char *src, size_t n)
 		{
 			if ((*d++ = *s++) == 0)
 			{
-				/* NUL pad the remaining n-1 bytes */
+				// null-pad the remaining n-1 bytes
 				while (--n != 0)
 					*d++ = 0;
 				break;

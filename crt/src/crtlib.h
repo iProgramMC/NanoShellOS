@@ -211,6 +211,8 @@ char*  Tokenize   (TokenState* pState, char* pString, char* separator);
 void*  malloc     (size_t size);
 void   free       (void*  ptr);
 
+void   exit       (int num);
+
 void LogMsg     ( const char *pfmt, ... );
 void LogMsgNoCr ( const char *pfmt, ... );
 
@@ -221,5 +223,9 @@ int* GetErrorNumberPointer();
 #define errno (*GetErrorNumberPointer())
 
 size_t sprintf(char* buf, const char* fmt, ...);
+
+void OnAssertionFail(const char *cond_msg, const char *file, int line);
+#define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__); } while (0)
+#define ASSERT assert
 
 #endif//_CRTLIB_H

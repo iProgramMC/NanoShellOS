@@ -26,6 +26,8 @@ typedef uint8_t bool;
 #define PERM_WRITE (2)
 #define PERM_EXEC  (4)
 
+#define EOF (-1)
+
 // mmap() flags
 #define PROT_NONE  (0 << 0)
 #define PROT_READ  (1 << 0)
@@ -522,7 +524,9 @@ enum
 	EVENT_RIGHTCLICK,
 	EVENT_RIGHTCLICKRELEASE,
 	EVENT_CHECKBOX,
-	EVENT_MAX
+	EVENT_MAX,
+	
+	EVENT_USER = 0x10000,
 };
 
 //NOTE WHEN WORKING WITH CONTROLS:
