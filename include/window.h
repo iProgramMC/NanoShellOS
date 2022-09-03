@@ -742,4 +742,24 @@ Control* GetControlByComboID(Window* pWindow, int comboID);
  */
 bool IsWindowManagerRunning(void);
 
+/**
+ * Create a tooltip with the specified text.
+ */
+void TooltipShow(const char* text, int x, int y);
+
+/**
+ * Remove an active tooltip, if needed.
+ */
+void TooltipDismiss();
+
+/**
+ * Render a tooltip's text if needed.
+ */
+void TooltipDraw();
+
+/**
+ * Get the tooltip's rectangle.
+ */
+Rectangle* TooltipGetRect();
+
 #endif//_WINDOW_H

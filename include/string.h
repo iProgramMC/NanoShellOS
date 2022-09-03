@@ -30,6 +30,7 @@ void strcat(char* dest, const char* after);
 char* strchr (char* stringToSearch, const char characterToSearchFor);
 char* strrchr (char* stringToSearch, const char characterToSearchFor);
 char* strdup (const char* pText);//! Make sure to free this.
+char* strncpy(char *dst, const char *src, size_t n);
 void fast_memcpy(void* restrict dest, const void* restrict src, int size);//aligns to 32 bytes!!
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
 

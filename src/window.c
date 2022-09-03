@@ -1082,8 +1082,9 @@ void WindowManagerShutdown(bool wants_restart_too)
 	g_shutdownWantReb = wants_restart_too;
 }
 
-void UndrawWindow (Window* pWnd)
+void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 {
+	// pWnd - the window that's being undrawn
 	VBEData* backup = g_vbeData;
 	VidSetVBEData(NULL);
 	
@@ -1091,9 +1092,8 @@ void UndrawWindow (Window* pWnd)
 	
 	LockAcquire (&g_BackgdLock);
 	
-	Rectangle r = pWnd->m_rect;
 	//redraw the background and all the things underneath:
-	RedrawBackground(r);
+	RedrawBackground(rect);
 	
 	LockFree (&g_BackgdLock);
 	
@@ -1109,7 +1109,7 @@ void UndrawWindow (Window* pWnd)
 		
 		Window* pWindow = &g_windows[drawOrder];
 		
-		if (RectangleOverlap (&pWindow->m_rect, &pWnd->m_rect))
+		if (RectangleOverlap (&pWindow->m_rect, &rect) && pWindow != pWindowToExclude)
 			windowDrawList[sz++] = pWindow;
 	}
 	
@@ -1130,19 +1130,27 @@ void UndrawWindow (Window* pWnd)
 		{
 			VidBitBlit (
 				g_vbeData,
-				pWnd->m_rect.left,
-				pWnd->m_rect.top,
-				pWnd->m_rect.right  - pWnd->m_rect.left,
-				pWnd->m_rect.bottom - pWnd->m_rect.top,
+				rect.left,
+				rect.top,
+				rect.right  - rect.left,
+				rect.bottom - rect.top,
 				&windowDrawList[i]->m_vbeData,
-				pWnd->m_rect.left - windowDrawList[i]->m_rect.left,
-				pWnd->m_rect.top  - windowDrawList[i]->m_rect.top,
+				rect.left - windowDrawList[i]->m_rect.left,
+				rect.top  - windowDrawList[i]->m_rect.top,
 				BOP_SRCCOPY
 			);
 		}
 	}
 	
+	if (RectangleOverlap(&rect, TooltipGetRect()))
+		TooltipDraw();
+	
 	g_vbeData = backup;
+}
+
+void UndrawWindow (Window* pWnd)
+{
+	RefreshRectangle(pWnd->m_rect, pWnd);
 }
 
 static void HideWindowUnsafe (Window* pWindow)
@@ -1237,6 +1245,7 @@ static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int
 		newHeight= WINDOW_MIN_HEIGHT;
 	
 	//acquire the screen lock
+	SLogMsg("Task who owns lock %p for now: %p", &pWindow->m_screenLock, pWindow->m_screenLock.m_task_owning_it);
 	LockAcquire(&pWindow->m_screenLock);
 	
 	uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
@@ -1322,10 +1331,11 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 	action.rect.right  = newPosX + newWidth;
 	action.rect.bottom = newPosY + newHeight;
 	
-	WindowAction* ptr = ActionQueueAdd(action);
+	//WindowAction* ptr =
+	ActionQueueAdd(action);
 	
-	while (ptr->bInProgress)
-		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+	//while (ptr->bInProgress)
+	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
 Cursor g_windowDragCursor;
@@ -1639,16 +1649,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 }
 #endif 
 
-/*void WmTest()
-{
-	for(int i=0; i<ARRAY_COUNT(g_windows); i++)
-	{
-		if(g_windows[i].m_used)
-		{
-			SLogMsg("WINDOW (%p): %s", &g_windows[i], g_windows[i].m_title);
-		}
-	}
-}*/
 // Mouse event handlers
 #if 1
 int g_prevMouseX, g_prevMouseY;
@@ -1941,6 +1941,72 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 
 #endif
 
+// Tooltips
+#if 1
+
+struct Tooltip
+{
+	bool m_shown;
+	char m_text[512];
+	Rectangle m_rect;
+}
+g_tooltip;
+
+void TooltipDismiss()
+{
+	//if we're not showing anything, get outta here
+	if (!g_tooltip.m_shown) return;
+	
+	g_tooltip.m_shown = false;
+	RefreshRectangle(g_tooltip.m_rect, NULL);
+}
+
+void TooltipDraw()
+{
+	//if we're not showing anything, get outta here
+	if (!g_tooltip.m_shown) return;
+	
+	VBEData* pBackup = g_vbeData;
+	
+	VidSetVBEData (&g_mainScreenVBEData);
+	
+	VidFillRect(WINDOW_TEXT_COLOR_LIGHT, g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
+	VidDrawRect(WINDOW_TEXT_COLOR,       g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
+	
+	VidTextOut(g_tooltip.m_text, g_tooltip.m_rect.left + 3, g_tooltip.m_rect.top + 3, P_WINDOW_TEXT_COLOR, TRANSPARENT);
+	
+	VidSetVBEData (pBackup);
+}
+
+void TooltipShow(const char * text, int x, int y)
+{
+	//dismiss the old one
+	TooltipDismiss();
+	
+	strncpy (g_tooltip.m_text, text, 511);
+	
+	//calculate the rectangle
+	int width = 0, height = 0;
+	VidTextOutInternal(text, 0, 0, 0, 0, true, &width, &height);
+	
+	g_tooltip.m_shown = true;
+	
+	g_tooltip.m_rect.left   = x;
+	g_tooltip.m_rect.top    = y;
+	g_tooltip.m_rect.right  = g_tooltip.m_rect.left + width  + 6;
+	g_tooltip.m_rect.bottom = g_tooltip.m_rect.top  + height + 6;
+	
+	//render it initially
+	TooltipDraw();
+}
+
+Rectangle* TooltipGetRect()
+{
+	return &g_tooltip.m_rect;
+}
+
+#endif
+
 // Main loop thread.
 #if 1
 
@@ -1970,7 +2036,7 @@ void RedrawEverything()
 
 bool HandleMessages(Window* pWindow);
 void TerminalHostTask(int arg);
-void RefreshMouse(void);
+bool RefreshMouse(void);
 void RenderCursor(void);
 
 static Window* g_pShutdownMessage = NULL;
@@ -2336,8 +2402,11 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					//FREE_LOCK(g_backgdLock);
 					
 					Point p = { g_mouseX, g_mouseY };
-					if (RectangleContains (&pWindow->m_rect, &p))
-						RenderCursor ();
+					if (RectangleContains(&pWindow->m_rect, &p))
+						RenderCursor();
+					
+					if (RectangleOverlap(&pWindow->m_rect, &g_tooltip.m_rect))
+						TooltipDraw();
 				}
 			}
 			
@@ -2375,7 +2444,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		LockAcquire (&g_ClickQueueLock);
 		
-		RefreshMouse();
+		if (RefreshMouse())
+			TooltipDismiss();
 		
 		for (int i = 0; i < g_clickQueueSize; i++)
 		{
@@ -2397,6 +2467,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		{
 			int errorCode = 0;
 			Task *pTask = KeStartTask(ShutdownProcessing, 0, &errorCode);
+			g_shutdownProcessing = true;
 			if (pTask == NULL)
 			{
 				LogMsg("Cannot spawn shutdown processing task!  That's... weird.");
@@ -3622,3 +3693,4 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 	}
 }
 #endif
+

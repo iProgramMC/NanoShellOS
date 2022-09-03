@@ -36,27 +36,33 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			RECT(r, 10, 70 + TITLE_BAR_HEIGHT, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (30 sec)", 1001, 0, 0);
 			
+			RECT(r, 10, 100 + TITLE_BAR_HEIGHT, 100, 20);
+			AddControl (pWindow, CONTROL_BUTTON, r, "Show Tooltip", 1003, 0, 0);
+			
 			break;
 		}
 		case EVENT_COMMAND:
 		{
-			if (parm1 == 1000)
+			switch (parm1)
 			{
-				SLogMsg("Hanging 10 sec!");
-				// hang
-				WaitMS(30000);
-			}
-			if (parm1 == 1001)
-			{
-				SLogMsg("Hanging 30 sec!");
-				// hang
-				WaitMS(10000);
-			}
-			if (parm1 == 1002)
-			{
-				SLogMsg("Hanging 5 sec!");
-				// hang
-				WaitMS(5000);
+				case 1000:
+					SLogMsg("Hanging 10 sec!");
+					WaitMS(10000);
+					break;
+				case 1001:
+					SLogMsg("Hanging 30 sec!");
+					WaitMS(30000);
+					break;
+				case 1002:
+					SLogMsg("Hanging 5 sec!");
+					WaitMS(5000);
+					break;
+				case 1003:
+				{
+					Point p = GetMousePos();
+					TooltipShow("This is a testing tooltip!\n\nLook ma, I'm on another line!!\nThis is awesome!", p.x, p.y + 30);
+					break;
+				}
 			}
 			break;
 		}

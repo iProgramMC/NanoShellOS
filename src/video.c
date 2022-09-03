@@ -77,7 +77,8 @@ MouseMoveQueue g_queueMouseUpdateTo;
 void RenderCursor(void);
 void RedrawOldPixels(int oldX, int oldY);
 void RedrawOldPixelsFull(int oldX, int oldY);
-void RefreshMouse()
+
+bool RefreshMouse()
 {
 	if (g_queueMouseUpdateTo.updated)
 	{
@@ -118,8 +119,10 @@ void RefreshMouse()
 		
 		g_queueMouseUpdateTo.newX = 0;
 		g_queueMouseUpdateTo.newY = 0;
+		return true;
 	}
-	hlt;
+	
+	return false;
 }
 
 void AddClickInfoToQueue(const ClickInfo* info)
@@ -187,6 +190,9 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 	int dx, dy;
 	dx = (flags & (1 << 4)) ? (int8_t)Dx : Dx;
 	dy = (flags & (1 << 5)) ? (int8_t)Dy : Dy;
+	
+	if (!IsWindowManagerRunning())
+		return;
 	
 	//move the cursor:
 	g_queueMouseUpdateTo.newX += dx;
