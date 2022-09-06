@@ -32,6 +32,7 @@ enum
 	ZERO,
 	MAIN_LISTVIEW,
 	MAIN_MENU_BAR,
+	MAIN_PATH_TEXT,
 };
 enum
 {
@@ -174,7 +175,12 @@ reset:
 	strcpy (pWindow->m_title, "Cabinet - ");
 	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	RequestTaskbarUpdate();
-	RequestRepaint(pWindow);
+	
+	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);
+	
+	//RequestRepaint(pWindow);
+	CallControlCallback(pWindow, MAIN_LISTVIEW,  EVENT_PAINT, 0, 0);
+	CallControlCallback(pWindow, MAIN_PATH_TEXT, EVENT_PAINT, 0, 0);
 }
 
 //TODO FIXME
@@ -260,9 +266,11 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	{
 		case EVENT_PAINT:
 		{
+			/*
 			VidTextOut (g_cbntOldCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
 			VidTextOut (g_cabinetCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
 			strcpy(g_cbntOldCWD, g_cabinetCWD);
+			*/
 			break;
 		}
 		case EVENT_COMMAND:
@@ -467,6 +475,10 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
 			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
+			
+			r.top -= 14;
+			r.bottom = r.top + GetLineHeight();
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "", MAIN_PATH_TEXT, 0, TEXTSTYLE_FORCEBGCOL);
 			
 			// Initialize the menu-bar
 			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$FILE, "File");
