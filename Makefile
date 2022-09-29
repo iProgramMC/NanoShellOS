@@ -6,8 +6,8 @@ INC_DIR=include
 BUILD_DIR=build
 ISO_DIR=$(BUILD_DIR)/iso_root
 
-CC=clang
-LD=ld
+CC?=clang
+LD?=ld
 AS=nasm
 
 # Turns out we don't actually need -g.  Consider 600kb saved.
