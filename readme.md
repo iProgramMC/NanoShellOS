@@ -83,7 +83,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 
 ## Build instructions
 
-### Linux build:
+### Linux:
 
 The following dependencies are required: `xorriso` `clang` `ld`.  Install them first.  An example of how to install them:
 ```
@@ -91,6 +91,8 @@ sudo apt-get install xorriso clang
 ```
 
 Then, run `make`.
+
+(Note: you can use `NCC=<compiler>`, `NAS=<assembler>` or `NLD=<linker>` to build NanoShell with different versions of clang, nasm or ld)
 
 #### Building an image
 
@@ -104,7 +106,7 @@ make image
 
 In the `build` directory, you should now have an `image.iso` that you can mount into your favorite x86 emulator and run.
 
-### Windows build:
+### Windows:
 
 It may or may not come back soon.
 

@@ -6,9 +6,11 @@ INC_DIR=include
 BUILD_DIR=build
 ISO_DIR=$(BUILD_DIR)/iso_root
 
-CC?=clang
-LD?=ld
-AS=nasm
+# probably shouldn't use $(CC) here because there are people who prefer
+# different versions of clang or ld
+NCC?=clang
+NLD?=ld
+NAS?=nasm
 
 # Turns out we don't actually need -g.  Consider 600kb saved.
 # Test results:
@@ -52,7 +54,7 @@ clean:
 
 $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"
-	@$(LD) $(LDFLAGS) -o $@ $^
+	@$(NLD) $(LDFLAGS) -o $@ $^
 
 $(INITRD_TARGET):
 	@echo "Building initrd..."
@@ -70,9 +72,9 @@ $(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)
 $(BUILD_DIR)/%.asm.o: $(SRC_DIR)/%.asm
 	@mkdir -p $(dir $@)
 	@echo "Assembling $<"
-	@$(AS) $(ASFLAGS) -o $@ $<
+	@$(NAS) $(ASFLAGS) -o $@ $<
 
 $(BUILD_DIR)/%.c.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@$(NCC) $(CFLAGS) -c $< -o $@
