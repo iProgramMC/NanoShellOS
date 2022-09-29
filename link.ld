@@ -22,37 +22,37 @@ SECTIONS
 
 	.multibootdata :
 	{
-		*(.multibootdata)
+		*(.multibootdata .multibootdata.*)
 	}
 
 	.multiboottext :
 	{
-		*(.multiboottext)
+		*(.multiboottext .multiboottext.*)
 	}
 	
 	. += 0xC0000000;
 	
 	.text ALIGN (4K) : AT (ADDR (.text) - 0xC0000000)
 	{
-		*(.text)
+		*(.text .text.*)
 	}
 	
 	.rodata ALIGN (4K) : AT (ADDR (.rodata) - 0xC0000000)
 	{
-		*(.rodata)
+		*(.rodata .rodata.*)
 	}
 	
 	.data ALIGN (4K) : AT (ADDR (.data) - 0xC0000000)
 	{
 		/* place the end right where data starts to get that nice page alignment :) */
 		l_code_and_rodata_end = .;
-		*(.data)
+		*(.data .data.*)
 	}
 	
 	.bss ALIGN (4K) : AT (ADDR (.bss) - 0xC0000000)
 	{
 		*(COMMON)
-		*(.bss)
+		*(.bss .bss.*)
 	}
 	
 	.section : 
