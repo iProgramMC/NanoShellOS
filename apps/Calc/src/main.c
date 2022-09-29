@@ -25,6 +25,13 @@ float resultCalculation = 0;
 
 bool bResultMode = false;
 
+long long absll (long long a)
+{
+	if (a < 0)
+		a = -a;
+	return a;
+}
+
 void FormatFloatToString (char* out, float n, int precision)
 {
 	//TODO: won't handle large enough numbers.  Precision should be smaller than 10.
@@ -33,11 +40,11 @@ void FormatFloatToString (char* out, float n, int precision)
 	
 	float fmt = n * po10;
 	
-	long long fmtint = (long long)fmt;
+	long long fmtint = (long long)fmt, fmtintabs = absll(fmtint);
 	char format_string[100];
 	sprintf(format_string, "%cd.%c0%dd", '%', '%', precision);
 	
-	sprintf(out, format_string, (int)(fmtint/po10), (int)(fmtint % po10));
+	sprintf(out, format_string, (int)(fmtint/po10), (int)(fmtintabs % po10));
 }
 
 void RequestRepaint(Window *pWindow);
