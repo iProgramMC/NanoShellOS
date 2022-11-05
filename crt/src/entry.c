@@ -14,10 +14,13 @@
 __attribute__((noreturn)) void exit (int number);
 
 int NsMain (int argc, char** argv);
+void MemMgrInitializeMemory();
 
 __attribute__((noreturn))
 void _CEntry(const char* arg)
 {
+	MemMgrInitializeMemory();
+	
 	char* argv[128]; 
 	argv[0] = NULL;
 	
