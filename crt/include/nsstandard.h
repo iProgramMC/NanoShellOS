@@ -28,7 +28,7 @@ int GetRandom();
 // Logging
 void LogMsg    (const char* Format, ...);
 void LogMsgNoCr(const char* Format, ...);
-#define printf LogMsgNoCr
+void printf    (const char* Format, ...);
 
 // Assertion
 void OnAssertionFail(const char *cond_msg, const char *file, int line);

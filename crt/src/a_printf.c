@@ -419,3 +419,15 @@ void LogMsgNoCr(UNUSED const char* fmt, ...)
 	va_end(list);
 }
 
+void printf(UNUSED const char* fmt, ...)
+{
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsnprintf(cr, sizeof(cr), fmt, list);
+	
+	_I_PutString(cr);
+	
+	va_end(list);
+}
+

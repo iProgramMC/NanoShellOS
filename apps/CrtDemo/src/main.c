@@ -21,6 +21,7 @@ int NsMain (int argc, char** argv)
 	LogMsg("Allocating something");
 	// Allocate an amount of memory
 	void* memory = malloc(8192);
+	LogMsg("Got Memory: %p", memory);
 	
 	memset (memory, 0, 8192);
 	
