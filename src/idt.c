@@ -208,8 +208,7 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 			
 			//Let a task switch come in
 			KeOnExitInterrupt();
-			
-			sti;
+			__asm__("sti");
 			
 			// Wait for a switch
 			while (1) hlt;
