@@ -213,6 +213,8 @@ typedef struct
 }
 ElfLoaderBlock;
 
+extern Console* g_currentConsole, g_debugSerialConsole;
+
 static void ElfExecThread(int pnLoaderBlock)
 {
 	// Load the pLoaderBlock
@@ -224,6 +226,12 @@ static void ElfExecThread(int pnLoaderBlock)
 	memcpy (pMem, block.pFileData, block.nFileSize);
 	MmFreeK(block.pFileData);
 	block.pFileData = pMem;
+	
+	// If async, pipe all output to the serial console
+	if (block.bAsync)
+	{
+		g_currentConsole = &g_debugSerialConsole;
+	}
 	
 	// Try to load the ELF in
 	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, &block.nElfErrorCodeExec);
