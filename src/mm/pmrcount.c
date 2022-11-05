@@ -26,6 +26,10 @@ RefCountTableLevel0 g_refCountRoot;
 
 uint32_t MrGetReferenceCount(uintptr_t page)
 {
+	bool bAreInterruptsDisabled = KeCheckInterruptsDisabled();
+	if (!bAreInterruptsDisabled)
+		cli;
+	
 	// Split the address up into chunks
 	union
 	{
@@ -45,16 +49,27 @@ uint32_t MrGetReferenceCount(uintptr_t page)
 	if (!g_refCountRoot.m_level1[aSplit.level1])
 	{
 		// No, assume this page was never referenced
+		if (!bAreInterruptsDisabled)
+			sti;
 		return 0;
 	}
 	
 	// There is a level1.
-	return g_refCountRoot.m_level1[aSplit.level1]->m_refCounts[aSplit.level2];
+	int result = g_refCountRoot.m_level1[aSplit.level1]->m_refCounts[aSplit.level2];
+	
+	if (!bAreInterruptsDisabled)
+		sti;
+	
+	return result;
 }
 
 // Returns the new reference count
 uint32_t MrReferencePage(uintptr_t page)
 {
+	bool bAreInterruptsDisabled = KeCheckInterruptsDisabled();
+	if (!bAreInterruptsDisabled)
+		cli;
+	
 	RSLogMsg("MrReferencePage(%p)",page);
 	// Split the address up into chunks
 	union
@@ -94,11 +109,20 @@ uint32_t MrReferencePage(uintptr_t page)
 	
 	uint32_t* pRefCount = &g_refCountRoot.m_level1[aSplit.level1]->m_refCounts[aSplit.level2];
 	
-	return ++(*pRefCount);
+	int result = ++(*pRefCount);
+	
+	if (!bAreInterruptsDisabled)
+		sti;
+	
+	return result;
 }
 
 uint32_t MrUnreferencePage(uintptr_t page)
 {
+	bool bAreInterruptsDisabled = KeCheckInterruptsDisabled();
+	if (!bAreInterruptsDisabled)
+		cli;
+	
 	RSLogMsg("MrUnreferencePage(%p)",page);
 	// Split the address up into chunks
 	union
@@ -157,6 +181,9 @@ uint32_t MrUnreferencePage(uintptr_t page)
 			g_refCountRoot.m_level1[aSplit.level1] = NULL;
 		}
 	}
+	
+	if (!bAreInterruptsDisabled)
+		sti;
 	
 	return result;
 }
