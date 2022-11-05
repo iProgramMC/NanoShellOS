@@ -991,10 +991,11 @@ void WindowRegisterEventUnsafe2 (Window* pWindow, short eventType, int parm1, in
 void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 void OnWindowHung(Window *pWindow)
 {
-	SLogMsg("Window with address %x (title: %s) is being marked as hung...", pWindow, pWindow->m_title);
 	//don't hang twice
 	if (pWindow->m_flags & WI_HUNGWIND)
 		return;
+	
+	SLogMsg("Window with address %x (title: %s) is being marked as hung...", pWindow, pWindow->m_title);
 	
 	pWindow->m_flags |= WI_HUNGWIND;
 	if (!(pWindow->m_flags & WF_FROZEN))
