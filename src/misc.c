@@ -584,7 +584,7 @@ char g_cmdline [1024];
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), September 2022 - " VersionString);
+	LogMsg("NanoShell (TM), November 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper, MpGetNumAvailablePages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
 }
