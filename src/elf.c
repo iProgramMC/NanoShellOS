@@ -218,14 +218,14 @@ extern Console* g_currentConsole, g_debugSerialConsole;
 static void ElfExecThread(int pnLoaderBlock)
 {
 	// Load the pLoaderBlock
-	ElfLoaderBlock block = *((ElfLoaderBlock*)pnLoaderBlock);
+	ElfLoaderBlock *pBlock = (ElfLoaderBlock*)pnLoaderBlock;
+	
+	// Create a local copy
+	ElfLoaderBlock block = *pBlock;
 	
 	// Make a clone of the elf data, so that in the event that this thread dies, it won't leak memory
 	// TODO: Use MmMapMemory here
-	void *pMem = MmAllocate (block.nFileSize);
-	memcpy (pMem, block.pFileData, block.nFileSize);
-	MmFreeK(block.pFileData);
-	block.pFileData = pMem;
+	void *pMem = block.pFileData;
 	
 	// If async, pipe all output to the serial console
 	if (block.bAsync)
@@ -264,6 +264,13 @@ void ElfOnDeath(Process* pProc)
 	if (pProc->pDetail)
 	{
 		ElfLoaderBlock* pBlk = (ElfLoaderBlock*)pProc->pDetail;
+		
+		if (pBlk->pFileData)
+		{
+			MmFree(pBlk->pFileData);
+			pBlk->pFileData = NULL;
+		}
+		
 		if (pBlk->bAsync)
 		{
 			MmFreeK(pProc->pDetail);
