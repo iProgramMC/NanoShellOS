@@ -154,7 +154,9 @@ enum {
 	EVENT_RIGHTCLICK,
 	EVENT_RIGHTCLICKRELEASE,
 	EVENT_CHECKBOX,
-	EVENT_MAX
+	EVENT_MAX,
+	
+	EVENT_USER = 0x10000,
 };
 
 //NOTE WHEN WORKING WITH CONTROLS:
@@ -693,6 +695,11 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
  */
 int AddControl  (Window* pWindow, int type,                    Rectangle rect, const char* text, int comboID, int p1, int p2);
 int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2);
+
+/**
+ * Removes a control with the specified comboID from the window.
+ */
+void RemoveControl(Window *pWindow, int comboID);
 
 /**
  * Gets the updates per second the window manager could do.

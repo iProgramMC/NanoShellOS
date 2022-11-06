@@ -17,6 +17,11 @@
 
 #define LAUNCHER_CONFIG_PATH "/launcher_config.txt"
 
+#define EVENT_UPDATE_TASKBAR_CTLS (EVENT_USER + 1)
+
+bool g_bShowDate = true;
+bool g_bShowTimeSeconds = true;
+
 // Shell resource handlers
 #if 1
 
@@ -496,6 +501,7 @@ void LauncherEntry(__attribute__((unused)) int arg)
 #define TASKBAR_BUTTON_WIDTH 80
 #define TASKBAR_BUTTON_HEIGHT TITLE_BAR_HEIGHT + 8
 #define TASKBAR_TIME_THING_WIDTH 50
+#define TASKBAR_DATE_THING_WIDTH 150
 
 //hack.
 #undef TITLE_BAR_HEIGHT
@@ -509,6 +515,7 @@ enum {
 	TASKBAR_HELLO = 0x1,
 	TASKBAR_START_TEXT,
 	TASKBAR_TIME_TEXT,
+	TASKBAR_DATE_TEXT,
 };
 
 void LaunchLauncher()
@@ -522,14 +529,54 @@ void LaunchLauncher()
 	DebugLogMsg("Created launcher task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 
+const char* TaskbarGetMonthName(int mo)
+{
+	const char * moName[] = {
+		"",
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	};
+	
+	return moName[mo];
+}
+
+const char* TaskbarGetNumeralEnding(int num)
+{
+	int lastDigit = num % 10;
+	if (lastDigit == 1 && num != 11)
+		return "st"; // 1st, 11th, 21st, 31st
+	if (lastDigit == 2 && num != 12)
+		return "nd"; // 2nd, 12th, 22nd
+	if (lastDigit == 3 && num != 13)
+		return "rd"; // 3nd, 13th, 23nd
+	return "th";
+}
+
 void UpdateTaskbar (Window* pWindow)
 {
 	char buffer[1024];
 	
 	// Time
 	TimeStruct* time = TmReadTime();
-	sprintf(buffer, "  %02d:%02d:%02d", time->hours, time->minutes, time->seconds);
+	sprintf(buffer, g_bShowTimeSeconds ? "  %02d:%02d:%02d" : "  %02d:%02d", time->hours, time->minutes, time->seconds);
 	SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
+	
+	if (g_bShowDate)
+	{
+		sprintf(buffer, "    %s %d%s, %d", TaskbarGetMonthName(time->month), time->day, TaskbarGetNumeralEnding(time->day), time->year);
+		SetLabelText(pWindow, TASKBAR_DATE_TEXT, buffer);
+		CallControlCallback(pWindow, TASKBAR_DATE_TEXT,  EVENT_PAINT, 0, 0);
+	}
 	
 	CallControlCallback(pWindow, TASKBAR_TIME_TEXT,  EVENT_PAINT, 0, 0);
 	CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
@@ -661,80 +708,120 @@ void LaunchRun()
 }
 
 Window* g_pTaskBarWindow;
+void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
+{
+	if (!g_taskbarMenu.nMenuEntries)
+	{
+		int nEntries = g_nLauncherItems + 2 + 2 + 2 + 3;
+		
+		g_taskbarMenu.nMenuEntries = nEntries;
+		g_taskbarMenu.pMenuEntries = MmAllocate(sizeof (WindowMenu) * nEntries);
+		memset (g_taskbarMenu.pMenuEntries, 0,  sizeof (WindowMenu) * nEntries);
+		
+		int index = 0;
+		// Add an "About" icon
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "About NanoShell...", 1, ICON_NANOSHELL);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 2, ICON_NULL); // Empty string = dash
+		for (int i = 0; i < g_nLauncherItems; i++)
+		{
+			CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], g_pLauncherItems[i].m_text, 2000 + i, g_pLauncherItems[i].m_icon); // Empty string = dash
+		}
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 7, ICON_NULL);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Old Launcher", 8, ICON_HOME);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Settings", 9, ICON_FOLDER_SETTINGS);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 3, ICON_NULL);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Run...", 4, ICON_RUN);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 5, ICON_NULL);
+		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
+	}
+	g_taskbarMenu.nLineSeparators = 3;
+	g_taskbarMenu.nWidth    = 200;
+	g_taskbarMenu.bHasIcons = true;
+	
+	Rectangle r;
+	
+	int wbutton, hbutton;
+	const char *pNanoShellText = "\x05 NanoShell";
+	VidTextOutInternal (pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
+	
+	int btn_width = TASKBAR_BUTTON_WIDTH;
+	if (btn_width < wbutton + 10)
+		btn_width = wbutton + 10;
+	
+	RECT (r, 4, 3, btn_width, TASKBAR_BUTTON_HEIGHT);
+	AddControl(pWindow, CONTROL_BUTTON, r, pNanoShellText, TASKBAR_HELLO, 0, 0);
+	
+	RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH, 3, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+	AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
+	
+	if (g_bShowDate)
+	{
+		RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+		AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_DATE_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
+	}
+	
+	int launcherItemPosX = 8 + btn_width;
+	for (int i = 0; i < g_nLauncherItems; i++)
+	{
+		if (g_pLauncherItems[i].m_addToQuickLaunch)
+		{
+			RECT (r, launcherItemPosX, 2, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
+			if (bAlsoCreateQuickLaunchIcons)
+				AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
+			
+			launcherItemPosX += TASKBAR_BUTTON_HEIGHT + 2;
+		}
+	}
+	
+	RECT (r, launcherItemPosX, 2, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2);
+	AddControl(pWindow, CONTROL_TASKLIST, r, NULL, TASKBAR_START_TEXT, 0, 0);
+	
+	pWindow->m_data = (void*)(launcherItemPosX + 400);
+}
+
+void TaskbarRemoveControls(Window *pWindow)
+{
+	RemoveControl (pWindow, TASKBAR_DATE_TEXT);
+	RemoveControl (pWindow, TASKBAR_TIME_TEXT);
+	RemoveControl (pWindow, TASKBAR_START_TEXT);
+	RemoveControl (pWindow, TASKBAR_HELLO);
+}
+
+void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs)
+{
+	if (bShowDate != g_bShowDate || bShowTimeSecs != g_bShowTimeSeconds)
+	{
+		g_bShowDate = bShowDate;
+		g_bShowTimeSeconds = bShowTimeSecs;
+		WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE_TASKBAR_CTLS, 0, 0);
+	}
+}
+
 void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
 	{
-		case EVENT_CREATE: {
-			
+		case EVENT_CREATE:
+		{
 			// Load config:
 			HomeMenu$LoadConfig(pWindow);
 			
-			if (!g_taskbarMenu.nMenuEntries)
-			{
-				int nEntries = g_nLauncherItems + 2 + 2 + 2 + 3;
-				
-				g_taskbarMenu.nMenuEntries = nEntries;
-				g_taskbarMenu.pMenuEntries = MmAllocate(sizeof (WindowMenu) * nEntries);
-				memset (g_taskbarMenu.pMenuEntries, 0,  sizeof (WindowMenu) * nEntries);
-				
-				int index = 0;
-				// Add an "About" icon
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "About NanoShell...", 1, ICON_NANOSHELL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 2, ICON_NULL); // Empty string = dash
-				for (int i = 0; i < g_nLauncherItems; i++)
-				{
-					CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], g_pLauncherItems[i].m_text, 2000 + i, g_pLauncherItems[i].m_icon); // Empty string = dash
-				}
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 7, ICON_NULL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Old Launcher", 8, ICON_HOME);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Settings", 9, ICON_FOLDER_SETTINGS);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 3, ICON_NULL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Run...", 4, ICON_RUN);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 5, ICON_NULL);
-				CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
-			}
-			g_taskbarMenu.nLineSeparators = 3;
-			g_taskbarMenu.nWidth    = 200;
-			g_taskbarMenu.bHasIcons = true;
-			
-			Rectangle r;
-			
-			int wbutton, hbutton;
-			const char *pNanoShellText = "\x05 NanoShell";
-			VidTextOutInternal (pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
-			
-			int btn_width = TASKBAR_BUTTON_WIDTH;
-			if (btn_width < wbutton + 10)
-				btn_width = wbutton + 10;
-			
-			RECT (r, 4, 3, btn_width, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_BUTTON, r, pNanoShellText, TASKBAR_HELLO, 0, 0);
-			RECT (r, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH, 3, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
-			AddControl(pWindow, CONTROL_TEXTCENTER, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
-			
-			int launcherItemPosX = 8 + btn_width;
-			for (int i = 0; i < g_nLauncherItems; i++)
-			{
-				if (g_pLauncherItems[i].m_addToQuickLaunch)
-				{
-					RECT (r, launcherItemPosX, 2, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
-					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
-					
-					launcherItemPosX += TASKBAR_BUTTON_HEIGHT + 2;
-				}
-			}
-			
-			RECT (r, launcherItemPosX, 2, GetScreenWidth() - 6 - TASKBAR_TIME_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2);
-			AddControl(pWindow, CONTROL_TASKLIST, r, NULL, TASKBAR_START_TEXT, 0, 0);
-			
-			pWindow->m_data = (void*)(launcherItemPosX + 400);
+			TaskbarCreateControls(pWindow, true);
 			
 			break;
 		}
 		case EVENT_UPDATE:
 		{
+			UpdateTaskbar(pWindow);
+			break;
+		}
+		case EVENT_UPDATE_TASKBAR_CTLS:
+		{
+			TaskbarRemoveControls(pWindow);
+			TaskbarCreateControls(pWindow, false);
+			VidFillRect(WINDOW_BACKGD_COLOR, 0, 0, pWindow->m_vbeData.m_width, pWindow->m_vbeData.m_height);
+			RequestRepaintNew(pWindow);
 			UpdateTaskbar(pWindow);
 			break;
 		}

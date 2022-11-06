@@ -232,7 +232,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		//Setup our new task here:
 		Task* pTask = &g_runningTasks[i];
 		memset (pTask, 0, sizeof *pTask);
-		pTask->m_bExists = true;
+		
 		pTask->m_pFunction = function;
 		pTask->m_pStack = pStack;
 		pTask->m_bFirstTime = true;
@@ -260,6 +260,8 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		
 		if (pErrorCodeOut)
 			*pErrorCodeOut = TASK_SUCCESS;
+		
+		pTask->m_bExists = true;
 		
 		// Update last running task index. Makes task scheduling faster
 		KeFindLastRunningTaskIndex ();

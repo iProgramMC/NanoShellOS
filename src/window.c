@@ -2129,7 +2129,9 @@ void HandleKeypressOnWindow(unsigned char key)
 		KillAltTab();
 	}
 	else if (key == KEY_TAB && g_heldAlt)
+	{
 		OnPressAltTabOnce();
+	}
 }
 
 typedef struct
@@ -2649,21 +2651,39 @@ int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int 
 	AddControlEx(pWindow, type, 0, rect, text, comboID, p1, p2);
 }
 
-void RemoveControl (Window* pWindow, int controlIndex)
+void RemoveControlInternal (Window* pWindow, int controlIndex)
 {
 	if (controlIndex >= pWindow->m_controlArrayLen || controlIndex < 0) return;
 	
-	LockAcquire(&pWindow->m_EventQueueLock);
 	Control* pControl = &pWindow->m_pControlArray[controlIndex];
-	if (pControl->m_dataPtr)
-	{
-		//TODO
-	}
 	pControl->m_active = false;
 	pControl->m_bMarkedForDeletion = false;
 	pControl->OnEvent = NULL;
+}
+
+void RemoveControl(Window* pWindow, int comboID)
+{
+	int controlIndex = -1;
 	
-	LockFree(&pWindow->m_EventQueueLock);
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* p = &pWindow->m_pControlArray[i];
+		if (p->m_active  &&  p->m_comboID == comboID)
+		{
+			controlIndex = i;
+			break;
+		}
+	}
+	
+	if (controlIndex == -1)
+	{
+		return;
+	}
+	
+	Control* pControl = &pWindow->m_pControlArray[controlIndex];
+	pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
+	
+	RemoveControlInternal(pWindow, controlIndex);
 }
 
 void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
