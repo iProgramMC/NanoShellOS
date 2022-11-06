@@ -15,7 +15,7 @@ size_t vsprintf(char* OutBuffer, const char* FormatType, va_list list);
 size_t sprintf(char* buf, const char* fmt, ...);
 
 // Threading
-void sleep(int ms);
+void sleep(int ms);      //not actually standard I don't think
 void exit (int errcode);
 
 // Execution control
@@ -48,6 +48,7 @@ void*  memset     (void* bufptr, BYTE val, size_t size);
 size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
 int    strcmp     (const char* as, const char* bs);
+int    strncmp    (const char* s1, const char* s2, size_t n);
 void   strcat     (char* dest, char* after);
 void   strtolower (char* as);
 void   strtoupper (char* as);

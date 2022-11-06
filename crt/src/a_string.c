@@ -165,6 +165,26 @@ int strcmp(const char* as, const char* bs)
 	return 0;
 }
 
+int strncmp(const char* s1, const char* s2, size_t n)
+{
+	if (n == 0)
+		return 0;
+	
+	do
+	{
+		if (*s1 != *s2)
+			return *(uint8_t*)s1 - *(uint8_t*)s2;
+		
+		s2++;
+		
+		if (*s1++ == 0)
+			break;
+	}
+	while (--n != 0);
+	
+	return 0;
+}
+
 void strcat(char* dest, const char* after)
 {
 	char* end = strlen(dest) + dest;
