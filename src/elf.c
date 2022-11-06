@@ -242,7 +242,10 @@ static void ElfExecThread(int pnLoaderBlock)
 		SLogMsg("ELF Execution Error: %d", erc);
 	}
 	
-	MmFreeK(block.pFileData);
+	// free it ourselves, so that ElfOnDeath doesn't try to free this again
+	MmFreeK(pBlock->pFileData);
+	pBlock->pFileData = NULL;
+	block.pFileData = NULL;
 	
 	if (block.bAsync)
 	{
