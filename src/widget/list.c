@@ -16,6 +16,7 @@
 #include <string.h>
 
 extern VBEData* g_vbeData, g_mainScreenVBEData;
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 
 // List View.
 #if 1
@@ -618,7 +619,6 @@ void WidgetIconViewDrag_ArrangeIcons (Control *this)
 	ListViewData* pData = &this->m_listViewData;
 	
 	int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
-	int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
 	
 	int elementStart =   0;
 	int elementEnd   =   pData->m_elementCount - 1;
@@ -628,7 +628,6 @@ void WidgetIconViewDrag_ArrangeIcons (Control *this)
 	for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
 	{
 		int x = 4 + elementX, y = 4 + 2 + j * ICON_ITEM_HEIGHT;
-		uint32_t color = WINDOW_TEXT_COLOR;
 		
 		ListItem* pItem = &pData->m_pItems[i];
 		
@@ -657,7 +656,6 @@ SAI int _Abs(int i)
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
 bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
-go_back:
 	switch (eventType)
 	{
 		case EVENT_SIZE:
@@ -841,8 +839,6 @@ go_back:
 			
 			if (elementStart > elementEnd)
 				VidDrawText ("(Empty)", rk, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0x7F7F7F, TRANSPARENT);
-			
-			int elementX = 0;
 			
 			for (int i = 0; i < pData->m_elementCount; i++)
 			{

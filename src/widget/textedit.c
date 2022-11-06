@@ -18,6 +18,8 @@
 
 #define TAB_WIDTH 4
 
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+
 void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 {
 	int c = CountLinesInText(this->m_textInputData.m_pText);
@@ -586,7 +588,6 @@ void CtlTextEditRecalcIndex(Control *this)
 }
 bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
 {
-	int charsPerLine = (this->m_rect.right-this->m_rect.left)/8;
 	switch (eventType)
 	{
 		//case EVENT_RELEASECURSOR:
@@ -597,7 +598,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		// I like to keep it on
 		case EVENT_CLICKCURSOR:
 		{
-			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			UNUSED Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			//TODO: Allow change of cursor via click.
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
@@ -646,14 +647,13 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				int xPos = rk.left + 2 - this->m_textInputData.m_scrollX;
 				int yPos = rk.top  + 2 - this->m_textInputData.m_scrollY;
 				
-				int xiPos = xPos, yiPos = yPos;
+				int xiPos = xPos;
 				int wChar, hChar;
 				wChar = GetCharWidth ('W');
 				hChar = GetLineHeight();
 				
 				//go through the characters:
 				const char *text = this->m_textInputData.m_pText;
-				int charsConsumed = 0;
 				bool bLink = false, bBold = false;
 				
 				while (*text)

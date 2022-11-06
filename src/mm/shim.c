@@ -176,18 +176,25 @@ void MmDebugDump()
 	LogMsg("MmDebugDump TODO: Using heap %p", MuGetCurrentHeap());
 }
 
-uint32_t* MuGetPageEntryAt(UserHeap* pHeap, uintptr_t address, bool bGeneratePageTable);;
+uint32_t* MuiGetPageEntryAt(UserHeap* pHeap, uintptr_t address, bool bGeneratePageTable);
 bool MmIsPageMapped(uint32_t addr)
 {
 	cli; //avoid TOCTOU
 	if (MuGetCurrentHeap())
 	{
 		if (MuiGetPageEntryAt(MuGetCurrentHeap(), (uintptr_t)addr, false))
+		{
+			sti;
 			return true;
+		}
 	}
 	
 	if (MhGetPageEntry(addr))
+	{
+		sti;
 		return true;
+	}
 	
+	sti;
 	return false;
 }

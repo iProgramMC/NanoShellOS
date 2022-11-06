@@ -19,10 +19,7 @@
 #define MIN_CACHE_UNITS 256   // 1 MB minimum
 #define MAX_CACHE_UNITS 16384 // 64 MB before we start to evict pages
 
-#define EVICT_WHEN_REACHING_MAX 4096 // Evict 4096 cache units when we're about to reach the max.
-
-#define PAGE_SIZE  4096
-#define BLOCK_SIZE 512
+#define EVICT_WHEN_REACHING_MAX (4096) // Evict 4096 cache units when we're about to reach the max.
 
 // Initialize the caching system.
 void StCacheInit(CacheRegister* pReg, DriveID driveID)
@@ -211,6 +208,7 @@ CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData)
 		if (pReg->m_nCacheUnitCapacity + MIN_CACHE_UNITS > MAX_CACHE_UNITS)
 		{
 			// no, try evicting some less used cache units
+			// TODO: optimize, right now it's basically O(n^2).. get better man
 			for (int i = 0; i < EVICT_WHEN_REACHING_MAX; i++)
 				StEvictLeastUsedCacheUnit(pReg);
 		}

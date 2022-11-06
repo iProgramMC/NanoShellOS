@@ -519,7 +519,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				ICON_PROPERTIES, ICON_FILE_SEARCH,
 				ICON_WHATS_THIS, ICON_PACKAGER,
 			};
-			int button_actions[] = {
+			// TODO
+			UNUSED int button_actions[] = {
 				CB$BACK, CB$FWD,
 				-1,
 				CB$COPY, CB$PASTE,

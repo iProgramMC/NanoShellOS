@@ -902,7 +902,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	if (g_pTaskBarWindow) return;
 	
 	// create ourself a window:
-	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT-1, sh = GetScreenHeight();
+	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT-1;
 	int wx = 0, wy = 0;
 	
 	g_TaskbarHeight = TASKBAR_HEIGHT;

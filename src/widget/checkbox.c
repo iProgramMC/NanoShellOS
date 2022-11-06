@@ -16,6 +16,8 @@
 #include <string.h>
 
 #define CHECKBOX_SIZE 14
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+
 bool CheckboxGetChecked(Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)

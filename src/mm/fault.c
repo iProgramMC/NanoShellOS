@@ -194,7 +194,7 @@ _INVALID_PAGE_FAULT:
 	SLogMsg("Registers:");
 	SLogMsg("EAX: %x  EBX: %x  ECX: %x  EDX: %x  ESP: %x  EBP: %x",pRegs->eax, pRegs->ebx, pRegs->ecx, pRegs->edx, pRegs->esp, pRegs->ebp);
 	
-	PrintBackTrace(pRegs->ebp, pRegs->eip, "bruh");
+	PrintBackTrace((StackFrame*)pRegs->ebp, pRegs->eip, "bruh");
 	
 	// No Problem. Just trigger an bug check
 	IsrExceptionCommon(BC_EX_PAGE_FAULT, pRegs);

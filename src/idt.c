@@ -136,6 +136,7 @@ CrashInfo* KeGetCrashedTaskInfo()
  * Exception handlers.  They cause a bugcheck when we get 'em.
  */
 extern Console *g_currentConsole, g_debugConsole;
+void KeOnExitInterrupt();
 
 void IsrExceptionCommon(int code, Registers* pRegs)
 {

@@ -185,6 +185,7 @@ void OnRightClickRelease()
 
 uint8_t g_previousFlags = 0;
 void ForceKernelTaskToRunNext();
+bool IsWindowManagerRunning();
 void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)) uint8_t Dz)
 {
 	int dx, dy;
@@ -1886,10 +1887,6 @@ void VidInit()
 
 // Dirty rect logger
 #if 1
-
-void DisjointRectSetRemove(DsjRectSet* pSet, int rectangle_index)
-{
-}
 
 bool RectangleOverlapTolerant(Rectangle* r1, Rectangle* r2)
 {

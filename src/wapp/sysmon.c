@@ -209,7 +209,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			//paint the image
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
-			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
+			//int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
 			int listview_height = (SYSMON_HEIGHT) / 2  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
 			int x = (pWindow->m_vbeData.m_width - (SYSMON_WIDTH - 20)) / 2;

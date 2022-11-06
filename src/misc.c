@@ -13,6 +13,7 @@
 #include <print.h>
 #include <string.h>
 #include <vga.h>
+#include <storabs.h>
 #include <task.h>
 #include <debug.h>
 

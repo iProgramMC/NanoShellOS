@@ -52,11 +52,11 @@ void CoWndScrollUpByOne(Console *this)
 		CoPlotChar (this, i, this->height - 1, 0);
 	}
 }
-void CoWndUpdateCursor(Console* this)
+void CoWndUpdateCursor(UNUSED Console* this)
 {
 	
 }
-void CoWndInit(Console *this)
+void CoWndInit(UNUSED Console *this)
 {
 }
 void CoWndKill(Console *this)

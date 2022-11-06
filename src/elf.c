@@ -13,16 +13,6 @@
 #include <process.h>
 #include <config.h>
 
-int gDefaultHeapSize = 4096;
-void SetDefaultHeapSize(int e)
-{
-	gDefaultHeapSize = e;
-}
-int GetDefaultHeapSize()
-{
-	return gDefaultHeapSize;
-}
-
 //#define ELF_DEBUG
 #ifdef ELF_DEBUG
 #define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
@@ -222,10 +212,6 @@ static void ElfExecThread(int pnLoaderBlock)
 	
 	// Create a local copy
 	ElfLoaderBlock block = *pBlock;
-	
-	// Make a clone of the elf data, so that in the event that this thread dies, it won't leak memory
-	// TODO: Use MmMapMemory here
-	void *pMem = block.pFileData;
 	
 	// If async, pipe all output to the serial console
 	if (block.bAsync)

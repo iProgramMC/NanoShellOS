@@ -6,6 +6,7 @@
 ******************************************/
 
 #include <wbuiltin.h>
+#include <main.h>
 #include <vfs.h>
 #include <image.h>
 

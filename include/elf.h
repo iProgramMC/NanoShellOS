@@ -138,6 +138,6 @@ void SetDefaultHeapSize(int);
 
 void ElfPerformTest();
 const char *ElfGetErrorMsg (int error_code);
-int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, int nHeapSize, int *pElfErrorCodeOut);
+int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, UNUSED int nHeapSize, int *pElfErrorCodeOut);
 
 #endif//_ELF_H

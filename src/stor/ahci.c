@@ -416,7 +416,7 @@ static void AhciPortIdentify (AhciDevice *pDev)
 	ASSERT(devIdRecord);
 	
 	HbaCmdTable *pTable = pDev->m_pCommandTableBase[cmdSlot];
-	memset (pTable, 0, sizeof *pTable);
+	memset ((void*)pTable, 0, sizeof *pTable);
 	
 	pTable->prdt_entry[0].m_dataBase  = mem;
 	pTable->prdt_entry[0].m_dataBaseU = 0;
@@ -527,7 +527,7 @@ static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, ui
 	
 	// Obtain command table and zero it.
 	HbaCmdTable *pTable = pDev->m_pCommandTableBase[cmdSlot];
-	memset (pTable, 0, sizeof *pTable);
+	memset ((void*)pTable, 0, sizeof *pTable);
 	
 	pTable->prdt_entry[0].m_dataBase  = mem;
 	pTable->prdt_entry[0].m_dataBaseU = 0;
@@ -605,7 +605,7 @@ void AhciPortInit(AhciDevice *pDev)
 	
 	pDev->m_pCommandListBase = MmAllocateSinglePagePhy (&mem);
 	ASSERT(pDev->m_pCommandListBase && "Huh?");
-	memset(pDev->m_pCommandListBase, 0, 4096);
+	memset((void*)pDev->m_pCommandListBase, 0, 4096);
 	
 	pDev->m_pPort->m_cmdListBase  = mem;
 	pDev->m_pPort->m_cmdListBaseU = 0;
@@ -613,7 +613,7 @@ void AhciPortInit(AhciDevice *pDev)
 	// Allocate the place received FISes will be copied to.
 	pDev->m_pFisBase = MmAllocateSinglePagePhy (&mem);
 	ASSERT(pDev->m_pFisBase && "Huh?");
-	memset(pDev->m_pFisBase, 0, 4096);
+	memset((void*)pDev->m_pFisBase, 0, 4096);
 	
 	pDev->m_pPort->m_fisBase  = mem;
 	pDev->m_pPort->m_fisBaseU = 0;
@@ -628,7 +628,7 @@ void AhciPortInit(AhciDevice *pDev)
 		
 		// Allocate a 
 		pDev->m_pCommandTableBase[i] = MmAllocateSinglePagePhy(&mem);
-		memset (pDev->m_pCommandTableBase[i], 0, 4096);
+		memset ((void*)pDev->m_pCommandTableBase[i], 0, 4096);
 		
 		pHeader->m_cmdTableBase  = mem;
 		pHeader->m_cmdTableBaseU = 0;

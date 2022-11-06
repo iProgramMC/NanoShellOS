@@ -683,7 +683,7 @@ bool MuUnMap(UserHeap *pHeap, uintptr_t address, size_t numPages)
 
 // User exposed functions
 
-int MmMapMemoryUser(void *pAddr, size_t lengthBytes, int protectionFlags, int mapFlags, int fileDes, size_t fileOffset, void **pOut)
+int MmMapMemoryUser(void *pAddr, size_t lengthBytes, int protectionFlags, int mapFlags, UNUSED int fileDes, UNUSED size_t fileOffset, void **pOut)
 {
 	if (!(mapFlags & MAP_ANON))
 	{

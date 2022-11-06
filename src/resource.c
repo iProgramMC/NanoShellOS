@@ -43,7 +43,7 @@ RESOURCE_STATUS CabinetExecute(const char* filename)
 	// Execute a cabinet file
 	int ec1 = 0, ec2 = 0;
 	
-	ec1 = ElfRunProgram (filename, NULL, true, true, GetDefaultHeapSize(), &ec2);
+	ec1 = ElfRunProgram (filename, NULL, true, true, 0, &ec2);
 	
 	return ec1 == ELF_ERROR_NONE ? RESOURCE_LAUNCH_SUCCESS : RESOURCE_LAUNCH_OUT_OF_MEMORY;
 }

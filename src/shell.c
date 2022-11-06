@@ -334,7 +334,7 @@ void ShellExecuteCommand(char* p)
 		else
 		{
 			int* er = MmAllocateK(sizeof(int));
-			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, GetDefaultHeapSize(), er);
+			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, 0, er);
 			
 			if (ec != ELF_ERROR_NONE)
 			{
@@ -542,7 +542,7 @@ void ShellExecuteCommand(char* p)
 		size_t sz = FiTellSize(fd_in);
 		
 		//write 512 byte blocks
-		for (int i = 0; i < sz; i += MOVEDATA_PRECISION)
+		for (size_t i = 0; i < sz; i += MOVEDATA_PRECISION)
 		{
 			size_t read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
 			if ((int)read_in < 0)

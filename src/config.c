@@ -310,19 +310,4 @@ void CfgLoadFromMainFile()
 	MmFreeK (pText);
 	
 	FiClose (fd);
-	
-	// load the default heap size, elf needs it:
-	
-	const char *pVal = CfgGetEntryValue("Executive::HeapSize");
-	if (pVal)
-	{
-		int val = atoi (pVal);
-		if (val < 128)
-		{
-			LogMsg("Error in config: \"Executive::HeapSize\" is set too low. The minimum is 128 pages, and that's what we'll go with");
-			val = 128;
-		}
-		SLogMsg("Executive::HeapSize: %d",val);
-		SetDefaultHeapSize(val);
-	}
 }
