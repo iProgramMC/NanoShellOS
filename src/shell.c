@@ -333,8 +333,8 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			int* er = MmAllocateK(sizeof(int));
-			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, 0, er);
+			int er = 0;
+			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, 0, &er);
 			
 			if (ec != ELF_ERROR_NONE)
 			{

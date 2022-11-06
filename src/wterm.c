@@ -14,9 +14,12 @@ int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
 #define DebugLogMsg  SLogMsg
 extern Console *g_currentConsole, *g_focusedOnConsole, g_debugConsole, g_debugSerialConsole;
 extern uint32_t g_vgaColorsToRGB[];
+
 void ShellExecuteCommand(char* p);
 void CoRefreshChar (Console *this, int x, int y);
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+void KeKillThreadsByConsole(Console *pConsole);
+
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	Console* pConsole = (Console*)pWindow->m_data;
@@ -33,21 +36,26 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 		case EVENT_CLOSE:
 		case EVENT_DESTROY:
 		{
-			// Restore keyboard input
-			if (g_focusedOnConsole == pConsole)
+			if (pConsole)
 			{
-				g_focusedOnConsole =  &g_debugConsole;
-				g_currentConsole   =  &g_debugConsole;
+				// Restore keyboard input
+				if (g_focusedOnConsole == pConsole)
+				{
+					g_focusedOnConsole =  &g_debugConsole;
+				}
+				if (g_currentConsole == pConsole)
+				{
+					g_currentConsole =  &g_debugConsole;
+				}
+				
+				// Kill the tasks using this console.
+				KeKillThreadsByConsole(pConsole);
+				pWindow->m_pSubThread = NULL;
+				
+				CoKill(pConsole);
+				MmFree(pConsole);
+				pWindow->m_data = NULL;
 			}
-			
-			// Kill the subordinate task.
-			if (pWindow->m_pSubThread)
-			{
-				KeKillTask(pWindow->m_pSubThread);//kill that first
-			}
-			pWindow->m_pSubThread = NULL;
-			
-			CoKill(pConsole);
 			
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			
@@ -171,69 +179,41 @@ void TerminalHostTask(int arg)
 	}
 	
 	Console basic_console;
-	if (hookDebugConsole)
-	{
-		pWindow->m_iconID = ICON_BOMB_SPIKEY;
-		pWindow->m_data = &g_debugSerialConsole;
-		g_currentConsole = &g_debugSerialConsole;
-		pWindow->m_consoleToFocusKeyInputsTo = &g_debugSerialConsole;
-		
-		// Change the debug console to point to us instead.
-		int size = sizeof(uint16_t) * array[2] * array[3];
-		uint16_t* pBuffer = (uint16_t*)MmAllocate(size);
-		memset (pBuffer, 0, size);
-		
-		g_debugSerialConsole.type = CONSOLE_TYPE_WINDOW;
-		g_debugSerialConsole.m_vbeData = &pWindow->m_vbeData;
-		g_debugSerialConsole.textBuffer = pBuffer;
-		g_debugSerialConsole.width  = array[2];
-		g_debugSerialConsole.height = array[3];
-		g_debugSerialConsole.font = g_TerminalFont;
-		g_debugSerialConsole.offX = 3 + 2;
-		g_debugSerialConsole.offY = 3 + 2 + TITLE_BAR_HEIGHT;
-		g_debugSerialConsole.color = DefaultConsoleColor;//green background
-		g_debugSerialConsole.curX = basic_console.curY = 0;
-		g_debugSerialConsole.pushOrWrap = 0; //wrap for now
-		g_debugSerialConsole.cwidth  = charWidth;
-		g_debugSerialConsole.cheight = charHeite;
-		g_debugSerialConsole.curX = 0;
-		g_debugSerialConsole.curY = 0;
-		g_debugSerialConsole.m_cursorFlashTimer = 0;
-	}
-	else
-	{
-		pWindow->m_iconID = ICON_COMMAND;
-		memset (&basic_console, 0, sizeof(basic_console));
-		
-		int size = sizeof(uint16_t) * array[2] * array[3];
-		uint16_t* pBuffer = (uint16_t*)MmAllocate(size);
-		memset (pBuffer, 0, size);
-		
-		basic_console.type = CONSOLE_TYPE_WINDOW;
-		basic_console.m_vbeData = &pWindow->m_vbeData;
-		basic_console.textBuffer = pBuffer;
-		basic_console.width  = array[2];
-		basic_console.height = array[3];
-		basic_console.font = g_TerminalFont;
-		basic_console.offX = 3 + 2;
-		basic_console.offY = 3 + 2 + TITLE_BAR_HEIGHT;
-		basic_console.color = DefaultConsoleColor;//green background
-		basic_console.curX = basic_console.curY = 0;
-		basic_console.pushOrWrap = 0; //wrap for now
-		basic_console.cwidth  = charWidth;
-		basic_console.cheight = charHeite;
-		basic_console.curX = 0;
-		basic_console.curY = 0;
-		basic_console.m_cursorFlashTimer = 0;
-		
-		pWindow->m_data = &basic_console;
-		g_currentConsole = &basic_console;
-		pWindow->m_consoleToFocusKeyInputsTo = &basic_console;
-		
-		CoClearScreen(&basic_console);
-		basic_console.curX = 0;
-		basic_console.curY = 0;
-	}
+	
+	pWindow->m_iconID = ICON_COMMAND;
+	memset (&basic_console, 0, sizeof(basic_console));
+	
+	int size = sizeof(uint16_t) * array[2] * array[3];
+	uint16_t* pBuffer = (uint16_t*)MmAllocate(size);
+	memset (pBuffer, 0, size);
+	
+	basic_console.type = CONSOLE_TYPE_WINDOW;
+	basic_console.m_vbeData = &pWindow->m_vbeData;
+	basic_console.textBuffer = pBuffer;
+	basic_console.width  = array[2];
+	basic_console.height = array[3];
+	basic_console.font = g_TerminalFont;
+	basic_console.offX = 3 + 2;
+	basic_console.offY = 3 + 2 + TITLE_BAR_HEIGHT;
+	basic_console.color = DefaultConsoleColor;//green background
+	basic_console.curX = basic_console.curY = 0;
+	basic_console.pushOrWrap = 0; //wrap for now
+	basic_console.cwidth  = charWidth;
+	basic_console.cheight = charHeite;
+	basic_console.curX = 0;
+	basic_console.curY = 0;
+	basic_console.m_cursorFlashTimer = 0;
+	
+	Console* pConsole = MmAllocate(sizeof (Console));
+	memcpy(pConsole, &basic_console, sizeof basic_console);
+	
+	pWindow->m_data  = pConsole;
+	g_currentConsole = pConsole;
+	pWindow->m_consoleToFocusKeyInputsTo = pConsole;
+	
+	CoClearScreen(pConsole);
+	pConsole->curX = 0;
+	pConsole->curY = 0;
 	
 	
 	if (providedShellCmd)
@@ -245,7 +225,7 @@ void TerminalHostTask(int arg)
 	}
 	else if (!hookDebugConsole)
 	{
-		ShellExecuteCommand ("ver");
+		KePrintSystemVersion();
 	}
 	else
 	{

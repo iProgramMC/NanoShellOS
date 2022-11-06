@@ -70,6 +70,19 @@ void KeKillThreadByPID (int proc)
 	else LogMsg("Killed task with pid %d", proc);
 }
 
+// stupid hack... but I think that's what other OSes do (issue a SIGTERM 
+// or SIGHUP to the running process using this terminal)
+void KeKillThreadsByConsole(Console *pConsole)
+{
+	for (int i = C_MAX_TASKS - 1; i > 0; i--)
+	{
+		if (!g_runningTasks[i].m_bExists) continue;
+		
+		if (s_currentRunningTask != i && g_runningTasks[i].m_pConsoleContext == pConsole)
+			KeKillTask(&g_runningTasks[i]);
+	}
+}
+
 void KeFindLastRunningTaskIndex(void)
 {
 	for (int i = C_MAX_TASKS - 1; i > 0; i--)

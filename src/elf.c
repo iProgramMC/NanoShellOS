@@ -271,6 +271,8 @@ void ElfOnDeath(Process* pProc)
 			pBlk->nElfErrorCode     = ELF_KILLED;
 			pBlk->nElfErrorCodeExec = 0;
 		}
+		
+		MmFree(pProc->pDetail);
 	}
 }
 
@@ -347,9 +349,6 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	// Ok, execution is complete. Free all related data
 	int error_code_obtained = pBlock->nElfErrorCode;
 	*pElfErrorCodeOut = pBlock->nElfErrorCodeExec;
-	
-	SLogMsg("Freeing pBlock from within the ElfRunProgram check");
-	MmFreeK (pBlock);
 	
 	return error_code_obtained;
 }
