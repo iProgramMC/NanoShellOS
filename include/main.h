@@ -43,7 +43,7 @@ void KeEnableInterrupts();
 #define sti KeEnableInterrupts ()  //asm("sti")
 
 #define VersionNumber 93
-#define VersionString "V0.93"
+#define VersionString "V0.94"
 
 #define UNUSED __attribute__((unused))
 
