@@ -19,8 +19,8 @@ This software is licensed under the GNU General Public License version 3, except
 
 ## Demo Screenshots
 
+<img src="images/2022_11_07_19_35_35.png"/>
 <img src="images/2022_05_20_22_58_20.png"/>
-<img src="images/2022_05_15_16_56_35.png"/>
 <img src="images/2022_08_04_00_48_25.png"/>
 [More images...](https://github.com/iProgramMC/NanoShellOS/blob/master/images)
 

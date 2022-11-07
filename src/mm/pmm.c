@@ -171,7 +171,6 @@ void MpInitialize(multiboot_info_t* mbi)
 		multiboot_module_t *pModules = (void*) (mbi->mods_addr + 0xc0000000);
 		for (MultibootUInt32 i = 0; i < mbi->mods_count; i++)
 		{
-			LogMsg("Blocking out frames from module");
 			// block out the frames this contains from being allocated by the PMM
 			for (uint32_t pg = pModules[i].mod_start;
 				          pg < pModules[i].mod_end + 0xFFF;
