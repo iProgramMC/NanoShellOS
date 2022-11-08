@@ -14,6 +14,8 @@
 #include <config.h>
 
 //#define ELF_DEBUG
+#define ELFSYM_DEBUG
+
 #ifdef ELF_DEBUG
 #define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
 #else
@@ -104,6 +106,46 @@ ElfSymbol* ElfGetSymbolAtIndex(ElfLoaderBlock* pLBlock, int index)
 	return &pSymbols[index];
 }
 
+ElfSymbol* ElfGetSymbolAtAddress(ElfLoaderBlock* pLBlock, uintptr_t address)
+{
+	if (!pLBlock)          return NULL;
+	if (!pLBlock->pSymTab) return NULL;
+	
+	ElfSymbol* pSymbols = (ElfSymbol*)pLBlock->pSymTab;
+	
+	// is it right after the end?
+	if (pSymbols[pLBlock->nSymTabEntries - 1].m_stValue <= address)
+		return &pSymbols[pLBlock->nSymTabEntries - 1];
+	
+	// is it right before the beginning? if yes, we probably don't want that
+	if (address < pSymbols[0].m_stValue)
+		return NULL;
+	
+	// nope, so binary search time! :^)
+	int left = 0, right = pLBlock->nSymTabEntries - 1;
+	while (left < right)
+	{
+		int where = (left + right) / 2;
+		//this is why we needed to check the end: we're checking if
+		//our address is in between these two addresses
+		ElfSymbol *pSym = &pSymbols[where], *pNextSym = &pSymbols[where + 1];
+		
+		if (pSym->m_stValue <= address && pNextSym->m_stValue > address)
+		{
+			// found!
+			return pSym;
+		}
+		
+		// before this, there are ONLY elements that have a smaller address.
+		if (pSym->m_stValue < address)
+			left = where + 1;
+		else
+			right = where;
+	}
+	
+	return NULL;
+}
+
 bool ElfSymbolLessThan(ElfSymbol* p1, ElfSymbol* p2)
 {
 	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue < p2->m_stValue;
@@ -183,6 +225,7 @@ void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pn
 	// Sort the symbols for easy load.
 	ElfSortSymbols(pNewSymbols, nEntries);
 	
+	#ifdef ELFSYM_DEBUG
 	SLogMsg("Printing symbols ....");
 	
 	// Dump them
@@ -193,6 +236,8 @@ void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pn
 		SLogMsgNoCr("Loaded symbol %x", pSym->m_stValue);
 		SLogMsg(": '%s'", pSym->m_pName);
 	}
+	#endif
+	// Try to get the address
 	
 	*pnEntries   = nEntries;
 	*pSymbolsPtr = pNewSymbols;
