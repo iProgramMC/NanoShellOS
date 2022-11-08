@@ -74,6 +74,20 @@ typedef struct {
 __attribute__((packed))
 ElfSectHeader;
 
+typedef struct {
+	union {
+		EWord       m_stName;
+		const char* m_pName;
+	};
+	EAddr   m_stValue;
+	EWord   m_stSize;
+	uint8_t m_stInfo;
+	uint8_t m_stOther; // set to 255 if we have set the m_pName field. Hack!!
+	EHalf   m_stShIndex;
+}
+__attribute__((packed))
+ElfSymbol;
+
 enum {
 	EI_MAG0 = 0, 	//0x7f
 	EI_MAG1,		//'E'

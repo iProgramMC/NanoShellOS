@@ -94,6 +94,110 @@ typedef struct
 }
 ElfLoaderBlock;
 
+ElfSymbol* ElfGetSymbolAtIndex(ElfLoaderBlock* pLBlock, int index)
+{
+	if (!pLBlock)          return NULL;
+	if (!pLBlock->pSymTab) return NULL;
+	if (index < 0 || index >= pLBlock->nSymTabEntries) return NULL;
+	
+	ElfSymbol* pSymbols = (ElfSymbol*)pLBlock->pSymTab;
+	return &pSymbols[index];
+}
+
+bool ElfSymbolLessThan(ElfSymbol* p1, ElfSymbol* p2)
+{
+	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue < p2->m_stValue;
+	if (p1->m_stSize  != p2->m_stSize)  return p1->m_stSize  < p2->m_stSize;
+	if (p1->m_stInfo  != p2->m_stInfo)  return p1->m_stInfo  < p2->m_stInfo;
+	if (p1->m_stName  != p2->m_stName)  return p1->m_stName  < p2->m_stName;
+	return false;
+}
+
+// merge sort implementation
+void ElfSortSymbolsSub(ElfSymbol* pSymbols, ElfSymbol* pTempStorage, int left, int right)
+{
+	// do we have a trivial problem?
+	if (left >= right) return;
+	
+	int mid = (left + right) / 2;
+	
+	// sort the first half
+	ElfSortSymbolsSub(pSymbols, pTempStorage, left, mid);
+	
+	// sort the second half
+	ElfSortSymbolsSub(pSymbols, pTempStorage, mid + 1, right);
+	
+	// interleave the halves
+	int indexL = left, indexR = mid + 1, indexI = 0;
+	while (indexL <= mid && indexR <= right)
+	{
+		if (ElfSymbolLessThan(&pSymbols[indexL], &pSymbols[indexR]))
+			pTempStorage[indexI++] = pSymbols[indexL++];
+		else
+			pTempStorage[indexI++] = pSymbols[indexR++];
+	}
+	
+	// append the other parts
+	while (indexL <=   mid) pTempStorage[indexI++] = pSymbols[indexL++];
+	while (indexR <= right) pTempStorage[indexI++] = pSymbols[indexR++];
+	
+	// copy the elements back into the array
+	memcpy(&pSymbols[left], pTempStorage, (right - left + 1) * sizeof (ElfSymbol));
+}
+
+void ElfSortSymbols(ElfSymbol* pSymbols, int nEntries)
+{
+	ElfSymbol* pIntermediateStorage = MmAllocate(nEntries * sizeof (ElfSymbol));
+	
+	ElfSortSymbolsSub(pSymbols, pIntermediateStorage, 0, nEntries - 1);
+	
+	MmFree(pIntermediateStorage);
+}
+
+void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pnEntries)
+{
+	ElfSymbol* pSymbols = *pSymbolsPtr;
+	int nEntries = 0, nAllEntries = *pnEntries;
+	ElfSymbol* pNewSymbols = MmAllocate(nAllEntries * sizeof *pSymbols);
+	
+	for (int i = 0; i < nAllEntries; i++)
+	{
+		ElfSymbol* pSym = &pSymbols[i];
+		
+		//we already loaded this
+		if (pSym->m_stOther == 0xFF) continue;
+		
+		//ignore symbols with no value, or symbols with no name
+		if (pSym->m_stValue == 0) continue;
+		if (pSym->m_stName  == 0) continue;
+		
+		int stName = pSym->m_stName;
+		pSym->m_pName   = &pStrTab[stName];
+		pSym->m_stOther = 0xFF;
+		
+		pNewSymbols[nEntries++] = *pSym;
+	}
+	
+	MmFree(pSymbols);
+	
+	// Sort the symbols for easy load.
+	ElfSortSymbols(pNewSymbols, nEntries);
+	
+	SLogMsg("Printing symbols ....");
+	
+	// Dump them
+	for (int i = 0; i < nEntries; i++)
+	{
+		ElfSymbol* pSym = &pNewSymbols[i];
+		
+		SLogMsgNoCr("Loaded symbol %x", pSym->m_stValue);
+		SLogMsg(": '%s'", pSym->m_pName);
+	}
+	
+	*pnEntries   = nEntries;
+	*pSymbolsPtr = pNewSymbols;
+}
+
 static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut, ElfLoaderBlock* pLoaderBlock)
 {
 	EDLogMsg("Loading elf file");
@@ -152,7 +256,22 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		EDLogMsg("(loaded and mapped everything, activating heap!)");
 		MuUseHeap (pHeap);
 		
+		int strTabShLink = -1, symTabIndex = -1;
+		
+		for (int i = 0; i < pHeader->m_shNum; i++)
+		{
+			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
+			
+			if (pSectHeader->m_type == SHT_SYMTAB)
+			{
+				strTabShLink = pSectHeader->m_shLink;
+				symTabIndex  = i;
+				break;
+			}
+		}
+		
 		EDLogMsg("(looking for NOBITS sections to zero out...)");
+		
 		for (int i = 0; i < pHeader->m_shNum; i++)
 		{
 			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
@@ -161,6 +280,53 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			{
 				//clear
 				ZeroMemory(addr, pSectHeader->m_shSize);
+			}
+			if (pSectHeader->m_type == SHT_SYMTAB)
+			{
+				SLogMsg("Found SymTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
+				
+				uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
+				size_t   nTableSize  = pSectHeader->m_shSize;
+				
+				// allocate the symbol table
+				void *pTableMem = MmAllocate(nTableSize);
+				
+				// copy the contents from the ELF data
+				memcpy(pTableMem, pTableStart, nTableSize);
+				
+				// set the loader block's relevant fields
+				pLoaderBlock->pSymTab = pTableMem;
+				pLoaderBlock->nSymTabEntries = nTableSize / sizeof(ElfSymbol);
+				
+				// have we loaded the strtab?
+				if (pLoaderBlock->pStrTab && !pLoaderBlock->bSetUpSymTab)
+				{
+					ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
+					pLoaderBlock->bSetUpSymTab = true;
+				}
+			}
+			if (pSectHeader->m_type == SHT_STRTAB && i == strTabShLink)
+			{
+				SLogMsg("Found StrTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
+				
+				uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
+				size_t   nTableSize  = pSectHeader->m_shSize;
+				
+				// allocate the symbol table
+				void *pTableMem = MmAllocate(nTableSize);
+				
+				// copy the contents from the ELF data
+				memcpy(pTableMem, pTableStart, nTableSize);
+				
+				// set the loader block's relevant fields
+				pLoaderBlock->pStrTab = pTableMem;
+				
+				// have we loaded the symtab?
+				if (pLoaderBlock->pSymTab && !pLoaderBlock->bSetUpSymTab)
+				{
+					ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
+					pLoaderBlock->bSetUpSymTab = true;
+				}
 			}
 		}
 		
