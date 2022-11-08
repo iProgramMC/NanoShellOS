@@ -91,7 +91,7 @@ void MmOnPageFault(Registers *pRegs)
 			
 			if (*pPageEntry & PAGE_BIT_DAI)
 			{
-				DaiDebugLogMsg("Page not present, allocating %x%s...", pRegs->cr2, bIsKernelHeap?" on kernel heap" : "on user heap");
+				DaiDebugLogMsg("Page not present, allocating %x%s...", pRegs->cr2, bIsKernelHeap?" on kernel heap" : " on user heap");
 				
 				// It's time to map a page here
 				uint32_t frame = MpRequestFrame(bIsKernelHeap);
