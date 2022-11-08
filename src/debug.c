@@ -118,6 +118,10 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 	regs.ecx = (uint32_t)pFunc;
 	regs.edx = (uint32_t)nLine;
 	
+	SLogMsg("Assertion failed: %s", pStr);
+	SLogMsg("Dumping backtrace below:");
+	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "");
+	
 	KeBugCheck(BC_EX_ASSERTION_FAILED, &regs);
 	
 	return false;
