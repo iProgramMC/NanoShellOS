@@ -179,7 +179,7 @@ void MhFreePage(void* pPage)
 	uint32_t index = (pAddr - KERNEL_HEAP_BASE) >> 12;
 	
 	// don't free a page if it was marked as demand-paged but was never actually demanded
-	if (g_KernelPageEntries[index] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
+	if (g_KernelPageEntries[index] & PAGE_BIT_PRESENT)
 	{
 		// MMIO needn't keep track of reference counts as it's always "there" in physical memory
 		if ((g_KernelPageEntries[index] & PAGE_BIT_MMIO) == 0)
