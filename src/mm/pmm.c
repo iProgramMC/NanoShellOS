@@ -39,6 +39,8 @@ void MpSetFrame (uint32_t frameAddr)
 }
 void MpClearFrame (uint32_t frameAddr)
 {
+	ASSERT (frameAddr != 0 && "ERROR: MpClearFrame(0) probably shouldn't happen");
+	
 	uint32_t frame = frameAddr >> 12;
 	uint32_t idx = INDEX_FROM_BIT (frame),
 			 off = OFFSET_FROM_BIT (frame);
