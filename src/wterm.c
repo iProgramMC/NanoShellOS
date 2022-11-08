@@ -49,8 +49,17 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 				}
 				
 				// Kill the tasks using this console.
+				
+				// Make sure to kill the shell first, so that programs called by it won't wait for something to go away
+				// Maybe I should add some kind of memory ownership system to the kernel heap, but I don't know...
+				if (pWindow->m_pSubThread)
+				{
+					KeKillTask(pWindow->m_pSubThread);
+					pWindow->m_pSubThread = NULL;
+				}
+				
+				// Kill the other threads using this console.
 				KeKillThreadsByConsole(pConsole);
-				pWindow->m_pSubThread = NULL;
 				
 				CoKill(pConsole);
 				MmFree(pConsole);
