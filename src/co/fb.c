@@ -8,6 +8,7 @@
 #include <main.h>
 #include <console.h>
 #include <video.h>
+#include <string.h>
 #include "../mm/memoryi.h"
 
 uint16_t TextModeMakeChar(uint8_t fgbg, uint8_t chr);
@@ -19,6 +20,7 @@ extern VBEData* g_vbeData, g_mainScreenVBEData;
 void CoVbeClearScreen(Console *this)
 {
 	VidFillScreen (g_vgaColorsToRGB[this->color >> 4]);
+	memset_shorts(this->textBuffer, TextModeMakeChar(this->color, 0), this->width * this->height);
 }
 
 void CoVbePlotChar (Console *this, int x, int y, char c)
