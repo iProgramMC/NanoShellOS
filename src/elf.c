@@ -74,7 +74,27 @@ void ElfDumpInfo(ElfHeader* pHeader)
 
 extern int g_lastReturnCode;
 
-static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut)
+typedef struct
+{
+	void*  pFileData;
+	size_t nFileSize;
+	bool   bGui;        //false if ran from command shell
+	bool   bAsync;      //false if the parent is waiting for this to finish
+	bool   bExecDone;   //true if the execution of this process has completed
+	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
+	char   sArgs[1024];
+	char   sFileName[PATH_MAX+5];
+	int    nElfErrorCode;     // The error code that the ELF executive returns if the ELF file didn't run
+	int    nElfErrorCodeExec; // The error code that the ELF file itself returns.
+	void*  pSymTab;
+	void*  pStrTab;
+	bool   bSetUpSymTab;
+	int    nSymTabEntries;
+	uint64_t nParentTaskRID;
+}
+ElfLoaderBlock;
+
+static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut, ElfLoaderBlock* pLoaderBlock)
 {
 	EDLogMsg("Loading elf file");
 	
@@ -149,11 +169,18 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		//now that we have switched, call the entry func:
 		ElfEntry entry = (ElfEntry)pHeader->m_entry;
 		
-		int e = entry(pArgs);
+		// this is a bit complex, but I'll break it down. This does a couple things:
+		// - push `pArgs` as the only argument (%1)
+		// - call `entry` (%2)
+		// - restore esp to normal
+		// - mark ebx, esi, and edi as being clobbered
+		// - the return value is in %0 (eax)
+		int returnValue = 0;
+		asm("pushl %1\ncall *%2\nadd $4, %%esp" : "=a"(returnValue) : "r"(pArgs), "r"(entry) : "ebx", "esi", "edi");
 		
 		EDLogMsg("Executable has exited.");
 		
-		*pErrCodeOut = g_lastReturnCode = e;
+		*pErrCodeOut = g_lastReturnCode = returnValue;
 	}
 	
 	return failed ? ELF_INVALID_SEGMENTS : ELF_ERROR_NONE;
@@ -188,21 +215,6 @@ const char *ElfGetErrorMsg (int error_code)
 	return gElfErrorCodes[error_code - ELF_ERROR_NONE];
 }
 
-typedef struct
-{
-	void*  pFileData;
-	size_t nFileSize;
-	bool   bGui;        //false if ran from command shell
-	bool   bAsync;      //false if the parent is waiting for this to finish
-	bool   bExecDone;   //true if the execution of this process has completed
-	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
-	char   sArgs[1024];
-	char   sFileName[PATH_MAX+5];
-	int    nElfErrorCode;     // The error code that the ELF executive returns if the ELF file didn't run
-	int    nElfErrorCodeExec; // The error code that the ELF file itself returns.
-}
-ElfLoaderBlock;
-
 extern Console* g_currentConsole, g_debugSerialConsole;
 
 static void ElfExecThread(int pnLoaderBlock)
@@ -220,7 +232,7 @@ static void ElfExecThread(int pnLoaderBlock)
 	}
 	
 	// Try to load the ELF in
-	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, &block.nElfErrorCodeExec);
+	int erc = ElfExecute (block.pFileData, block.nFileSize, block.sArgs, &block.nElfErrorCodeExec, pBlock);
 	
 	if (erc != ELF_ERROR_NONE)
 	{
@@ -233,6 +245,9 @@ static void ElfExecThread(int pnLoaderBlock)
 	pBlock->pFileData = NULL;
 	block.pFileData = NULL;
 	
+	SAFE_FREE(pBlock->pSymTab);
+	SAFE_FREE(pBlock->pStrTab);
+	
 	if (block.bAsync)
 	{
 		ExGetRunningProc()->pDetail = NULL;
@@ -240,10 +255,9 @@ static void ElfExecThread(int pnLoaderBlock)
 	}
 	else
 	{
-		ExGetRunningProc()->pDetail = NULL; // the runner will handle us anyway.
-		((ElfLoaderBlock*)pnLoaderBlock)->bExecDone         = true;
-		((ElfLoaderBlock*)pnLoaderBlock)->nElfErrorCode     = erc;
-		((ElfLoaderBlock*)pnLoaderBlock)->nElfErrorCodeExec = block.nElfErrorCodeExec;
+		pBlock->bExecDone         = true;
+		pBlock->nElfErrorCode     = erc;
+		pBlock->nElfErrorCodeExec = block.nElfErrorCodeExec;
 		KeExit ();
 	}
 }
@@ -254,11 +268,9 @@ void ElfOnDeath(Process* pProc)
 	{
 		ElfLoaderBlock* pBlk = (ElfLoaderBlock*)pProc->pDetail;
 		
-		if (pBlk->pFileData)
-		{
-			MmFree(pBlk->pFileData);
-			pBlk->pFileData = NULL;
-		}
+		SAFE_FREE(pBlk->pFileData);
+		SAFE_FREE(pBlk->pSymTab);
+		SAFE_FREE(pBlk->pStrTab);
 		
 		if (pBlk->bAsync)
 		{
@@ -267,12 +279,22 @@ void ElfOnDeath(Process* pProc)
 		}
 		else
 		{
-			pBlk->bExecDone = true;
-			pBlk->nElfErrorCode     = ELF_KILLED;
-			pBlk->nElfErrorCodeExec = 0;
+			if (!pBlk->bExecDone)
+			{
+				SLogMsg("pBlk->bExecDone = false.");
+				pBlk->bExecDone = true;
+				pBlk->nElfErrorCode     = ELF_KILLED;
+				pBlk->nElfErrorCodeExec = 0;
+			}
+			
+			//if the parent thread doesn't exist, there is no point in keeping the detail here
+			if (!KeGetThreadByRID(pBlk->nParentTaskRID))
+			{
+				SLogMsg("Freeing because parent thread isn't here anymore");
+				MmFreeK(pBlk);
+				pProc->pDetail = NULL;
+			}
 		}
-		
-		MmFree(pProc->pDetail);
 	}
 }
 
@@ -326,18 +348,18 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	pBlock->nFileSize = nActualFileSz;
 	pBlock->nElfErrorCode     = 0;
 	pBlock->nElfErrorCodeExec = 0;
+	pBlock->nParentTaskRID    = KeGetRunningTask()->m_nIdentifier;
 	
 	SLogMsg("Block : %p", pBlock);
 	
 	// Create a new process
 	int erc = 0;
-	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc);
+	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc, pBlock);
 	if (!pProc)
 	{
 		MmFreeK (pBlock);
 		return ELF_PROCESS_ERROR;
 	}
-	pProc->pDetail = pBlock;
 	pProc->OnDeath = ElfOnDeath;
 	
 	// If this is an async execution, our job is done, and the KeExecThread will continue.
@@ -349,6 +371,8 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	// Ok, execution is complete. Free all related data
 	int error_code_obtained = pBlock->nElfErrorCode;
 	*pElfErrorCodeOut = pBlock->nElfErrorCodeExec;
+	
+	MmFree(pBlock);
 	
 	return error_code_obtained;
 }

@@ -5,6 +5,7 @@
          Process Executive module
 ******************************************/
 #include <process.h>
+#include <misc.h>
 
 SafeLock gProcessLock;
 
@@ -131,7 +132,20 @@ Process* ExGetRunningProc()
 		return NULL;
 }
 
-Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode)
+Process* ExGetProcessByRID(uint64_t rid)
+{
+	for (size_t i = 0; i < ARRAY_COUNT(gProcesses); i++)
+	{
+		Process* pProc = &gProcesses[i];
+		if (pProc->bActive && pProc->nIdentifier == rid)
+		{
+			return pProc;
+		}
+	}
+	return NULL;
+}
+
+Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail)
 {
 	LockAcquire (&gProcessLock);
 	KeVerifyInterruptsEnabled;
@@ -182,6 +196,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->bWillDie = false;
 	pProc->nTasks = 1;
 	pProc->sTasks[0] = pTask;
+	pProc->nIdentifier = ReadTSC();
+	pProc->pDetail   = pDetail;
 	
 	MuiUseHeap (pBkp);
 	

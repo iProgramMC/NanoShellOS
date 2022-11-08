@@ -40,6 +40,8 @@ struct Proc
 	DeathProc OnDeath;
 	
 	UserHeap* pHeap;
+	
+	uint64_t nIdentifier;
 };
 typedef struct Proc Process;
 
@@ -52,6 +54,7 @@ enum
 
 void ExKillProcess(Process *pProc);
 Process* ExGetRunningProc();
-Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode);
+Process* ExGetProcessByRID(uint64_t rid);
+Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail);
 
 #endif//_PROCESS_H

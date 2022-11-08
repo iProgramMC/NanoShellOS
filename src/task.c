@@ -96,6 +96,16 @@ void KeFindLastRunningTaskIndex(void)
 	s_lastRunningTaskIndex = 1;
 }
 
+Task* KeGetThreadByRID(uint64_t rid)
+{
+	for (int i = C_MAX_TASKS - 1; i > 0; i--)
+	{
+		if (g_runningTasks[i].m_bExists && g_runningTasks[i].m_nIdentifier == rid)
+			return &g_runningTasks[i];
+	}
+	return NULL;
+}
+
 // Requests a re-schedule.
 bool gIdleOnDoneTask = false, gDisableIdle = false;
 void KeTaskDone(void)
@@ -255,6 +265,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		pTask->m_argument   = argument;
 		pTask->m_bMarkedForDeletion = false;
 		pTask->m_pProcess = pProc;
+		pTask->m_nIdentifier = ReadTSC();
 		
 		UserHeap* pBkp = MuGetCurrentHeap();
 		

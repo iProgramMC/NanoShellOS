@@ -341,8 +341,6 @@ void ShellExecuteCommand(char* p)
 				LogMsg(ElfGetErrorMsg(ec), fileName);
 			}
 			
-			MmFreeK(er);
-			
 			LogMsg("");
 		}
 	}

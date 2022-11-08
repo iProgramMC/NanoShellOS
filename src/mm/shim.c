@@ -118,11 +118,20 @@ void* MmAllocateSinglePageD(const char* callFile, int callLine)
 }
 void* MmAllocatePhyD (size_t size, UNUSED const char* callFile, UNUSED int callLine, uint32_t* physAddresses)
 {
-	// TODO: Make this go through the user heap too.
 	KeVerifyInterruptsEnabled;
+	
+	// clear interrupts - kernel heap isn't something to race on
 	cli;
+	
+	// allocate from the kernel heap
 	void *pMem = MhAllocate(size, physAddresses);
+	
+	// I use this to find and track down leaks in the kernel heap
+	//SLogMsg("%x <== MmAllocatePhyD %s %d", pMem, callFile, callLine);
+	
+	// restore interrupts, all good
 	sti;
+	
 	return pMem;
 }
 void* MmAllocateD (size_t size, const char* callFile, int callLine)
@@ -161,8 +170,15 @@ void MmFreePage(void *pAddr)
 void MmFree(void *pAddr)
 {
 	KeVerifyInterruptsEnabled;
+	
 	cli;
+	
 	MhFree(pAddr);
+	
+	// I use this to track down memory leaks easily
+	//SLogMsg("%x => MhFree", pAddr);
+	//PrintBackTrace(KeGetEBP(), KeGetEIP(), "bruh");
+	
 	sti;
 }
 

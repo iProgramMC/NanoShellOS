@@ -126,6 +126,8 @@ typedef struct
 	
 	uint64_t       m_lastSwitchTime; // in TSC ticks
 	uint32_t       m_cpuTimeTotal, m_cpuTimeFull; //the CPU time actually used, the CPU time used at full speed
+	
+	uint64_t       m_nIdentifier;
 }
 Task;
 
@@ -198,6 +200,11 @@ void KeExit();
     Kills a task by process index.
 ***********************************************************/
 void KeKillThreadByPID (int proc);
+
+/***********************************************************
+    Gets a task by task identifier (RID).
+***********************************************************/
+Task* KeGetThreadByRID (uint64_t proc);
 
 /***********************************************************
     Waits a certain number of milliseconds.

@@ -8,7 +8,15 @@
 #define _ELF_H
 
 #include <stdint.h>
+#include <process.h>
 #include <main.h>
+
+#define SAFE_FREE(ptr) do { \
+	if (ptr) { \
+		MmFree(ptr); \
+		ptr = NULL;  \
+	} \
+} while (0)
 
 typedef uint16_t EHalf;
 typedef uint32_t EOffs;
