@@ -195,6 +195,8 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 			// Mark the process to be killed eventually
 			KeGetRunningTask()->m_bSuspended = false;
 			
+			if (ExGetRunningProc())
+				ExGetRunningProc()->bWaitingForCrashAck = true;
 			
 			//Get the stacktrace too
 			StackFrame* stk = (StackFrame*)(pRegs->ebp);

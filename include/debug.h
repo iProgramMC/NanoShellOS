@@ -68,7 +68,7 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs);
 void DumpRegisters (Registers*);
 //WORK: make sure the string you pass in here is large enough!!!
 void DumpRegistersToString (char* pStr, Registers* pRegs);
-void PrintBackTrace (StackFrame* pFrame, uintptr_t eip, const char* pTag);
-void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs);
+void PrintBackTrace (StackFrame* pFrame, uintptr_t eip, const char* pTag, void* pProcess, bool bPrintToScreen);
+void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProcess);
 
 #endif//_DEBUG_H

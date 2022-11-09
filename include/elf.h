@@ -155,11 +155,9 @@ enum
 	//...
 };
 
-int GetDefaultHeapSize();
-void SetDefaultHeapSize(int);
-
-void ElfPerformTest();
 const char *ElfGetErrorMsg (int error_code);
 int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, UNUSED int nHeapSize, int *pElfErrorCodeOut);
+
+ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address);
 
 #endif//_ELF_H

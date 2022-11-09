@@ -14,7 +14,7 @@
 #include <config.h>
 
 //#define ELF_DEBUG
-#define ELFSYM_DEBUG
+//#define ELFSYM_DEBUG
 
 #ifdef ELF_DEBUG
 #define EDLogMsg(...)  SLogMsg(__VA_ARGS__)
@@ -96,6 +96,8 @@ typedef struct
 }
 ElfLoaderBlock;
 
+// TODO: Maybe update this to outside of the elf bubble? It could work for other executable files too
+
 ElfSymbol* ElfGetSymbolAtIndex(ElfLoaderBlock* pLBlock, int index)
 {
 	if (!pLBlock)          return NULL;
@@ -115,7 +117,7 @@ ElfSymbol* ElfGetSymbolAtAddress(ElfLoaderBlock* pLBlock, uintptr_t address)
 	
 	// is it right after the end?
 	if (pSymbols[pLBlock->nSymTabEntries - 1].m_stValue <= address)
-		return &pSymbols[pLBlock->nSymTabEntries - 1];
+		return NULL;
 	
 	// is it right before the beginning? if yes, we probably don't want that
 	if (address < pSymbols[0].m_stValue)
@@ -144,6 +146,18 @@ ElfSymbol* ElfGetSymbolAtAddress(ElfLoaderBlock* pLBlock, uintptr_t address)
 	}
 	
 	return NULL;
+}
+
+ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address)
+{
+	// make up a fake loader block
+	ElfLoaderBlock lb;
+	memset(&lb, 0, sizeof lb);
+	lb.pSymTab = pProc->pSymTab;
+	lb.pStrTab = pProc->pStrTab;
+	lb.nSymTabEntries = pProc->nSymTabEntries;
+	
+	return ElfGetSymbolAtAddress(&lb, address);
 }
 
 bool ElfSymbolLessThan(ElfSymbol* p1, ElfSymbol* p2)
@@ -375,6 +389,12 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			}
 		}
 		
+		// now, copy the symtab and strtab data into the process' structure
+		Process* pThisProcess = ExGetRunningProc();
+		pThisProcess->pSymTab = pLoaderBlock->pSymTab;
+		pThisProcess->pStrTab = pLoaderBlock->pStrTab;
+		pThisProcess->nSymTabEntries = pLoaderBlock->nSymTabEntries;
+		
 		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
 		
 		//now that we have switched, call the entry func:
@@ -456,8 +476,9 @@ static void ElfExecThread(int pnLoaderBlock)
 	pBlock->pFileData = NULL;
 	block.pFileData = NULL;
 	
-	SAFE_FREE(pBlock->pSymTab);
-	SAFE_FREE(pBlock->pStrTab);
+	//-- the process will free this stuff when it's time
+	//SAFE_FREE(pBlock->pSymTab);
+	//SAFE_FREE(pBlock->pStrTab);
 	
 	if (block.bAsync)
 	{
@@ -480,8 +501,10 @@ void ElfOnDeath(Process* pProc)
 		ElfLoaderBlock* pBlk = (ElfLoaderBlock*)pProc->pDetail;
 		
 		SAFE_FREE(pBlk->pFileData);
-		SAFE_FREE(pBlk->pSymTab);
-		SAFE_FREE(pBlk->pStrTab);
+		
+		//-- the process will free this stuff when it's time
+		//SAFE_FREE(pBlk->pSymTab);
+		//SAFE_FREE(pBlk->pStrTab);
 		
 		if (pBlk->bAsync)
 		{

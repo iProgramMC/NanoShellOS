@@ -9,6 +9,8 @@
 #include <keyboard.h>
 #include <print.h>
 #include <icon.h>
+#include <process.h>
+#include <elf.h>
 
 bool g_bAreInterruptsEnabled       = false;
 bool g_bAreInterruptsEnabledBackup = false;
@@ -18,7 +20,7 @@ NO_RETURN void KeStopSystem()
 {
 	SLogMsg("System has been stopped!");
 	
-	PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+	PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, true);
 	
 	asm ("cli");
 	
@@ -120,7 +122,7 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 	
 	SLogMsg("Assertion failed: %s", pStr);
 	SLogMsg("Dumping backtrace below:");
-	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "");
+	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "", NULL, true);
 	
 	KeBugCheck(BC_EX_ASSERTION_FAILED, &regs);
 	
@@ -128,28 +130,56 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 }
 
 #define MAX_FRAMES 12
-void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag)
+typedef void (*PLogMsg) (const char* fmt, ...);
+
+void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag, void* pProcVoid, bool bPrintToScreen)
 {
-	SLogMsg("Stack trace:");
-	SLogMsg("-> 0x%x %s", eip, TransformTag (pTag, eip), GetMemoryRangeString (eip));
+	Process *pProc = (Process*)pProcVoid;
+	PLogMsg logMsg = SLogMsg;
+	if (bPrintToScreen)
+		logMsg = LogMsg;
+	
+	const char* pFunctionCrashedInside = "";
+	if (pProc)
+	{
+		ElfSymbol* pSym = ExLookUpSymbol(pProc, eip);
+		if (pSym)
+		{
+			pFunctionCrashedInside = pSym->m_pName;
+		}
+	}
+	
+	logMsg("Stack trace:");
+	logMsg("-> 0x%x %s\t%s", eip, TransformTag (pTag, eip), pFunctionCrashedInside);
 	int count = 10;
 	for (unsigned int frame = 0; stk && frame < MAX_FRAMES; frame++)
 	{
-		SLogMsgNoCr(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), GetMemoryRangeString (stk->eip));
-		// TODO: addr2line implementation?
-		SLogMsg("");
+		const char* thing = "";
+		
+		if (pProc)
+		{
+			ElfSymbol* pSym = ExLookUpSymbol(pProc, stk->eip);
+			if (pSym)
+			{
+				thing = pSym->m_pName;
+			}
+		}
+		
+		logMsg(" * 0x%x %s\t%s", stk->eip, TransformTag (pTag, stk->eip), thing);
+		
 		stk = stk->ebp;
 		count--;
 		if (count == 0)
 		{
-			SLogMsg("(And so on. Cutting it off here. Remove this if you need it.)");
+			logMsg("(And so on. Cutting it off here. Remove this if you need it.)");
 			break;
 		}
 	}
 }
 
-void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
+void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProcVoid)
 {
+	Process *pProc = (Process*)pProcVoid;
 	LogMsg("*** STOP: %x", reason);
 	
 	if (reason == BC_EX_ASSERTION_FAILED)
@@ -168,13 +198,11 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs)
 	if (pRegs)
 		DumpRegisters(pRegs);
 	
-	const char* pTag = KeTaskGetTag(KeGetRunningTask());
-	
 	if (pRegs)
 	{
 		// navigate the stack:
 		StackFrame* stk = (StackFrame*)(pRegs->ebp);
-		PrintBackTrace(stk, pRegs->eip, pTag);
+		PrintBackTrace(stk, pRegs->eip, "", pProc, true);
 	}
 	else
 		LogMsg("No stack trace is available.");
@@ -193,7 +221,7 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	}
 	LogMsg("\nTechnical Information:");
 	
-	KeLogExceptionDetails (reason, pRegs);
+	KeLogExceptionDetails (reason, pRegs, ExGetRunningProc());
 	
 	//enough text, draw the icon:
 	
@@ -245,7 +273,7 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 		}
 		else if (buf == 'r' || buf == 'R')
 		{
-			KeLogExceptionDetails (reason, pRegs);
+			KeLogExceptionDetails (reason, pRegs, ExGetRunningProc());
 		}
 		else if (buf == 'h' || buf == 'H')
 		{
@@ -289,7 +317,7 @@ void KeVerifyInterruptsDisabledD(const char *file, int line)
 	if (!KeCheckInterruptsDisabled())
 	{
 		SLogMsg("Interrupts are NOT disabled! (called from %s:%d)", file, line);
-		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		ASSERT(!"Hmm, interrupts shouldn't be enabled here");
 	}
 }
@@ -299,7 +327,7 @@ void KeVerifyInterruptsEnabledD(const char *file, int line)
 	if (KeCheckInterruptsDisabled())
 	{
 		SLogMsg("Interrupts are disabled, but they should be enabled! (called from %s:%d)", file, line);
-		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		ASSERT(!"Hmm, interrupts shouldn't be enabled here");
 	}
 }
@@ -310,7 +338,7 @@ void KeDisableInterrupts()
 	if (!g_bAreInterruptsEnabled)
 	{
 		SLogMsg("Interrupts are already disabled!");
-		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		KeStopSystem();
 	}
 	
@@ -324,7 +352,7 @@ void KeEnableInterrupts()
 	if (g_bAreInterruptsEnabled)
 	{
 		SLogMsg("Interrupts are already enabled!");
-		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		KeStopSystem();
 	}
 	
@@ -344,7 +372,7 @@ void KeOnEnterInterrupt()
 	if (g_nInterruptRecursionCount > 10)
 	{
 		SLogMsg("WARNING: Interrupt nesting too deep at %d levels?", g_nInterruptRecursionCount);
-		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 	}
 	
 	g_bAreInterruptsEnabled = false;

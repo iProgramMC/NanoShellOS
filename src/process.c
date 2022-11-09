@@ -6,6 +6,7 @@
 ******************************************/
 #include <process.h>
 #include <misc.h>
+#include "mm/memoryi.h"
 
 SafeLock gProcessLock;
 
@@ -47,6 +48,19 @@ void ExDisposeProcess(Process *pProc)
 	
 	// If there are any tasks waiting for us to terminate, unsuspend those now
 	KeUnsuspendTasksWaitingForProc(pProc);
+	
+	// If we have a sym tab loaded:
+	if (pProc->pSymTab)
+	{
+		MhFree(pProc->pSymTab);
+		pProc->pSymTab = NULL;
+		pProc->nSymTabEntries = 0;
+	}
+	if (pProc->pStrTab)
+	{
+		MhFree(pProc->pStrTab);
+		pProc->pStrTab = NULL;
+	}
 }
 
 void ExCheckDyingProcesses(Process *pProcToAvoid)
@@ -56,6 +70,7 @@ void ExCheckDyingProcesses(Process *pProcToAvoid)
 		if (&gProcesses[i] == pProcToAvoid) continue;
 		if (!gProcesses[i].bActive) continue;
 		if (!gProcesses[i].bWillDie) continue;
+		if (gProcesses[i].bWaitingForCrashAck) continue;
 		
 		ExDisposeProcess(&gProcesses[i]);
 	}
@@ -198,6 +213,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->sTasks[0] = pTask;
 	pProc->nIdentifier = ReadTSC();
 	pProc->pDetail   = pDetail;
+	pProc->pSymTab   = pProc->pStrTab = NULL;
+	pProc->nSymTabEntries = 0;
 	
 	MuiUseHeap (pBkp);
 	

@@ -39,6 +39,8 @@ void CrashReportWindow( int argument )
 	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
 	
+	Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
+	
 	char otherString[512], 
 	     //anotherString[4096], 
 	     smallerString[16];
@@ -144,6 +146,7 @@ void CrashReporterCheck()
 		{
 			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
 			SLogMsg("Killing Process %s...", p->sIdentifier);
+			p->bWaitingForCrashAck = false;
 			ExKillProcess(p);
 		}
 		else
@@ -180,13 +183,14 @@ void CrashReporterCheckNoWindow()
 		
 		// Print the crash output
 		LogMsg("Task %x (tag: '%s') has crashed, here're its details:", pCrashInfo->m_pTaskKilled, pCrashInfo->m_tag);
-		KeLogExceptionDetails(BC_EX_DEBUG, &pCrashInfo->m_regs);
+		Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
+		KeLogExceptionDetails(BC_EX_DEBUG, &pCrashInfo->m_regs, crashInfo.m_pTaskKilled->m_pProcess);
 		
 		// Kill the process
 		if (crashInfo.m_pTaskKilled->m_pProcess)
 		{
-			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
 			SLogMsg("Killing Process %s...", p->sIdentifier);
+			p->bWaitingForCrashAck = false;
 			ExKillProcess(p);
 		}
 		else

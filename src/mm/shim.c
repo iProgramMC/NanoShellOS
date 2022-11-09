@@ -177,7 +177,7 @@ void MmFree(void *pAddr)
 	
 	// I use this to track down memory leaks easily
 	//SLogMsg("%x => MhFree", pAddr);
-	//PrintBackTrace(KeGetEBP(), KeGetEIP(), "bruh");
+	//PrintBackTrace(KeGetEBP(), KeGetEIP(), "bruh", NULL, false);
 	
 	sti;
 }

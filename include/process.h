@@ -42,6 +42,10 @@ struct Proc
 	UserHeap* pHeap;
 	
 	uint64_t nIdentifier;
+	
+	void* pSymTab, *pStrTab;
+	int   nSymTabEntries;
+	bool  bWaitingForCrashAck;
 };
 typedef struct Proc Process;
 
