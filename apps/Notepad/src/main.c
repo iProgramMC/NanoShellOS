@@ -117,12 +117,16 @@ void NotepadOnSave(UNUSED Window* pWindow)
 		
 		if (strlen (data) > sizeof (NOTEPDATA(pWindow)->m_filename)-5)
 		{
+			MmKernelFree(data);
 			return;//don't bof
 		}
 		
 		strcpy (NOTEPDATA(pWindow)->m_filename, data);
 		NOTEPDATA(pWindow)->m_untitled = false;
-			
+		
+		MmKernelFree(data);
+		data = NULL;
+		
 		NotepadUpdateTitle(pWindow);
 	}
 	
@@ -290,7 +294,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 						if (!data) break;
 						
 						NotepadOpenFile(pWindow, data);
-						free(data);
+						MmKernelFree(data);
 						RequestRepaint(pWindow);
 						break;
 					}
