@@ -448,10 +448,18 @@ void MhUnMapPhysicalMemory(void *pAddr)
 	MhFree(pAddr);
 }
 
+// Mark the code and rodata segments as read-only.
+extern char l_code_and_rodata_start[], l_code_and_rodata_end[];
+extern uint32_t g_pageTableArray[];
 void MmMarkStuffReadOnly()
 {
-	// TODO
+	LogMsg("Code and rodata: %p - %p",l_code_and_rodata_start,l_code_and_rodata_end);
+
+	uint32_t crap;
+	for (crap = (uint32_t) l_code_and_rodata_start;
+		 crap < (uint32_t) l_code_and_rodata_end;
+		 crap += 4096)
+	{
+		g_pageTableArray[(crap >> 12) & 0x3FF] &= ~PAGE_BIT_READWRITE;
+	}
 }
-
-
-
