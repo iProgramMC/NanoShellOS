@@ -116,6 +116,7 @@ void NotepadOnSave(UNUSED Window* pWindow)
 		SLogMsg("Properly got fed data: '%s'", data);
 		if (strlen (data) > sizeof (NOTEPDATA(pWindow)->m_filename)-5)
 		{
+			MmFreeK(data);
 			return;//don't bof
 		}
 		
