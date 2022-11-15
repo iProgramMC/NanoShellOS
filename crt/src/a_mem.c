@@ -517,3 +517,14 @@ void free (void* pMem)
 {
 	return MemMgrFreeMemory(pMem);
 }
+
+// Allocating kernel regions, if needed. Will cause a memory leak if not disposed of properly, so use carefully!!!
+void* MmKernelAllocate(size_t sz)
+{
+	return _I_AllocateDebug(sz, __FILE__, __LINE__);
+}
+
+void MmKernelFree(void *pData)
+{
+	_I_Free(pData);
+}

@@ -172,10 +172,11 @@ void        RequestRepaint (Window *pWindow);
 void        RequestRepaintNew (Window *pWindow);
 void        PopupWindow (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
 uint32_t    ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCaption);
-char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 uint32_t    GetThemingParameter (int type);
 void        SetThemingParameter (int type, uint32_t parm);
 void        SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler);
+// Returns a kernel memory region. Use MmKernelFree() instead of free() to free it.
+char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);
@@ -196,7 +197,15 @@ int ShellExecuteResource(const char *pResourceID); //for instance, shell:stuff
 int  SetErrorNumber(int errno);
 int  GetErrorNumber();
 int* GetErrorNumberPointer();
-
 #define errno (*GetErrorNumberPointer())
+
+// Kernel memory resource management.
+// NOTE: Improper management of kernel memory resources will cause a leak that
+// will persist over the rest of the OS' runtime, so use carefully!!!!
+void* MmKernelAllocate(size_t sz);
+
+//note: Do not feed this function addresses from malloc().
+void MmKernelFree(void *pData);
+
 
 #endif//_NSSTANDARD_H
