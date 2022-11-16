@@ -80,6 +80,9 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	
 	CtlTextEditRecalcCurXY (this);
 	CtlTextInputUpdateScrollSize (this, pWindow);
+	
+	SetScrollBarPos(pWindow,            - this->m_comboID, 0);
+	SetScrollBarPos(pWindow, 0x70000000 - this->m_comboID, 0);
 }
 
 void SetTextInputText(Window* pWindow, int comboID, const char* pText)
