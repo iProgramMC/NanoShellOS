@@ -305,7 +305,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			// Add a list view control.
 			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			
-			#define PADDING_AROUND_TEXTVIEW 4
+			#define PADDING_AROUND_TEXTVIEW 8
 			#define TOP_PADDING             TITLE_BAR_HEIGHT + COOLBAR_BUTTON_HEIGHT + 5
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_TEXTVIEW, 
