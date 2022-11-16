@@ -61,7 +61,7 @@ static int AddNote()
 	else
 		strcpy(pNote->m_title, "Untitled note");
 	
-	free (pText);
+	MmKernelFree (pText);
 	
 	pNote->m_pWindow = NULL;
 	
@@ -76,8 +76,8 @@ void CALLBACK MainWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 			Rectangle r;
 			// Add a list view control.
 			
-			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             4
+			#define PADDING_AROUND_LISTVIEW 8
+			#define TOP_PADDING             8
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 

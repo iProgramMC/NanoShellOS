@@ -11,6 +11,8 @@
 #define NOTE_WIDTH 240
 #define NOTE_HEIGHT 180 + TITLE_BAR_HEIGHT
 
+extern NOTE g_notes[64];
+
 void OpenMainMenu();
 
 void NoteClose(NOTE* pNote, bool alsoRemWnd)
@@ -117,6 +119,8 @@ void NoteOpen (NOTE* pNote)
 		return;
 	
 	pNote->m_pWindow->m_data = pNote;
+	
+	SetWindowIcon(pNote->m_pWindow, ICON_NOTE_YELLOW + (pNote - g_notes) % 4);
 }
 
 
