@@ -174,6 +174,10 @@ go_back:;
 					if (this->m_scrollBarData.m_pos >= this->m_scrollBarData.m_max)
 						this->m_scrollBarData.m_pos  = this->m_scrollBarData.m_max - 1;
 				}
+				
+				//let everyone else know that we're done scrolling on this control
+				CallWindowCallbackAndControls(pWindow, EVENT_SCROLLDONE, this->m_comboID, 0);
+				
 				eventType = EVENT_PAINT;
 			}
 			this->m_scrollBarData.m_clickedBefore  = false;
@@ -259,6 +263,10 @@ go_back:;
 					if (this->m_scrollBarData.m_pos >= this->m_scrollBarData.m_max)
 						this->m_scrollBarData.m_pos  = this->m_scrollBarData.m_max - 1;
 				}
+				
+				//let everyone else know that we're done scrolling on this control
+				CallWindowCallbackAndControls(pWindow, EVENT_SCROLLDONE, this->m_comboID, 0);
+				
 				eventType = EVENT_PAINT;
 			}
 			this->m_scrollBarData.m_clickedBefore  = false;

@@ -602,7 +602,12 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 		case EVENT_CLICKCURSOR:
 		{
 			UNUSED Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			
 			//TODO: Allow change of cursor via click.
+		}
+		//fallthrough intended
+		case EVENT_SCROLLDONE:
+		{
 			if (!this->m_textInputData.m_onlyOneLine)
 			{
 				bool bUpdate = false;
@@ -827,7 +832,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
 					flags |= ANCHOR_BOTTOM_TO_BOTTOM;
 				
-				AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, 1, 1);
+				AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, 1, (10 << 16) | 1);
 				
 				r.right = this->m_rect.right  - SCROLL_BAR_WIDTH, 
 				r.top   = this->m_rect.bottom - SCROLL_BAR_WIDTH, 
