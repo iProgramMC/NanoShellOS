@@ -257,6 +257,7 @@ void FsInitializeDevicesDir();
 //First time setup of the file manager
 void FsInit ()
 {
+	strcpy(g_cwd, "/");
 	FsRootInit();
 	FsInitializeDevicesDir();
 }

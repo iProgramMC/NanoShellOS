@@ -240,6 +240,11 @@ void FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 	strcpy(buffer, path);
 	
 	char* name = strrchr(buffer, '/');
+	if (name == NULL)
+	{
+		SLogMsg("FsRootCreateFileAt(\"%s\"): strrchr(buffer, '/') returned NULL!", path);
+		return;
+	}
 	*name = 0;
 	name++;
 	
@@ -255,14 +260,22 @@ void FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 	FsRootAddFile(pRFN, name, pContents, sz);
 }
 
-void FsRootCreateDirAt(const char* dirPath)
+void FsRootCreateDirAt(const char* path)
 {
+	if (FsResolvePath(path))
+		return;
+	
 	char buffer[PATH_MAX+1];
 	
 	if (strlen(path) >= PATH_MAX) return;
 	strcpy(buffer, path);
 	
 	char* name = strrchr(buffer, '/');
+	if (name == NULL)
+	{
+		SLogMsg("FsRootCreateDirAt(\"%s\"): strrchr(buffer, '/') returned NULL!", path);
+		return;
+	}
 	*name = 0;
 	name++;
 	
@@ -282,15 +295,119 @@ void FsRootInit()
 {
 	FsRootSetupRootNode();
 	
-	FsRootAddFile(&g_rootNode, "test1.txt", "Hello!", 6);
-	FsRootAddFile(&g_rootNode, "test2.txt", "Hello! This is a longer file.", 29);
-	FsRootAddFile(&g_rootNode, "ns.ini", "[Launcher]\n\tConfigPath=/lc.txt\n\tConfigPathReserve=/lc.txt", 57);
-	FsRootAddFile(&g_rootNode, "lc.txt", "version|2\nadd_item|1|1|Cab|shell:cabinet\nadd_item|96|1|Ed|shell:notepad\nadd_item|121|1|Mon|shell:sysmon", 103);
+	FsRootCreateDirAt("/Device");
+	FsRootCreateFileAt("/Device/help.txt", "This directory contains all the device 'files' that NanoShell has loaded.", 73);
+}
+
+static uint32_t OctToBin(char *data, uint32_t size)
+{
+	uint32_t value = 0;
+	while (size > 0)
+	{
+		size--;
+		value *= 8;
+		value += *data++ - '0';
+	}
+	return value;
+}
+
+void FsInitializeInitRd(void* pRamDisk)
+{	
+	// Add files to the root FS.
+	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
+	{
+		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
+		uint32_t pathLength = strlen(ramDiskTar->name);
+		bool hasDotSlash = false;
+
+		if (ramDiskTar->name[0] == '.')
+		{
+			pathLength -= 1;
+			hasDotSlash = true;
+		}
+
+		if (pathLength > 0)
+		{
+			char *pname = ramDiskTar->name + hasDotSlash;
+			char buffer[PATH_MAX];
+			
+			if (strlen(pname) >= sizeof buffer) goto _skip;
+			
+			strcpy(buffer, pname);
+			
+			// For each slash character in the buffer:
+			int lastRemovedSlashIndex = -1;
+			for (int i = 0; buffer[i] != 0; i++)
+			{
+				if (buffer[i] == '/')
+				{
+					// try removing it...
+					buffer[i] = 0;
+					
+					lastRemovedSlashIndex = i;
+					
+					// add the directory, if there is one
+					if (buffer[0] != 0)
+					{
+						FsRootCreateDirAt(buffer);
+					}
+					
+					// restore it
+					buffer[i] = '/';
+				}
+			}
+			
+			if (buffer[0] != 0)
+			{
+				//note: this should be safe anyway even if lastRemovedSlashIndex == -1, as it
+				//just gets neutralized to zero.
+				if (buffer[lastRemovedSlashIndex + 1] != 0)
+				{
+					FsRootCreateFileAt(buffer, &ramDiskTar->buffer, fileSize);
+				}
+			}
+		}
+	_skip:
+
+		// Advance to the next entry
+		ramDiskTar = (Tar *) ((uintptr_t) ramDiskTar + ((fileSize + 511) / 512 + 1) * 512);
+	}
+	SLogMsg("Init ramdisk is fully setup!");
+}
+
+void FsInitRdInit()
+{
+	// Initialize the ramdisk
+	multiboot_info_t* pInfo = KiGetMultibootInfo();
+	if (pInfo->mods_count != 1)
+		KeBugCheck(BC_EX_INITRD_MISSING, NULL);
+
+	//Usually the mods table is below 1m.
+	if (pInfo->mods_addr >= 0x100000)
+	{
+		LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
+		KeStopSystem();
+	}
+	//The initrd module is here.
+	multiboot_module_t *initRdModule = (void*) (pInfo->mods_addr + 0xc0000000);
+
+	//Precalculate an address we can use
+	void* pInitrdAddress = (void*)(0xc0000000 + initRdModule->mod_start);
 	
-	FsRootCreateDirectoryAt("/Device");
-	FsRootCreateDirectoryAt("/Directory");
-	FsRootCreateFileAt("/Device/Nothing.txt", "Nothing is here!", 16);
-	FsRootCreateFileAt("/Directory/Something.txt", "Something is here!", 18);
+	// We should no longer have the problem of it hitting our frame bitset.
+	
+	SLogMsg("Init Ramdisk module Start address: %x, End address: %x", initRdModule->mod_start, initRdModule->mod_end);
+	//If the end address went beyond 1 MB:
+	if (initRdModule->mod_end >= 0x100000)
+	{
+		//Actually go to the effort of mapping the initrd to be used.
+		pInitrdAddress = MmMapPhysicalMemory (initRdModule->mod_start, initRdModule->mod_end);
+	}
+	
+	SLogMsg("Physical address that we should load from: %x", pInitrdAddress);
+	
+	// Load the initrd last so its entries show up last when we type 'ls'.
+	FsInitializeInitRd(pInitrdAddress);
 }
 
 void FsInitializeDevicesDir()
