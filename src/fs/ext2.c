@@ -68,6 +68,32 @@ void Ext2ReadSuperBlock(Ext2FileSystem* pFS)
 	LogMsg("Path volume was last mounted to: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 }
 
+void Ext2ReadBlock(Ext2FileSystem* pFS, uint32_t blockNo, uint8_t* pOut)
+{
+	//TODO
+}
+
+void Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
+	
+	// Determine which block group the inode belongs to.
+	int inodesPerGroup = Ext2GetInodesPerGroup(pFS);
+	
+	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
+	uint32_t index = (inodeNo - 1) % inodesPerGroup;
+	
+	// Determine which block contains the inode.
+	int blockSize = Ext2GetBlockSize(pFS);
+	uint32_t blockInodeIsIn = (index * Ext2GetInodeSize(pFS)) / blockSize;
+	
+	uint8_t blockData[blockSize];
+	
+	Ext2ReadBlock(pFS, blockInodeIsIn, blockData);
+	
+	//TODO: Print the data you get
+}
+
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
 	// Find a Fat32 structure in the list of Fat32 structures.
@@ -89,6 +115,9 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_driveID     = driveID;
 	pFS->m_bMounted    = true;
 	Ext2ReadSuperBlock(pFS);
+	
+	// Try reading inode 2.
+	Ext2ReadInode(pFS, 2);
 }
 
 void FsExt2Init()
