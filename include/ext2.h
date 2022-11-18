@@ -18,67 +18,75 @@
 
 #define EXT2_SIGNATURE (0xEF53)
 
-typedef struct Ext2SuperBlock
+typedef union Ext2SuperBlock
 {
-	// Base superblock fields
-	uint32_t m_nInodes;
-	uint32_t m_nBlocks;
-	uint32_t m_nBlocksSuperUser;
-	uint32_t m_nUnallocatedBlocks;
-	uint32_t m_nUnallocatedInodes;
-	uint32_t m_superBlockBlockNum; // Block number of the block containing the super block
-	uint32_t m_log2BlockSize;
-	uint32_t m_log2FragmentSize;
-	uint32_t m_blocksPerGroup;
-	uint32_t m_fragsPerGroup;
-	uint32_t m_inodesPerGroup;
-	uint32_t m_lastMountTime;
-	uint32_t m_lastWrittenTime;
-	uint16_t m_nMountsSinceLastCheck;
-	uint16_t m_nMountsAllowedBeforeCheck;
-	uint16_t m_nE2Signature;           // EXT2_SIGNATURE
-	uint16_t m_fsState;
-	uint16_t m_errorDetectedAction;
-	uint16_t m_minorVersion;
-	uint32_t m_lastCheckTime;
-	uint32_t m_forceCheckAfter;
-	uint32_t m_systemID;
-	uint32_t m_uidThatCanUseReservedBlocks;
-	uint32_t m_gidThatCanUseReservedBlocks;
-	// Extended superblock fields
-	uint32_t m_firstNonReservedInode;
-	uint16_t m_inodeStructureSize;
-	uint16_t m_blockGroupThisIsPartOf;
-	uint32_t m_optionalFeatures;
-	uint32_t m_requiredFeatures;
-	uint32_t m_featuresReadOnlyIfNotSupported;
-	char     m_fileSystemID[16];
-	char     m_volumeName[16];
-	char     m_pathVolumeLastMountedTo[64];
-	uint32_t m_compressionAlgos;
-	uint8_t  m_nBlocksPreallocateFiles;
-	uint8_t  m_nBlocksPreallocateDirs;
-	uint16_t m_unused;
-	char     m_journalID[16];
-	uint32_t m_journalInode;
-	uint32_t m_journalDevice;
-	uint32_t m_headOfOrphanInodeList;
-	// pad to 1 KiB
+	uint8_t m_bytes[1024];
+	
+	struct
+	{
+		// Base superblock fields
+		uint32_t m_nInodes;
+		uint32_t m_nBlocks;
+		uint32_t m_nBlocksSuperUser;
+		uint32_t m_nUnallocatedBlocks;
+		uint32_t m_nUnallocatedInodes;
+		uint32_t m_superBlockBlockNum; // Block number of the block containing the super block
+		uint32_t m_log2BlockSize;
+		uint32_t m_log2FragmentSize;
+		uint32_t m_blocksPerGroup;
+		uint32_t m_fragsPerGroup;
+		uint32_t m_inodesPerGroup;
+		uint32_t m_lastMountTime;
+		uint32_t m_lastWrittenTime;
+		uint16_t m_nMountsSinceLastCheck;
+		uint16_t m_nMountsAllowedBeforeCheck;
+		uint16_t m_nE2Signature;           // EXT2_SIGNATURE
+		uint16_t m_fsState;
+		uint16_t m_errorDetectedAction;
+		uint16_t m_minorVersion;
+		uint32_t m_lastCheckTime;
+		uint32_t m_forceCheckAfter;
+		uint32_t m_systemID;
+		uint32_t m_majorVersion;
+		uint16_t m_uidThatCanUseReservedBlocks;
+		uint16_t m_gidThatCanUseReservedBlocks;
+		// Extended superblock fields
+		uint32_t m_firstNonReservedInode;
+		uint16_t m_inodeStructureSize;
+		uint16_t m_blockGroupThisIsPartOf;
+		uint32_t m_optionalFeatures;
+		uint32_t m_requiredFeatures;
+		uint32_t m_featuresReadOnlyIfNotSupported;
+		char     m_fileSystemID[16];
+		char     m_volumeName[16];
+		char     m_pathVolumeLastMountedTo[64];
+		uint32_t m_compressionAlgos;
+		uint8_t  m_nBlocksPreallocateFiles;
+		uint8_t  m_nBlocksPreallocateDirs;
+		uint16_t m_unused;
+		char     m_journalID[16];
+		uint32_t m_journalInode;
+		uint32_t m_journalDevice;
+		uint32_t m_headOfOrphanInodeList;
+	}
+	__attribute__((packed));
 }
-__attribute__((packed))
 Ext2SuperBlock;
 
-typedef struct Ext2BlockGroupDescriptor
+typedef union Ext2BlockGroupDescriptor
 {
-	uint32_t m_blockAddrBlockUsageBmp;
-	uint32_t m_blockAddrInodeUsageBmp;
-	uint32_t m_startBlockAddrInodeTable;
-	uint32_t m_nUnallocatedBlocks;
-	uint32_t m_nUnallocatedInodes;
-	uint32_t m_nDirs;
-	//pad to 32 bytes
+	uint8_t m_bytes[32];
+	struct
+	{
+		uint32_t m_blockAddrBlockUsageBmp;
+		uint32_t m_blockAddrInodeUsageBmp;
+		uint32_t m_startBlockAddrInodeTable;
+		uint32_t m_nUnallocatedBlocks;
+		uint32_t m_nUnallocatedInodes;
+		uint32_t m_nDirs;
+	}
+	__attribute__((packed));
 }
-__attribute__((packed))
 Ext2BlockGroupDescriptor;
 
 typedef struct Ext2Inode
@@ -104,6 +112,7 @@ typedef struct Ext2Inode
 	uint32_t m_upperSize; // upper 32 bits of m_size.
 	uint32_t m_fragmentBlockAddr;
 	uint32_t m_osSpecific2[3];
+	//no point in putting *this* into a union, since it's 128 bytes already
 }
 __attribute__((packed))
 Ext2Inode;
@@ -239,6 +248,6 @@ enum
 	E2_DETI_FIFO,
 	E2_DETI_SOCKET,
 	E2_DETI_SYMLINK,
-}
+};
 
 #endif//_EXT2_H
