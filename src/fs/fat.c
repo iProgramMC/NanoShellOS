@@ -9,6 +9,8 @@
 // Right now, it's quite possible to browse yourself to OoM using the cabinet
 // if you have a sufficiently intricate directory structure.
 
+#if 0
+
 // Structure definitions.
 #include <fat.h>
 FatFileSystem s_Fat32Structures[32];
@@ -1954,5 +1956,7 @@ void FsFatInit ()
 		}
 	}
 }
+
+#endif
 
 #endif
