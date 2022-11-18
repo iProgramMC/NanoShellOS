@@ -232,13 +232,22 @@ void FsRootCreateDirAtRoot(const char* pFileName)
 	FsRootAddDirectory(&g_rootNode, pFileName);
 }
 
-void FsRootCreateFileAt(const char* dirPath, const char* name, void* pContents, size_t sz)
+void FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 {
-	FileNode* pFNode = FsResolvePath(dirPath);
+	char buffer[PATH_MAX+1];
+	
+	if (strlen(path) >= PATH_MAX) return;
+	strcpy(buffer, path);
+	
+	char* name = strrchr(buffer, '/');
+	*name = 0;
+	name++;
+	
+	FileNode* pFNode = FsResolvePath(buffer);
 	
 	if (!pFNode)
 	{
-		LogMsg("FsRootCreateFileAt(\"%s\", \"%s\") failed!", dirPath, name);
+		LogMsg("FsRootCreateFileAt(\"%s\") failed!", path);
 		return;
 	}
 	
@@ -246,13 +255,22 @@ void FsRootCreateFileAt(const char* dirPath, const char* name, void* pContents, 
 	FsRootAddFile(pRFN, name, pContents, sz);
 }
 
-void FsRootCreateDirAt(const char* dirPath, const char* name)
+void FsRootCreateDirAt(const char* dirPath)
 {
-	FileNode* pFNode = FsResolvePath(dirPath);
+	char buffer[PATH_MAX+1];
+	
+	if (strlen(path) >= PATH_MAX) return;
+	strcpy(buffer, path);
+	
+	char* name = strrchr(buffer, '/');
+	*name = 0;
+	name++;
+	
+	FileNode* pFNode = FsResolvePath(buffer);
 	
 	if (!pFNode)
 	{
-		LogMsg("FsRootCreateFileAt(\"%s\", \"%s\") failed!", dirPath, name);
+		LogMsg("FsRootCreateFileAt(\"%s\") failed!", path);
 		return;
 	}
 	
@@ -269,10 +287,10 @@ void FsRootInit()
 	FsRootAddFile(&g_rootNode, "ns.ini", "[Launcher]\n\tConfigPath=/lc.txt\n\tConfigPathReserve=/lc.txt", 57);
 	FsRootAddFile(&g_rootNode, "lc.txt", "version|2\nadd_item|1|1|Cab|shell:cabinet\nadd_item|96|1|Ed|shell:notepad\nadd_item|121|1|Mon|shell:sysmon", 103);
 	
-	FsRootAddDirectory(&g_rootNode, "Device");
-	FsRootAddDirectory(&g_rootNode, "Directory");
-	FsRootCreateFileAt("/Device", "Nothing.txt", "Nothing is here!", 16);
-	FsRootCreateFileAt("/Directory", "Something.txt", "Something is here!", 18);
+	FsRootCreateDirectoryAt("/Device");
+	FsRootCreateDirectoryAt("/Directory");
+	FsRootCreateFileAt("/Device/Nothing.txt", "Nothing is here!", 16);
+	FsRootCreateFileAt("/Directory/Something.txt", "Something is here!", 18);
 }
 
 void FsInitializeDevicesDir()
