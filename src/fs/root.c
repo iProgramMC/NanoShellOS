@@ -226,6 +226,8 @@ void FsRootInit()
 	
 	FsRootAddFile(&g_rootNode, "test1.txt", "Hello!", 6);
 	FsRootAddFile(&g_rootNode, "test2.txt", "Hello! This is a longer file.", 29);
+	FsRootAddFile(&g_rootNode, "ns.ini", "[Launcher]\n\tConfigPath=/lc.txt\n\tConfigPathReserve=/lc.txt", 57);
+	FsRootAddFile(&g_rootNode, "lc.txt", "version|2\nadd_item|1|1|Cab|shell:cabinet\nadd_item|96|1|Ed|shell:notepad\nadd_item|121|1|Mon|shell:sysmon", 103);
 }
 
 void FsInitializeDevicesDir()
