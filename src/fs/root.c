@@ -211,13 +211,53 @@ RootFileNode* FsRootAddDirectory(RootFileNode* pNode, const char* pFileName)
 	
 	FileNode* pFN = &pNewNode->node;
 	strcpy(pFN->m_name, pFileName);
-	pFN->m_type   = FILE_TYPE_FILE;
+	pFN->m_type   = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
 	pFN->m_perms  = PERM_READ | PERM_WRITE | PERM_EXEC;
 	pFN->m_length = 0;
 	pFN->m_inode  = 0;
 	pFN->m_implData = (uint32_t)pNewNode;
+	pFN->ReadDir  = FsRootReadDir;
+	pFN->FindDir  = FsRootFindDir;
 	
 	return pNewNode;
+}
+
+void FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz)
+{
+	FsRootAddFile(&g_rootNode, pFileName, pContents, sz);
+}
+
+void FsRootCreateDirAtRoot(const char* pFileName)
+{
+	FsRootAddDirectory(&g_rootNode, pFileName);
+}
+
+void FsRootCreateFileAt(const char* dirPath, const char* name, void* pContents, size_t sz)
+{
+	FileNode* pFNode = FsResolvePath(dirPath);
+	
+	if (!pFNode)
+	{
+		LogMsg("FsRootCreateFileAt(\"%s\", \"%s\") failed!", dirPath, name);
+		return;
+	}
+	
+	RootFileNode* pRFN = (RootFileNode*)pFNode->m_implData;
+	FsRootAddFile(pRFN, name, pContents, sz);
+}
+
+void FsRootCreateDirAt(const char* dirPath, const char* name)
+{
+	FileNode* pFNode = FsResolvePath(dirPath);
+	
+	if (!pFNode)
+	{
+		LogMsg("FsRootCreateFileAt(\"%s\", \"%s\") failed!", dirPath, name);
+		return;
+	}
+	
+	RootFileNode* pRFN = (RootFileNode*)pFNode->m_implData;
+	FsRootAddDirectory(pRFN, name);
 }
 
 void FsRootInit()
@@ -228,6 +268,11 @@ void FsRootInit()
 	FsRootAddFile(&g_rootNode, "test2.txt", "Hello! This is a longer file.", 29);
 	FsRootAddFile(&g_rootNode, "ns.ini", "[Launcher]\n\tConfigPath=/lc.txt\n\tConfigPathReserve=/lc.txt", 57);
 	FsRootAddFile(&g_rootNode, "lc.txt", "version|2\nadd_item|1|1|Cab|shell:cabinet\nadd_item|96|1|Ed|shell:notepad\nadd_item|121|1|Mon|shell:sysmon", 103);
+	
+	FsRootAddDirectory(&g_rootNode, "Device");
+	FsRootAddDirectory(&g_rootNode, "Directory");
+	FsRootCreateFileAt("/Device", "Nothing.txt", "Nothing is here!", 16);
+	FsRootCreateFileAt("/Directory", "Something.txt", "Something is here!", 18);
 }
 
 void FsInitializeDevicesDir()
