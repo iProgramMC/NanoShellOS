@@ -191,12 +191,6 @@ FileNode* FsResolvePath (const char* pPath)
 
 // Default
 #if 1
-FileNode g_root;
-
-FileNode* FsGetRootNode ()
-{
-	return &g_root;
-}
 // Basic functions
 
 
@@ -263,14 +257,7 @@ void FsInitializeDevicesDir();
 //First time setup of the file manager
 void FsInit ()
 {
-	memset(&g_root, 0, sizeof g_root);
-	
-	strcpy(g_root.m_name, "root");
-	g_root.m_perms = PERM_READ | PERM_WRITE | PERM_EXEC;
-	g_root.m_type  = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
-	
-	// Starts off empty, gets more files as it gets up and running.
-	
+	FsRootInit();
 	FsInitializeDevicesDir();
 }
 #endif

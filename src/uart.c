@@ -192,6 +192,8 @@ void UartInit(uint8_t com_num)
 	WritePort (Port+1, IER_ERBFI | IER_ETBEI);
 	
 	// Ok, port init has completed, now add it to the file system
+	
+	/*
 	FileNode *pDirNode = FsResolvePath ("/Device");
 	
 	if (!pDirNode)
@@ -211,6 +213,7 @@ void UartInit(uint8_t com_num)
 	pNode->m_length = 0;
 	pNode->Read     = FsSerialRead;
 	pNode->Write    = FsSerialWrite;
+	*/
 	
 	// Send a testing string out
 	char pText[] = "NanoShell has initialized COMX successfully.\r\n";
