@@ -109,7 +109,7 @@ void FsClearFile(FileNode* pNode)
 }
 int FsRemoveFile(FileNode* pNode)
 {
-	if (!pNode) return -ENOENT;
+	/*if (!pNode) return -ENOENT;
 	
 	if (!pNode->RemoveFile) return -ENOMEM;
 	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -ENOMEM;
@@ -120,7 +120,9 @@ int FsRemoveFile(FileNode* pNode)
 		EraseFileNode (pNode);
 		return e;
 	}
-	return e;
+	return e;*/
+	
+	return -EIO;
 }
 FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {

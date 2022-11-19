@@ -81,9 +81,9 @@ typedef union Ext2BlockGroupDescriptor
 		uint32_t m_blockAddrBlockUsageBmp;
 		uint32_t m_blockAddrInodeUsageBmp;
 		uint32_t m_startBlockAddrInodeTable;
-		uint32_t m_nUnallocatedBlocks;
-		uint32_t m_nUnallocatedInodes;
-		uint32_t m_nDirs;
+		uint16_t m_nUnallocatedBlocks;
+		uint16_t m_nUnallocatedInodes;
+		uint16_t m_nDirs;
 	}
 	__attribute__((packed));
 }
@@ -205,6 +205,7 @@ enum
 	E2_INO_FILE        = 0x8000,
 	E2_INO_SYM_LINK    = 0xA000,
 	E2_INO_UNIX_SOCKET = 0xC000,
+	E2_INO_TYPE_MASK   = 0xF000,
 };
 
 // Inode Permissions
@@ -222,6 +223,10 @@ enum
 	E2_PERM_STICKY_BIT  = 01000,
 	E2_PERM_SET_GID     = 02000,
 	E2_PERM_SET_UID     = 04000,
+	
+	E2_PERM_ANYONE_WRITE = E2_PERM_OTHER_WRITE | E2_PERM_GROUP_WRITE | E2_PERM_USER_WRITE,
+	E2_PERM_ANYONE_READ  = E2_PERM_OTHER_READ  | E2_PERM_GROUP_READ  | E2_PERM_USER_READ,
+	E2_PERM_ANYONE_EXEC  = E2_PERM_OTHER_EXEC  | E2_PERM_GROUP_EXEC  | E2_PERM_USER_EXEC,
 };
 
 // Inode Flags
@@ -249,5 +254,53 @@ enum
 	E2_DETI_SOCKET,
 	E2_DETI_SYMLINK,
 };
+
+// Ext2 Major revision level
+enum
+{
+	E2_GOOD_OLD_REV,
+	E2_DYNAMIC_REV,
+};
+
+
+
+// OS specifics
+
+// Binary search tree node.
+typedef struct Ext2InodeCacheUnit
+{
+	int m_inodeNumber;
+	struct Ext2InodeCacheUnit* pLeft, *pRight, *pParent;
+	
+	FileNode  m_node;
+	Ext2Inode m_inode;
+}
+Ext2InodeCacheUnit;
+
+typedef struct Ext2FileSystem
+{
+	bool     m_bMounted;
+	DriveID  m_driveID;
+	uint32_t m_lbaStart;
+	uint32_t m_sectorCount;
+	Ext2SuperBlock m_superBlock; // super block cache
+	
+	// cache
+	uint32_t m_firstNonReservedInode;
+	uint32_t m_inodesPerGroup;
+	uint32_t m_blocksPerGroup;
+	uint32_t m_fragmentSize;
+	uint32_t m_blockSize;
+	uint32_t m_inodeSize;
+	uint32_t m_log2BlockSize;
+	uint32_t m_sectorsPerBlock;
+	
+	Ext2BlockGroupDescriptor *m_pBlockGroups;
+	Ext2InodeCacheUnit       *m_pInodeCacheRoot;
+	
+	uint8_t *m_pBlockBuffer;
+}
+Ext2FileSystem;
+
 
 #endif//_EXT2_H
