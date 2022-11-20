@@ -229,6 +229,17 @@ enum
 	E2_PERM_ANYONE_EXEC  = E2_PERM_OTHER_EXEC  | E2_PERM_GROUP_EXEC  | E2_PERM_USER_EXEC,
 };
 
+// Reserved Inodes
+enum
+{
+	E2_RINO_BAD = 1, // This inode is made entirely of bad blocks, so they can't be used by other files.
+	E2_RINO_ROOT,    // This inode represents the root directory.
+	E2_RINO_ACL_IDX, // ACL index inode
+	E2_RINO_ACL_DATA,// ACL data inode
+	E2_RINO_BOOTLDR, // Boot loader inode
+	E2_RINO_UNDELETE,// Undelete directory inode
+};
+
 // Inode Flags
 enum
 {
@@ -269,7 +280,7 @@ enum
 // Binary search tree node.
 typedef struct Ext2InodeCacheUnit
 {
-	int m_inodeNumber;
+	uint32_t m_inodeNumber;
 	struct Ext2InodeCacheUnit* pLeft, *pRight, *pParent;
 	
 	FileNode  m_node;
@@ -302,5 +313,19 @@ typedef struct Ext2FileSystem
 }
 Ext2FileSystem;
 
+// Not actually related to Ext2, but we need it.
+void FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz);
+
+// Adds an inode to the inode cache.
+Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName);
+
+// Dumps the inode cache tree of a file system.
+void Ext2DumpInodeCacheTree(Ext2FileSystem* pFS);
+
+// Look up an inode in the inode cache.
+Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo);
+
+// Delete the inode cache tree.
+void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS);
 
 #endif//_EXT2_H

@@ -8,9 +8,6 @@
 //  ***************************************************************
 #include <vfs.h>
 #include <ext2.h>
-#include <fat.h> // need this for the MasterBootRecord
-
-
 
 void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeNo, const char* pName)
 {
@@ -56,22 +53,156 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	// TODO: ReadDir() and other calls if this is a directory.
 }
 
-// Adds an inode to the binary search tree.
-void Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
+void Ext2AddInodeToCacheRecursive(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrUnit, Ext2InodeCacheUnit* pUnitNew)
 {
+	if (pCurrUnit->m_inodeNumber == pUnitNew->m_inodeNumber)
+	{
+		SLogMsg("NOTE: Inode %d is already cached.", pUnitNew->m_inodeNumber);
+		
+		// free the new unit.
+		MmFree(pUnitNew);
+		
+		return;
+	}
+	
+	if (pCurrUnit->m_inodeNumber < pUnitNew->m_inodeNumber)
+	{
+		// Add to the right. If there's nothing, put it right there.
+		if (!pCurrUnit->pRight)
+		{
+			pCurrUnit->pRight = pUnitNew;
+			pUnitNew->pParent = pCurrUnit;
+		}
+		else
+		{
+			Ext2AddInodeToCacheRecursive(pFS, pCurrUnit->pRight, pUnitNew);
+		}
+	}
+	else
+	{
+		// Add to the left. If there's nothing, put it right there.
+		if (!pCurrUnit->pLeft)
+		{
+			pCurrUnit->pLeft = pUnitNew;
+			pUnitNew->pParent = pCurrUnit;
+		}
+		else
+		{
+			Ext2AddInodeToCacheRecursive(pFS, pCurrUnit->pLeft, pUnitNew);
+		}
+	}
+}
+
+// Adds an inode to the binary search tree.
+Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
+{
+	// Create a new inode cache unit:
+	Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
+	memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));
+	
+	// Set its inode number.
+	pUnit->m_inodeNumber = inodeNo;
+	pUnit->m_inode = *pInode; // copy the inode's data.
+	
+	pUnit->m_node.m_implData = (uint32_t)pUnit; // for faster lookup
+	
+	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
+	
 	// Trivial case: the root is empty.
 	if (!pFS->m_pInodeCacheRoot)
 	{
-		// Create a new inode cache unit:
-		Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
-		memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));
-		
-		// Set its inode number.
-		pUnit->m_inodeNumber = inodeNo;
-		
 		// Setting the left, right and parent pointers to null is already taken care of by the memset.
-		Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
+		// Update the root.
+		pFS->m_pInodeCacheRoot = pUnit;
+	}
+	else
+	{
+		// Binary search a place where to put it.
+		Ext2AddInodeToCacheRecursive(pFS, pFS->m_pInodeCacheRoot, pUnit);
 	}
 	
+	return pUnit;
+}
+
+Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnitRecursive(Ext2InodeCacheUnit* pCurrentUnit, uint32_t inodeNo)
+{
+	if (!pCurrentUnit) return NULL;
 	
+	if (pCurrentUnit->m_inodeNumber == inodeNo) return pCurrentUnit;
+	
+	// Look at the children.
+	if (pCurrentUnit->m_inodeNumber < inodeNo)
+	{
+		// Right.
+		return Ext2LookUpInodeCacheUnitRecursive(pCurrentUnit->pRight, inodeNo);
+	}
+	else
+	{
+		// Left.
+		return Ext2LookUpInodeCacheUnitRecursive(pCurrentUnit->pLeft, inodeNo);
+	}
+}
+
+Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	return Ext2LookUpInodeCacheUnitRecursive(pFS->m_pInodeCacheRoot, inodeNo);
+}
+
+void Ext2DumpInodeCacheTreeRec(Ext2InodeCacheUnit* pNode, int numDashes)
+{
+	if (!pNode) return;
+	
+	for (int i = 0; i < numDashes; i++) SLogMsgNoCr("-");
+	SLogMsg("%d", pNode->m_inodeNumber);
+	
+	Ext2DumpInodeCacheTreeRec(pNode->pLeft,  1);
+	Ext2DumpInodeCacheTreeRec(pNode->pRight, 1);
+}
+
+void Ext2DumpInodeCacheTree(Ext2FileSystem* pFS)
+{
+	Ext2DumpInodeCacheTreeRec(pFS->m_pInodeCacheRoot, 0);
+}
+
+/*
+void Ext2InodeCacheUnitShiftNodes(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+{
+	
+}
+*/
+
+void Ext2DeleteInodeCacheUnit(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+{
+	/*if (pUnit->pLeft == NULL)
+	{
+		Ext2InodeCacheUnitShiftNodes(pFS, pUnit, pUnit->pRight);
+		return;
+	}
+	if (pUnit->pRight == NULL)
+	{
+		Ext2InodeCacheUnitShiftNodes(pFS, pUnit, pUnit->pLeft);
+		return;
+	}*/
+	
+	// TODO: Won't bother for now.
+}
+
+void Ext2DeleteInodeCacheLeaf(Ext2InodeCacheUnit* pUnit)
+{
+	if (!pUnit) return;
+	
+	// delete the left
+	Ext2DeleteInodeCacheLeaf(pUnit->pLeft);
+	
+	// delete the right
+	Ext2DeleteInodeCacheLeaf(pUnit->pRight);
+	
+	// delete ourselves
+	MmFree(pUnit);
+}
+
+void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS)
+{
+	Ext2DeleteInodeCacheLeaf(pFS->m_pInodeCacheRoot);
+	pFS->m_pInodeCacheRoot = NULL;
 }

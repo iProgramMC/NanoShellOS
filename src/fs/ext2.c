@@ -10,7 +10,9 @@
 #include <ext2.h>
 #include <fat.h> // need this for the MasterBootRecord
 
-#define C_MAX_E2_FILE_SYSTEMS (32)
+#define C_MAX_E2_FILE_SYSTEMS (16)
+
+static const char s_extLetters[] = "0123456789ABCDEF";
 
 #define ENSURE_READ_OP(op, message) ASSERT(op == DEVERR_SUCCESS && message);
 
@@ -52,7 +54,7 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	offset -= 12;
 	
 	// is this part of the singly-indirect block?
-	int addrsPerBlock = pFS->m_blockSize / 4;
+	uint32_t  addrsPerBlock = pFS->m_blockSize / 4;
 	uint32_t* data = (uint32_t*)pFS->m_pBlockBuffer;
 		
 	if (offset < addrsPerBlock)
@@ -116,12 +118,12 @@ void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)
 	}
 }
 
-void Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo)
+void Ext2ReadInodeMetaData(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pOutputInode)
 {
 	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
 	
 	// Determine which block group the inode belongs to.
-	int inodesPerGroup = Ext2GetInodesPerGroup(pFS);
+	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
 	
 	// Get the block group this inode is a part of.
 	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
@@ -140,25 +142,26 @@ void Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo)
 	uint32_t somethingMore = blockInodeOffs / pFS->m_inodeSize;
 	
 	uint8_t bytes[pFS->m_blockSize];
-	Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes);
-	
-	SLogMsg("Inode Table Address: %d. Block Inode is in: %d. Inodes per group: %d, Inode size: %d, blockInodeOffs: %d. thing: %d, blockGroup: %d, somethingMore: %d", inodeTableAddr, blockInodeIsIn, inodesPerGroup, pFS->m_inodeSize, blockInodeOffs, thing, blockGroup, somethingMore);
+	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
 	
 	Ext2Inode* pInode = (Ext2Inode*)(bytes + blockInodeOffs);
 	
-	LogMsg("Inode Perms:   %x", pInode->m_permissions);
-	LogMsg("Inode UID:     %d", pInode->m_uid);
-	LogMsg("Inode GID:     %d", pInode->m_gid);
-	LogMsg("Inode Size:    %d", pInode->m_size);
-	LogMsg("Last Access:   %d", pInode->m_lastAccessTime);
-	LogMsg("Last Modify:   %d", pInode->m_lastModTime);
-	LogMsg("Create Time:   %d", pInode->m_creationTime);
-	LogMsg("Delete Time:   %d", pInode->m_deletionTime);
-	LogMsg("Hard Links:    %d", pInode->m_nHardLinks);
-	LogMsg("Disk sector #: %d", pInode->m_diskSectors);
-	LogMsg("Inode Flags:   %x", pInode->m_flags);
-	LogMsg("Inode Flags:   %x", pInode->m_flags);
-	LogMsg("First Block:   %d", pInode->m_directBlockPointer[0]);
+	*pOutputInode = *pInode;
+	
+	/*
+	SLogMsg("Inode Perms:   %x", pInode->m_permissions);
+	SLogMsg("Inode UID:     %d", pInode->m_uid);
+	SLogMsg("Inode GID:     %d", pInode->m_gid);
+	SLogMsg("Inode Size:    %d", pInode->m_size);
+	SLogMsg("Last Access:   %d", pInode->m_lastAccessTime);
+	SLogMsg("Last Modify:   %d", pInode->m_lastModTime);
+	SLogMsg("Create Time:   %d", pInode->m_creationTime);
+	SLogMsg("Delete Time:   %d", pInode->m_deletionTime);
+	SLogMsg("Hard Links:    %d", pInode->m_nHardLinks);
+	SLogMsg("Disk sector #: %d", pInode->m_diskSectors);
+	SLogMsg("Inode Flags:   %x", pInode->m_flags);
+	SLogMsg("Inode Flags:   %x", pInode->m_flags);
+	SLogMsg("First Block:   %d", pInode->m_directBlockPointer[0]);
 	
 	// Read the first 512 bytes afterwards.
 	uint8_t firstBlock[pFS->m_blockSize];
@@ -166,9 +169,27 @@ void Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo)
 	
 	LogMsg("firstBlock: %p", firstBlock);
 	SDumpBytesAsHex (firstBlock, sizeof firstBlock, true);
+	*/
 }
 
-
+// Read an inode and add it to the inode cache. Give it a name from the system side, since
+// the inodes themselves do not contain names -- that's the job of the directory entry.
+// When done, return the specific cache unit.
+Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead)
+{
+	// If the inode was already cached, and we aren't forced to re-read it, just return.
+	if (!bForceReRead)
+	{
+		Ext2InodeCacheUnit* pUnit = Ext2LookUpInodeCacheUnit(pFS, inodeNo);
+		if (pUnit)
+			return pUnit;
+	}
+	
+	Ext2Inode inode;
+	Ext2ReadInodeMetaData(pFS, inodeNo, &inode);
+	
+	return Ext2AddInodeToCache(pFS, inodeNo, &inode, pName);
+}
 
 
 
@@ -275,8 +296,14 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_lbaStart    = partitionStart;
 	pFS->m_sectorCount = partitionSizeSec;
 	pFS->m_driveID     = driveID;
-	pFS->m_bMounted    = true;
 	Ext2ReadSuperBlock(pFS);
+	
+	if (pFS->m_superBlock.m_nE2Signature != EXT2_SIGNATURE)
+	{
+		// this isn't even good! Return.
+		// We didn't do anything bad like allocate stuff or mark it as mounted. So a return is safe
+		return;
+	}
 	
 	// Set up and cache basic info about the file system.
 	pFS->m_inodeSize = Ext2GetInodeSize(pFS);
@@ -287,13 +314,26 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_log2BlockSize  = pFS->m_superBlock.m_log2BlockSize + 10;
 	pFS->m_sectorsPerBlock = pFS->m_blockSize / BLOCK_SIZE;
 	
-	ASSERT(pFS->m_sectorsPerBlock != 0 && "Ext2 partitions with a less than 512 byte block are not accepted!");
+	if (pFS->m_sectorsPerBlock != 0)
+	{
+		LogMsg("An Ext2 partition with a block size of %d was found! It can't be less than 512 bytes, so skip.", pFS->m_blockSize);
+		return;
+	}
+	
+	pFS->m_bMounted = true;
+	pFS->m_pInodeCacheRoot = NULL;
+	pFS->m_pBlockBuffer    = NULL;
+	pFS->m_pBlockGroups    = NULL;
 	
 	// load the block group descriptor table
 	Ext2LoadBlockGroupDescriptorTable(pFS);
 	
-	// Try reading inode 2.
-	Ext2ReadInode(pFS, 12);
+	// Read the root inode.
+	char name[10];
+	strcpy(name, "ExtX");
+	name[3] = s_extLetters[FreeArea];
+	
+	Ext2ReadInode(pFS, E2_RINO_ROOT, name, true);
 }
 
 void FsExt2Cleanup(Ext2FileSystem* pFS)
@@ -308,6 +348,8 @@ void FsExt2Cleanup(Ext2FileSystem* pFS)
 		MmFree(pFS->m_pBlockBuffer);
 		pFS->m_pBlockBuffer = NULL;
 	}
+	
+	Ext2DeleteInodeCacheTree(pFS);
 	
 	pFS->m_bMounted = false;
 }
