@@ -52,6 +52,12 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	if (pInode->m_permissions & E2_PERM_ANYONE_READ)  pFileNode->m_perms |= PERM_READ;
 	if (pInode->m_permissions & E2_PERM_ANYONE_EXEC)  pFileNode->m_perms |= PERM_EXEC;
 	
+	// If the file is too big we probably shouldn't try to modify it.
+	if (pInode->m_size > 512*1024*1024 || pInode->m_upperSize > 0)
+	{
+		pFileNode->m_perms &= ~PERM_WRITE;
+	}
+	
 	// Set the modify and create time.
 	pFileNode->m_modifyTime = pInode->m_lastModTime;
 	pFileNode->m_createTime = pInode->m_creationTime;

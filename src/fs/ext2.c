@@ -351,12 +351,6 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_log2BlockSize  = pFS->m_superBlock.m_log2BlockSize + 10;
 	pFS->m_sectorsPerBlock = pFS->m_blockSize / BLOCK_SIZE;
 	
-	if (pFS->m_sectorsPerBlock == 0)
-	{
-		LogMsg("An Ext2 partition with a block size of %d was found! It can't be less than 512 bytes, so skip.", pFS->m_blockSize);
-		return;
-	}
-	
 	SLogMsg("Mounting Ext2 partition...  Last place where it was mounted: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 	
 	pFS->m_bMounted = true;

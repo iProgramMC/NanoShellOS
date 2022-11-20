@@ -184,7 +184,8 @@ enum
 	E2_ROF_FS_USES_64BIT_SIZES     = (1 << 1),
 	E2_ROF_DIR_IN_BINARY_TREE      = (1 << 2),
 	
-	E2_ROF_UNSUPPORTED_FLAGS = -1,
+	//well, we can claim we support 64-bit sizes by making files bigger than 512 MB unmodifiable. Has its reasons.
+	E2_ROF_UNSUPPORTED_FLAGS = (-1) & ~(E2_ROF_FS_USES_64BIT_SIZES),
 };
 
 // Ext2 Version 1.0 and earlier defaults
