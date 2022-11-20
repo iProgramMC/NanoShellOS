@@ -1655,8 +1655,7 @@ void FsFatCloseNonRootDir (UNUSED FileNode* pFileNode)
 	//Does nothing. For now
 }
 
-static DirEnt  g_FatDirEnt;
-static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t index)
+static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t * index, DirEnt* pOutputDent)
 {
 	int loaded = pDirNode->m_implData3;
 	if (loaded == -1)
@@ -1673,17 +1672,21 @@ static DirEnt* FsFatReadNonRootDir(FileNode* pDirNode, uint32_t index)
 	FileNode *pNode = pDirNode->children;
 	//TODO: Optimize this, if you have consecutive indices
 	uint32_t id = 0;
-	while (pNode && id < index)
+	while (pNode && id < *index)
 	{
 		pNode = pNode->next;
 		id++;
 	}
 	if (!pNode) return NULL;
-	strcpy(g_FatDirEnt.m_name, pNode->m_name);
-	g_FatDirEnt.m_inode      = pNode->m_inode;
-	g_FatDirEnt.m_type       = pNode->m_type;
-	return &g_FatDirEnt;
+	
+	strcpy(pOutputDent->m_name, pNode->m_name);
+	pOutputDent->m_inode      = pNode->m_inode;
+	pOutputDent->m_type       = pNode->m_type;
+	
+	++(*index);
+	return pOutputDent;
 }
+
 static FileNode* FsFatFindNonRootDir(FileNode* pDirNode, const char* pName)
 {
 	int loaded = pDirNode->m_implData3;
@@ -1710,22 +1713,24 @@ static FileNode* FsFatFindNonRootDir(FileNode* pDirNode, const char* pName)
 
 //Generic
 
-static DirEnt* FsFatReadRootDir(FileNode* pDirNode, uint32_t index)
+static DirEnt* FsFatReadRootDir(FileNode* pDirNode, uint32_t * index, DirEnt* pOutputDent)
 {
 	FileNode *pNode = pDirNode->children;
 	//TODO: Optimize this, if you have consecutive indices
 	uint32_t id = 0;
-	while (pNode && id < index)
+	while (pNode && id < *index)
 	{
 		pNode = pNode->next;
 		id++;
 	}
 	if (!pNode) return NULL;
 	
-	strcpy(g_FatDirEnt.m_name, pNode->m_name);
-	g_FatDirEnt.m_inode      = pNode->m_inode;
-	g_FatDirEnt.m_type       = pNode->m_type;
-	return &g_FatDirEnt;
+	++(*index);
+	
+	strcpy(pOutputDent->m_name, pNode->m_name);
+	pOutputDent->m_inode      = pNode->m_inode;
+	pOutputDent->m_type       = pNode->m_type;
+	return pOutputDent;
 }
 static FileNode* FsFatFindRootDir(FileNode *pDirNode, const char* pName)
 {

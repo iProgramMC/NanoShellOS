@@ -111,7 +111,7 @@ DirEnt g_dirEnt;
 // File node operations.
 #if 1
 
-static DirEnt* FsRootReadDir(FileNode* pFileNode, uint32_t n)
+static DirEnt* FsRootReadDir(FileNode* pFileNode, uint32_t * nIndex, DirEnt* pOutputDent)
 {
 	// Get root file node
 	RootFileNode* pNode = (RootFileNode*)pFileNode->m_implData;
@@ -119,14 +119,19 @@ static DirEnt* FsRootReadDir(FileNode* pFileNode, uint32_t n)
 	// Follow the children of this node.
 	RootFileNode* pChild = pNode->children;
 	
+	int n = *nIndex;
+	
 	while (pChild)
 	{
 		if (n == 0)
 		{
-			strcpy(g_dirEnt.m_name, pChild->node.m_name);
-			g_dirEnt.m_inode = pChild->node.m_inode;
-			g_dirEnt.m_type  = pChild->node.m_type;
-			return &g_dirEnt;
+			strcpy(pOutputDent->m_name, pChild->node.m_name);
+			pOutputDent->m_inode = pChild->node.m_inode;
+			pOutputDent->m_type  = pChild->node.m_type;
+			
+			++(*nIndex);
+			
+			return pOutputDent;
 		}
 		else
 		{

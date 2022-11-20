@@ -42,7 +42,7 @@ typedef bool     		(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
 typedef void     		(*FileCloseFunc)      (struct FSNodeS*);
 typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
 typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
-typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t);
+typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
 typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
 typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
@@ -142,7 +142,7 @@ bool     FsOpen      (FileNode* pNode, bool read, bool write);
 void     FsClose     (FileNode* pNode);
 bool     FsOpenDir   (FileNode* pNode);
 void     FsCloseDir  (FileNode* pNode);
-DirEnt*  FsReadDir   (FileNode* pNode, uint32_t index);
+DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 FileNode*FsFindDir   (FileNode* pNode, const char* pName);
 int      FsRemoveFile(FileNode* pNode);
 
@@ -215,7 +215,7 @@ void EraseFileNode (FileNode* pFileNode);
 		bool      m_bOpen;
 		FileNode *m_pNode;
 		char      m_sPath[PATH_MAX+2];
-		int       m_nStreamOffset;
+		uint32_t  m_nStreamOffset;
 		DirEnt    m_sCurDirEnt;
 		
 		const char* m_openFile;

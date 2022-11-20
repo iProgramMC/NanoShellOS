@@ -61,12 +61,12 @@ void FsClose(FileNode* pNode)
 			pNode->Close(pNode);
 	}
 }
-DirEnt* FsReadDir(FileNode* pNode, uint32_t index)
+DirEnt* FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
 {
 	if (pNode)
 	{
 		if (pNode->ReadDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
-			return pNode->ReadDir(pNode, index);
+			return pNode->ReadDir(pNode, index, pOutputDent);
 		else return NULL;
 	}
 	else return NULL;
@@ -566,16 +566,13 @@ DirEnt* FiReadDir (int dd)
 	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
-	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, pDesc->m_nStreamOffset);
+	
+	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, &pDesc->m_nStreamOffset, &pDesc->m_sCurDirEnt);
 	if (!pDirEnt)
 	{
 		LockFree (&g_FileSystemLock);
 		return NULL;
 	}
-	
-	pDesc->m_sCurDirEnt = *pDirEnt;
-	
-	pDesc->m_nStreamOffset++;
 	
 	LockFree (&g_FileSystemLock);
 	return &pDesc->m_sCurDirEnt;

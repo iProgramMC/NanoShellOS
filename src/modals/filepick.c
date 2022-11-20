@@ -48,7 +48,8 @@ void FilePickerUpdate (Window *pWindow)
 		return;
 	}
 	
-	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
+	DirEnt ent;
+	while ((pEnt = FsReadDir (pFolderNode, &i, &ent)) != 0)
 	{
 		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
 		
@@ -59,7 +60,6 @@ void FilePickerUpdate (Window *pWindow)
 		else
 		{
 			AddElementToList (pWindow, 100002, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
-			i++;
 		}
 	}
 }

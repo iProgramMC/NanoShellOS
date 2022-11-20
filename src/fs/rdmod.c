@@ -52,23 +52,27 @@ static uint32_t FsRamDiskTarRead(FileNode* pNode, uint32_t offset, uint32_t size
 	memcpy (pBuffer, (uint8_t*)pNode->m_implData1 + offset, size);
 	return size;
 }
-static DirEnt g_ramDiskDirEnt;
-static DirEnt* FsRamDiskReadDir (FileNode *pDirNode, uint32_t index)
+
+static DirEnt* FsRamDiskReadDir (FileNode *pDirNode, uint32_t * index, DirEnt* pOutputDent)
 {
 	FileNode *pNode = pDirNode->children;
 	//TODO: Optimize this, if you have consecutive indices
 	uint32_t id = 0;
-	while (pNode && id < index)
+	while (pNode && id < *index)
 	{
 		pNode = pNode->next;
 		id++;
 	}
 	if (!pNode) return NULL;
-	strcpy(g_ramDiskDirEnt.m_name, pNode->m_name);
-	g_ramDiskDirEnt.m_inode      = pNode->m_inode;
-	g_ramDiskDirEnt.m_type       = pNode->m_type;
-	return &g_ramDiskDirEnt;
+	
+	++(*index);
+	
+	strcpy(pOutputDent->m_name, pNode->m_name);
+	pOutputDent->m_inode      = pNode->m_inode;
+	pOutputDent->m_type       = pNode->m_type;
+	return pOutputDent;
 }
+
 static FileNode* FsRamDiskFindDir(FileNode* pDirNode, const char* pName)
 {
 	FileNode *pNode = pDirNode->children;
