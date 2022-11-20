@@ -88,6 +88,60 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	return 0;
 }
 
+void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset, uint32_t size, void *pMemOut)
+{
+	// will we ever hit a block boundary?
+	uint32_t offsetEnd = offset + size;
+	uint32_t blockStart = (offset       ) >> (10 + pFS->m_log2BlockSize);
+	uint32_t blockEnd   = (offsetEnd - 1) >> (10 + pFS->m_log2BlockSize);
+	
+	uint32_t offsetWithinStartBlock = (offset    & ((1024 << pFS->m_log2BlockSize) - 1));
+	uint32_t offsetWithinEndBlock   = (offsetEnd & ((1024 << pFS->m_log2BlockSize) - 1));
+	
+	// offsetable version
+	uint8_t* pMem = (uint8_t*)pMemOut;
+	
+	for (uint32_t i = blockStart; i <= blockEnd; i++)
+	{
+		uint32_t blockIndex = Ext2GetInodeBlock(pInode, pFS, i);
+		
+		if (blockIndex)
+			ASSERT(Ext2ReadBlocks(pFS, blockIndex, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		else
+			memset(pFS->m_pBlockBuffer, 0, pFS->m_blockSize);
+		
+		// Are we at the start?
+		if (i == blockStart)
+		{
+			// copy from offsetWithinStartBlock to blockSize
+			
+			uint32_t endMin = pFS->m_blockSize;
+			if (endMin < offsetWithinEndBlock)
+				endMin = offsetWithinEndBlock;
+			
+			memcpy(pMem, pFS->m_pBlockBuffer + offsetWithinStartBlock, pFS->m_blockSize - offsetWithinStartBlock);
+			
+			pMem += (pFS->m_blockSize - offsetWithinStartBlock);
+		}
+		// Are we at the end?
+		else if (i == blockEnd)
+		{
+			// copy from 0 to offsetWithinEndBlock
+			if (offsetWithinEndBlock == 0)
+				offsetWithinEndBlock = pFS->m_blockSize;
+			memcpy(pMem, pFS->m_pBlockBuffer, offsetWithinEndBlock);
+		}
+		// Nope, read the full block.
+		else
+		{
+			memcpy(pMem, pFS->m_pBlockBuffer, pFS->m_blockSize);
+			
+			pMem += pFS->m_blockSize;
+		}
+		
+	}
+}
+
 void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)
 {
 	int ints = nBytes/4;
@@ -139,37 +193,12 @@ void Ext2ReadInodeMetaData(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pOu
 	uint32_t blockInodeIsIn = thing / pFS->m_blockSize;
 	uint32_t blockInodeOffs = thing % pFS->m_blockSize;
 	
-	uint32_t somethingMore = blockInodeOffs / pFS->m_inodeSize;
-	
 	uint8_t bytes[pFS->m_blockSize];
 	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
 	
 	Ext2Inode* pInode = (Ext2Inode*)(bytes + blockInodeOffs);
 	
 	*pOutputInode = *pInode;
-	
-	/*
-	SLogMsg("Inode Perms:   %x", pInode->m_permissions);
-	SLogMsg("Inode UID:     %d", pInode->m_uid);
-	SLogMsg("Inode GID:     %d", pInode->m_gid);
-	SLogMsg("Inode Size:    %d", pInode->m_size);
-	SLogMsg("Last Access:   %d", pInode->m_lastAccessTime);
-	SLogMsg("Last Modify:   %d", pInode->m_lastModTime);
-	SLogMsg("Create Time:   %d", pInode->m_creationTime);
-	SLogMsg("Delete Time:   %d", pInode->m_deletionTime);
-	SLogMsg("Hard Links:    %d", pInode->m_nHardLinks);
-	SLogMsg("Disk sector #: %d", pInode->m_diskSectors);
-	SLogMsg("Inode Flags:   %x", pInode->m_flags);
-	SLogMsg("Inode Flags:   %x", pInode->m_flags);
-	SLogMsg("First Block:   %d", pInode->m_directBlockPointer[0]);
-	
-	// Read the first 512 bytes afterwards.
-	uint8_t firstBlock[pFS->m_blockSize];
-	Ext2ReadBlocks(pFS, pInode->m_directBlockPointer[0], 1, firstBlock);
-	
-	LogMsg("firstBlock: %p", firstBlock);
-	SDumpBytesAsHex (firstBlock, sizeof firstBlock, true);
-	*/
 }
 
 // Read an inode and add it to the inode cache. Give it a name from the system side, since
@@ -190,9 +219,6 @@ Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const c
 	
 	return Ext2AddInodeToCache(pFS, inodeNo, &inode, pName);
 }
-
-
-
 
 // Initting code
 
@@ -259,23 +285,12 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	
 	pFS->m_pBlockGroups = (Ext2BlockGroupDescriptor*)pMem;
 	
-	LogMsg("File system version is: %s", pFS->m_superBlock.m_majorVersion ? "DYNAMIC_REVISION" : "GOOD_OLD_REVISION");
-	LogMsg("Block count: %d", pFS->m_superBlock.m_nBlocks);
-	
-	// dump the first four
-	for (int i = 0; i < 4; i++)
-	{
-		Ext2BlockGroupDescriptor *pDesc = &pFS->m_pBlockGroups[i];
-		
-		LogMsg("BLOCK GROUP DESCRIPTOR:");
-		LogMsg("BlockAddressBlockUsageBitmap: %d", pDesc->m_blockAddrBlockUsageBmp);
-		LogMsg("BlockAddressInodeUsageBitmap: %d", pDesc->m_blockAddrInodeUsageBmp);
-		LogMsg("StartBlockAddressInodeTable:  %d", pDesc->m_startBlockAddrInodeTable);
-		LogMsg("NumberOfUnallocatedBlocks:    %d", pDesc->m_nUnallocatedBlocks);
-		LogMsg("NumberOfUnallocatedInodes:    %d", pDesc->m_nUnallocatedInodes);
-		LogMsg("NumberOfDirectories:          %d", pDesc->m_nDirs);
-	}
+	SLogMsg("File system version is: %s", pFS->m_superBlock.m_majorVersion ? "DYNAMIC_REVISION" : "GOOD_OLD_REVISION");
+	SLogMsg("Block count: %d", pFS->m_superBlock.m_nBlocks);
 }
+
+//NOTE: This makes a copy!!
+void FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
 
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
@@ -300,7 +315,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	if (pFS->m_superBlock.m_nE2Signature != EXT2_SIGNATURE)
 	{
-		// this isn't even good! Return.
+		// this isn't even good! Bleh, go away.
 		// We didn't do anything bad like allocate stuff or mark it as mounted. So a return is safe
 		return;
 	}
@@ -314,26 +329,35 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_log2BlockSize  = pFS->m_superBlock.m_log2BlockSize + 10;
 	pFS->m_sectorsPerBlock = pFS->m_blockSize / BLOCK_SIZE;
 	
-	if (pFS->m_sectorsPerBlock != 0)
+	if (pFS->m_sectorsPerBlock == 0)
 	{
 		LogMsg("An Ext2 partition with a block size of %d was found! It can't be less than 512 bytes, so skip.", pFS->m_blockSize);
 		return;
 	}
 	
+	SLogMsg("Mounting Ext2 partition...  Last place where it was mounted: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
+	
 	pFS->m_bMounted = true;
 	pFS->m_pInodeCacheRoot = NULL;
-	pFS->m_pBlockBuffer    = NULL;
 	pFS->m_pBlockGroups    = NULL;
+	
+	pFS->m_pBlockBuffer    = MmAllocate(pFS->m_blockSize);
 	
 	// load the block group descriptor table
 	Ext2LoadBlockGroupDescriptorTable(pFS);
 	
-	// Read the root inode.
 	char name[10];
 	strcpy(name, "ExtX");
+	
+	// This replaces the X with a letter. This will be its name.
 	name[3] = s_extLetters[FreeArea];
 	
-	Ext2ReadInode(pFS, E2_RINO_ROOT, name, true);
+	// Read the root directory's inode, and cache it.
+	Ext2InodeCacheUnit* pCacheUnit = Ext2ReadInode(pFS, 2, name, true);
+	pCacheUnit->m_bPermanent = true; // Currently useless right now.
+	
+	// Get its filenode, and copy it. This will add the file system to the root directory.
+	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
 }
 
 void FsExt2Cleanup(Ext2FileSystem* pFS)

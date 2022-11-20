@@ -144,7 +144,7 @@ reset:
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
 	DirEnt* pEnt = NULL;
-	int i = 0;
+	uint32_t i = 0;
 	
 	if (!FsOpenDir(pFolderNode))
 	{

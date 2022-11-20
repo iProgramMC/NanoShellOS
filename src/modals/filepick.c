@@ -40,7 +40,7 @@ void FilePickerUpdate (Window *pWindow)
 	FileNode *pFolderNode = FsResolvePath (pCwd);
 	
 	DirEnt* pEnt = NULL;
-	int i = 0;
+	uint32_t i = 0;
 	
 	if (!FsOpenDir(pFolderNode))
 	{

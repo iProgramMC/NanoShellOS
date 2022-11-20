@@ -121,15 +121,8 @@ typedef struct Ext2DirEnt
 {
 	uint32_t m_inode;
 	uint16_t m_entrySize;
-	union
-	{
-		uint16_t m_nameLength;
-		struct
-		{
-			uint8_t m_nameLength8;
-			uint8_t m_typeIndicator;
-		};
-	};
+	uint8_t  m_nameLength;
+	uint8_t  m_typeIndicator;
 	char     m_name[];
 }
 __attribute__((packed))
@@ -282,6 +275,7 @@ typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
 	struct Ext2InodeCacheUnit* pLeft, *pRight, *pParent;
+	bool m_bPermanent; // if false, this can get deleted if its reference count (will add soon) is zero
 	
 	FileNode  m_node;
 	Ext2Inode m_inode;
@@ -327,5 +321,14 @@ Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inode
 
 // Delete the inode cache tree.
 void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS);
+
+// Read an inode and add it to the inode cache. (or if it's in the inode cache, retrieve it from there or refresh it.)
+Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead);
+
+// Get the inode block number at an offset in block_size units.
+uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset);
+
+// Read a part of the inode's data.
+void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset, uint32_t size, void *pMemOut);
 
 #endif//_EXT2_H

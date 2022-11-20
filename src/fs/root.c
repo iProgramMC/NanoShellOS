@@ -232,6 +232,14 @@ void FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz)
 	FsRootAddFile(&g_rootNode, pFileName, pContents, sz);
 }
 
+//NOTE: This makes a copy!!
+void FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode)
+{
+	RootFileNode* pFN = FsRootAddFile(&g_rootNode, pFileName, NULL, 0);
+	
+	pFN->node = *pFileNode;
+}
+
 void FsRootCreateDirAtRoot(const char* pFileName)
 {
 	FsRootAddDirectory(&g_rootNode, pFileName);

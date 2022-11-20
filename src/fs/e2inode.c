@@ -9,6 +9,13 @@
 #include <vfs.h>
 #include <ext2.h>
 
+// File operations.
+uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+
+DirEnt   *Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent);
+FileNode *Ext2FindDir(FileNode* pNode, const char* pName);
+
 void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeNo, const char* pName)
 {
 	strcpy(pFileNode->m_name, pName);
@@ -49,8 +56,20 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	pFileNode->m_modifyTime = pInode->m_lastModTime;
 	pFileNode->m_createTime = pInode->m_creationTime;
 	
+	pFileNode->m_length     = pInode->m_size;
+	
 	// TODO: Read() and Write() calls if this is file.
 	// TODO: ReadDir() and other calls if this is a directory.
+	if (pFileNode->m_type == FILE_TYPE_DIRECTORY)
+	{
+		pFileNode->ReadDir = Ext2ReadDir;
+		pFileNode->FindDir = Ext2FindDir;
+	}
+	else
+	{
+		pFileNode->Read  = Ext2FileRead;
+		pFileNode->Write = Ext2FileWrite;
+	}
 }
 
 void Ext2AddInodeToCacheRecursive(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrUnit, Ext2InodeCacheUnit* pUnitNew)
@@ -58,6 +77,10 @@ void Ext2AddInodeToCacheRecursive(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurr
 	if (pCurrUnit->m_inodeNumber == pUnitNew->m_inodeNumber)
 	{
 		SLogMsg("NOTE: Inode %d is already cached.", pUnitNew->m_inodeNumber);
+		
+		// copy the data anyways
+		pCurrUnit->m_inode = pUnitNew->m_inode;
+		pCurrUnit->m_node  = pUnitNew->m_node;
 		
 		// free the new unit.
 		MmFree(pUnitNew);
@@ -104,7 +127,8 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	pUnit->m_inodeNumber = inodeNo;
 	pUnit->m_inode = *pInode; // copy the inode's data.
 	
-	pUnit->m_node.m_implData = (uint32_t)pUnit; // for faster lookup
+	pUnit->m_node.m_implData  = (uint32_t)pUnit; // for faster lookup
+	pUnit->m_node.m_implData1 = (uint32_t)pFS;
 	
 	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
 	

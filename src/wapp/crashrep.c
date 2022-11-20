@@ -39,7 +39,7 @@ void CrashReportWindow( int argument )
 	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
 	
-	Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
+	UNUSED Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
 	
 	char otherString[512], 
 	     //anotherString[4096], 
