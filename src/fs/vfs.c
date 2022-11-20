@@ -107,8 +107,10 @@ void FsClearFile(FileNode* pNode)
 			pNode->EmptyFile(pNode);
 	}
 }
-int FsRemoveFile(FileNode* pNode)
+int FsRemoveFile(UNUSED FileNode* pNode)
 {
+	// TODO
+	
 	/*if (!pNode) return -ENOENT;
 	
 	if (!pNode->RemoveFile) return -ENOMEM;
@@ -255,6 +257,7 @@ void EraseFileNode (FileNode* pFileNode)
 	FreeFileNode (pFileNode);
 }
 
+void FsRootInit();
 void FsInitializeDevicesDir();
 //First time setup of the file manager
 void FsInit ()

@@ -162,6 +162,8 @@ enum
 	E2_OPT_INODE_EXT_ATTRS     = (1 << 3),
 	E2_OPT_FS_RESIZE_SELF      = (1 << 4),
 	E2_OPT_DIRS_USE_HASH_INDEX = (1 << 5),
+	
+	E2_OPT_UNSUPPORTED_FLAGS = -1,
 };
 
 // Required features
@@ -171,6 +173,8 @@ enum
 	E2_REQ_DIR_TYPE_FIELD   = (1 << 1),
 	E2_REQ_REPLAY_JOURNAL   = (1 << 2),
 	E2_REQ_USE_JOURNAL_DEV  = (1 << 3),
+	
+	E2_REQ_UNSUPPORTED_FLAGS = (-1) & ~(E2_REQ_DIR_TYPE_FIELD),
 };
 
 // Read-only Feature Flags
@@ -179,6 +183,8 @@ enum
 	E2_ROF_SPARSE_SBLOCKS_AND_GDTS = (1 << 0),
 	E2_ROF_FS_USES_64BIT_SIZES     = (1 << 1),
 	E2_ROF_DIR_IN_BINARY_TREE      = (1 << 2),
+	
+	E2_ROF_UNSUPPORTED_FLAGS = -1,
 };
 
 // Ext2 Version 1.0 and earlier defaults
@@ -289,6 +295,7 @@ typedef struct Ext2FileSystem
 	uint32_t m_lbaStart;
 	uint32_t m_sectorCount;
 	Ext2SuperBlock m_superBlock; // super block cache
+	bool     m_bIsReadOnly;
 	
 	// cache
 	uint32_t m_firstNonReservedInode;

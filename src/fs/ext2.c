@@ -320,6 +320,28 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 		return;
 	}
 	
+	// Ensure we have the correct feature set.
+	uint32_t optionalFeatures, requiredFeatures, readOnlyFeatures;
+	optionalFeatures = pFS->m_superBlock.m_optionalFeatures;
+	requiredFeatures = pFS->m_superBlock.m_requiredFeatures;
+	readOnlyFeatures = pFS->m_superBlock.m_featuresReadOnlyIfNotSupported;
+	
+	// Required features:
+	if (requiredFeatures & E2_REQ_UNSUPPORTED_FLAGS)
+	{
+		LogMsg("Warning: An Ext2 partition implements unsupported features. Good-bye! (requiredFeatures: %x)", requiredFeatures);
+		return;
+	}
+	if (readOnlyFeatures & E2_ROF_UNSUPPORTED_FLAGS)
+	{
+		LogMsg("Warning: An Ext2 partition implements unsupported features. This FS is now read only (readOnlyFeatures: %x)", readOnlyFeatures);
+		pFS->m_bIsReadOnly = true;
+	}
+	if (optionalFeatures & E2_OPT_UNSUPPORTED_FLAGS)
+	{
+		LogMsg("Warning: An Ext2 partition implements unsupported features. (optionalFeatures: %x)", optionalFeatures);
+	}
+	
 	// Set up and cache basic info about the file system.
 	pFS->m_inodeSize = Ext2GetInodeSize(pFS);
 	pFS->m_blockSize = Ext2GetBlockSize(pFS);

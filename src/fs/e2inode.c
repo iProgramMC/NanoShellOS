@@ -132,6 +132,11 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	
 	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
 	
+	if (pFS->m_bIsReadOnly)
+	{
+		pUnit->m_node.m_perms &= ~PERM_WRITE;
+	}
+	
 	// Trivial case: the root is empty.
 	if (!pFS->m_pInodeCacheRoot)
 	{
@@ -195,7 +200,7 @@ void Ext2InodeCacheUnitShiftNodes(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit
 }
 */
 
-void Ext2DeleteInodeCacheUnit(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+void Ext2DeleteInodeCacheUnit(UNUSED Ext2FileSystem* pFS, UNUSED Ext2InodeCacheUnit* pUnit)
 {
 	/*if (pUnit->pLeft == NULL)
 	{
