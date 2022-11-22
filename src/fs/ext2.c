@@ -43,26 +43,63 @@ DriveStatus Ext2ReadBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t block
 	return DEVERR_SUCCESS;
 }
 
-//note: the offset is in <block_size> units.
-uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset)
+// Write a number of blocks from the file system. Use `uint8_t mem[pFS->m_blockSize * numBlocks]` or the equivalent MmAllocate to make space for its output.
+DriveStatus Ext2WriteBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t blockCount, const void* pMem)
 {
+	uint32_t lbaStart = pFS->m_lbaStart + blockNo * pFS->m_sectorsPerBlock, sectorCount = blockCount * pFS->m_sectorsPerBlock;
+	const uint8_t* pMem1 = (const uint8_t*)pMem;
+	
+	while (sectorCount)
+	{
+		// read!
+		DriveStatus ds = StDeviceWrite( lbaStart, pMem1, pFS->m_driveID, 1 );
+		if (ds != DEVERR_SUCCESS)
+			return ds;
+		
+		lbaStart++;
+		sectorCount--;
+		pMem1 += BLOCK_SIZE;
+	}
+	
+	return DEVERR_SUCCESS;
+}
+
+enum
+{
+	EXT2_INODE_USE_NOTHING,
+	EXT2_INODE_USE_DIRECT,
+	EXT2_INODE_USE_SINGLY,
+	EXT2_INODE_USE_DOUBLY,
+	EXT2_INODE_USE_TRIPLY,
+};
+
+// How this works in a nutshell (cases)
+// EXT2_INODE_USE_NOTHING: blockAddrs is unused.
+// EXT2_INODE_USE_DIRECT: blockIndices is a pointer to 1 int referring to the index used in pInode->m_directBlockPointer.
+// EXT2_INODE_USE_SINGLY: blockIndices is a pointer to 1 int  referring to the indices used in DA(pInode->m_singlyIndirBlockPtr)[*0].
+// EXT2_INODE_USE_DOUBLY: blockIndices is a pointer to 2 ints referring to the indices used in DA(DA(pInode->m_doublyIndirBlockPtr)[*0])[*1].
+// EXT2_INODE_USE_TRIPLY: blockIndices is a pointer to 3 ints referring to the indices used in DA(DA(DA(pInode->m_triplyIndirBlockPtr)[*0])[*1])[*2].
+// (DA = Data at a block address, *X = The Xth element of blockIndices.)
+void Ext2GetInodeBlockWhere(uint32_t offset, uint32_t* useWhat, uint32_t* blockIndices, uint32_t addrsPerBlock)
+{
+	useWhat[0] = EXT2_INODE_USE_NOTHING;
+	
 	if (offset < 12)
 	{
-		return pInode->m_directBlockPointer[offset];
+		useWhat[0] = EXT2_INODE_USE_DIRECT;
+		blockIndices[0] = offset;
+		return;
 	}
 	
 	offset -= 12;
 	
 	// is this part of the singly-indirect block?
-	uint32_t  addrsPerBlock = pFS->m_blockSize / 4;
-	uint32_t* data = (uint32_t*)pFS->m_pBlockBuffer;
 		
 	if (offset < addrsPerBlock)
 	{
-		// yes, so just return from there
-		ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-		
-		return data[offset];
+		useWhat[0] = EXT2_INODE_USE_SINGLY;
+		blockIndices[0] = offset;
+		return;
 	}
 	
 	offset -= addrsPerBlock;
@@ -73,30 +110,112 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 		uint32_t firstTurn  = offset / addrsPerBlock;
 		uint32_t secondTurn = offset % addrsPerBlock;
 		
-		// read for the first turn
-		ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-		uint32_t firstTurnBlock = data[firstTurn];
-		
-		// read for the second turn
-		ASSERT(Ext2ReadBlocks(pFS, firstTurnBlock, 1, data) == DEVERR_SUCCESS);
-		return data[secondTurn];
+		useWhat[0] = EXT2_INODE_USE_DOUBLY;
+		blockIndices[0] = firstTurn;
+		blockIndices[1] = secondTurn;
 	}
 	
 	// TODO: Check the triply indirect things as well soon.
 	
 	// well, we're trying to exceed the file's boundaries anyway, call it quits ;)
+	return;
+}
+
+//note: the offset is in <block_size> units.
+uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset)
+{
+	uint32_t addrsPerBlock = pFS->m_blockSize / 4;
+	
+	uint32_t useWhat = EXT2_INODE_USE_NOTHING;
+	uint32_t blockIndices[3];
+	
+	Ext2GetInodeBlockWhere(offset, &useWhat, blockIndices, addrsPerBlock);
+	
+	uint32_t* data = (uint32_t*)pFS->m_pBlockBuffer;
+	
+	switch (useWhat)
+	{
+		case EXT2_INODE_USE_DIRECT:
+		{
+			return pInode->m_directBlockPointer[blockIndices[0]];
+		}
+		case EXT2_INODE_USE_SINGLY:
+		{
+			ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			return data[blockIndices[0]];
+		}
+		case EXT2_INODE_USE_DOUBLY:
+		{
+			ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			
+			uint32_t thing = data[blockIndices[1]];
+			ASSERT(Ext2ReadBlocks(pFS, thing, 1, data) == DEVERR_SUCCESS);
+			
+			return data[blockIndices[1]];
+		}
+		// TODO: handle triply indirect blocks
+	}
+	
 	return 0;
+}
+
+// Expands an inode by 'byHowMuch' bytes.
+void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
+{
+	uint32_t inodeNo = pCacheUnit->m_inodeNumber;
+	
+	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
+	
+	// Determine which block group the inode belongs to.
+	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
+	
+	// Get the block group this inode is a part of.
+	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
+	
+	// Get the block group's inode table address.
+	uint32_t inodeTableAddr = pFS->m_pBlockGroups[blockGroup].m_startBlockAddrInodeTable;
+	
+	// This is the index inside that table.
+	uint32_t index = (inodeNo - 1) % inodesPerGroup;
+	
+	// Determine which block contains the inode.
+	uint32_t thing = index * pFS->m_inodeSize;
+	uint32_t blockInodeIsIn = thing / pFS->m_blockSize;
+	uint32_t blockInodeOffs = thing % pFS->m_blockSize;
+	
+	uint8_t bytes[pFS->m_blockSize];
+	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	
+	Ext2Inode* pInodePlaceOnDisk = (Ext2Inode*)(bytes + blockInodeOffs);
+	
+	uint32_t byteSizeOld = pCacheUnit->m_inode.m_size, byteSizeNew = byteSizeOld + byHowMuch;
+	
+	pInodePlaceOnDisk->m_size += byHowMuch;
+	pCacheUnit->m_inode.m_size += byHowMuch;
+	pCacheUnit->m_node.m_length += byHowMuch;
+	
+	uint32_t blockSizeOld = (byteSizeOld + pFS->m_blockSize - 1) >> (10 + pFS->m_log2BlockSize);
+	uint32_t blockSizeNew = (byteSizeNew + pFS->m_blockSize - 1) >> (10 + pFS->m_log2BlockSize);
+	
+	// Allocate the missing blocks.
+	for (uint32_t i = blockSizeOld + 1; i <= blockSizeNew; i++)
+	{
+		
+	}
+	
+	// Write the block containing the inode back to disk.
+	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
 }
 
 void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset, uint32_t size, void *pMemOut)
 {
 	// will we ever hit a block boundary?
 	uint32_t offsetEnd = offset + size;
-	uint32_t blockStart = (offset       ) >> (10 + pFS->m_log2BlockSize);
-	uint32_t blockEnd   = (offsetEnd - 1) >> (10 + pFS->m_log2BlockSize);
+	uint32_t blockStart = (offset       ) >> (pFS->m_log2BlockSize);
+	uint32_t blockEnd   = (offsetEnd - 1) >> (pFS->m_log2BlockSize);
 	
-	uint32_t offsetWithinStartBlock = (offset    & ((1024 << pFS->m_log2BlockSize) - 1));
-	uint32_t offsetWithinEndBlock   = (offsetEnd & ((1024 << pFS->m_log2BlockSize) - 1));
+	uint32_t offsetWithinStartBlock = (offset    & ((1 << pFS->m_log2BlockSize) - 1)); // TODO why does this bypass our and??
+	uint32_t offsetWithinEndBlock   = (offsetEnd & ((1 << pFS->m_log2BlockSize) - 1));
 	
 	// offsetable version
 	uint8_t* pMem = (uint8_t*)pMemOut;
@@ -289,6 +408,11 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	SLogMsg("Block count: %d", pFS->m_superBlock.m_nBlocks);
 }
 
+void Ext2TestFunction(Ext2FileSystem* pFS)
+{
+	//...
+}
+
 //NOTE: This makes a copy!!
 void FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
 
@@ -374,6 +498,9 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
+	
+	// Try to retrieve the backups of the inodes. This is a test function.
+	Ext2TestFunction(pFS);
 }
 
 void FsExt2Cleanup(Ext2FileSystem* pFS)
