@@ -24,8 +24,10 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 	if (offset + size > pInode->m_size)
 		size = pInode->m_size - offset;
 	
+	if (size == 0) return 0;
+	
 	// read!
-	Ext2ReadFileSegment(pFS, pInode, offset, size, pBuffer);
+	Ext2ReadFileSegment(pFS, pUnit, offset, size, pBuffer);
 	return size;
 }
 
@@ -47,7 +49,7 @@ void Ext2FileClose(UNUSED FileNode* pNode)
 	//all good
 }
 
-DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
+DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
 	// Read the directory entry, starting at (*index).
 	
@@ -64,11 +66,18 @@ DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
 		Ext2DirEnt dirEnt;
 	} d;
 	
-	ASSERT(tempBuffer[1] < sizeof d.EntryData);
-	
-	if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData)) return NULL;
+	// if it's bigger, chances are it's a Padding entry.
+	if (tempBuffer[1] < sizeof d.EntryData)
+	{
+		if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData)) return NULL;
+	}
 	
 	(*index) += d.dirEnt.m_entrySize;
+	
+	if (tempBuffer[1] >= sizeof d.EntryData)
+	{
+		return NULL;
+	}
 	
 	size_t nameLen = d.dirEnt.m_nameLength;
 	if (nameLen > sizeof(pOutputDent->m_name) - 2)
@@ -76,6 +85,13 @@ DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
 	
 	memcpy(pOutputDent->m_name, d.dirEnt.m_name, nameLen);
 	pOutputDent->m_name[nameLen] = '\0';
+	
+	if (bSkipDotAndDotDot)
+	{
+		// If it's a '.' or '..' entry, skip it. We provide our own implementation anyway.
+		if (strcmp(pOutputDent->m_name, ".") == 0  ||  strcmp(pOutputDent->m_name, "..") == 0)
+			return Ext2ReadDirInternal(pNode, index, pOutputDent, bSkipDotAndDotDot);
+	}
 	
 	pOutputDent->m_inode = d.dirEnt.m_inode;
 	
@@ -92,12 +108,17 @@ DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
 	return pOutputDent;
 }
 
+DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
+{
+	return Ext2ReadDirInternal(pNode, index, pOutputDent, true);
+}
+
 FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 {
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	DirEnt space; uint32_t index = 0;
 	
-	while (Ext2ReadDir(pNode, &index, &space) != NULL)
+	while (Ext2ReadDirInternal(pNode, &index, &space, false) != NULL)
 	{
 		if (strcmp(space.m_name, pName) == 0)
 		{

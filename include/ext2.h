@@ -281,11 +281,14 @@ enum
 typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
-	struct Ext2InodeCacheUnit* pLeft, *pRight, *pParent;
+	struct Ext2InodeCacheUnit *pLeft, *pRight, *pParent;
 	bool m_bPermanent; // if false, this can get deleted if its reference count (will add soon) is zero
 	
 	FileNode  m_node;
 	Ext2Inode m_inode;
+	
+	void*    m_pBlockBuffer;
+	uint32_t m_nLastBlockRead;
 }
 Ext2InodeCacheUnit;
 
@@ -307,6 +310,7 @@ typedef struct Ext2FileSystem
 	uint32_t m_inodeSize;
 	uint32_t m_log2BlockSize;
 	uint32_t m_sectorsPerBlock;
+	uint32_t m_blockGroupCount;
 	
 	Ext2BlockGroupDescriptor *m_pBlockGroups;
 	Ext2InodeCacheUnit       *m_pInodeCacheRoot;
@@ -337,6 +341,6 @@ Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const c
 uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset);
 
 // Read a part of the inode's data.
-void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset, uint32_t size, void *pMemOut);
+void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint32_t offset, uint32_t size, void *pMemOut);
 
 #endif//_EXT2_H

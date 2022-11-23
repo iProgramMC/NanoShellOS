@@ -206,6 +206,17 @@ void Ext2InodeCacheUnitShiftNodes(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit
 }
 */
 
+void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
+{
+	if (pUnit->m_pBlockBuffer)
+	{
+		MmFree(pUnit->m_pBlockBuffer);
+		pUnit->m_pBlockBuffer = NULL;
+	}
+	
+	MmFree(pUnit);
+}
+
 void Ext2DeleteInodeCacheUnit(UNUSED Ext2FileSystem* pFS, UNUSED Ext2InodeCacheUnit* pUnit)
 {
 	/*if (pUnit->pLeft == NULL)
@@ -233,7 +244,7 @@ void Ext2DeleteInodeCacheLeaf(Ext2InodeCacheUnit* pUnit)
 	Ext2DeleteInodeCacheLeaf(pUnit->pRight);
 	
 	// delete ourselves
-	MmFree(pUnit);
+	Ext2FreeInodeCacheUnit(pUnit);
 }
 
 void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS)

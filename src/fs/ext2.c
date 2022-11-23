@@ -159,6 +159,80 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	return 0;
 }
 
+void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
+{
+	// TODO: Flush the main super block
+	
+	// TODO: Flush the backup super blocks same as the main one.
+}
+
+void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex)
+{
+	uint32_t ContainingBlock = (bgdIndex * sizeof(Ext2BlockGroupDescriptor)) >> pFS->m_log2BlockSize;
+	uint32_t blockGroupTableStart = (pFS->m_blockSize == 1024) ? 2 : 1;
+	
+	uint8_t* pMem = (uint8_t*)&pFS->m_pBlockGroups[(ContainingBlock << pFS->m_log2BlockSize) / sizeof(Ext2BlockGroupDescriptor)];
+	
+	ASSERT(Ext2WriteBlocks(pFS, blockGroupTableStart + ContainingBlock, 1, pMem) == DEVERR_SUCCESS);
+}
+
+uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS)
+{
+	// Look for a free block.
+	
+	for (uint32_t i = 0; i < pFS->m_blockGroupCount; i++)
+	{
+		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
+		
+		// If we don't have any free blocks, return.
+		if (!pBG->m_nUnallocatedBlocks)
+			continue;
+		
+		// There's at least one free block in this group.
+		uint32_t entriesPerBlock = pFS->m_blockSize / sizeof(uint32_t);
+		uint32_t sectorsToCheck = (pFS->m_superBlock.m_blocksPerGroup + entriesPerBlock - 1) / entriesPerBlock;
+		
+		for (uint32_t j = 0; j < sectorsToCheck; j++)
+		{
+			ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+			
+			uint32_t* pData = (uint32_t*)pFS->m_pBlockBuffer;
+			
+			for (uint32_t k = 0; k < entriesPerBlock; k++)
+			{
+				// if all the blocks here are allocated....
+				if (pData[k] == ~0u)
+					continue;
+				
+				for (uint32_t l = 0; l < 32; l++)
+				{
+					if (!(pData[k] & (1 << l))) continue;
+					
+					// Set the bit in the bitmap and return.
+					pData[k] |= (1 << l);
+					
+					// Flush the bitmap.
+					ASSERT(Ext2WriteBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+					
+					// Update the free blocks.
+					pBG->m_nUnallocatedBlocks--;
+					Ext2FlushBlockGroupDescriptor(pFS, i);
+					
+					// Update the superblock.
+					pFS->m_superBlock.m_nUnallocatedBlocks--;
+					Ext2FlushSuperBlock(pFS);
+					
+					return i * pFS->m_blocksPerGroup + j * entriesPerBlock + k * 32 + l;
+				}
+			}
+		}
+	}
+	
+	// Uh oh! We're out of blocks. Gracefully return.
+	SLogMsg("WARNING: Ext2 block group table says we're out of nodes");
+	return -1;
+}
+
 // Expands an inode by 'byHowMuch' bytes.
 void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
 {
@@ -207,8 +281,19 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
 }
 
-void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset, uint32_t size, void *pMemOut)
+void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
+
+void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, void *pMemOut)
 {
+	Ext2Inode* pInode = &pCacheUnit->m_inode;
+	if (!pCacheUnit->m_pBlockBuffer)
+	{
+		pCacheUnit->m_pBlockBuffer = MmAllocate(pFS->m_blockSize);
+		pCacheUnit->m_nLastBlockRead = ~0u;
+	}
+	
+	memset(pMemOut, 0xCC, size);
+	
 	// will we ever hit a block boundary?
 	uint32_t offsetEnd = offset + size;
 	uint32_t blockStart = (offset       ) >> (pFS->m_log2BlockSize);
@@ -217,17 +302,30 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset
 	uint32_t offsetWithinStartBlock = (offset    & ((1 << pFS->m_log2BlockSize) - 1)); // TODO why does this bypass our and??
 	uint32_t offsetWithinEndBlock   = (offsetEnd & ((1 << pFS->m_log2BlockSize) - 1));
 	
+	if (offsetWithinEndBlock == 0)
+		offsetWithinEndBlock = pFS->m_blockSize;
+	
 	// offsetable version
 	uint8_t* pMem = (uint8_t*)pMemOut;
+	
+	//SLogMsg("blockStart: %d  blockEnd: %d  offsetWithinStartBlock: %d  offsetWithinEndBlock: %d  offset: %d  offsetEnd: %d", blockStart,blockEnd,offsetWithinStartBlock,offsetWithinEndBlock,offset,offsetEnd);
 	
 	for (uint32_t i = blockStart; i <= blockEnd; i++)
 	{
 		uint32_t blockIndex = Ext2GetInodeBlock(pInode, pFS, i);
 		
 		if (blockIndex)
-			ASSERT(Ext2ReadBlocks(pFS, blockIndex, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		{
+			if (pCacheUnit->m_nLastBlockRead != blockIndex)
+			{
+				pCacheUnit->m_nLastBlockRead = blockIndex;
+				ASSERT(Ext2ReadBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) == DEVERR_SUCCESS);
+			}
+		}
 		else
-			memset(pFS->m_pBlockBuffer, 0, pFS->m_blockSize);
+		{
+			memset(pCacheUnit->m_pBlockBuffer, 0, pFS->m_blockSize);
+		}
 		
 		// Are we at the start?
 		if (i == blockStart)
@@ -235,25 +333,25 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2Inode* pInode, uint32_t offset
 			// copy from offsetWithinStartBlock to blockSize
 			
 			uint32_t endMin = pFS->m_blockSize;
-			if (endMin < offsetWithinEndBlock)
+			if (i == blockEnd)
 				endMin = offsetWithinEndBlock;
 			
-			memcpy(pMem, pFS->m_pBlockBuffer + offsetWithinStartBlock, pFS->m_blockSize - offsetWithinStartBlock);
+			memcpy(pMem, pCacheUnit->m_pBlockBuffer + offsetWithinStartBlock, endMin - offsetWithinStartBlock);
 			
-			pMem += (pFS->m_blockSize - offsetWithinStartBlock);
+			pMem += (endMin - offsetWithinStartBlock);
 		}
 		// Are we at the end?
 		else if (i == blockEnd)
 		{
 			// copy from 0 to offsetWithinEndBlock
-			if (offsetWithinEndBlock == 0)
-				offsetWithinEndBlock = pFS->m_blockSize;
-			memcpy(pMem, pFS->m_pBlockBuffer, offsetWithinEndBlock);
+			memcpy(pMem, pCacheUnit->m_pBlockBuffer, offsetWithinEndBlock);
+			
+			pMem += offsetWithinEndBlock;
 		}
 		// Nope, read the full block.
 		else
 		{
-			memcpy(pMem, pFS->m_pBlockBuffer, pFS->m_blockSize);
+			memcpy(pMem, pCacheUnit->m_pBlockBuffer, pFS->m_blockSize);
 			
 			pMem += pFS->m_blockSize;
 		}
@@ -393,6 +491,8 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	// if blockSize is 1024, then this will be block 2. Otherwise, it will be block 1.
 	uint32_t blockGroupTableStart = (pFS->m_blockSize == 1024) ? 2 : 1;
 	uint32_t blockGroupCount = (pFS->m_superBlock.m_nBlocks + pFS->m_blocksPerGroup - 1) / pFS->m_blocksPerGroup;
+	
+	pFS->m_blockGroupCount = blockGroupCount;
 	
 	SLogMsg("Block group count is %d. Blocks per group : %d", blockGroupCount, pFS->m_blocksPerGroup);
 	
