@@ -56,7 +56,7 @@ typedef union Ext2SuperBlock
 		uint16_t m_blockGroupThisIsPartOf;
 		uint32_t m_optionalFeatures;
 		uint32_t m_requiredFeatures;
-		uint32_t m_featuresReadOnlyIfNotSupported;
+		uint32_t m_readOnlyFeatures;
 		char     m_fileSystemID[16];
 		char     m_volumeName[16];
 		char     m_pathVolumeLastMountedTo[64];

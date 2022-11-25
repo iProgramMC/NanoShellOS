@@ -22,6 +22,14 @@ static const char s_extLetters[] = "0123456789ABCDEF";
 
 Ext2FileSystem s_ext2FileSystems[C_MAX_E2_FILE_SYSTEMS];
 
+uint32_t Ext2GetBlockGroupBlockIsIn(Ext2FileSystem* pFS, uint32_t blockNo)
+{
+	// We shouldn't access stuff in here
+	ASSERT(blockNo != 0);
+	
+	return (blockNo - 1) / pFS->m_blocksPerGroup;
+}
+
 // Read a number of blocks from the file system. Use `uint8_t mem[pFS->m_blockSize * numBlocks]` or the equivalent MmAllocate to make space for its output.
 DriveStatus Ext2ReadBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t blockCount, void* pMem)
 {
@@ -159,11 +167,55 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	return 0;
 }
 
+// Note: Before using this, make sure you've initialized pFS->m_pBlockBuffer to the super block's contents.
+static void Ext2CommitSuperBlockBackup(Ext2FileSystem* pFS, int blockGroupNo)
+{
+	// Determine the first block of the block group.
+	
+	// Block 0 is not part of any block group. 
+	uint32_t firstBlock = blockGroupNo * pFS->m_blocksPerGroup + 1;
+	
+	SLogMsg("Committing super block backup... %d", blockGroupNo);
+	
+	// Write the block.
+	ASSERT(Ext2WriteBlocks(pFS, firstBlock, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+}
+
 void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 {
-	// TODO: Flush the main super block
+	SLogMsg("Committing super block...");
 	
-	// TODO: Flush the backup super blocks same as the main one.
+	// Create a block-sized buffer where we'll put the super block.
+	memset(pFS->m_pBlockBuffer, 0, pFS->m_blockSize);
+	
+	memcpy(pFS->m_pBlockBuffer, &pFS->m_superBlock, sizeof (pFS->m_superBlock));
+	
+	// Flush the main super block.
+	// It is located at 1024 bytes from the start of the volume, and is 1024 bytes in size.
+	uint32_t m_superBlockSector = pFS->m_lbaStart + 2;
+	
+	StDeviceWrite( m_superBlockSector, pFS->m_pBlockBuffer, pFS->m_driveID, 2 );
+	
+	// If the file system has SPARSE_SUPER enabled...
+	if (pFS->m_superBlock.m_readOnlyFeatures & E2_ROF_SPARSE_SBLOCKS_AND_GDTS)
+	{
+		// The groups chosen are 0, 1, and powers of 3, 5, and 7. We've already written zero.
+		
+		Ext2CommitSuperBlockBackup(pFS, 1);
+		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3)
+			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5)
+			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7)
+			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+	}
+	else
+	{
+		for (uint32_t blockGroupNo = 1; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo++)
+		{
+			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		}
+	}
 }
 
 void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex)
@@ -498,6 +550,8 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	
 	uint32_t blocksToRead = (blockGroupCount * sizeof(Ext2BlockGroupDescriptor) + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
 	
+	SLogMsg("Blocks to read: %d", blocksToRead);
+	
 	void *pMem = MmAllocate(blocksToRead << pFS->m_log2BlockSize);
 	
 	ENSURE_READ_OP(Ext2ReadBlocks(pFS, blockGroupTableStart, blocksToRead, pMem), "Couldn't read the whole block group descriptor array!");
@@ -510,7 +564,33 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 
 void Ext2TestFunction(Ext2FileSystem* pFS)
 {
-	//...
+	// dump the super block
+	SLogMsg("Dumping super block...  NOTE: Blocks per group: %d", pFS->m_blocksPerGroup);
+	SDumpBytesAsHex(&pFS->m_superBlock, sizeof(pFS->m_superBlock), true);
+	
+	uint32_t thing = 1 + (1) * pFS->m_blocksPerGroup;
+	
+	SLogMsg("Dumping a super block backup...");
+	ASSERT(Ext2ReadBlocks(pFS, thing, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+	
+	SDumpBytesAsHex(pFS->m_pBlockBuffer, sizeof(pFS->m_superBlock), true);
+}
+
+// note: No one actually bothers to do this. (I think, from my own testing it seems like not)
+// This function was mostly written to test the Ext2FlushSuperBlock function.
+void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
+{
+	char name[10];
+	strcpy(name, "/ExtX");
+	
+	// This replaces the X with a letter. This will be its name.
+	name[4] = s_extLetters[FreeArea];
+	
+	strcpy(pFS->m_superBlock.m_pathVolumeLastMountedTo, name);
+	
+	LogMsg("Path volume last mounted to is now %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
+	
+	Ext2FlushSuperBlock(pFS);
 }
 
 //NOTE: This makes a copy!!
@@ -548,7 +628,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	uint32_t optionalFeatures, requiredFeatures, readOnlyFeatures;
 	optionalFeatures = pFS->m_superBlock.m_optionalFeatures;
 	requiredFeatures = pFS->m_superBlock.m_requiredFeatures;
-	readOnlyFeatures = pFS->m_superBlock.m_featuresReadOnlyIfNotSupported;
+	readOnlyFeatures = pFS->m_superBlock.m_readOnlyFeatures;
 	
 	// Required features:
 	if (requiredFeatures & E2_REQ_UNSUPPORTED_FLAGS)
@@ -599,8 +679,10 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
 	
+	Ext2UpdateLastMountedPath(pFS, FreeArea);
+	
 	// Try to retrieve the backups of the inodes. This is a test function.
-	Ext2TestFunction(pFS);
+	//Ext2TestFunction(pFS);
 }
 
 void FsExt2Cleanup(Ext2FileSystem* pFS)
