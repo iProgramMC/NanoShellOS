@@ -69,14 +69,29 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [ ] NVMe?
 - [ ] USB stick device driver
 #### File system
-- [x] Root contains several files which are packed neatly into the executable
-- [x] Mounting other file systems to the main one
-- [x] FAT32 support (quite messy, I'll probably redo it at some point)
-- [ ] FiRenameFile
-- [ ] FiMakeDir
-- [ ] EXT2 file system support?
-- [ ] Don't allocate filenodes, instead, use an inode descriptor which is static and doesn't occupy space on the heap (only applies to disk-backed file systems)
-- [ ] Cleaning up after a while of not having used a certain directory page (can't apply to root or ram disks, you know why)
+
+This branch is meant as an overhaul to how the VFS in NanoShell is structured. Here are my plans.
+- [x] Rewrite root directory code.
+- [ ] EXT2:
+- [x] \*        Read only support.
+- [ ] \*        Expand a file.
+- [ ] \*        Create a file entry.
+- [ ] \*        Rename a file entry.
+- [ ] \*        Unlink a file.
+- [ ] \*        Create a directory.
+- [ ] \*        Do all these things with flying colors from `e2fsck`.
+- [ ] \*        Fix most edge cases.
+- [ ] FAT32:
+- [ ] \*        Read only support.
+- [ ] \*        Expand a file.
+- [ ] \*        Create a file entry.
+- [ ] \*        Rename a file entry.
+- [ ] \*        Delete a file.
+- [ ] \*        Create a directory.
+- [ ] \*        Do all these things with flying colors from `e2fsck`.
+- [ ] \*        Fix most edge cases.
+- [ ] Integrate these changes into the NanoShell we all know and love. :)
+
 #### The future
 - [ ] An installer, which deploys [Limine](https://github.com/limine-bootloader/limine) onto a system, creates a FAT32 (or EXT2?) file system and creates a working installation of NanoShell
 - [ ] An in-built IDE (which depends on the compiler thing I mentioned earlier)
