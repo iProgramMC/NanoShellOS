@@ -466,6 +466,73 @@ void ShellExecuteCommand(char* p)
 			LogMsg("");
 		}
 	}
+	else if (strcmp (token, "hat") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			int fd = FiOpen (fileName, O_RDONLY);
+			if (fd < 0)
+			{
+				LogMsg("hat: %s: %s", fileName, GetErrNoString(fd));
+				return;
+			}
+			
+			FiSeek(fd, 0, SEEK_SET);
+			
+			int offset = 0, currentLineOffset = 0;
+			
+			int result; char data[2];
+			char buffer[16];
+			
+			while ((result = FiRead(fd, data, 1), result > 0))
+			{
+				//CoPrintChar(g_currentConsole, data[0]);
+				if (offset % 16 == 0)
+				{
+					currentLineOffset = offset;
+					if (offset != 0)
+					{
+						LogMsgNoCr("   ");
+						// Also print the ASCII representation of the data. We've placed that inside 'buffer'.
+						for (int i = 0; i < 16; i++)
+						{
+							char c = buffer[i];
+							if (c < 0x20 || c > 0x7E) c = '.';
+							LogMsgNoCr("%c", c);
+						}
+						LogMsg("");
+					}
+					LogMsgNoCr("%x: ", offset);
+				}
+				
+				buffer[offset % 16] = data[0];
+				LogMsgNoCr("%B ", data[0]);
+				
+				offset++;
+			}
+			
+			LogMsgNoCr("\e[60G");
+			
+			for (int i = currentLineOffset; i < offset; i++)
+			{
+				char c = buffer[i % 16];
+				if (c < 0x20 || c > 0x7E) c = '.';
+				LogMsgNoCr("%c", c);
+			}
+			LogMsg("");
+			
+			FiClose (fd);
+		}
+	}
 	else if (strcmp (token, "rm") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");

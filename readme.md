@@ -88,7 +88,7 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [ ] \*        Rename a file entry.
 - [ ] \*        Delete a file.
 - [ ] \*        Create a directory.
-- [ ] \*        Do all these things with flying colors from `e2fsck`.
+- [ ] \*        Do all these things with flying colors from `chkdsk`.
 - [ ] \*        Fix most edge cases.
 - [ ] Integrate these changes into the NanoShell we all know and love. :)
 
