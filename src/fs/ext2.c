@@ -129,6 +129,28 @@ void Ext2GetInodeBlockLocation(uint32_t offset, uint32_t* useWhat, uint32_t* blo
 	return;
 }
 
+void Ext2DumpInode(Ext2Inode* pInode, const char* pInfo)
+{
+	if (*pInfo)
+	{
+		LogMsg("Inode dump [%s]", pInfo);
+	}
+	else
+	{
+		LogMsg("Inode dump");
+	}
+	
+	LogMsg("direct block pointers:");
+	for (int i = 0; i < 12; i++)
+	{
+		LogMsg("%x", pInode->m_directBlockPointer[i]);
+	}
+	
+	LogMsg("singly block pointer: %x", pInode->m_singlyIndirBlockPtr);
+	LogMsg("doubly block pointer: %x", pInode->m_doublyIndirBlockPtr);
+	LogMsg("triply block pointer: %x", pInode->m_triplyIndirBlockPtr);
+}
+
 uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);
 
 //note: the offset is in <block_size> units.
@@ -310,12 +332,9 @@ void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 		// The groups chosen are 0, 1, and powers of 3, 5, and 7. We've already written zero.
 		
 		Ext2CommitSuperBlockBackup(pFS, 1);
-		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3)
-			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
-		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5)
-			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
-		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7)
-			Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3) Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5) Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
+		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7) Ext2CommitSuperBlockBackup(pFS, blockGroupNo);
 	}
 	else
 	{
@@ -326,14 +345,42 @@ void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 	}
 }
 
+//Assumes stuff has been prepared in Ext2FlushBlockGroupDescriptor. Don't use.
+static void Ext2FlushBlockGroupDescriptorInternal(Ext2FileSystem* pFS, uint32_t blockGroupIndex, uint32_t containingBlock, void* pMem)
+{
+	uint32_t bgdtStart;
+	if (blockGroupIndex == 0)
+		bgdtStart = (pFS->m_blockSize == 1024) ? 2 : 1;
+	else
+		bgdtStart = 2 + pFS->m_blocksPerGroup * blockGroupIndex;
+	
+	ASSERT(Ext2WriteBlocks(pFS, bgdtStart + containingBlock, 1, pMem) == DEVERR_SUCCESS);
+}
+
 void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex)
 {
 	uint32_t ContainingBlock = (bgdIndex * sizeof(Ext2BlockGroupDescriptor)) >> pFS->m_log2BlockSize;
-	uint32_t blockGroupTableStart = (pFS->m_blockSize == 1024) ? 2 : 1;
-	
 	uint8_t* pMem = (uint8_t*)&pFS->m_pBlockGroups[(ContainingBlock << pFS->m_log2BlockSize) / sizeof(Ext2BlockGroupDescriptor)];
 	
-	ASSERT(Ext2WriteBlocks(pFS, blockGroupTableStart + ContainingBlock, 1, pMem) == DEVERR_SUCCESS);
+	Ext2FlushBlockGroupDescriptorInternal(pFS, 0, ContainingBlock, pMem);
+	
+	// If the file system has SPARSE_SUPER enabled...
+	if (pFS->m_superBlock.m_readOnlyFeatures & E2_ROF_SPARSE_SBLOCKS_AND_GDTS)
+	{
+		// The groups chosen are 0, 1, and powers of 3, 5, and 7. We've already written zero.
+		
+		Ext2FlushBlockGroupDescriptorInternal(pFS, 1, ContainingBlock, pMem);
+		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+	}
+	else
+	{
+		for (uint32_t blockGroupNo = 1; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo++)
+		{
+			Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+		}
+	}
 }
 
 uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
@@ -431,7 +478,7 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	uint32_t blockSizeNew = (byteSizeNew + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
 	
 	// Allocate the missing blocks.
-	for (uint32_t i = blockSizeOld + 1; i <= blockSizeNew; i++)
+	for (uint32_t i = blockSizeOld; i < blockSizeNew; i++)
 	{
 		uint32_t newBlock = Ext2AllocateBlock(pFS, 0);
 		
@@ -700,6 +747,7 @@ void Ext2TestFunction()
 	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
 	
 	Ext2InodeExpand(pFS, pUnit, 16000);
+	Ext2DumpInode(pInode, "/Ext0/z2_1024.txt");
 }
 
 // note: No one actually bothers to do this. (I think, from my own testing it seems like not)
