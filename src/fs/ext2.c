@@ -6,6 +6,10 @@
 //  ***************************************************************
 //  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
 //  ***************************************************************
+
+// TODO: This implementation can't read files bigger than 64 MB. Not that we'd want to for now.
+// TODO: Maybe replace these ASSERTs with proper-er error handling? :)
+
 #include <vfs.h>
 #include <ext2.h>
 #include <fat.h> // need this for the MasterBootRecord
@@ -15,10 +19,6 @@
 static const char s_extLetters[] = "0123456789ABCDEF";
 
 #define ENSURE_READ_OP(op, message) ASSERT(op == DEVERR_SUCCESS && message);
-
-// ...
-
-
 
 Ext2FileSystem s_ext2FileSystems[C_MAX_E2_FILE_SYSTEMS];
 
@@ -129,8 +129,10 @@ void Ext2GetInodeBlockLocation(uint32_t offset, uint32_t* useWhat, uint32_t* blo
 	return;
 }
 
+uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);
+
 //note: the offset is in <block_size> units.
-uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset)
+uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset, bool bWrite, uint32_t blockNo)
 {
 	uint32_t addrsPerBlock = pFS->m_blockSize / 4;
 	
@@ -145,26 +147,136 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	{
 		case EXT2_INODE_USE_DIRECT:
 		{
-			return pInode->m_directBlockPointer[blockIndices[0]];
+			if (!bWrite)
+			{
+				return pInode->m_directBlockPointer[blockIndices[0]];
+			}
+			
+			pInode->m_directBlockPointer[blockIndices[0]] = blockNo;
+			
+			//TODO: Somehow mark this inode as dirty.
+			
+			return blockNo;
 		}
 		case EXT2_INODE_USE_SINGLY:
 		{
-			ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-			return data[blockIndices[0]];
+			if (!bWrite)
+			{
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+				return data[blockIndices[0]];
+			}
+			
+			if (pInode->m_singlyIndirBlockPtr == 0)
+			{
+				// Allocate a new block.
+				uint32_t blk = Ext2AllocateBlock(pFS, 0);
+				if (blk == ~0u)
+				{
+					// Huh? We ran out of blocks. Wellp.
+					return 0;
+				}
+				else
+				{
+					pInode->m_singlyIndirBlockPtr = blk;
+					//TODO: Somehow mark this inode as dirty.
+					memset(data, 0, pFS->m_blockSize);
+				}
+			}
+			else
+			{
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			}
+			
+			data[blockIndices[0]] = blockNo;
+			ASSERT(Ext2WriteBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			return blockNo;
 		}
 		case EXT2_INODE_USE_DOUBLY:
 		{
-			ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			if (!bWrite)
+			{
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+				
+				uint32_t thing = data[blockIndices[0]];
+				ASSERT(Ext2ReadBlocks(pFS, thing, 1, data) == DEVERR_SUCCESS);
+				
+				return data[blockIndices[1]];
+			}
 			
-			uint32_t thing = data[blockIndices[1]];
-			ASSERT(Ext2ReadBlocks(pFS, thing, 1, data) == DEVERR_SUCCESS);
+			// If doubly indirect is zero...
+			if (pInode->m_doublyIndirBlockPtr == 0)
+			{
+				// Allocate it. The goal is to overwrite the entry inside the inode
+				uint32_t blk = Ext2AllocateBlock(pFS, 0);
+				if (blk == ~0u)
+				{
+					// Huh? We ran out of blocks. Wellp.
+					return 0;
+				}
+				else
+				{
+					pInode->m_doublyIndirBlockPtr = blk;
+					// TODO: Somehow mark this inode as dirty.
+					memset(data, 0, pFS->m_blockSize);
+					ASSERT(Ext2WriteBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+				}
+			}
+			else
+			{
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			}
 			
-			return data[blockIndices[1]];
+			// If the stuff inside the doubly direct is zero.
+			uint32_t firstTurn = data[blockIndices[0]];
+			if (firstTurn == 0)
+			{
+				// Allocate it. The goal is to overwrite the entry inside the inode
+				uint32_t blk = Ext2AllocateBlock(pFS, 0);
+				if (blk == ~0u)
+				{
+					// Huh? We ran out of blocks. Wellp.
+					return 0;
+				}
+				else
+				{
+					// Overwrite the entry in the doubly indirect table.
+					data[blockIndices[0]] = blk;
+					
+					// Write the doubly indirect table into memory. The 'data' pointer currently has its contents.
+					ASSERT(Ext2WriteBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+					
+					// Reset 'data' to null.
+					memset(data, 0, pFS->m_blockSize);
+					
+					// Write it to the disk.
+					ASSERT(Ext2WriteBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
+				}
+			}
+			else
+			{
+				ASSERT(Ext2ReadBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
+			}
+			
+			// All good.
+			data[blockIndices[1]] = blockNo;
+			ASSERT(Ext2WriteBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
+			
+			return blockNo;
 		}
 		// TODO: handle triply indirect blocks
 	}
 	
 	return 0;
+}
+
+uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset)
+{
+	return Ext2ReadWriteInodeBlock(pInode, pFS, offset, false, 0);
+}
+
+void Ext2SetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset, uint32_t blockNo)
+{
+	ASSERT(Ext2ReadWriteInodeBlock(pInode, pFS, offset, true, blockNo) == blockNo);
 }
 
 // Note: Before using this, make sure you've initialized pFS->m_pBlockBuffer to the super block's contents.
@@ -175,16 +287,12 @@ static void Ext2CommitSuperBlockBackup(Ext2FileSystem* pFS, int blockGroupNo)
 	// Block 0 is not part of any block group. 
 	uint32_t firstBlock = blockGroupNo * pFS->m_blocksPerGroup + 1;
 	
-	SLogMsg("Committing super block backup... %d", blockGroupNo);
-	
 	// Write the block.
 	ASSERT(Ext2WriteBlocks(pFS, firstBlock, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
 }
 
 void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 {
-	SLogMsg("Committing super block...");
-	
 	// Create a block-sized buffer where we'll put the super block.
 	memset(pFS->m_pBlockBuffer, 0, pFS->m_blockSize);
 	
@@ -228,10 +336,9 @@ void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex)
 	ASSERT(Ext2WriteBlocks(pFS, blockGroupTableStart + ContainingBlock, 1, pMem) == DEVERR_SUCCESS);
 }
 
-uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS)
+uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 {
 	// Look for a free block.
-	
 	for (uint32_t i = 0; i < pFS->m_blockGroupCount; i++)
 	{
 		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
@@ -258,7 +365,7 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS)
 				
 				for (uint32_t l = 0; l < 32; l++)
 				{
-					if (!(pData[k] & (1 << l))) continue;
+					if (pData[k] & (1 << l)) continue;
 					
 					// Set the bit in the bitmap and return.
 					pData[k] |= (1 << l);
@@ -320,13 +427,16 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	pCacheUnit->m_inode.m_size += byHowMuch;
 	pCacheUnit->m_node.m_length += byHowMuch;
 	
-	uint32_t blockSizeOld = (byteSizeOld + pFS->m_blockSize - 1) >> (10 + pFS->m_log2BlockSize);
-	uint32_t blockSizeNew = (byteSizeNew + pFS->m_blockSize - 1) >> (10 + pFS->m_log2BlockSize);
+	uint32_t blockSizeOld = (byteSizeOld + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
+	uint32_t blockSizeNew = (byteSizeNew + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
 	
 	// Allocate the missing blocks.
 	for (uint32_t i = blockSizeOld + 1; i <= blockSizeNew; i++)
 	{
+		uint32_t newBlock = Ext2AllocateBlock(pFS, 0);
 		
+		// Set the block in the correct place.
+		Ext2SetInodeBlock(&pCacheUnit->m_inode, pFS, i, newBlock);
 	}
 	
 	// Write the block containing the inode back to disk.
@@ -562,9 +672,10 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	SLogMsg("Block count: %d", pFS->m_superBlock.m_nBlocks);
 }
 
-void Ext2TestFunction(Ext2FileSystem* pFS)
+void Ext2TestFunction()
 {
 	// dump the super block
+	/*
 	SLogMsg("Dumping super block...  NOTE: Blocks per group: %d", pFS->m_blocksPerGroup);
 	SDumpBytesAsHex(&pFS->m_superBlock, sizeof(pFS->m_superBlock), true);
 	
@@ -574,6 +685,21 @@ void Ext2TestFunction(Ext2FileSystem* pFS)
 	ASSERT(Ext2ReadBlocks(pFS, thing, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
 	
 	SDumpBytesAsHex(pFS->m_pBlockBuffer, sizeof(pFS->m_superBlock), true);
+	*/
+	
+	//Ext2InodeExpand
+	
+	// Resolve the path:
+	FileNode* pFileNode = FsResolvePath("/Ext0/z2_1024.txt");
+	
+	// Grab the info.
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
+	
+	Ext2InodeExpand(pFS, pUnit, 16000);
 }
 
 // note: No one actually bothers to do this. (I think, from my own testing it seems like not)
@@ -679,10 +805,10 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
 	
-	Ext2UpdateLastMountedPath(pFS, FreeArea);
+	//Ext2UpdateLastMountedPath(pFS, FreeArea);
 	
 	// Try to retrieve the backups of the inodes. This is a test function.
-	//Ext2TestFunction(pFS);
+	Ext2TestFunction();
 }
 
 void FsExt2Cleanup(Ext2FileSystem* pFS)
