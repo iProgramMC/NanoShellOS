@@ -88,7 +88,7 @@ enum
 // EXT2_INODE_USE_DOUBLY: blockIndices is a pointer to 2 ints referring to the indices used in DA(DA(pInode->m_doublyIndirBlockPtr)[*0])[*1].
 // EXT2_INODE_USE_TRIPLY: blockIndices is a pointer to 3 ints referring to the indices used in DA(DA(DA(pInode->m_triplyIndirBlockPtr)[*0])[*1])[*2].
 // (DA = Data at a block address, *X = The Xth element of blockIndices.)
-void Ext2GetInodeBlockWhere(uint32_t offset, uint32_t* useWhat, uint32_t* blockIndices, uint32_t addrsPerBlock)
+void Ext2GetInodeBlockLocation(uint32_t offset, uint32_t* useWhat, uint32_t* blockIndices, uint32_t addrsPerBlock)
 {
 	useWhat[0] = EXT2_INODE_USE_NOTHING;
 	
@@ -137,7 +137,7 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 	uint32_t useWhat = EXT2_INODE_USE_NOTHING;
 	uint32_t blockIndices[3];
 	
-	Ext2GetInodeBlockWhere(offset, &useWhat, blockIndices, addrsPerBlock);
+	Ext2GetInodeBlockLocation(offset, &useWhat, blockIndices, addrsPerBlock);
 	
 	uint32_t* data = (uint32_t*)pFS->m_pBlockBuffer;
 	
