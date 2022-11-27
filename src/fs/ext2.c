@@ -346,7 +346,7 @@ void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 }
 
 //Assumes stuff has been prepared in Ext2FlushBlockGroupDescriptor. Don't use.
-static void Ext2FlushBlockGroupDescriptorInternal(Ext2FileSystem* pFS, uint32_t blockGroupIndex, uint32_t containingBlock, void* pMem)
+static void Ext2FlushBlockGroupDescriptorInternal(Ext2FileSystem* pFS, uint32_t blockGroupIndex, uint32_t blocksToWrite, void* pMem)
 {
 	uint32_t bgdtStart;
 	if (blockGroupIndex == 0)
@@ -354,31 +354,31 @@ static void Ext2FlushBlockGroupDescriptorInternal(Ext2FileSystem* pFS, uint32_t 
 	else
 		bgdtStart = 2 + pFS->m_blocksPerGroup * blockGroupIndex;
 	
-	ASSERT(Ext2WriteBlocks(pFS, bgdtStart + containingBlock, 1, pMem) == DEVERR_SUCCESS);
+	ASSERT(Ext2WriteBlocks(pFS, bgdtStart, blocksToWrite, pMem) == DEVERR_SUCCESS);
 }
 
 void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex)
 {
-	uint32_t ContainingBlock = (bgdIndex * sizeof(Ext2BlockGroupDescriptor)) >> pFS->m_log2BlockSize;
-	uint8_t* pMem = (uint8_t*)&pFS->m_pBlockGroups[(ContainingBlock << pFS->m_log2BlockSize) / sizeof(Ext2BlockGroupDescriptor)];
+	uint8_t* pMem = (uint8_t*)pFS->m_pBlockGroups;
+	uint32_t blocksToWrite = (pFS->m_blockGroupCount * sizeof(Ext2BlockGroupDescriptor) + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
 	
-	Ext2FlushBlockGroupDescriptorInternal(pFS, 0, ContainingBlock, pMem);
+	Ext2FlushBlockGroupDescriptorInternal(pFS, 0, blocksToWrite, pMem);
 	
 	// If the file system has SPARSE_SUPER enabled...
 	if (pFS->m_superBlock.m_readOnlyFeatures & E2_ROF_SPARSE_SBLOCKS_AND_GDTS)
 	{
 		// The groups chosen are 0, 1, and powers of 3, 5, and 7. We've already written zero.
 		
-		Ext2FlushBlockGroupDescriptorInternal(pFS, 1, ContainingBlock, pMem);
-		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
-		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
-		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+		Ext2FlushBlockGroupDescriptorInternal(pFS, 1, blocksToWrite, pMem);
+		for (uint32_t blockGroupNo = 3; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 3) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, blocksToWrite, pMem);
+		for (uint32_t blockGroupNo = 5; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 5) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, blocksToWrite, pMem);
+		for (uint32_t blockGroupNo = 7; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo *= 7) Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, blocksToWrite, pMem);
 	}
 	else
 	{
 		for (uint32_t blockGroupNo = 1; blockGroupNo < pFS->m_blockGroupCount; blockGroupNo++)
 		{
-			Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, ContainingBlock, pMem);
+			Ext2FlushBlockGroupDescriptorInternal(pFS, blockGroupNo, blocksToWrite, pMem);
 		}
 	}
 }
@@ -414,6 +414,8 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 				{
 					if (pData[k] & (1 << l)) continue;
 					
+					SLogMsg("Ext2AllocateBlock: Found blockgroup %d block %d entry %d bit %d",i,j,k,l);
+					
 					// Set the bit in the bitmap and return.
 					pData[k] |= (1 << l);
 					
@@ -428,7 +430,7 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 					pFS->m_superBlock.m_nUnallocatedBlocks--;
 					Ext2FlushSuperBlock(pFS);
 					
-					return i * pFS->m_blocksPerGroup + j * entriesPerBlock + k * 32 + l;
+					return 1 + i * pFS->m_blocksPerGroup + j * entriesPerBlock + k * 32 + l;
 				}
 			}
 		}
