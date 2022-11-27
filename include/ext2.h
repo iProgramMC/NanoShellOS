@@ -30,7 +30,7 @@ typedef union Ext2SuperBlock
 		uint32_t m_nBlocksSuperUser;
 		uint32_t m_nUnallocatedBlocks;
 		uint32_t m_nUnallocatedInodes;
-		uint32_t m_superBlockBlockNum; // Block number of the block containing the super block
+		uint32_t m_firstDataBlock;
 		uint32_t m_log2BlockSize;
 		uint32_t m_log2FragmentSize;
 		uint32_t m_blocksPerGroup;
