@@ -74,7 +74,9 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [x] Rewrite root directory code.
 - [ ] EXT2:
 - [x] \*        Read only support.
-- [ ] \*        Expand a file.
+- [x] \*        Expand a file.
+- [ ] \*        Shrink a file.
+- [ ] \*        Write data to a file.
 - [ ] \*        Create a file entry.
 - [ ] \*        Rename a file entry.
 - [ ] \*        Unlink a file.
@@ -84,6 +86,8 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [ ] FAT32:
 - [ ] \*        Read only support.
 - [ ] \*        Expand a file.
+- [ ] \*        Shrink a file.
+- [ ] \*        Write data to a file.
 - [ ] \*        Create a file entry.
 - [ ] \*        Rename a file entry.
 - [ ] \*        Delete a file.
