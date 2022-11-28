@@ -13,12 +13,15 @@
 #include <vfs.h>
 #include <ext2.h>
 #include <fat.h> // need this for the MasterBootRecord
+#include <debug.h>
 
 #define C_MAX_E2_FILE_SYSTEMS (16)
 
 static const char s_extLetters[] = "0123456789ABCDEF";
 
 #define ENSURE_READ_OP(op, message) ASSERT(op == DEVERR_SUCCESS && message);
+
+void SDumpBytesAsHex(void*pData, size_t bytes, bool as_bytes);
 
 Ext2FileSystem s_ext2FileSystems[C_MAX_E2_FILE_SYSTEMS];
 
@@ -54,6 +57,18 @@ DriveStatus Ext2ReadBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t block
 // Write a number of blocks from the file system. Use `uint8_t mem[pFS->m_blockSize * numBlocks]` or the equivalent MmAllocate to make space for its output.
 DriveStatus Ext2WriteBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t blockCount, const void* pMem)
 {
+	if ((int) blockNo < 0)
+	{
+		LogMsg("blockNo < 0");
+		return DEVERR_HARDWARE_ERROR;
+	}
+	
+	if (blockNo == 1108)
+	{
+		PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), NULL, NULL, false);
+		SDumpBytesAsHex(pMem, blockCount * pFS->m_blockSize, true);
+	}
+	
 	uint32_t lbaStart = pFS->m_lbaStart + blockNo * pFS->m_sectorsPerBlock, sectorCount = blockCount * pFS->m_sectorsPerBlock;
 	const uint8_t* pMem1 = (const uint8_t*)pMem;
 	
@@ -231,6 +246,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			// If doubly indirect is zero...
 			if (pInode->m_doublyIndirBlockPtr == 0)
 			{
+				SLogMsg("!!! Allocating pInode->m_doublyIndirBlockPtr !!!");
+				
 				// Allocate it. The goal is to overwrite the entry inside the inode
 				uint32_t blk = Ext2AllocateBlock(pFS, 0);
 				if (blk == ~0u)
@@ -240,10 +257,14 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				}
 				else
 				{
+					SLogMsg("!!! Setting as... %d !!!", blk);
 					pInode->m_doublyIndirBlockPtr = blk;
 					// TODO: Somehow mark this inode as dirty.
+					ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+					SDumpBytesAsHex(data, pFS->m_blockSize, false);
 					memset(data, 0, pFS->m_blockSize);
 					ASSERT(Ext2WriteBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+					SLogMsg("DumpDone");
 				}
 			}
 			else
@@ -253,6 +274,22 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			
 			// If the stuff inside the doubly direct is zero.
 			uint32_t firstTurn = data[blockIndices[0]];
+			
+			if (firstTurn > 1600000000)
+			{
+				SLogMsg("Dumping data as is in RAM...");
+				SDumpBytesAsHex(data, pFS->m_blockSize, false);
+				
+				SLogMsg("Dumping data as is on disk...");
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+				SDumpBytesAsHex(data, pFS->m_blockSize, false);
+				
+				void StDumpInterestingThing();
+				StDumpInterestingThing();
+				
+				ASSERT(false);
+			}
+			
 			if (firstTurn == 0)
 			{
 				// Allocate it. The goal is to overwrite the entry inside the inode
@@ -264,6 +301,9 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				}
 				else
 				{
+					// Read the doubly indirect table into memory. The 'data' pointer currently has its contents.
+					ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+					
 					// Overwrite the entry in the doubly indirect table.
 					data[blockIndices[0]] = blk;
 					
@@ -281,6 +321,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			{
 				ASSERT(Ext2ReadBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
 			}
+			
+			SLogMsg("FirstTurn: %d. Offset: %d. BlockIndices[0]: %d, m_doublyIndirBlockPtr: %d", firstTurn, offset, blockIndices[0], pInode->m_doublyIndirBlockPtr);
 			
 			// All good.
 			data[blockIndices[1]] = blockNo;
@@ -468,8 +510,6 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	LogMsg("ERROR: Block group descriptor whose m_nUnallocatedBlocks is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nUnallocatedBlocks);
 	return ~0u;
 }
-
-void SDumpBytesAsHex(void*pData, size_t bytes, bool as_bytes);
 
 void Ext2BlockBitmapCheck(Ext2FileSystem* pFS, uint32_t blockNo, bool bWrite, bool* pResultInOut)
 {

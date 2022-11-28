@@ -255,6 +255,11 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 	return StDeviceReadNoCache(lba, pDest, driveId, nBlocks);
 	#endif
 }
+
+void StDumpInterestingThing()
+{
+	StDebugDump(&s_cacheRegisters[0]);
+}
 DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
 {
 	#ifdef ENABLE_CACHING
