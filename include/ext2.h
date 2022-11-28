@@ -184,8 +184,8 @@ enum
 	E2_ROF_FS_USES_64BIT_SIZES     = (1 << 1),
 	E2_ROF_DIR_IN_BINARY_TREE      = (1 << 2),
 	
-	//well, we can claim we support 64-bit sizes by making files bigger than 512 MB unmodifiable. Has its reasons.
-	E2_ROF_UNSUPPORTED_FLAGS = (-1) & ~(E2_ROF_FS_USES_64BIT_SIZES),
+	//well, we can claim we support 64-bit sizes by making files bigger than 64 MB unmodifiable. Has its reasons.
+	E2_ROF_UNSUPPORTED_FLAGS = (-1) & ~(E2_ROF_FS_USES_64BIT_SIZES | E2_ROF_SPARSE_SBLOCKS_AND_GDTS),
 };
 
 // Ext2 Version 1.0 and earlier defaults
@@ -346,5 +346,11 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 
 // Read a part of the inode's data.
 void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint32_t offset, uint32_t size, void *pMemOut);
+
+// Write a part of the inode's data.
+void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint32_t offset, uint32_t size, const void *pMemIn);
+
+// Grow an inode by 'byHowMuch' bytes.
+void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch);
 
 #endif//_EXT2_H

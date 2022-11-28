@@ -580,7 +580,8 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
 }
 
-void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
+// TODO
+// OPTIMIZE oh come on, optimize this -iProgramInCpp
 
 void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, void *pMemOut)
 {
@@ -655,6 +656,83 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			pMem += pFS->m_blockSize;
 		}
 		
+	}
+}
+
+void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, const void *pMemIn)
+{
+	Ext2Inode* pInode = &pCacheUnit->m_inode;
+	if (!pCacheUnit->m_pBlockBuffer)
+	{
+		pCacheUnit->m_pBlockBuffer = MmAllocate(pFS->m_blockSize);
+		pCacheUnit->m_nLastBlockRead = ~0u;
+	}
+	
+	// will we ever hit a block boundary?
+	uint32_t offsetEnd = offset + size;
+	uint32_t blockStart = (offset       ) >> (pFS->m_log2BlockSize);
+	uint32_t blockEnd   = (offsetEnd - 1) >> (pFS->m_log2BlockSize);
+	
+	uint32_t offsetWithinStartBlock = (offset    & ((1 << pFS->m_log2BlockSize) - 1)); // TODO why does this bypass our and??
+	uint32_t offsetWithinEndBlock   = (offsetEnd & ((1 << pFS->m_log2BlockSize) - 1));
+	
+	if (offsetWithinEndBlock == 0)
+		offsetWithinEndBlock = pFS->m_blockSize;
+	
+	// offsetable version
+	const uint8_t* pMem = (const uint8_t*)pMemIn;
+	
+	for (uint32_t i = blockStart; i <= blockEnd; i++)
+	{
+		uint32_t blockIndex = Ext2GetInodeBlock(pInode, pFS, i);
+		
+		if (blockIndex)
+		{
+			if (pCacheUnit->m_nLastBlockRead != blockIndex)
+			{
+				pCacheUnit->m_nLastBlockRead = blockIndex;
+				ASSERT(Ext2ReadBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) == DEVERR_SUCCESS);
+			}
+		}
+		else
+		{
+			continue;
+		}
+		
+		// Are we at the start?
+		if (i == blockStart)
+		{
+			// copy from offsetWithinStartBlock to blockSize
+			
+			uint32_t endMin = pFS->m_blockSize;
+			if (i == blockEnd)
+				endMin = offsetWithinEndBlock;
+			
+			memcpy(pCacheUnit->m_pBlockBuffer + offsetWithinStartBlock, pMem, endMin - offsetWithinStartBlock);
+			
+			pMem += (endMin - offsetWithinStartBlock);
+		}
+		// Are we at the end?
+		else if (i == blockEnd)
+		{
+			// copy from 0 to offsetWithinEndBlock
+			memcpy(pCacheUnit->m_pBlockBuffer, pMem, offsetWithinEndBlock);
+			
+			pMem += offsetWithinEndBlock;
+		}
+		// Nope, read the full block.
+		else
+		{
+			memcpy(pCacheUnit->m_pBlockBuffer, pMem, pFS->m_blockSize);
+			
+			pMem += pFS->m_blockSize;
+		}
+		
+		// Write this block.
+		if (blockIndex)
+		{
+			ASSERT(Ext2WriteBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) == DEVERR_SUCCESS);
+		}
 	}
 }
 
@@ -816,11 +894,11 @@ void Ext2TestFunction()
 	
 	// Grab the info.
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
-	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
+	//Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
 	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
-	Ext2InodeExpand(pFS, pUnit, 16000000);
+	//Ext2InodeExpand(pFS, pUnit, 16000000);
 	Ext2DumpInode(pInode, "/Ext0/z2_1024.txt");
 }
 

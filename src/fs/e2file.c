@@ -33,9 +33,26 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 
 uint32_t Ext2FileWrite(UNUSED FileNode* pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
 {
-	// TODO
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
 	
-	return 0;
+	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
+	
+	// Make sure to cap the offset.
+	if (offset > pInode->m_size) 
+		return 0;
+	
+	if (offset + size > pInode->m_size)
+	{
+		Ext2InodeExpand(pFS, pUnit, size - (pInode->m_size - offset));
+	}
+	
+	if (size == 0) return 0;
+	
+	// write!
+	Ext2WriteFileSegment(pFS, pUnit, offset, size, pBuffer);
+	return size;
 }
 
 bool Ext2FileOpen(UNUSED FileNode* pNode)
