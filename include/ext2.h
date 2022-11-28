@@ -311,6 +311,10 @@ typedef struct Ext2FileSystem
 	uint32_t m_log2BlockSize;
 	uint32_t m_sectorsPerBlock;
 	uint32_t m_blockGroupCount;
+	uint8_t* m_pBlockBitmapPtr; // Stores all the block bitmaps.
+	uint8_t* m_pInodeBitmapPtr; // Stores all the inode bitmaps.
+	uint32_t m_blocksPerBlockBitmap;
+	uint32_t m_blocksPerInodeBitmap;
 	
 	Ext2BlockGroupDescriptor *m_pBlockGroups;
 	Ext2InodeCacheUnit       *m_pInodeCacheRoot;

@@ -57,18 +57,6 @@ DriveStatus Ext2ReadBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t block
 // Write a number of blocks from the file system. Use `uint8_t mem[pFS->m_blockSize * numBlocks]` or the equivalent MmAllocate to make space for its output.
 DriveStatus Ext2WriteBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t blockCount, const void* pMem)
 {
-	if ((int) blockNo < 0)
-	{
-		LogMsg("blockNo < 0");
-		return DEVERR_HARDWARE_ERROR;
-	}
-	
-	if (blockNo == 1108)
-	{
-		PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), NULL, NULL, false);
-		SDumpBytesAsHex(pMem, blockCount * pFS->m_blockSize, true);
-	}
-	
 	uint32_t lbaStart = pFS->m_lbaStart + blockNo * pFS->m_sectorsPerBlock, sectorCount = blockCount * pFS->m_sectorsPerBlock;
 	const uint8_t* pMem1 = (const uint8_t*)pMem;
 	
@@ -246,8 +234,6 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			// If doubly indirect is zero...
 			if (pInode->m_doublyIndirBlockPtr == 0)
 			{
-				SLogMsg("!!! Allocating pInode->m_doublyIndirBlockPtr !!!");
-				
 				// Allocate it. The goal is to overwrite the entry inside the inode
 				uint32_t blk = Ext2AllocateBlock(pFS, 0);
 				if (blk == ~0u)
@@ -257,14 +243,11 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				}
 				else
 				{
-					SLogMsg("!!! Setting as... %d !!!", blk);
 					pInode->m_doublyIndirBlockPtr = blk;
+					
 					// TODO: Somehow mark this inode as dirty.
-					ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-					SDumpBytesAsHex(data, pFS->m_blockSize, false);
 					memset(data, 0, pFS->m_blockSize);
 					ASSERT(Ext2WriteBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-					SLogMsg("DumpDone");
 				}
 			}
 			else
@@ -274,22 +257,6 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			
 			// If the stuff inside the doubly direct is zero.
 			uint32_t firstTurn = data[blockIndices[0]];
-			
-			if (firstTurn > 1600000000)
-			{
-				SLogMsg("Dumping data as is in RAM...");
-				SDumpBytesAsHex(data, pFS->m_blockSize, false);
-				
-				SLogMsg("Dumping data as is on disk...");
-				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
-				SDumpBytesAsHex(data, pFS->m_blockSize, false);
-				
-				void StDumpInterestingThing();
-				StDumpInterestingThing();
-				
-				ASSERT(false);
-			}
-			
 			if (firstTurn == 0)
 			{
 				// Allocate it. The goal is to overwrite the entry inside the inode
@@ -321,8 +288,6 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			{
 				ASSERT(Ext2ReadBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
 			}
-			
-			SLogMsg("FirstTurn: %d. Offset: %d. BlockIndices[0]: %d, m_doublyIndirBlockPtr: %d", firstTurn, offset, blockIndices[0], pInode->m_doublyIndirBlockPtr);
 			
 			// All good.
 			data[blockIndices[1]] = blockNo;
@@ -428,6 +393,13 @@ void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex
 	}
 }
 
+void Ext2FlushBlockBitmap(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex)
+{
+	uint32_t* pData = (uint32_t*)&pFS->m_pBlockBitmapPtr[(bgdIndex * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize];
+	
+	ASSERT(Ext2WriteBlocks(pFS, pFS->m_pBlockGroups[bgdIndex].m_blockAddrBlockUsageBmp, pFS->m_blocksPerBlockBitmap, pData) == DEVERR_SUCCESS);
+}
+
 uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 {
 	// Look for a free BG descriptor with at least one free block.
@@ -466,42 +438,37 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[freeBGD];
 	
 	// Look for a free block inside the block group.
-	uint32_t entriesPerBlock = pFS->m_blockSize / sizeof(uint32_t); // 32-bit entries.
-	uint32_t bitsPerBlock = pFS->m_blockSize * 8;
-	uint32_t blocksToCheck = (pFS->m_superBlock.m_blocksPerGroup + bitsPerBlock - 1) / bitsPerBlock;
+	uint32_t entriesPerBlock = pFS->m_blockSize * pFS->m_blocksPerBlockBitmap / sizeof(uint32_t); // 32-bit entries.
+	uint32_t* pData = (uint32_t*)&pFS->m_pBlockBitmapPtr[(freeBGD * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize];
 	
-	for (uint32_t j = 0; j < blocksToCheck; j++)
+	//SLogMsg("thing: %d, freeBGD: %d, blocksperblockbitmap: %d", (freeBGD * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize, freeBGD, pFS->m_blocksPerBlockBitmap);
+	
+	for (uint32_t k = 0; k < entriesPerBlock; k++)
 	{
-		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		// if all the blocks here are allocated....
+		if (pData[k] == ~0u)
+			continue;
 		
-		uint32_t* pData = (uint32_t*)pFS->m_pBlockBuffer;
-		
-		for (uint32_t k = 0; k < entriesPerBlock; k++)
+		for (uint32_t l = 0; l < 32; l++)
 		{
-			// if all the blocks here are allocated....
-			if (pData[k] == ~0u)
-				continue;
+			if (pData[k] & (1 << l)) continue;
 			
-			for (uint32_t l = 0; l < 32; l++)
-			{
-				if (pData[k] & (1 << l)) continue;
-				
-				// Set the bit in the bitmap and return.
-				pData[k] |= (1 << l);
-				
-				// Flush the bitmap.
-				ASSERT(Ext2WriteBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
-				
-				// Update the free blocks.
-				pBG->m_nUnallocatedBlocks--;
-				Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
-				
-				// Update the superblock.
-				pFS->m_superBlock.m_nUnallocatedBlocks--;
-				Ext2FlushSuperBlock(pFS);
-				
-				return pFS->m_superBlock.m_firstDataBlock + freeBGD * pFS->m_blocksPerGroup + j * entriesPerBlock + k * 32 + l;
-			}
+			// Set the bit in the bitmap and return.
+			pData[k] |= (1 << l);
+			
+			// Flush the bitmap.
+			//ASSERT(Ext2WriteBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+			Ext2FlushBlockBitmap(pFS, freeBGD);
+			
+			// Update the free blocks.
+			pBG->m_nUnallocatedBlocks--;
+			Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
+			
+			// Update the superblock.
+			pFS->m_superBlock.m_nUnallocatedBlocks--;
+			Ext2FlushSuperBlock(pFS);
+			
+			return pFS->m_superBlock.m_firstDataBlock + freeBGD * pFS->m_blocksPerGroup + k * 32 + l;
 		}
 	}
 	
@@ -604,9 +571,6 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	for (uint32_t i = blockSizeOld; i < blockSizeNew; i++)
 	{
 		uint32_t newBlock = Ext2AllocateBlock(pFS, 0);
-		
-		if (newBlock >= 4700 && newBlock <= 5000)
-			SLogMsg("i: %d  newBlock: %d", i, newBlock);
 		
 		// Set the block in the correct place.
 		Ext2SetInodeBlock(&pCacheUnit->m_inode, pFS, i, newBlock);
@@ -856,9 +820,7 @@ void Ext2TestFunction()
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
 	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
-	
-	//TODO: debug this shit (it sometimes overflows to -65536 and even lower lol)
-	//Ext2InodeExpand(pFS, pUnit, 16000000);
+	Ext2InodeExpand(pFS, pUnit, 16000000);
 	Ext2DumpInode(pInode, "/Ext0/z2_1024.txt");
 }
 
@@ -877,6 +839,26 @@ void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
 	LogMsg("Path volume last mounted to is now %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 	
 	Ext2FlushSuperBlock(pFS);
+}
+
+void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS)
+{
+	// For each block group...
+	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
+	{
+		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
+		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp, pFS->m_blocksPerBlockBitmap, &pFS->m_pBlockBitmapPtr[(bg * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
+	}
+}
+
+void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS)
+{
+	// For each block group...
+	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
+	{
+		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
+		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrInodeUsageBmp, pFS->m_blocksPerInodeBitmap, &pFS->m_pInodeBitmapPtr[(bg * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
+	}
 }
 
 //NOTE: This makes a copy!!
@@ -947,10 +929,24 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_pInodeCacheRoot = NULL;
 	pFS->m_pBlockGroups    = NULL;
 	
+	// TODO: We should probably do a ceil division rather than a floor one.
+	uint32_t blocksToReadBlockBitmap = pFS->m_blocksPerGroup >> (3 + pFS->m_log2BlockSize);
+	uint32_t blocksToReadInodeBitmap = pFS->m_inodesPerGroup >> (3 + pFS->m_log2BlockSize);
+	
 	pFS->m_pBlockBuffer    = MmAllocate(pFS->m_blockSize);
 	
-	// load the block group descriptor table
 	Ext2LoadBlockGroupDescriptorTable(pFS);
+	
+	// Load the bitmaps.
+	pFS->m_pBlockBitmapPtr = MmAllocate(pFS->m_blockSize * blocksToReadBlockBitmap * pFS->m_blockGroupCount);
+	//pFS->m_pInodeBitmapPtr = MmAllocate(pFS->m_blockSize * blocksToReadInodeBitmap * pFS->m_blockGroupCount);
+	pFS->m_pInodeBitmapPtr = NULL;
+	
+	pFS->m_blocksPerBlockBitmap = blocksToReadBlockBitmap;
+	pFS->m_blocksPerInodeBitmap = blocksToReadInodeBitmap;
+	
+	Ext2LoadBlockBitmaps(pFS);
+	//Ext2LoadInodeBitmaps(pFS);
 	
 	char name[10];
 	strcpy(name, "ExtX");
@@ -984,6 +980,16 @@ void FsExt2Cleanup(Ext2FileSystem* pFS)
 	{
 		MmFree(pFS->m_pBlockBuffer);
 		pFS->m_pBlockBuffer = NULL;
+	}
+	if (pFS->m_pBlockBitmapPtr)
+	{
+		MmFree(pFS->m_pBlockBitmapPtr);
+		pFS->m_pBlockBitmapPtr = NULL;
+	}
+	if (pFS->m_pInodeBitmapPtr)
+	{
+		MmFree(pFS->m_pInodeBitmapPtr);
+		pFS->m_pInodeBitmapPtr = NULL;
 	}
 	
 	Ext2DeleteInodeCacheTree(pFS);
