@@ -320,6 +320,14 @@ void ShellExecuteCommand(char* p)
 	{
 		LogMsg("Last run ELF returned: %d", g_lastReturnCode);
 	}
+	else if (strcmp (token, "time") == 0)
+	{
+		int timeThen = GetTickCount();
+		ShellExecuteCommand(state.m_pContinuation);
+		int timeNow  = GetTickCount();
+		
+		LogMsg("Real time: %d ms", timeNow - timeThen);
+	}
 	else if (strcmp (token, "e") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
