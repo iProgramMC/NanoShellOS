@@ -31,7 +31,7 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 	return size;
 }
 
-uint32_t Ext2FileWrite(UNUSED FileNode* pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void* pBuffer)
+uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -53,6 +53,15 @@ uint32_t Ext2FileWrite(UNUSED FileNode* pNode, UNUSED uint32_t offset, UNUSED ui
 	// write!
 	Ext2WriteFileSegment(pFS, pUnit, offset, size, pBuffer);
 	return size;
+}
+
+void Ext2FileEmpty(FileNode* pNode)
+{
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	Ext2InodeShrink(pFS, pUnit, pInode->m_size);
 }
 
 bool Ext2FileOpen(UNUSED FileNode* pNode)

@@ -16,6 +16,8 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 DirEnt   *Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent);
 FileNode *Ext2FindDir(FileNode* pNode, const char* pName);
 
+void Ext2FileEmpty(FileNode* pNode);
+
 void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeNo, const char* pName)
 {
 	strcpy(pFileNode->m_name, pName);
@@ -75,6 +77,8 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	{
 		pFileNode->Read  = Ext2FileRead;
 		pFileNode->Write = Ext2FileWrite;
+		
+		pFileNode->EmptyFile = Ext2FileEmpty;
 	}
 }
 

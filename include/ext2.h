@@ -353,4 +353,7 @@ void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint3
 // Grow an inode by 'byHowMuch' bytes.
 void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch);
 
+// Shrink an inode by 'byHowMuch' bytes.
+void Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch);
+
 #endif//_EXT2_H
