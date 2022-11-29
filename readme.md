@@ -75,8 +75,8 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [ ] EXT2:
 - [x] \*        Read only support.
 - [x] \*        Expand a file.
-- [ ] \*        Shrink a file.
-- [ ] \*        Write data to a file.
+- [x] \*        Shrink a file.
+- [x] \*        Write data to a file.
 - [ ] \*        Create a file entry.
 - [ ] \*        Rename a file entry.
 - [ ] \*        Unlink a file.
