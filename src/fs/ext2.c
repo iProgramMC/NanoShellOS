@@ -23,6 +23,9 @@ static const char s_extLetters[] = "0123456789ABCDEF";
 
 void SDumpBytesAsHex(void*pData, size_t bytes, bool as_bytes);
 
+// Forward declarations.
+void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo);
+
 Ext2FileSystem s_ext2FileSystems[C_MAX_E2_FILE_SYSTEMS];
 
 uint32_t Ext2GetBlockGroupBlockIsIn(Ext2FileSystem* pFS, uint32_t blockNo)
@@ -196,6 +199,9 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			
 			if (pInode->m_singlyIndirBlockPtr == 0)
 			{
+				// Don't allocate unless blockNo is not zero.
+				if (blockNo == 0) return blockNo;
+				
 				// Allocate a new block.
 				uint32_t blk = Ext2AllocateBlock(pFS, 0);
 				if (blk == ~0u)
@@ -217,6 +223,24 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			
 			data[blockIndices[0]] = blockNo;
 			ASSERT(Ext2WriteBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+			
+			// If the singly indirect list is full of zeroes...
+			bool bIsFullOfZeroes = true;
+			for (size_t i = 0; i < pFS->m_blockSize / sizeof(uint32_t); i++)
+			{
+				if (data[i] != 0)
+				{
+					bIsFullOfZeroes = false;
+					break;
+				}
+			}
+			
+			if (bIsFullOfZeroes)
+			{
+				Ext2FreeBlock(pFS, pInode->m_singlyIndirBlockPtr);
+				pInode->m_singlyIndirBlockPtr = 0;
+			}
+			
 			return blockNo;
 		}
 		case EXT2_INODE_USE_DOUBLY:
@@ -234,6 +258,9 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			// If doubly indirect is zero...
 			if (pInode->m_doublyIndirBlockPtr == 0)
 			{
+				// Don't allocate unless blockNo is not zero.
+				if (blockNo == 0) return blockNo;
+				
 				// Allocate it. The goal is to overwrite the entry inside the inode
 				uint32_t blk = Ext2AllocateBlock(pFS, 0);
 				if (blk == ~0u)
@@ -259,6 +286,9 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			uint32_t firstTurn = data[blockIndices[0]];
 			if (firstTurn == 0)
 			{
+				// Don't allocate unless blockNo is not zero.
+				if (blockNo == 0) return blockNo;
+				
 				// Allocate it. The goal is to overwrite the entry inside the inode
 				uint32_t blk = Ext2AllocateBlock(pFS, 0);
 				if (blk == ~0u)
@@ -292,6 +322,45 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			// All good.
 			data[blockIndices[1]] = blockNo;
 			ASSERT(Ext2WriteBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
+			
+			// If the first turn is full of zeroes...
+			bool bIsFullOfZeroes = true;
+			for (size_t i = 0; i < pFS->m_blockSize / sizeof(uint32_t); i++)
+			{
+				if (data[i] != 0)
+				{
+					bIsFullOfZeroes = false;
+					break;
+				}
+			}
+			
+			if (bIsFullOfZeroes)
+			{
+				//well, we can free this and remove it from the doubly indirect list
+				Ext2FreeBlock(pFS, firstTurn);
+				
+				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
+				ASSERT(data[blockIndices[0]] == firstTurn);
+				
+				data[blockIndices[0]] = 0;
+				
+				// Check if this is full of zeroes too.
+				bIsFullOfZeroes = true;
+				for (size_t i = 0; i < pFS->m_blockSize / sizeof(uint32_t); i++)
+				{
+					if (data[i] != 0)
+					{
+						bIsFullOfZeroes = false;
+						break;
+					}
+				}
+				
+				if (bIsFullOfZeroes)
+				{
+					Ext2FreeBlock(pFS, pInode->m_doublyIndirBlockPtr);
+					pInode->m_doublyIndirBlockPtr = 0;
+				}
+			}
 			
 			return blockNo;
 		}
@@ -529,6 +598,12 @@ void Ext2CheckBlockMarkUsed(Ext2FileSystem* pFS, uint32_t blockNo)
 	Ext2BlockBitmapCheck(pFS, blockNo, true, &result);
 }
 
+void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo)
+{
+	//SLogMsg("Ext2FreeBlock(%x)", blockNo);
+	Ext2CheckBlockMarkFree(pFS, blockNo);
+}
+
 // Expands an inode by 'byHowMuch' bytes.
 void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
 {
@@ -573,7 +648,72 @@ void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 		uint32_t newBlock = Ext2AllocateBlock(pFS, 0);
 		
 		// Set the block in the correct place.
-		Ext2SetInodeBlock(&pCacheUnit->m_inode, pFS, i, newBlock);
+		Ext2SetInodeBlock(pInodePlaceOnDisk, pFS, i, newBlock);
+		
+		memcpy(&pCacheUnit->m_inode.m_directBlockPointer[0], &pInodePlaceOnDisk->m_directBlockPointer[0], sizeof pInodePlaceOnDisk->m_directBlockPointer);
+		pCacheUnit->m_inode.m_singlyIndirBlockPtr = pInodePlaceOnDisk->m_singlyIndirBlockPtr;
+		pCacheUnit->m_inode.m_doublyIndirBlockPtr = pInodePlaceOnDisk->m_doublyIndirBlockPtr;
+		pCacheUnit->m_inode.m_triplyIndirBlockPtr = pInodePlaceOnDisk->m_triplyIndirBlockPtr;
+	}
+	
+	// Write the block containing the inode back to disk.
+	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+}
+
+void Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
+{
+	uint32_t inodeNo = pCacheUnit->m_inodeNumber;
+	
+	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
+	
+	// Determine which block group the inode belongs to.
+	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
+	
+	// Get the block group this inode is a part of.
+	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
+	
+	// Get the block group's inode table address.
+	uint32_t inodeTableAddr = pFS->m_pBlockGroups[blockGroup].m_startBlockAddrInodeTable;
+	
+	// This is the index inside that table.
+	uint32_t index = (inodeNo - 1) % inodesPerGroup;
+	
+	// Determine which block contains the inode.
+	uint64_t thing = index * pFS->m_inodeSize;
+	uint32_t blockInodeIsIn = (uint32_t)(thing / pFS->m_blockSize);
+	uint32_t blockInodeOffs = (uint32_t)(thing % pFS->m_blockSize);
+	
+	uint8_t bytes[pFS->m_blockSize];
+	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	
+	Ext2Inode* pInodePlaceOnDisk = (Ext2Inode*)(bytes + blockInodeOffs);
+	
+	// don't try to shrink the file beyond its size.
+	if (byHowMuch >= pInodePlaceOnDisk->m_size)
+		byHowMuch  = pInodePlaceOnDisk->m_size;
+	
+	uint32_t byteSizeOld = pCacheUnit->m_inode.m_size, byteSizeNew = byteSizeOld - byHowMuch;
+	
+	pInodePlaceOnDisk->m_size -= byHowMuch;
+	pCacheUnit->m_inode.m_size -= byHowMuch;
+	pCacheUnit->m_node.m_length -= byHowMuch;
+	
+	uint32_t blockSizeOld = (byteSizeOld + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
+	uint32_t blockSizeNew = (byteSizeNew + pFS->m_blockSize - 1) >> pFS->m_log2BlockSize;
+	
+	// Free the extra blocks.
+	for (uint32_t i = blockSizeNew; i < blockSizeOld; i++)
+	{
+		uint32_t blockToFree = Ext2GetInodeBlock(pInodePlaceOnDisk, pFS, i);
+		
+		Ext2FreeBlock(pFS, blockToFree);
+		
+		Ext2SetInodeBlock(pInodePlaceOnDisk, pFS, i, 0);
+		
+		memcpy(&pCacheUnit->m_inode.m_directBlockPointer[0], &pInodePlaceOnDisk->m_directBlockPointer[0], sizeof pInodePlaceOnDisk->m_directBlockPointer);
+		pCacheUnit->m_inode.m_singlyIndirBlockPtr = pInodePlaceOnDisk->m_singlyIndirBlockPtr;
+		pCacheUnit->m_inode.m_doublyIndirBlockPtr = pInodePlaceOnDisk->m_doublyIndirBlockPtr;
+		pCacheUnit->m_inode.m_triplyIndirBlockPtr = pInodePlaceOnDisk->m_triplyIndirBlockPtr;
 	}
 	
 	// Write the block containing the inode back to disk.
@@ -890,16 +1030,19 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 void Ext2TestFunction()
 {
 	// Resolve the path:
-	FileNode* pFileNode = FsResolvePath("/Ext0/z2_1024.txt");
+	FileNode* pFileNode = FsResolvePath("/Ext0/z2_3085.txt");
 	
 	// Grab the info.
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
-	//Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
 	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
 	//Ext2InodeExpand(pFS, pUnit, 16000000);
-	Ext2DumpInode(pInode, "/Ext0/z2_1024.txt");
+	
+	// Shrink the inode by 3000 bytes. So its size would be 85 bytes afterwards.
+	Ext2InodeShrink(pFS, pUnit, 3000);
+	Ext2DumpInode(pInode, "/Ext0/z2_3085.txt");
 }
 
 // note: No one actually bothers to do this. (I think, from my own testing it seems like not)
