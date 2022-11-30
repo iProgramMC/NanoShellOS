@@ -132,35 +132,28 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	return ~0u;
 }
 
+// If bWrite is set, takes the value from pResultInOut and sets the 'used' bit of that entry.
+// If bWrite is clear, takes the 'used' bit of the entry and sets pResultInOut to that.
 void Ext2BlockBitmapCheck(Ext2FileSystem* pFS, uint32_t blockNo, bool bWrite, bool* pResultInOut)
 {
 	blockNo -= pFS->m_superBlock.m_firstDataBlock; //since block numbers start at 1
 	
-	uint32_t bitsPerBlock = pFS->m_blockSize * 8;
-	uint32_t blockGroup = blockNo / pFS->m_blocksPerGroup, indexInsideBG = blockNo % pFS->m_blocksPerGroup;
-	//uint32_t blocksPerBlockBitmap = (pFS->m_superBlock.m_blocksPerGroup + bitsPerBlock - 1) / bitsPerBlock;
-	uint32_t blockThisBitIsIn = indexInsideBG / bitsPerBlock, indexInsideThatBlock = indexInsideBG % bitsPerBlock;
+	uint32_t bgd = blockNo / pFS->m_blocksPerGroup, idxInsideBgd = blockNo % pFS->m_blocksPerGroup;
 	
-	Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[blockGroup];
+	uint32_t* pData = (uint32_t*)&pFS->m_pBlockBitmapPtr[(bgd * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize];
 	
-	// Read the block.
-	ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + blockThisBitIsIn, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
-	
-	uint32_t* data = (uint32_t*)pFS->m_pBlockBuffer;
-	uint32_t thingIndex = indexInsideThatBlock / 32, thingBit = indexInsideThatBlock % 32;
+	uint32_t bitOffset = idxInsideBgd / 32, bitIndex = idxInsideBgd % 32;
 	
 	if (bWrite)
 	{
 		if (*pResultInOut)
-			data[thingIndex] |= (1 << thingBit);
+			pData[bitOffset] |=  (1 << bitIndex);
 		else
-			data[thingIndex] &=~(1 << thingBit);
-		
-		ASSERT(Ext2WriteBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + blockThisBitIsIn, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+			pData[bitOffset] &= ~(1 << bitIndex);
 	}
 	else
 	{
-		*pResultInOut = (data[thingIndex] & (1 << thingBit)) == 0;
+		*pResultInOut = (pData[bitOffset] & (1 << bitIndex)) != 0;
 	}
 }
 
@@ -168,7 +161,7 @@ bool Ext2CheckBlockFree(Ext2FileSystem* pFS, uint32_t blockNo)
 {
 	bool result = false;
 	Ext2BlockBitmapCheck(pFS, blockNo, false, &result);
-	return result;
+	return !result;
 }
 
 void Ext2CheckBlockMarkFree(Ext2FileSystem* pFS, uint32_t blockNo)
