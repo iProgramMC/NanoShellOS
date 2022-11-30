@@ -324,36 +324,52 @@ typedef struct Ext2FileSystem
 Ext2FileSystem;
 
 // Not actually related to Ext2, but we need it.
-void FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz);
+void FsRootCreateFileAtRoot(const char *pFileName, void *pContents, size_t sz);
 
 // Adds an inode to the inode cache.
-Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName);
+Ext2InodeCacheUnit *Ext2AddInodeToCache(Ext2FileSystem *pFS, uint32_t inodeNo, Ext2Inode *pInode, const char *pName);
 
 // Dumps the inode cache tree of a file system.
-void Ext2DumpInodeCacheTree(Ext2FileSystem* pFS);
+void Ext2DumpInodeCacheTree(Ext2FileSystem *pFS);
 
 // Look up an inode in the inode cache.
-Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo);
+Ext2InodeCacheUnit *Ext2LookUpInodeCacheUnit(Ext2FileSystem *pFS, uint32_t inodeNo);
 
 // Delete the inode cache tree.
-void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS);
+void Ext2DeleteInodeCacheTree(Ext2FileSystem *pFS);
 
 // Read an inode and add it to the inode cache. (or if it's in the inode cache, retrieve it from there or refresh it.)
-Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead);
+Ext2InodeCacheUnit *Ext2ReadInode(Ext2FileSystem *pFS, uint32_t inodeNo, const char *pName, bool bForceReRead);
 
 // Get the inode block number at an offset in block_size units.
-uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset);
+uint32_t Ext2GetInodeBlock(Ext2Inode *pInode, Ext2FileSystem *pFS, uint32_t offset);
 
 // Read a part of the inode's data.
-void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint32_t offset, uint32_t size, void *pMemOut);
+void Ext2ReadFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, void *pMemOut);
 
 // Write a part of the inode's data.
-void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pInode, uint32_t offset, uint32_t size, const void *pMemIn);
+void Ext2WriteFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, const void *pMemIn);
 
 // Grow an inode by 'byHowMuch' bytes.
-void Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch);
+void Ext2InodeExpand(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
 
 // Shrink an inode by 'byHowMuch' bytes.
-void Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch);
+void Ext2InodeShrink(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
+
+// Allocates a single block.
+uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);
+
+// Frees a single block.
+void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo);
+
+// Checks if a block spot is free right now.
+bool Ext2CheckBlockFree(Ext2FileSystem *pFS, uint32_t block);
+
+// Raw block based I/O functions.
+DriveStatus Ext2ReadBlocks (Ext2FileSystem *pFS, uint32_t blockNo, uint32_t blockCount,       void *pMem);
+DriveStatus Ext2WriteBlocks(Ext2FileSystem *pFS, uint32_t blockNo, uint32_t blockCount, const void *pMem);
+
+// Flush the super block.
+void Ext2FlushSuperBlock(Ext2FileSystem *pFS);
 
 #endif//_EXT2_H
