@@ -834,7 +834,7 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 			Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
 			
 			// Update the superblock.
-			pFS->m_superBlock.m_nUnallocatedBlocks--;
+			pFS->m_superBlock.m_nUnallocatedInodes--;
 			Ext2FlushSuperBlock(pFS);
 			
 			return 1 + freeBGD * pFS->m_blocksPerGroup + k * 32 + l;
@@ -843,6 +843,55 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 	
 	// Maybe this entry was faulty. well, that's the problem of the driver that wrote this...
 	// TODO: Don't just bail out if we have such a faulty thing.
-	LogMsg("ERROR: Block group descriptor whose m_nUnallocatedBlocks is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nUnallocatedBlocks);
+	LogMsg("ERROR: Block group descriptor whose m_nUnallocatedInodes is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nUnallocatedInodes);
 	return ~0u;
+}
+
+// If bWrite is set, takes the value from pResultInOut and sets the 'used' bit of that entry.
+// If bWrite is clear, takes the 'used' bit of the entry and sets pResultInOut to that.
+void Ext2InodeBitmapCheck(Ext2FileSystem* pFS, uint32_t inodeNo, bool bWrite, bool* pResultInOut)
+{
+	inodeNo--; //since inode numbers start at 1
+	
+	uint32_t bgd = inodeNo / pFS->m_inodesPerGroup, idxInsideBgd = inodeNo % pFS->m_inodesPerGroup;
+	
+	uint32_t* pData = (uint32_t*)&pFS->m_pInodeBitmapPtr[(bgd * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize];
+	
+	uint32_t bitOffset = idxInsideBgd / 32, bitIndex = idxInsideBgd % 32;
+	
+	if (bWrite)
+	{
+		if (*pResultInOut)
+			pData[bitOffset] |=  (1 << bitIndex);
+		else
+			pData[bitOffset] &= ~(1 << bitIndex);
+	}
+	else
+	{
+		*pResultInOut = (pData[bitOffset] & (1 << bitIndex)) != 0;
+	}
+}
+
+bool Ext2CheckInodeFree(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	bool result = false;
+	Ext2InodeBitmapCheck(pFS, inodeNo, false, &result);
+	return !result;
+}
+
+void Ext2CheckInodeMarkFree(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	bool result = false;
+	Ext2InodeBitmapCheck(pFS, inodeNo, true, &result);
+}
+
+void Ext2CheckInodeMarkUsed(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	bool result = true;
+	Ext2InodeBitmapCheck(pFS, inodeNo, true, &result);
+}
+
+void Ext2FreeInode(Ext2FileSystem *pFS, uint32_t inodeNo)
+{
+	Ext2CheckInodeMarkFree(pFS, inodeNo);
 }

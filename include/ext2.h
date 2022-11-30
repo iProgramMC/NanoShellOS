@@ -387,4 +387,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS);
 void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS);
 
+// Flush the block group descriptor table.
+void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex);
+
 #endif//_EXT2_H
