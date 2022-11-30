@@ -289,6 +289,8 @@ typedef struct Ext2InodeCacheUnit
 	
 	void*    m_pBlockBuffer;
 	uint32_t m_nLastBlockRead;
+	
+	uint32_t m_nBlockAllocHint;
 }
 Ext2InodeCacheUnit;
 

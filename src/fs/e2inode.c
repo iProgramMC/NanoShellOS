@@ -160,6 +160,19 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 		Ext2AddInodeToCacheRecursive(pFS, pFS->m_pInodeCacheRoot, pUnit);
 	}
 	
+	// determine a rough hint. This is just the maximum block address.
+	pUnit->m_nBlockAllocHint = 0;
+	
+	for (int i = 0; i < 12; i++)
+	{
+		if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_directBlockPointer[i])
+			pUnit->m_nBlockAllocHint = pUnit->m_inode.m_directBlockPointer[i];
+	}
+	
+	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_singlyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_singlyIndirBlockPtr;
+	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_doublyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_doublyIndirBlockPtr;
+	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_triplyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_triplyIndirBlockPtr;
+	
 	return pUnit;
 }
 

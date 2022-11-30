@@ -9,6 +9,21 @@
 #include <vfs.h>
 #include <ext2.h>
 
+static int FileTypeToExt2TypeHint(int fileType)
+{
+	if (fileType & FILE_TYPE_DIRECTORY)
+		return E2_DETI_DIRECTORY;
+	
+	switch (fileType)
+	{
+		case FILE_TYPE_FILE:         return E2_DETI_REG_FILE;
+		case FILE_TYPE_CHAR_DEVICE:  return E2_DETI_CHAR_DEV;
+		case FILE_TYPE_BLOCK_DEVICE: return E2_DETI_BLOCK_DEV;
+	}
+	
+	return E2_DETI_UNKNOWN;
+}
+
 uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
@@ -88,8 +103,6 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 {
 	//note: I don't think we want to allocate something in the heap right now.
 	uint8_t buffer[pFS->m_blockSize];
-	
-	FileNode* pNode = &pUnit->m_node;
 	
 	size_t nameLen = strlen(pName);
 	if (nameLen >= 255)
@@ -285,7 +298,7 @@ FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 }
 
 // Create a hard link. Will cause an I/O error on FAT32, because it doesn't actually support hard links.
-void Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, uint32_t destInode)
+void Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, Ext2InodeCacheUnit* pDestinationInode)
 {
-	Ext2AddDirectoryEntry(pFS, pCurrentDir, 
+	Ext2AddDirectoryEntry(pFS, pCurrentDir, pName, pDestinationInode->m_inodeNumber, FileTypeToExt2TypeHint(pDestinationInode->m_node.m_type));
 }

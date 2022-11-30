@@ -914,7 +914,6 @@ void Ext2TestFunction()
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
-	
 	char buf[1000];
 	
 	uint32_t tickCountThen = GetTickCount();
