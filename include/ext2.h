@@ -383,4 +383,8 @@ uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offs
 // Adds a directory entry pointing towards a certain inode and increases that inode's link count.
 void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator);
 
+// Read data from the block and inode bitmaps.
+void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS);
+void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS);
+
 #endif//_EXT2_H

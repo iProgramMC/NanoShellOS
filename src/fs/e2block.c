@@ -59,7 +59,8 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	// Look for a free BG descriptor with at least one free block.
 	uint32_t freeBGD = ~0u;
 	
-	uint32_t hintBG = (hint - pFS->m_superBlock.m_firstDataBlock) / pFS->m_blocksPerGroup;
+	uint32_t hintBG       = (hint - pFS->m_superBlock.m_firstDataBlock) / pFS->m_blocksPerGroup;
+	uint32_t hintInsideBG = (hint - pFS->m_superBlock.m_firstDataBlock) % pFS->m_blocksPerGroup;
 	
 	for (uint32_t i = hintBG; i < pFS->m_blockGroupCount; i++)
 	{
@@ -97,8 +98,10 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	
 	//SLogMsg("thing: %d, freeBGD: %d, blocksperblockbitmap: %d", (freeBGD * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize, freeBGD, pFS->m_blocksPerBlockBitmap);
 	
-	for (uint32_t k = 0; k < entriesPerBlock; k++)
+	for (uint32_t idx = 0; idx < entriesPerBlock; idx++)
 	{
+		uint32_t k = (idx + hintInsideBG / 32) % entriesPerBlock;
+		
 		// if all the blocks here are allocated....
 		if (pData[k] == ~0u)
 			continue;
