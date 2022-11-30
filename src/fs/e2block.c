@@ -96,8 +96,6 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	uint32_t entriesPerBlock = pFS->m_blockSize * pFS->m_blocksPerBlockBitmap / sizeof(uint32_t); // 32-bit entries.
 	uint32_t* pData = (uint32_t*)&pFS->m_pBlockBitmapPtr[(freeBGD * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize];
 	
-	//SLogMsg("thing: %d, freeBGD: %d, blocksperblockbitmap: %d", (freeBGD * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize, freeBGD, pFS->m_blocksPerBlockBitmap);
-	
 	for (uint32_t idx = 0; idx < entriesPerBlock; idx++)
 	{
 		uint32_t k = (idx + hintInsideBG / 32) % entriesPerBlock;
@@ -114,7 +112,6 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 			pData[k] |= (1 << l);
 			
 			// Flush the bitmap.
-			//ASSERT(Ext2WriteBlocks(pFS, pBG->m_blockAddrBlockUsageBmp + j, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
 			Ext2FlushBlockBitmap(pFS, freeBGD);
 			
 			// Update the free blocks.

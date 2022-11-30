@@ -358,16 +358,6 @@ Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const c
 	return Ext2AddInodeToCache(pFS, inodeNo, &inode, pName);
 }
 
-void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS)
-{
-	// For each block group...
-	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
-	{
-		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
-		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrInodeUsageBmp, pFS->m_blocksPerInodeBitmap, &pFS->m_pInodeBitmapPtr[(bg * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
-	}
-}
-
 // **************************************
 //   Section : Inode Block Manipulation
 // **************************************
@@ -779,6 +769,80 @@ void Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 //   Section : Inode Allocation
 // ******************************
 
+void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS)
+{
+	// For each block group...
+	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
+	{
+		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
+		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrInodeUsageBmp, pFS->m_blocksPerInodeBitmap, &pFS->m_pInodeBitmapPtr[(bg * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
+	}
+}
 
+void Ext2FlushInodeBitmap(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex)
+{
+	uint32_t* pData = (uint32_t*)&pFS->m_pInodeBitmapPtr[(bgdIndex * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize];
+	
+	ASSERT(Ext2WriteBlocks(pFS, pFS->m_pBlockGroups[bgdIndex].m_blockAddrInodeUsageBmp, pFS->m_blocksPerInodeBitmap, pData) == DEVERR_SUCCESS);
+}
 
-
+uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
+{
+	uint32_t freeBGD = ~0u;
+	
+	for (uint32_t i = 0; i < pFS->m_blockGroupCount; i++)
+	{
+		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
+		
+		if (pBG->m_nUnallocatedInodes > 0)
+		{
+			freeBGD = i;
+			break;
+		}
+	}
+	
+	if (freeBGD == ~0u)
+	{
+		//well, we did not really have space for an inode.
+		return ~0u;
+	}
+	
+	Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[freeBGD];
+	
+	// Look for a free block inside the block group.
+	uint32_t entriesPerBlock = pFS->m_blockSize * pFS->m_blocksPerInodeBitmap / sizeof(uint32_t); // 32-bit entries.
+	uint32_t* pData = (uint32_t*)&pFS->m_pInodeBitmapPtr[(freeBGD * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize];
+	
+	for (uint32_t k = 0; k < entriesPerBlock; k++)
+	{
+		// if all the blocks here are allocated....
+		if (pData[k] == ~0u)
+			continue;
+		
+		for (uint32_t l = 0; l < 32; l++)
+		{
+			if (pData[k] & (1 << l)) continue;
+			
+			// Set the bit in the bitmap and return.
+			pData[k] |= (1 << l);
+			
+			// Flush the bitmap.
+			Ext2FlushInodeBitmap(pFS, freeBGD);
+			
+			// Update the free inodes.
+			pBG->m_nUnallocatedInodes--;
+			Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
+			
+			// Update the superblock.
+			pFS->m_superBlock.m_nUnallocatedBlocks--;
+			Ext2FlushSuperBlock(pFS);
+			
+			return 1 + freeBGD * pFS->m_blocksPerGroup + k * 32 + l;
+		}
+	}
+	
+	// Maybe this entry was faulty. well, that's the problem of the driver that wrote this...
+	// TODO: Don't just bail out if we have such a faulty thing.
+	LogMsg("ERROR: Block group descriptor whose m_nUnallocatedBlocks is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nUnallocatedBlocks);
+	return ~0u;
+}
