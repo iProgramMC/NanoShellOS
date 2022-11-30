@@ -730,88 +730,6 @@ void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)
 	}
 }
 
-void Ext2ReadInodeMetaData(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pOutputInode)
-{
-	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
-	
-	// Determine which block group the inode belongs to.
-	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
-	
-	// Get the block group this inode is a part of.
-	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
-	
-	// Get the block group's inode table address.
-	uint32_t inodeTableAddr = pFS->m_pBlockGroups[blockGroup].m_startBlockAddrInodeTable;
-	
-	// This is the index inside that table.
-	uint32_t index = (inodeNo - 1) % inodesPerGroup;
-	
-	// Determine which block contains the inode.
-	uint32_t thing = index * pFS->m_inodeSize;
-	uint32_t blockInodeIsIn = thing / pFS->m_blockSize;
-	uint32_t blockInodeOffs = thing % pFS->m_blockSize;
-	
-	uint8_t bytes[pFS->m_blockSize];
-	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
-	
-	Ext2Inode* pInode = (Ext2Inode*)(bytes + blockInodeOffs);
-	
-	*pOutputInode = *pInode;
-}
-
-void Ext2FlushInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
-{
-	Ext2Inode* pInputInode = &pUnit->m_inode;
-	uint32_t inodeNo = pUnit->m_inodeNumber;
-	
-	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
-	
-	// Determine which block group the inode belongs to.
-	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
-	
-	// Get the block group this inode is a part of.
-	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
-	
-	// Get the block group's inode table address.
-	uint32_t inodeTableAddr = pFS->m_pBlockGroups[blockGroup].m_startBlockAddrInodeTable;
-	
-	// This is the index inside that table.
-	uint32_t index = (inodeNo - 1) % inodesPerGroup;
-	
-	// Determine which block contains the inode.
-	uint32_t thing = index * pFS->m_inodeSize;
-	uint32_t blockInodeIsIn = thing / pFS->m_blockSize;
-	uint32_t blockInodeOffs = thing % pFS->m_blockSize;
-	
-	uint8_t bytes[pFS->m_blockSize];
-	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
-	
-	Ext2Inode* pInode = (Ext2Inode*)(bytes + blockInodeOffs);
-	
-	*pInode = *pInputInode;
-	
-	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
-}
-
-// Read an inode and add it to the inode cache. Give it a name from the system side, since
-// the inodes themselves do not contain names -- that's the job of the directory entry.
-// When done, return the specific cache unit.
-Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead)
-{
-	// If the inode was already cached, and we aren't forced to re-read it, just return.
-	if (!bForceReRead)
-	{
-		Ext2InodeCacheUnit* pUnit = Ext2LookUpInodeCacheUnit(pFS, inodeNo);
-		if (pUnit)
-			return pUnit;
-	}
-	
-	Ext2Inode inode;
-	Ext2ReadInodeMetaData(pFS, inodeNo, &inode);
-	
-	return Ext2AddInodeToCache(pFS, inodeNo, &inode, pName);
-}
-
 // Initting code
 
 int Ext2GetInodeSize(Ext2FileSystem* pFS)
@@ -857,8 +775,6 @@ void Ext2ReadSuperBlock(Ext2FileSystem* pFS)
 	uint32_t m_superBlockSector = pFS->m_lbaStart + 2;
 	
 	StDeviceRead( m_superBlockSector, &pFS->m_superBlock.m_bytes, pFS->m_driveID, 2 );
-	
-	LogMsg("Path volume was last mounted to: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 }
 
 void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
@@ -946,26 +862,6 @@ void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
 	LogMsg("Path volume last mounted to is now %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 	
 	Ext2FlushSuperBlock(pFS);
-}
-
-void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS)
-{
-	// For each block group...
-	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
-	{
-		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
-		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp, pFS->m_blocksPerBlockBitmap, &pFS->m_pBlockBitmapPtr[(bg * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
-	}
-}
-
-void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS)
-{
-	// For each block group...
-	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
-	{
-		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
-		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrInodeUsageBmp, pFS->m_blocksPerInodeBitmap, &pFS->m_pInodeBitmapPtr[(bg * pFS->m_blocksPerInodeBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
-	}
 }
 
 //NOTE: This makes a copy!!

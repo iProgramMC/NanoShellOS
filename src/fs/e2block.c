@@ -188,3 +188,13 @@ void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo)
 	//SLogMsg("Ext2FreeBlock(%x)", blockNo);
 	Ext2CheckBlockMarkFree(pFS, blockNo);
 }
+
+void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS)
+{
+	// For each block group...
+	for (uint32_t bg = 0; bg < pFS->m_blockGroupCount; bg++)
+	{
+		Ext2BlockGroupDescriptor* pBG = &pFS->m_pBlockGroups[bg];
+		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp, pFS->m_blocksPerBlockBitmap, &pFS->m_pBlockBitmapPtr[(bg * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
+	}
+}
