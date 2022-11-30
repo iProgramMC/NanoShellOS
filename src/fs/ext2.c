@@ -191,6 +191,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 		{
 			if (!bWrite)
 			{
+				if (pInode->m_singlyIndirBlockPtr == 0) return 0;
+				
 				ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 				return data[blockIndices[0]];
 			}
@@ -245,9 +247,13 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 		{
 			if (!bWrite)
 			{
+				if (pInode->m_doublyIndirBlockPtr == 0) return 0;
+				
 				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 				
 				uint32_t thing = data[blockIndices[0]];
+				if (thing == 0) return 0;
+				
 				ASSERT(Ext2ReadBlocks(pFS, thing, 1, data) == DEVERR_SUCCESS);
 				
 				return data[blockIndices[1]];
@@ -753,6 +759,40 @@ void Ext2ReadInodeMetaData(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pOu
 	*pOutputInode = *pInode;
 }
 
+void Ext2FlushInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+{
+	Ext2Inode* pInputInode = &pUnit->m_inode;
+	uint32_t inodeNo = pUnit->m_inodeNumber;
+	
+	ASSERT(inodeNo != 0 && "The inode number may not be zero, something is definitely wrong!");
+	
+	// Determine which block group the inode belongs to.
+	int inodesPerGroup = pFS->m_superBlock.m_inodesPerGroup;
+	
+	// Get the block group this inode is a part of.
+	uint32_t blockGroup = (inodeNo - 1) / inodesPerGroup;
+	
+	// Get the block group's inode table address.
+	uint32_t inodeTableAddr = pFS->m_pBlockGroups[blockGroup].m_startBlockAddrInodeTable;
+	
+	// This is the index inside that table.
+	uint32_t index = (inodeNo - 1) % inodesPerGroup;
+	
+	// Determine which block contains the inode.
+	uint32_t thing = index * pFS->m_inodeSize;
+	uint32_t blockInodeIsIn = thing / pFS->m_blockSize;
+	uint32_t blockInodeOffs = thing % pFS->m_blockSize;
+	
+	uint8_t bytes[pFS->m_blockSize];
+	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	
+	Ext2Inode* pInode = (Ext2Inode*)(bytes + blockInodeOffs);
+	
+	*pInode = *pInputInode;
+	
+	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+}
+
 // Read an inode and add it to the inode cache. Give it a name from the system side, since
 // the inodes themselves do not contain names -- that's the job of the directory entry.
 // When done, return the specific cache unit.
@@ -847,6 +887,8 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 
 void Ext2TestFunction()
 {
+	
+#ifdef TEST_FILE_SHRINK
 	// Resolve the path:
 	FileNode* pFileNode = FsResolvePath("/Ext0/z2_3085.txt");
 	
@@ -861,6 +903,33 @@ void Ext2TestFunction()
 	// Shrink the inode by 3000 bytes. So its size would be 85 bytes afterwards.
 	Ext2InodeShrink(pFS, pUnit, 3000);
 	Ext2DumpInode(pInode, "/Ext0/z2_3085.txt");
+#endif
+	
+#ifdef TEST_CREATE_HARD_LINK_TO
+	// Get the root inode.
+	FileNode* pFileNode = FsResolvePath("/Ext0/test");
+	
+	// Grab the info.
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	
+	char buf[1000];
+	
+	uint32_t tickCountThen = GetTickCount();
+	
+	for (int i = 0; i < 100; i++)
+	{
+		sprintf(buf, "bogus%d.txt", i);
+		// Try adding a directory entry.
+		Ext2AddDirectoryEntry(pFS, pUnit, buf, 20, E2_DETI_REG_FILE);
+	}
+	
+	uint32_t tickCountNow = GetTickCount();
+	
+	SLogMsg("Added 100 entries in %d ms", tickCountNow - tickCountThen);
+#endif
 }
 
 // note: No one actually bothers to do this. (I think, from my own testing it seems like not)

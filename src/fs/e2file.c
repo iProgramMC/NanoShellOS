@@ -75,6 +75,128 @@ void Ext2FileClose(UNUSED FileNode* pNode)
 	//all good
 }
 
+static uint32_t Ext2CalculateDirEntSize(Ext2DirEnt* pDirEnt)
+{
+	uint32_t sz = pDirEnt->m_nameLength + 8;
+	
+	sz = 4 * ((3 + sz) / 4);
+	
+	return sz;
+}
+
+void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator)
+{
+	//note: I don't think we want to allocate something in the heap right now.
+	uint8_t buffer[pFS->m_blockSize];
+	
+	FileNode* pNode = &pUnit->m_node;
+	
+	size_t nameLen = strlen(pName);
+	if (nameLen >= 255)
+	{
+		nameLen  = 255;
+	}
+	
+	union
+	{
+		uint8_t* pEntryData;
+		Ext2DirEnt* pDirEnt;
+	}
+	newDEntry;
+	
+	newDEntry.pEntryData = buffer;
+	
+	newDEntry.pDirEnt->m_inode         = inodeNo;
+	newDEntry.pDirEnt->m_typeIndicator = typeIndicator;
+	newDEntry.pDirEnt->m_nameLength    = nameLen;
+	
+	memcpy(newDEntry.pDirEnt->m_name, pName, nameLen);
+	
+	// ceil it to a multiple of 4
+	newDEntry.pDirEnt->m_entrySize = Ext2CalculateDirEntSize(newDEntry.pDirEnt);
+	
+	// For each block in the directory inode.
+	uint32_t blockNo = 0, offset = 0;
+	do
+	{
+	TRY_AGAIN:
+		blockNo = Ext2GetInodeBlock(&pUnit->m_inode, pFS, offset++);
+		
+		if (blockNo == 0) break;
+		
+		// look through all the dentries
+		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		
+		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer;
+		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
+		
+		while (pDirEnt < pEndPoint)
+		{
+			// check if the entry's size can fit this dentry too
+			uint32_t actualEntrySize = Ext2CalculateDirEntSize(pDirEnt);
+			
+			if (pDirEnt->m_inode == 0)
+				actualEntrySize = 0;
+			
+			if (pDirEnt->m_entrySize >= newDEntry.pDirEnt->m_entrySize + actualEntrySize)
+			{
+				// calculate the point where the new entry will go.
+				Ext2DirEnt* pDestEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + actualEntrySize);
+				
+				uint32_t newActualEntrySize = newDEntry.pDirEnt->m_entrySize;
+				
+				// set the new entry's size to pad the space that was occupied by the old one
+				newDEntry.pDirEnt->m_entrySize = pDirEnt->m_entrySize - actualEntrySize;
+				
+				// update the old one so it only uses the space it should
+				pDirEnt->m_entrySize = actualEntrySize;
+				
+				// clear it. Just in case
+				memset(pDestEnt, 0, newDEntry.pDirEnt->m_entrySize);
+				
+				// copy the new one
+				memcpy(pDestEnt, newDEntry.pDirEnt, newActualEntrySize);
+				
+				// write!
+				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+				
+				// Now, get the entry itself. This will be a hard link
+				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, inodeNo, pName, false);
+				
+				// Increase the destination Inode's reference count
+				pDestUnit->m_inode.m_nLinks++;
+				
+				Ext2FlushInode(pFS, pDestUnit);
+				
+				return;
+			}
+			
+			pDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
+		}
+	}
+	while (true);
+	
+	SLogMsg("Gotta expand!");
+	
+	// note: This should be fine, if the directory isn't <multiple of block size> sized then I don't think it's good
+	memset(buffer, 0, pFS->m_blockSize);
+	
+	// Note: We create a new entry here in the hope that it gets used later on.
+	Ext2DirEnt* pNewDirEnt = (Ext2DirEnt*)(buffer);
+	pNewDirEnt->m_entrySize = pFS->m_blockSize;
+	
+	// Write it
+	ASSERT(Ext2FileWrite(&pUnit->m_node, pUnit->m_inode.m_size, pFS->m_blockSize, buffer));
+	
+	if (offset < 1)
+		offset = 0;
+	else
+		offset -= 1;
+	
+	// Try again.
+	goto TRY_AGAIN;
+}
+
 DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
 	// Read the directory entry, starting at (*index).
@@ -104,6 +226,8 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	{
 		return NULL;
 	}
+	
+	d.dirEnt.m_name[d.dirEnt.m_nameLength] = 0;
 	
 	size_t nameLen = d.dirEnt.m_nameLength;
 	if (nameLen > sizeof(pOutputDent->m_name) - 2)
@@ -158,4 +282,10 @@ FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 	}
 	
 	return NULL;
+}
+
+// Create a hard link. Will cause an I/O error on FAT32, because it doesn't actually support hard links.
+void Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, uint32_t destInode)
+{
+	Ext2AddDirectoryEntry(pFS, pCurrentDir, 
 }

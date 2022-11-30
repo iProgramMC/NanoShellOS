@@ -99,7 +99,7 @@ typedef struct Ext2Inode
 	uint32_t m_lastModTime;
 	uint32_t m_deletionTime;
 	uint16_t m_gid;
-	uint16_t m_nHardLinks;
+	uint16_t m_nLinks;
 	uint32_t m_diskSectors;
 	uint32_t m_flags;
 	uint32_t m_osSpecific1;
@@ -362,6 +362,9 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);
 // Frees a single block.
 void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo);
 
+// Flush an inode.
+void Ext2FlushInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit);
+
 // Checks if a block spot is free right now.
 bool Ext2CheckBlockFree(Ext2FileSystem *pFS, uint32_t block);
 
@@ -371,5 +374,11 @@ DriveStatus Ext2WriteBlocks(Ext2FileSystem *pFS, uint32_t blockNo, uint32_t bloc
 
 // Flush the super block.
 void Ext2FlushSuperBlock(Ext2FileSystem *pFS);
+
+// Get a block at a specific offset from an inode.
+uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset);
+
+// Adds a directory entry pointing towards a certain inode and increases that inode's link count.
+void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator);
 
 #endif//_EXT2_H
