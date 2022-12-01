@@ -28,8 +28,8 @@ typedef union Ext2SuperBlock
 		uint32_t m_nInodes;
 		uint32_t m_nBlocks;
 		uint32_t m_nBlocksSuperUser;
-		uint32_t m_nUnallocatedBlocks;
-		uint32_t m_nUnallocatedInodes;
+		uint32_t m_nFreeBlocks;
+		uint32_t m_nFreeInodes;
 		uint32_t m_firstDataBlock;
 		uint32_t m_log2BlockSize;
 		uint32_t m_log2FragmentSize;
@@ -81,8 +81,8 @@ typedef union Ext2BlockGroupDescriptor
 		uint32_t m_blockAddrBlockUsageBmp;
 		uint32_t m_blockAddrInodeUsageBmp;
 		uint32_t m_startBlockAddrInodeTable;
-		uint16_t m_nUnallocatedBlocks;
-		uint16_t m_nUnallocatedInodes;
+		uint16_t m_nFreeBlocks;
+		uint16_t m_nFreeInodes;
 		uint16_t m_nDirs;
 	}
 	__attribute__((packed));

@@ -66,7 +66,7 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	{
 		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
 		
-		if (pBG->m_nUnallocatedBlocks > 0)
+		if (pBG->m_nFreeBlocks > 0)
 		{
 			freeBGD = i;
 			break;
@@ -79,7 +79,7 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 		{
 			Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
 			
-			if (pBG->m_nUnallocatedBlocks > 0)
+			if (pBG->m_nFreeBlocks > 0)
 			{
 				freeBGD = i;
 				break;
@@ -115,11 +115,11 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 			Ext2FlushBlockBitmap(pFS, freeBGD);
 			
 			// Update the free blocks.
-			pBG->m_nUnallocatedBlocks--;
+			pBG->m_nFreeBlocks--;
 			Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
 			
 			// Update the superblock.
-			pFS->m_superBlock.m_nUnallocatedBlocks--;
+			pFS->m_superBlock.m_nFreeBlocks--;
 			Ext2FlushSuperBlock(pFS);
 			
 			return pFS->m_superBlock.m_firstDataBlock + freeBGD * pFS->m_blocksPerGroup + k * 32 + l;
@@ -128,7 +128,7 @@ uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint)
 	
 	// Maybe this entry was faulty. well, that's the problem of the driver that wrote this...
 	// TODO: Don't just bail out if we have such a faulty thing.
-	LogMsg("ERROR: Block group descriptor whose m_nUnallocatedBlocks is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nUnallocatedBlocks);
+	LogMsg("ERROR: Block group descriptor whose m_nFreeBlocks is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", pBG->m_nFreeBlocks);
 	return ~0u;
 }
 

@@ -180,8 +180,6 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_doublyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_doublyIndirBlockPtr;
 	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_triplyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_triplyIndirBlockPtr;
 	
-	SLogMsg("File %s's block alloc hint is %d", pName, pUnit->m_nBlockAllocHint);
-	
 	return pUnit;
 }
 
@@ -806,7 +804,7 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 	{
 		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[i];
 		
-		if (pBG->m_nUnallocatedInodes > 0)
+		if (pBG->m_nFreeInodes > 0)
 		{
 			freeBGD = i;
 			break;
@@ -844,11 +842,11 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 			Ext2FlushInodeBitmap(pFS, freeBGD);
 			
 			// Update the free inodes.
-			pBG->m_nUnallocatedInodes--;
+			pBG->m_nFreeInodes--;
 			Ext2FlushBlockGroupDescriptor(pFS, freeBGD);
 			
 			// Update the superblock.
-			pFS->m_superBlock.m_nUnallocatedInodes--;
+			pFS->m_superBlock.m_nFreeInodes--;
 			Ext2FlushSuperBlock(pFS);
 			
 			return 1 + freeBGD * pFS->m_inodesPerGroup + k * 32 + l;
@@ -857,7 +855,7 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 	
 	// Maybe this entry was faulty. well, that's the problem of the driver that wrote this...
 	// TODO: Don't just bail out if we have such a faulty thing.
-	LogMsg("ERROR: Block group descriptor %d, whose m_nUnallocatedInodes is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", freeBGD, pBG->m_nUnallocatedInodes);
+	LogMsg("ERROR: Block group descriptor %d, whose m_nFreeInodes is %d actually lied and there are no blocks inside! An ``e2fsck'' MUST be performed.", freeBGD, pBG->m_nFreeInodes);
 	return ~0u;
 }
 
