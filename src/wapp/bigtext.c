@@ -155,6 +155,9 @@ void NotepadOnSave(UNUSED Window* pWindow)
 	int fd = FiOpen(NOTEPDATA(pWindow)->m_filename, O_WRONLY | O_CREAT);
 	if (fd < 0)
 	{
+		
+		SLogMsg("ERROR: %d", fd);
+		
 		char buffer[1024];
 		sprintf(buffer, "Could not save to %s, try saving to another directory.", NOTEPDATA(pWindow)->m_filename);
 		MessageBox(pWindow, buffer, "Notepad", ICON_WARNING << 16 | MB_OK);
