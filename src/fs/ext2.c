@@ -569,7 +569,8 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	Ext2InodeCacheUnit* pCacheUnit = Ext2ReadInode(pFS, 2, name, true);
 	pCacheUnit->m_bPermanent = true; // Currently useless right now.
 	
-	pCacheUnit->m_node.m_refCount = NODE_IS_PERMANENT;
+	pCacheUnit->m_node.m_refCount  = NODE_IS_PERMANENT;
+	pCacheUnit->m_node.m_type     |= FILE_TYPE_MOUNTPOINT;
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
