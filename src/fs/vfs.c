@@ -30,6 +30,7 @@ uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 	}
 	else return 0;
 }
+
 uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	if (pNode)
@@ -42,6 +43,7 @@ uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 	}
 	else return 0;
 }
+
 bool FsOpen(FileNode* pNode, bool read, bool write)
 {
 	if (pNode)
@@ -53,6 +55,7 @@ bool FsOpen(FileNode* pNode, bool read, bool write)
 	//FIXME: This just assumes the file is prepared for opening.
 	else return true;
 }
+
 void FsClose(FileNode* pNode)
 {
 	if (pNode)
@@ -61,6 +64,7 @@ void FsClose(FileNode* pNode)
 			pNode->Close(pNode);
 	}
 }
+
 DirEnt* FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
 {
 	if (pNode)
@@ -71,6 +75,7 @@ DirEnt* FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
 	}
 	else return NULL;
 }
+
 FileNode* FsFindDir(FileNode* pNode, const char* pName)
 {
 	if (pNode)
@@ -81,6 +86,7 @@ FileNode* FsFindDir(FileNode* pNode, const char* pName)
 	}
 	else return NULL;
 }
+
 bool FsOpenDir(FileNode* pNode)
 {
 	if (pNode)
@@ -91,6 +97,7 @@ bool FsOpenDir(FileNode* pNode)
 	}
 	else return false;
 }
+
 void FsCloseDir(FileNode* pNode)
 {
 	if (pNode)
@@ -99,6 +106,7 @@ void FsCloseDir(FileNode* pNode)
 			pNode->CloseDir(pNode);
 	}
 }
+
 void FsClearFile(FileNode* pNode)
 {
 	if (pNode)
@@ -107,25 +115,18 @@ void FsClearFile(FileNode* pNode)
 			pNode->EmptyFile(pNode);
 	}
 }
+
 int FsRemoveFile(UNUSED FileNode* pNode)
 {
-	// TODO
+	if (!pNode) return -ENOENT;
 	
-	/*if (!pNode) return -ENOENT;
+	if (!pNode->RemoveFile) return -EIO;
 	
-	if (!pNode->RemoveFile) return -ENOMEM;
-	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -ENOMEM;
+	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -EISDIR;
 	
-	int e;
-	if (!(e = pNode->RemoveFile(pNode)))
-	{
-		EraseFileNode (pNode);
-		return e;
-	}
-	return e;*/
-	
-	return -EIO;
+	return pNode->RemoveFile(pNode);
 }
+
 FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
 	if (pDirNode)
