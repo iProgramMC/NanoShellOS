@@ -100,7 +100,7 @@ typedef struct Ext2Inode
 	uint32_t m_deletionTime;
 	uint16_t m_gid;
 	uint16_t m_nLinks;
-	uint32_t m_diskSectors;
+	uint32_t m_nBlocks;
 	uint32_t m_flags;
 	uint32_t m_osSpecific1;
 	uint32_t m_directBlockPointer[12];
@@ -389,5 +389,11 @@ void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS);
 
 // Flush the block group descriptor table.
 void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex);
+
+// Allocate an inode and set it as used. This does not initialize the inode.
+uint32_t Ext2AllocateInode(Ext2FileSystem* pFS);
+
+// Free an inode.
+void Ext2FreeInode(Ext2FileSystem *pFS, uint32_t inodeNo);
 
 #endif//_EXT2_H

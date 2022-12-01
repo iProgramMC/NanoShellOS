@@ -703,7 +703,7 @@ void ShellExecuteCommand(char* p)
 		}
 		else
 		{
-			int fd = FiOpen (fileName, O_WRONLY);
+			int fd = FiOpen (fileName, O_WRONLY | O_APPEND);
 			if (fd < 0)
 			{
 				LogMsg("ft: %s: %s", fileName, GetErrNoString(fd));

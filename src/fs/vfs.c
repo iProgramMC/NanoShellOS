@@ -386,7 +386,6 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			// Try creating a file
 			pFile = FsCreateEmptyFile (pDir, fileNameSimple);
 			hasClearedAlready = true;
-			SLogMsg("Has cleared file already");
 			
 			if (!pFile)
 			{

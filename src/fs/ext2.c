@@ -15,6 +15,8 @@
 #include <fat.h> // need this for the MasterBootRecord
 #include <debug.h>
 
+#define CEIL_DIV_PO2(thing, divisor) ((thing + (1 << (divisor)) - 1) >> (divisor))
+
 #define C_MAX_E2_FILE_SYSTEMS (16)
 
 static const char s_extLetters[] = "0123456789ABCDEF";
@@ -404,7 +406,7 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 void Ext2TestFunction()
 {
 	
-	#define TEST_FILE_SHRINK
+	//#define TEST_FILE_SHRINK
 #ifdef TEST_FILE_SHRINK
 	// Resolve the path:
 	FileNode* pFileNode = FsResolvePath("/Ext0/z2_3085.txt");
@@ -534,8 +536,10 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pFS->m_pBlockGroups    = NULL;
 	
 	// TODO: We should probably do a ceil division rather than a floor one.
-	uint32_t blocksToReadBlockBitmap = pFS->m_blocksPerGroup >> (3 + pFS->m_log2BlockSize);
-	uint32_t blocksToReadInodeBitmap = pFS->m_inodesPerGroup >> (3 + pFS->m_log2BlockSize);
+	uint32_t blocksToReadBlockBitmap = CEIL_DIV_PO2(pFS->m_blocksPerGroup, 3 + pFS->m_log2BlockSize);
+	uint32_t blocksToReadInodeBitmap = CEIL_DIV_PO2(pFS->m_inodesPerGroup, 3 + pFS->m_log2BlockSize);
+	
+	SLogMsg("blocksToReadInodeBitmap: %d", blocksToReadInodeBitmap);
 	
 	pFS->m_pBlockBuffer    = MmAllocate(pFS->m_blockSize);
 	
@@ -543,8 +547,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Load the bitmaps.
 	pFS->m_pBlockBitmapPtr = MmAllocate(pFS->m_blockSize * blocksToReadBlockBitmap * pFS->m_blockGroupCount);
-	//pFS->m_pInodeBitmapPtr = MmAllocate(pFS->m_blockSize * blocksToReadInodeBitmap * pFS->m_blockGroupCount);
-	pFS->m_pInodeBitmapPtr = NULL;
+	pFS->m_pInodeBitmapPtr = MmAllocate(pFS->m_blockSize * blocksToReadInodeBitmap * pFS->m_blockGroupCount);
 	
 	pFS->m_blocksPerBlockBitmap = blocksToReadBlockBitmap;
 	pFS->m_blocksPerInodeBitmap = blocksToReadInodeBitmap;

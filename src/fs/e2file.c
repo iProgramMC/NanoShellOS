@@ -173,6 +173,11 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 				// write!
 				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
 				
+				// force a refresh
+				pUnit->m_nLastBlockRead = ~0u;
+				
+				SDumpBytesAsHex(pFS->m_pBlockBuffer, 1024, true);
+				
 				// Now, get the entry itself. This will be a hard link
 				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, inodeNo, pName, false);
 				
@@ -188,8 +193,6 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 		}
 	}
 	while (true);
-	
-	SLogMsg("Gotta expand!");
 	
 	// note: This should be fine, if the directory isn't <multiple of block size> sized then I don't think it's good
 	memset(buffer, 0, pFS->m_blockSize);
@@ -301,4 +304,42 @@ FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 void Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, Ext2InodeCacheUnit* pDestinationInode)
 {
 	Ext2AddDirectoryEntry(pFS, pCurrentDir, pName, pDestinationInode->m_inodeNumber, FileTypeToExt2TypeHint(pDestinationInode->m_node.m_type));
+}
+
+// Creates a new empty inode.
+int Ext2CreateFileAndInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName)
+{
+	uint32_t inodeNo = Ext2AllocateInode(pFS);
+	if (inodeNo == ~0u) return -ENOSPC;
+	
+	// Clear the inode. It will have a reference count of zero.
+	Ext2InodeCacheUnit fakeUnit;
+	memset(&fakeUnit, 0, sizeof fakeUnit);
+	
+	fakeUnit.m_inodeNumber = inodeNo;
+	
+	// set some default permissions for now
+	fakeUnit.m_inode.m_permissions |= E2_PERM_ANYONE_WRITE | E2_PERM_ANYONE_READ | E2_INO_FILE;
+	
+	Ext2FlushInode(pFS, &fakeUnit);
+	
+	// Add a directory entry to it.
+	Ext2AddDirectoryEntry(pFS, pCurrentDir, pName, inodeNo, E2_DETI_REG_FILE);
+	
+	return -ENOTHING;
+}
+
+FileNode* Ext2CreateFile(FileNode* pNode, const char* pName)
+{
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	
+	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
+	
+	if (Ext2CreateFileAndInode(pFS, pUnit, pName) == ENOTHING)
+	{
+		return Ext2FindDir(pNode, pName);
+	}
+	
+	return NULL;
 }
