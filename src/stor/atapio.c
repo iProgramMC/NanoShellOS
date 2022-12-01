@@ -27,7 +27,7 @@ static bool StIdeWaitBusy (uint16_t base)
 	while (ReadPort (base + 7) & BSY_FLAG)
 	{
 		countWait++;
-		if (countWait >= 1000000)
+		if (countWait >= 10000000)
 		{
 			return false;
 		}
