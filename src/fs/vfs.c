@@ -20,6 +20,24 @@
 
 char g_cwd[PATH_MAX+2];
 
+void FsAddReference(FileNode* pNode)
+{
+	SLogMsg("FsAddReference(%s) -> %d", pNode->m_name, pNode->m_refCount + 1);
+	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
+	
+	pNode->m_refCount++;
+}
+void FsReleaseReference(FileNode* pNode)
+{
+	SLogMsg("FsReleaseReference(%s) -> %d", pNode->m_name, pNode->m_refCount - 1);
+	
+	// if it's permanent, return
+	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
+	
+	ASSERT(pNode->m_refCount > 0);
+	pNode->m_refCount--;
+}
+
 uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
 {
 	if (pNode)
@@ -153,7 +171,7 @@ FileNode* FsResolvePath (const char* pPath)
 	//and run this function again.
 	if (*initial_filename == 0)
 	{
-		FileNode *pNode = FsGetRootNode ();//TODO
+		FileNode *pNode = FsGetRootNode();
 		while (true)
 		{
 			char* path = Tokenize (&state, NULL, "/");
@@ -162,11 +180,14 @@ FileNode* FsResolvePath (const char* pPath)
 			if (path && *path)
 			{
 				//nope, resolve pNode again.
+				FileNode* pOldNode = pNode;
 				pNode = FsFindDir (pNode, path);
-				if (!pNode)
-				{
-					return NULL;
-				}
+				
+				//release the old one
+				FsReleaseReference(pOldNode);
+				
+				//if we don't actually have it, return NULL
+				if (!pNode) return NULL;
 			}
 			else
 			{
@@ -331,6 +352,8 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			
 			pFile = FsFindDir(pDir, fileNameSimple);
 			
+			FsReleaseReference(pDir);
+			
 			hasClearedAlready = true;
 			
 			if (!pFile)
@@ -427,6 +450,8 @@ int FiClose (int fd)
 	
 	FsClose (pDesc->m_pNode);
 	
+	FsReleaseReference(pDesc->m_pNode);
+	
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
 	
@@ -454,6 +479,8 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	
 	if (!(pDir->m_type & FILE_TYPE_DIRECTORY))
 	{
+		FsReleaseReference(pDir);
+		
 		// Not a Directory
 		LockFree (&g_FileSystemLock);
 		return -ENOTDIR;
@@ -496,6 +523,8 @@ int FiCloseDir (int dd)
 	strcpy(pDesc->m_sPath, "");
 	
 	FsCloseDir (pDesc->m_pNode);
+	
+	FsReleaseReference(pDesc->m_pNode);
 	
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
@@ -593,6 +622,8 @@ int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 	pOut->m_createTime = pNode->m_createTime;
 	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
+	FsReleaseReference(pNode);
+	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
@@ -615,6 +646,8 @@ int FiStat (const char *pFileName, StatResult* pOut)
 	pOut->m_modifyTime = pNode->m_modifyTime;
 	pOut->m_createTime = pNode->m_createTime;
 	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	
+	FsReleaseReference(pNode);
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
@@ -743,13 +776,21 @@ int FiTellSize (int fd)
 
 
 extern char g_cwd[PATH_MAX+2];
+
 int FiRemoveFile (const char *pfn)
 {
 	FileNode *p = FsResolvePath (pfn);
 	if (!p) return -ENOENT;
 	
-	return FsRemoveFile (p); // Node no longer valid : )
+	int errorCode = FsRemoveFile (p);
+	if (errorCode < 0)
+	{
+		FsReleaseReference(p);
+	}
+	
+	return errorCode;
 }
+
 int FiChangeDir (const char *pfn)
 {
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
@@ -757,13 +798,19 @@ int FiChangeDir (const char *pfn)
 	int slen = strlen (pfn);
 	if (slen >= PATH_MAX) return -EOVERFLOW;
 	
-	
 	if (pfn[0] == '/')
 	{
 		// Absolute Path
 		FileNode *pNode = FsResolvePath (pfn);
 		if (!pNode) return -EEXIST;
-		if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+		
+		if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
+		{
+			FsReleaseReference(pNode);
+			return -ENOTDIR;
+		}
+		
+		FsReleaseReference(pNode);
 		
 		//this should work!
 		strcpy (g_cwd, pfn);
@@ -777,7 +824,7 @@ int FiChangeDir (const char *pfn)
 	memset (cwd_work, 0, sizeof cwd_work);
 	strcpy (cwd_work, g_cwd);
 	
-	//TODO FIXME: make composite paths like "../../test/file" work
+	//TODO FIXME: make composite paths like "../../test/file" work -- Partially works, but only because ext2 is generous enough to give us . and .. entries
 	
 	if (strcmp (pfn, PATH_PARENTDIR) == 0)
 	{
@@ -805,10 +852,19 @@ int FiChangeDir (const char *pfn)
 	
 	//resolve the path
 	FileNode *pNode = FsResolvePath (cwd_work);
+	
 	if (!pNode)
+	{
 		return -ENOENT; //does not exist
+	}
+	
 	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
+	{
+		FsReleaseReference(pNode);
 		return -ENOTDIR; //not a directory
+	}
+	
+	FsReleaseReference(pNode);
 	
 	//this should work!
 	strcpy (g_cwd, cwd_work);

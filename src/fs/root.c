@@ -15,6 +15,8 @@
 #include <debug.h>
 #include <sb.h>
 
+// note: here, we don't actually use FsReleaseReference, because everything is permanent anyway
+
 typedef struct RootFileNode
 {
 	struct RootFileNode* parent;
@@ -187,6 +189,7 @@ void FsRootSetupRootNode()
 {
 	FileNode* pFN = FsGetRootNode();
 	strcpy(pFN->m_name, "root");
+	pFN->m_refCount = NODE_IS_PERMANENT;
 	pFN->m_type  = FILE_TYPE_DIRECTORY;
 	pFN->m_perms = PERM_READ | PERM_WRITE | PERM_EXEC;
 	pFN->m_implData = (uint32_t)&g_rootNode;
@@ -200,6 +203,7 @@ RootFileNode* FsRootAddFile(RootFileNode* pNode, const char* pFileName, void* pC
 	
 	FileNode* pFN = &pNewNode->node;
 	strcpy(pFN->m_name, pFileName);
+	pFN->m_refCount = NODE_IS_PERMANENT;
 	pFN->m_type   = FILE_TYPE_FILE;
 	pFN->m_perms  = PERM_READ;
 	pFN->m_length = size;
@@ -216,6 +220,7 @@ RootFileNode* FsRootAddDirectory(RootFileNode* pNode, const char* pFileName)
 	
 	FileNode* pFN = &pNewNode->node;
 	strcpy(pFN->m_name, pFileName);
+	pFN->m_refCount = NODE_IS_PERMANENT;
 	pFN->m_type   = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
 	pFN->m_perms  = PERM_READ | PERM_WRITE | PERM_EXEC;
 	pFN->m_length = 0;

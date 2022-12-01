@@ -150,25 +150,40 @@ int  g_lastReturnCode = 0;
 bool CoPrintCharInternal (Console* this, char c, char next);
 
 extern char g_cwd[PATH_MAX+2];
-FileNode* g_pCwdNode = NULL;
 
 //extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 uint64_t ReadTSC();
 
+void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode);
+
 void ShellExecuteCommand(char* p)
+{
+	FileNode* pCwdNode = FsResolvePath (g_cwd);
+	
+	if (!pCwdNode)
+	{
+		LogMsg("ERROR: Current working directory is no longer available (deleted?)");
+		return;
+	}
+	
+	ShellExecuteCommandSub(p, pCwdNode);
+	
+	FsReleaseReference(pCwdNode);
+}
+
+void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 {
 	TokenState state;
 	state.m_bInitted = 0;
 	char* token = Tokenize (&state, p, " ");
+	
 	if (!token)
 		return;
+	
 	if (*token == 0)
 		return;
-	
-	//TODO
-	g_pCwdNode = FsResolvePath (g_cwd);
 	
 	if (strcmp (token, "help") == 0)
 	{
@@ -1138,11 +1153,14 @@ void ShellExecuteCommand(char* p)
 void ShellInit()
 {
 	strcpy (g_cwd, "/");
-	g_pCwdNode = FsResolvePath (g_cwd);
 	
+	/*
 	bool b = CbCopyText("movedata /Device/Sb16 /Fat0/sup/crap.raw\n");
 	if (!b)
+	{
 		LogMsg("Error copying text");
+	}
+	*/
 }
 
 void ShellPrintMotd()

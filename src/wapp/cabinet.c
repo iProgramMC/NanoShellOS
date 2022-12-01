@@ -165,6 +165,8 @@ reset:
 		else
 		{
 			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
+			
+			FsReleaseReference(pNode);
 		}
 	}
 	
@@ -177,6 +179,8 @@ reset:
 	RequestTaskbarUpdate();
 	
 	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);
+	
+	FsReleaseReference(pFolderNode);
 	
 	//RequestRepaint(pWindow);
 	CallControlCallback(pWindow, MAIN_LISTVIEW,  EVENT_PAINT, 0, 0);
@@ -200,6 +204,7 @@ void CdBack(Window* pWindow)
 				return;
 			}
 			UpdateDirectoryListing (pWindow);
+			FsReleaseReference(checkNode);
 			break;
 		}
 	}
@@ -281,151 +286,161 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
 				//LogMsg("Double clicked element: %s", pFileName);
 				
-				FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
 				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
 				{
 					CdBack(pWindow);
 					break;
 				}
-				else if (pFileNode)
+				else
 				{
-					if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
+					FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
+					if (pFileNode)
 					{
-						OnBusy(pWindow);
-						
-						// Is a directory.  Navigate to it.
-						char cwd_copy[sizeof(g_cabinetCWD)];
-						memcpy(cwd_copy, g_cabinetCWD, sizeof(g_cabinetCWD));
-						if (g_cabinetCWD[1] != 0)
-							strcat (g_cabinetCWD, "/");
-						strcat (g_cabinetCWD, pFileName);
-						
-						FileNode *pCurrent = FsResolvePath (g_cabinetCWD);
-						if (!pCurrent)
+						if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
 						{
-							memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
-							char buffer [256];
-							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-							MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+							OnBusy(pWindow);
+							
+							// Is a directory.  Navigate to it.
+							char cwd_copy[sizeof(g_cabinetCWD)];
+							memcpy(cwd_copy, g_cabinetCWD, sizeof(g_cabinetCWD));
+							if (g_cabinetCWD[1] != 0)
+								strcat (g_cabinetCWD, "/");
+							strcat (g_cabinetCWD, pFileName);
+							
+							FileNode *pCurrent = FsResolvePath (g_cabinetCWD);
+							if (!pCurrent)
+							{
+								memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
+								char buffer [256];
+								sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
+								MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+							}
+							else
+							{
+								UpdateDirectoryListing (pWindow);
+								FsReleaseReference(pCurrent);
+							}
+							
+							OnNotBusy(pWindow);
+						}
+						else if (EndsWith (pFileName, ".nse"))
+						{
+							// Executing file.  Might want to MessageBox the user about it?
+							char buffer[512];
+							sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
+							if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
+							{
+								OnBusy(pWindow);
+								
+								// Get the file name.
+								char filename[1024];
+								strcpy (filename, "exwindow:");
+								strcat (filename, g_cabinetCWD);
+								if (g_cabinetCWD[1] != 0)
+									strcat (filename, "/");
+								strcat (filename, pFileName);
+								//CabinetExecute(pWindow, filename);
+								RESOURCE_STATUS status = LaunchResource(filename);
+								SLogMsg("Resource launch status: %x", status);
+								
+								OnNotBusy(pWindow);
+							}
+						}
+						else if (EndsWith (pFileName, ".c"))
+						{
+							// Executing file.  Might want to MessageBox the user about it?
+							char buffer[512];
+							sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
+							if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
+							{
+								OnBusy(pWindow);
+								
+								// Get the file name.
+								char filename[1024];
+								strcpy (filename, "exscript:");
+								strcat (filename, g_cabinetCWD);
+								if (g_cabinetCWD[1] != 0)
+									strcat (filename, "/");
+								strcat (filename, pFileName);
+								//CabinetExecute(pWindow, filename);
+								RESOURCE_STATUS status = LaunchResource(filename);
+								SLogMsg("Resource launch status: %x", status);
+								
+								OnNotBusy(pWindow);
+							}
+						}
+						else if (EndsWith (pFileName, ".txt"))
+						{
+							OnBusy(pWindow);
+							
+							// Get the file name.
+							char filename[1024];
+							strcpy (filename, "ted:");
+							strcat (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							//CabinetExecute(pWindow, filename);
+							RESOURCE_STATUS status = LaunchResource(filename);
+							SLogMsg("Resource launch status: %x", status);
+							
+							OnNotBusy(pWindow);
+						}
+						else if (EndsWith (pFileName, ".tar") || EndsWith (pFileName, ".mrd"))
+						{
+							// Executing file.  Might want to MessageBox the user about it?
+							char buffer[512];
+							sprintf(buffer, "Would you like to mount the file '%s' as a read-only file system?", pFileName);
+							if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_CABINET_COMBINE << 16 | MB_YESNO) == MBID_YES)
+							{
+								OnBusy(pWindow);
+								
+								char filename[1024];
+								strcpy (filename, g_cabinetCWD);
+								if (g_cabinetCWD[1] != 0)
+									strcat (filename, "/");
+								strcat (filename, pFileName);
+								
+								CabinetMountRamDisk(pWindow, filename);
+								
+								OnNotBusy(pWindow);
+							}
+						}
+						else if (EndsWith (pFileName, ".md"))
+						{
+							OnBusy(pWindow);
+							
+							// Get the file name.
+							char filename[1024];
+							strcpy (filename, "help:");
+							strcat (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							//CabinetExecute(pWindow, filename);
+							RESOURCE_STATUS status = LaunchResource(filename);
+							SLogMsg("Resource launch status: %x", status);
+							
+							OnNotBusy(pWindow);
 						}
 						else
-							UpdateDirectoryListing (pWindow);
-						
-						OnNotBusy(pWindow);
-					}
-					else if (EndsWith (pFileName, ".nse"))
-					{
-						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[512];
-						sprintf(buffer, "This executable file might be unsafe for you to run.\n\nWould you like to run '%s' anyway?", pFileName);
-						if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
 						{
-							OnBusy(pWindow);
-							
-							// Get the file name.
-							char filename[1024];
-							strcpy (filename, "exwindow:");
-							strcat (filename, g_cabinetCWD);
-							if (g_cabinetCWD[1] != 0)
-								strcat (filename, "/");
-							strcat (filename, pFileName);
-							//CabinetExecute(pWindow, filename);
-							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
-							
-							OnNotBusy(pWindow);
+							char buffer[256];
+							sprintf (buffer, "Don't know how to open '%s'.", pFileName);
+							MessageBox(pWindow, buffer, "Error", ICON_INFO << 16 | MB_OK);//ICON_QUESTION
 						}
-					}
-					else if (EndsWith (pFileName, ".c"))
-					{
-						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[512];
-						sprintf(buffer, "This script file might be unsafe for you to run.\n\nWould you like to run the NanoShell script '%s'?", pFileName);
-						if (MessageBox (pWindow, buffer, "Warning", ICON_INFO << 16 | MB_YESNO) == MBID_YES)
-						{
-							OnBusy(pWindow);
-							
-							// Get the file name.
-							char filename[1024];
-							strcpy (filename, "exscript:");
-							strcat (filename, g_cabinetCWD);
-							if (g_cabinetCWD[1] != 0)
-								strcat (filename, "/");
-							strcat (filename, pFileName);
-							//CabinetExecute(pWindow, filename);
-							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
-							
-							OnNotBusy(pWindow);
-						}
-					}
-					else if (EndsWith (pFileName, ".txt"))
-					{
-						OnBusy(pWindow);
-						
-						// Get the file name.
-						char filename[1024];
-						strcpy (filename, "ted:");
-						strcat (filename, g_cabinetCWD);
-						if (g_cabinetCWD[1] != 0)
-							strcat (filename, "/");
-						strcat (filename, pFileName);
-						//CabinetExecute(pWindow, filename);
-						RESOURCE_STATUS status = LaunchResource(filename);
-						SLogMsg("Resource launch status: %x", status);
-						
-						OnNotBusy(pWindow);
-					}
-					else if (EndsWith (pFileName, ".tar") || EndsWith (pFileName, ".mrd"))
-					{
-						// Executing file.  Might want to MessageBox the user about it?
-						char buffer[512];
-						sprintf(buffer, "Would you like to mount the file '%s' as a read-only file system?", pFileName);
-						if (MessageBox (pWindow, buffer, pWindow->m_title, ICON_CABINET_COMBINE << 16 | MB_YESNO) == MBID_YES)
-						{
-							OnBusy(pWindow);
-							
-							char filename[1024];
-							strcpy (filename, g_cabinetCWD);
-							if (g_cabinetCWD[1] != 0)
-								strcat (filename, "/");
-							strcat (filename, pFileName);
-							
-							CabinetMountRamDisk(pWindow, filename);
-							
-							OnNotBusy(pWindow);
-						}
-					}
-					else if (EndsWith (pFileName, ".md"))
-					{
-						OnBusy(pWindow);
-						
-						// Get the file name.
-						char filename[1024];
-						strcpy (filename, "help:");
-						strcat (filename, g_cabinetCWD);
-						if (g_cabinetCWD[1] != 0)
-							strcat (filename, "/");
-						strcat (filename, pFileName);
-						//CabinetExecute(pWindow, filename);
-						RESOURCE_STATUS status = LaunchResource(filename);
-						SLogMsg("Resource launch status: %x", status);
-						
-						OnNotBusy(pWindow);
 					}
 					else
 					{
-						char buffer[256];
-						sprintf (buffer, "Don't know how to open '%s'.", pFileName);
-						MessageBox(pWindow, buffer, "Error", ICON_INFO << 16 | MB_OK);//ICON_QUESTION
+						char buffer [256];
+						sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
+						MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 					}
+					
+					FsReleaseReference(pFileNode);
 				}
-				else
-				{
-					char buffer [256];
-					sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
-				}
+				
+				FsReleaseReference(pFolderNode);
 			}
 			else if (parm1 == MAIN_MENU_BAR)
 			{

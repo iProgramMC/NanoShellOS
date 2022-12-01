@@ -19,6 +19,10 @@ struct DirEntS;
 #define FS_DEVICE_NAME "Device"
 #define FS_FSROOT_NAME "FSRoot"
 
+// if the node has this many references, it's clear we never want it gone
+// The root node has this property.
+#define NODE_IS_PERMANENT (2000000000)
+
 #define FD_MAX 1024
 
 enum
@@ -56,6 +60,8 @@ struct tagFsPoolUnit;
 
 typedef struct FSNodeS
 {
+	uint32_t           m_refCount;
+	
 	char 	           m_name[128]; //+nullterm, so actually 127 chars
 	uint32_t           m_type;
 	uint32_t           m_perms;
@@ -117,9 +123,7 @@ typedef struct DirEntS
 }
 DirEnt;
 
-/**
- * Gets the root entry of the filesystem.
- */
+// Gets the root node of the file system.
 FileNode* FsGetRootNode();
 
 //Standard read/write/open/close functions.  They are prefixed with Fs to distinguish them
@@ -135,11 +139,14 @@ void     FsClose     (FileNode* pNode);
 bool     FsOpenDir   (FileNode* pNode);
 void     FsCloseDir  (FileNode* pNode);
 DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
-FileNode*FsFindDir   (FileNode* pNode, const char* pName);
+FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
 int      FsRemoveFile(FileNode* pNode);
 
 
 FileNode*FsResolvePath (const char* pPath);
+
+void FsAddReference(FileNode* pNode);
+void FsReleaseReference(FileNode* pNode);
 
 void FiDebugDump();
 

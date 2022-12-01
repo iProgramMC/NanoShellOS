@@ -422,6 +422,8 @@ void Ext2TestFunction()
 	// Shrink the inode by 3000 bytes. So its size would be 85 bytes afterwards.
 	//Ext2InodeShrink(pFS, pUnit, 3000);
 	Ext2DumpInode(pInode, "/Ext0/z2_3085.txt");
+	
+	FsReleaseReference(pFileNode);
 #endif
 	
 #ifdef TEST_CREATE_HARD_LINK_TO
@@ -447,6 +449,8 @@ void Ext2TestFunction()
 	uint32_t tickCountNow = GetTickCount();
 	
 	SLogMsg("Added 100 entries in %d ms", tickCountNow - tickCountThen);
+	
+	FsReleaseReference(pFileNode);
 #endif
 }
 
@@ -564,6 +568,8 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	// Read the root directory's inode, and cache it.
 	Ext2InodeCacheUnit* pCacheUnit = Ext2ReadInode(pFS, 2, name, true);
 	pCacheUnit->m_bPermanent = true; // Currently useless right now.
+	
+	pCacheUnit->m_node.m_refCount = NODE_IS_PERMANENT;
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);

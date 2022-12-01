@@ -202,6 +202,8 @@ void UartInit(uint8_t com_num)
 	
 	ASSERT(pNode && "Couldn't add that file to the root?");
 	
+	pNode->m_refCount = NODE_IS_PERMANENT;
+	
 	pNode->m_perms  = PERM_READ | PERM_WRITE;
 	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;
 	pNode->m_inode  = com_num;

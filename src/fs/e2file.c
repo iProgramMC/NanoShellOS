@@ -293,6 +293,8 @@ FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 			
 			if (!pCU) return NULL;
 			
+			FsAddReference(&pCU->m_node);
+			
 			return &pCU->m_node;
 		}
 	}
