@@ -44,7 +44,7 @@ typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
 typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
 typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
 typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef struct FSNodeS* (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
@@ -56,14 +56,6 @@ struct tagFsPoolUnit;
 
 typedef struct FSNodeS
 {
-	struct FSNodeS
-	*parent,
-	*children,
-	*next,
-	*prev;
-	
-	struct tagFsPoolUnit *m_pPoolUnit;//The pool unit this file node is part of.
-	
 	char 	           m_name[128]; //+nullterm, so actually 127 chars
 	uint32_t           m_type;
 	uint32_t           m_perms;

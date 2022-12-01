@@ -10,6 +10,8 @@
 #include <print.h>
 #include <tar.h>
 
+#if 0
+
 #define MAX_CONCURRENT_RAMDISKS 32
 
 int g_rdsMountedCount = 0;
@@ -214,3 +216,12 @@ void FsMountRamDisk(void* pRamDisk)
 		} 
 	}
 }
+
+#else
+
+void FsMountRamDisk(UNUSED void* pRamDisk)
+{
+	//TODO
+}
+
+#endif

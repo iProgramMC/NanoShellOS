@@ -329,17 +329,12 @@ int Ext2CreateFileAndInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir,
 	return -ENOTHING;
 }
 
-FileNode* Ext2CreateFile(FileNode* pNode, const char* pName)
+int Ext2CreateFile(FileNode* pNode, const char* pName)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	
 	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
 	
-	if (Ext2CreateFileAndInode(pFS, pUnit, pName) == ENOTHING)
-	{
-		return Ext2FindDir(pNode, pName);
-	}
-	
-	return NULL;
+	return Ext2CreateFileAndInode(pFS, pUnit, pName);
 }

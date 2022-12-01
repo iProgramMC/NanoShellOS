@@ -127,15 +127,14 @@ int FsRemoveFile(UNUSED FileNode* pNode)
 	return pNode->RemoveFile(pNode);
 }
 
-FileNode* FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
+int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
-	if (pDirNode)
-	{
-		if (pDirNode->CreateFile && (pDirNode->m_type & FILE_TYPE_DIRECTORY))
-			return pDirNode->CreateFile(pDirNode, pFileName);
-		return NULL;
-	}
-	return NULL;
+	if (!pDirNode) return -EIO;
+	
+	if (!pDirNode->CreateFile) return -EIO;
+	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+	
+	return pDirNode->CreateFile(pDirNode, pFileName);
 }
 
 FileNode* FsResolvePath (const char* pPath)
@@ -199,65 +198,6 @@ FileNode* FsResolvePath (const char* pPath)
 // Basic functions
 
 
-FileNode* CreateFileNode (FileNode* pParent)
-{
-	//Create the file node
-	FileNode* pNode = MakeFileNodeFromPool();//MmAllocateK (sizeof (FileNode));
-	if (!pNode)
-		return pNode;
-	
-	memset (pNode, 0, sizeof *pNode);
-	
-	//Add it to the parent
-	pNode->parent = pParent;
-	if (pParent->children)
-	{
-		FileNode *pLastEnt = pParent->children;
-		while (pLastEnt->next)
-		{
-			pLastEnt = pLastEnt->next;
-		}
-		
-		pLastEnt->next = pNode;
-		pNode   ->prev = pLastEnt;
-	}
-	else
-	{
-		pParent->children = pNode;
-		pNode->next = pNode->prev = NULL;
-	}
-	return pNode;
-}
-// Also removes the underlying tree from the VFS, so you can easily do EraseFileNode(&g_root).  Don't do this.
-void EraseFileNode (FileNode* pFileNode)
-{
-	// First of all, recursively delete children
-	while (pFileNode->children)
-	{
-		EraseFileNode (pFileNode->children);
-	}
-	
-	//If there's a previous node (which may or may not have pFileNode->parent->children
-	//set to it), override that one's next value to be our next value.
-	if (pFileNode->prev)
-	{
-		pFileNode->prev->next = pFileNode->next;
-	}
-	//If we don't have a previous, it's guaranteed that the parent's children value
-	//points to us, so give it the next pointer on our list
-	else if (pFileNode->parent)
-	{
-		pFileNode->parent->children = pFileNode->next;
-	}
-	//If there's a next element on the list, give its previous-pointer our prev-pointer.
-	if (pFileNode->next)
-	{
-		pFileNode->next->prev = pFileNode->prev;
-	}
-	
-	FreeFileNode (pFileNode);
-}
-
 void FsRootInit();
 void FsInitializeDevicesDir();
 //First time setup of the file manager
@@ -289,8 +229,6 @@ void FiDebugDump()
 					p->m_bIsFIFO, p->m_pNode, p->m_openFile, p->m_openLine, p->m_sPath);
 		}
 	}
-	LogMsg("Listing pool usage.");
-	FiPoolDebugDump();
 	LogMsg("Done");
 }
 
@@ -385,7 +323,14 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 			}
 			
 			// Try creating a file
-			pFile = FsCreateEmptyFile (pDir, fileNameSimple);
+			if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
+			{
+				LockFree (&g_FileSystemLock);
+				return -ENOSPC;
+			}
+			
+			pFile = FsFindDir(pDir, fileNameSimple);
+			
 			hasClearedAlready = true;
 			
 			if (!pFile)

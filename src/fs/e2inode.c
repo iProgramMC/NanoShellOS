@@ -18,7 +18,7 @@ FileNode *Ext2FindDir(FileNode* pNode, const char* pName);
 
 void Ext2FileEmpty(FileNode* pNode);
 
-FileNode* Ext2CreateFile(FileNode* pNode, const char* pName);
+int Ext2CreateFile(FileNode* pNode, const char* pName);
 
 // *************************
 //   Section : Inode Cache
