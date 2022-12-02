@@ -220,6 +220,8 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 
 DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	SLogMsg("Size: %d", pNode->m_length);
 	// Read the directory entry, starting at (*index).
 	
 	uint32_t tempBuffer[2] = { 0 };
@@ -229,32 +231,36 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	// The entry length is in tempBuffer[1].
 	tempBuffer[1] &= 0xFFFF;
 	
+	//if (tempBuffer[1] == 0) return NULL;
+	
 	union
 	{
-		uint8_t EntryData[1024];
-		Ext2DirEnt dirEnt;
+		uint8_t* EntryData;
+		Ext2DirEnt* dirEnt;
 	} d;
 	
+	d.EntryData = pFS->m_pBlockBuffer;
+	
 	// if it's bigger, chances are it's a Padding entry.
-	if (tempBuffer[1] < sizeof d.EntryData)
+	if (tempBuffer[1] < pFS->m_blockSize)
 	{
 		if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData)) return NULL;
 	}
 	
-	(*index) += d.dirEnt.m_entrySize;
+	(*index) += d.dirEnt->m_entrySize;
 	
-	if (tempBuffer[1] >= sizeof d.EntryData)
+	if (tempBuffer[1] >= pFS->m_blockSize)
 	{
 		return NULL;
 	}
 	
-	d.dirEnt.m_name[d.dirEnt.m_nameLength] = 0;
+	d.dirEnt->m_name[d.dirEnt->m_nameLength] = 0;
 	
-	size_t nameLen = d.dirEnt.m_nameLength;
+	size_t nameLen = d.dirEnt->m_nameLength;
 	if (nameLen > sizeof(pOutputDent->m_name) - 2)
 		nameLen = sizeof(pOutputDent->m_name) - 2;
 	
-	memcpy(pOutputDent->m_name, d.dirEnt.m_name, nameLen);
+	memcpy(pOutputDent->m_name, d.dirEnt->m_name, nameLen);
 	pOutputDent->m_name[nameLen] = '\0';
 	
 	if (bSkipDotAndDotDot)
@@ -264,10 +270,10 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 			return Ext2ReadDirInternal(pNode, index, pOutputDent, bSkipDotAndDotDot);
 	}
 	
-	pOutputDent->m_inode = d.dirEnt.m_inode;
+	pOutputDent->m_inode = d.dirEnt->m_inode;
 	
 	// convert the type indicator
-	switch (d.dirEnt.m_typeIndicator)
+	switch (d.dirEnt->m_typeIndicator)
 	{
 		case E2_DETI_REG_FILE:  pOutputDent->m_type = FILE_TYPE_FILE;
 		case E2_DETI_CHAR_DEV:  pOutputDent->m_type = FILE_TYPE_CHAR_DEVICE;

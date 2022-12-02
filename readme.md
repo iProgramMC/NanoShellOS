@@ -77,7 +77,7 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [x] \*        Expand a file.
 - [x] \*        Shrink a file.
 - [x] \*        Write data to a file.
-- [ ] \*        Create a file entry.
+- [x] \*        Create a file entry.
 - [ ] \*        Rename a file entry.
 - [ ] \*        Unlink a file.
 - [ ] \*        Create a directory.
