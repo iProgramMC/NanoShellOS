@@ -51,7 +51,7 @@ typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pNam
 typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
-typedef int             (*FileRemoveFileFunc) (struct FSNodeS* pFileNode);
+typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pFileNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
 #define C_FILE_NODES_PER_POOL_UNIT 64
@@ -93,11 +93,9 @@ typedef struct FSNodeS
 	FileEmptyFileFunc  EmptyFile;
 	// Creates an empty directory and sets up all the necessary stuff.  On FAT32, also creates the '.' and '..' links.
 	FileCreateDirFunc  CreateDir;
-	// Addendum: This will only remove EMPTY directories. Any directory with a file in it needs to be traversed first
-	// On FAT32, the . and .. directories won't count to the 'empty' directory limitation.
-	// This is exactly how most OSes implement remove(dir) anyway, so don't worry.
-	// The reason it works this way instead of deleting the whole directory is because 
-	FileRemoveFileFunc RemoveFile;
+	// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
+	// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
+	FileUnlinkFileFunc UnlinkFile;
 }
 FileNode;
 
@@ -140,7 +138,7 @@ bool     FsOpenDir   (FileNode* pNode);
 void     FsCloseDir  (FileNode* pNode);
 DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
-int      FsRemoveFile(FileNode* pNode);
+int      FsUnlinkFile(FileNode* pNode);
 
 
 FileNode*FsResolvePath (const char* pPath);

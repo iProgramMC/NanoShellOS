@@ -79,6 +79,11 @@ void Ext2FileEmpty(FileNode* pNode)
 	Ext2InodeShrink(pFS, pUnit, pInode->m_size);
 }
 
+void Ext2RemoveFile(FileNode* pFileNode)
+{
+	
+}
+
 bool Ext2FileOpen(UNUSED FileNode* pNode)
 {
 	//all good

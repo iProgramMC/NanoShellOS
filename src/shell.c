@@ -570,7 +570,7 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 		else
 		{
 			// Get rid of the file.
-			int io = FiRemoveFile (fileName);
+			int io = FiUnlinkFile (fileName);
 			if (io < 0)
 			{
 				LogMsg("rm: %s: %s", fileName, GetErrNoString(io));

@@ -134,15 +134,15 @@ void FsClearFile(FileNode* pNode)
 	}
 }
 
-int FsRemoveFile(UNUSED FileNode* pNode)
+int FsUnlinkFile(UNUSED FileNode* pNode)
 {
 	if (!pNode) return -ENOENT;
 	
-	if (!pNode->RemoveFile) return -EIO;
+	if (!pNode->UnlinkFile) return -EIO;
 	
 	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -EISDIR;
 	
-	return pNode->RemoveFile(pNode);
+	return pNode->UnlinkFile(pNode);
 }
 
 int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
@@ -777,16 +777,16 @@ int FiTellSize (int fd)
 
 extern char g_cwd[PATH_MAX+2];
 
-int FiRemoveFile (const char *pfn)
+int FiUnlinkFile (const char *pfn)
 {
 	FileNode *p = FsResolvePath (pfn);
 	if (!p) return -ENOENT;
 	
-	int errorCode = FsRemoveFile (p);
-	if (errorCode < 0)
-	{
-		FsReleaseReference(p);
-	}
+	// note: The file node is as valid as there is a reference to it.
+	// FsResolvePath adds a reference to the node, so it will only be invalid
+	// when we release the reference.
+	int errorCode = FsUnlinkFile (p);
+	FsReleaseReference(p);
 	
 	return errorCode;
 }

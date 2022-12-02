@@ -294,6 +294,8 @@ typedef struct Ext2InodeCacheUnit
 	uint32_t m_nLastBlockRead;
 	
 	uint32_t m_nBlockAllocHint;
+	
+	bool     m_bAboutToBeDeleted;
 }
 Ext2InodeCacheUnit;
 

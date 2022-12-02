@@ -103,7 +103,7 @@ void LogString(const char* pText)
 	LogMsgNoCr("%s", pText);
 }
 
-int FiRemoveFile2(UNUSED const char* pText)
+int FiUnlinkFile2(UNUSED const char* pText)
 {
 	// TODO
 	return  -ENXIO;
@@ -406,7 +406,7 @@ const void *WindowCall[] = {
 		CheckboxGetChecked,
 		CheckboxSetChecked,
 		CcRunCCode,
-		FiRemoveFile2,
+		FiUnlinkFile2,
 		UserRequestRepaintNew,
 		ShellAbout,
 		InputBox,
