@@ -179,6 +179,34 @@ int GetRawTickCount()
 	return g_nRtcTicks;
 }
 
+// This function tries to approximate unix time the best that it can.
+// This does not take into account leap seconds. Despite that, it matches the time
+// functions on my system (used gmtime, matches exactly with a call to time(NULL))
+static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+int GetUnixTime()
+{
+	TimeStruct ts = *TmReadTime();
+	
+	int year = ts.year - 1970;
+	int days = 365 * year + 1;
+	
+	// (almost) every 4 years since 1972 are leap years. Count them in
+	// This should work again. (year - 2 + 4) / 4 = (year - 2) / 4 + 1.
+	int leapYears = (year + 2) / 4;
+	days += leapYears;
+	
+	// based on the month, determine the day
+	for (int month = 1; month < ts.month; month++)
+	{
+		days += s_daysPerMonth[month];
+		if (month == 2 && ts.year % 4 == 0) // February -- leap year
+			days++;
+	}
+	
+	return days * 86400 + ts.hours * 3600 + ts.minutes * 60 + ts.seconds;
+}
+
 extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
 extern int g_nSeconds;
 int gEarliestTickCount;

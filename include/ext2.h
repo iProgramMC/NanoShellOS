@@ -347,8 +347,8 @@ void Ext2DumpInodeCacheTree(Ext2FileSystem *pFS);
 // Look up an inode in the inode cache.
 Ext2InodeCacheUnit *Ext2LookUpInodeCacheUnit(Ext2FileSystem *pFS, uint32_t inodeNo);
 
-// Delete the inode cache tree.
-void Ext2DeleteInodeCacheTree(Ext2FileSystem *pFS);
+// Delete an inode from the inode cache.
+void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo);
 
 // Read an inode and add it to the inode cache. (or if it's in the inode cache, retrieve it from there or refresh it.)
 Ext2InodeCacheUnit *Ext2ReadInode(Ext2FileSystem *pFS, uint32_t inodeNo, const char *pName, bool bForceReRead);
@@ -405,5 +405,8 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS);
 
 // Free an inode.
 void Ext2FreeInode(Ext2FileSystem *pFS, uint32_t inodeNo);
+
+// Free an indirection list.
+void Ext2FreeIndirectList(Ext2FileSystem* pFS, uint32_t blockNo, int indirs);
 
 #endif//_EXT2_H

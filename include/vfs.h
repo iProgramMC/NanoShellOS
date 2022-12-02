@@ -51,7 +51,8 @@ typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pNam
 typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
-typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pFileNode);
+typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
 #define C_FILE_NODES_PER_POOL_UNIT 64
@@ -73,6 +74,8 @@ typedef struct FSNodeS
 	uint32_t           m_implData2;
 	uint32_t           m_implData3;
 	uint64_t           m_modifyTime, m_createTime;
+	
+	// File callbacks
 	FileReadFunc       Read;
 	FileWriteFunc      Write;
 	FileOpenFunc       Open;
@@ -96,6 +99,8 @@ typedef struct FSNodeS
 	// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
 	// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
 	FileUnlinkFileFunc UnlinkFile;
+	// This function is called everytime the reference count of a file reaches zero.
+	FileOnUnreferencedFunc OnUnreferenced;
 }
 FileNode;
 
@@ -138,7 +143,7 @@ bool     FsOpenDir   (FileNode* pNode);
 void     FsCloseDir  (FileNode* pNode);
 DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
-int      FsUnlinkFile(FileNode* pNode);
+int      FsUnlinkFile(FileNode* pNode, const char* pName);
 
 
 FileNode*FsResolvePath (const char* pPath);
@@ -298,8 +303,8 @@ void EraseFileNode (FileNode* pFileNode);
 	// Changes the current directory.
 	int FiChangeDir (const char *pfn);
 	
-	// Removes a file or an empty directory.
-	int FiRemoveFile (const char *pfn);
+	// Removes a link to a file. If this is the last reference to a file, the file is deleted.
+	int FiUnlinkFile (const char *pfn);
 	
 #endif
 

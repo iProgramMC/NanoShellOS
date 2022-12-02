@@ -191,3 +191,24 @@ void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS)
 		ASSERT(Ext2ReadBlocks(pFS, pBG->m_blockAddrBlockUsageBmp, pFS->m_blocksPerBlockBitmap, &pFS->m_pBlockBitmapPtr[(bg * pFS->m_blocksPerBlockBitmap) << pFS->m_log2BlockSize]) == DEVERR_SUCCESS);
 	}
 }
+
+void Ext2FreeIndirectList(Ext2FileSystem* pFS, uint32_t blockNo, int indirs)
+{
+	uint32_t buffer[pFS->m_blockSize / sizeof(uint32_t)];
+	uint32_t entriesPerBlock = pFS->m_blockSize / sizeof(uint32_t);
+	
+	ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, buffer) == DEVERR_SUCCESS);
+	
+	for (uint32_t i = 0; i <= entriesPerBlock; i++)
+	{
+		if (buffer[i] == 0) continue;
+		
+		if (indirs > 0)
+			Ext2FreeIndirectList(pFS, buffer[i], indirs - 1);
+		else
+			Ext2FreeBlock(pFS, buffer[i]);
+	}
+	
+	Ext2FreeBlock(pFS, blockNo);
+}
+

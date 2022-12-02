@@ -36,6 +36,12 @@ void FsReleaseReference(FileNode* pNode)
 	
 	ASSERT(pNode->m_refCount > 0);
 	pNode->m_refCount--;
+	
+	if (pNode->m_refCount == 0)
+	{
+		if (pNode->OnUnreferenced)
+			pNode->OnUnreferenced(pNode);
+	}
 }
 
 uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
@@ -134,15 +140,17 @@ void FsClearFile(FileNode* pNode)
 	}
 }
 
-int FsUnlinkFile(UNUSED FileNode* pNode)
+int FsUnlinkFile(FileNode* pNode, const char* pName)
 {
 	if (!pNode) return -ENOENT;
 	
+	// if the directory we're trying to remove from isn't actually a directory
+	if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+	
+	// if there's no way to unlink a file
 	if (!pNode->UnlinkFile) return -EIO;
 	
-	if (pNode->m_type & FILE_TYPE_DIRECTORY) return -EISDIR;
-	
-	return pNode->UnlinkFile(pNode);
+	return pNode->UnlinkFile(pNode, pName);
 }
 
 int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
@@ -779,14 +787,46 @@ extern char g_cwd[PATH_MAX+2];
 
 int FiUnlinkFile (const char *pfn)
 {
-	FileNode *p = FsResolvePath (pfn);
-	if (!p) return -ENOENT;
+	char buffer[PATH_MAX];
+	if (strlen (pfn) >= PATH_MAX - 1) return -ENAMETOOLONG;
+	
+	// is this a relative path?
+	if (*pfn != '/')
+	{
+		// append the relative path
+		if (strlen (pfn) + strlen (g_cwd) >= PATH_MAX - 2) return -EOVERFLOW;
+		
+		strcpy(buffer, g_cwd);
+		if (strcmp(g_cwd, "/") != 0)
+			strcat(buffer, "/");
+		strcat(buffer, pfn);
+		
+		return FiUnlinkFile(buffer);
+	}
+	
+	// copy up until the last /
+	char* r = strrchr(pfn, '/');
+	
+	const char* ptr = pfn;
+	char *head = buffer;
+	
+	while (ptr != r) *head++ = *ptr++;
+	
+	// add the null terminator
+	*head = 0;
+	
+	if (buffer[0] == 0)
+		buffer[0] = '/', buffer[1] = 0;
+	
+	FileNode *pDir = FsResolvePath (buffer);
+	if (!pDir) return -ENOENT;
 	
 	// note: The file node is as valid as there is a reference to it.
 	// FsResolvePath adds a reference to the node, so it will only be invalid
 	// when we release the reference.
-	int errorCode = FsUnlinkFile (p);
-	FsReleaseReference(p);
+	int errorCode = FsUnlinkFile (pDir, r + 1);
+	
+	FsReleaseReference(pDir);
 	
 	return errorCode;
 }

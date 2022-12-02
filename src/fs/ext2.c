@@ -524,6 +524,11 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 		LogMsg("Warning: An Ext2 partition implements unsupported features. (optionalFeatures: %x)", optionalFeatures);
 	}
 	
+	if (pFS->m_blockSize > 8192)
+	{
+		LogMsg("WARNING: Block size is %d > 8192, you may experience problems!", pFS->m_blockSize);
+	}
+	
 	// Set up and cache basic info about the file system.
 	pFS->m_inodeSize = Ext2GetInodeSize(pFS);
 	pFS->m_blockSize = Ext2GetBlockSize(pFS);

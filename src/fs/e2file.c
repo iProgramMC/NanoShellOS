@@ -8,6 +8,7 @@
 //  ***************************************************************
 #include <vfs.h>
 #include <ext2.h>
+#include <misc.h>
 
 static int FileTypeToExt2TypeHint(int fileType)
 {
@@ -77,11 +78,6 @@ void Ext2FileEmpty(FileNode* pNode)
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
 	Ext2InodeShrink(pFS, pUnit, pInode->m_size);
-}
-
-void Ext2RemoveFile(FileNode* pFileNode)
-{
-	
 }
 
 bool Ext2FileOpen(UNUSED FileNode* pNode)
@@ -181,8 +177,6 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 				// force a refresh
 				pUnit->m_nLastBlockRead = ~0u;
 				
-				SDumpBytesAsHex(pFS->m_pBlockBuffer, 1024, true);
-				
 				// Now, get the entry itself. This will be a hard link
 				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, inodeNo, pName, false);
 				
@@ -218,11 +212,81 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	goto TRY_AGAIN;
 }
 
+int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName)
+{
+	//note: I don't think we want to allocate something in the heap right now.
+	char name[256];
+	
+	// For each block in the directory inode.
+	uint32_t blockNo = 0, offset = 0;
+	do
+	{
+		blockNo = Ext2GetInodeBlock(&pUnit->m_inode, pFS, offset++);
+		
+		if (blockNo == 0) break;
+		
+		// look through all the dentries
+		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		
+		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer;
+		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
+		
+		while (pDirEnt < pEndPoint)
+		{
+			memcpy(name, pDirEnt->m_name, pDirEnt->m_nameLength);
+			name[pDirEnt->m_nameLength] = 0;
+			
+			if (strcmp(name, pName) == 0)
+			{
+				//we found the entry!
+				uint32_t oldEntrySize  = pDirEnt->m_entrySize;
+				uint32_t oldEntryInode = pDirEnt->m_inode;
+				
+				//move the next entry backwards
+				Ext2DirEnt* pNextDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
+				
+				memmove(pDirEnt, pNextDirEnt, pNextDirEnt->m_entrySize);
+				
+				pNextDirEnt->m_entrySize += oldEntrySize;
+				
+				// write!
+				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+				
+				// force a refresh
+				pUnit->m_nLastBlockRead = ~0u;
+				
+				// Now, get the entry itself. This inode's reference count will be decreased.
+				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, pName, false);
+				
+				// decrease the inode's reference count
+				ASSERT(pDestUnit->m_inode.m_nLinks >= 0);
+				pDestUnit->m_inode.m_nLinks--;
+				
+				if (pDestUnit->m_inode.m_nLinks == 0)
+				{
+					pDestUnit->m_bAboutToBeDeleted = true;
+				}
+				
+				// flush its data.
+				Ext2FlushInode(pFS, pDestUnit);
+				
+				return ENOTHING;
+			}
+			
+			pDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
+		}
+	}
+	while (true);
+	
+	return -ENOENT;
+	
+}
+
 DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
-	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
-	SLogMsg("Size: %d", pNode->m_length);
 	// Read the directory entry, starting at (*index).
+	
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	
 	uint32_t tempBuffer[2] = { 0 };
 	
@@ -351,3 +415,52 @@ int Ext2CreateFile(FileNode* pNode, const char* pName)
 	
 	return Ext2CreateFileAndInode(pFS, pUnit, pName);
 }
+
+int Ext2UnlinkFile(FileNode* pNode, const char* pName)
+{
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	
+	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
+	
+	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName);
+}
+
+void Ext2FileOnUnreferenced(FileNode* pNode)
+{
+	SLogMsg("File %s unreferenced", pNode->m_name);
+	
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	
+	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
+	
+	// TODO
+	
+	// Is this inode about to be deleted?
+	if (!pUnit->m_bAboutToBeDeleted) return;
+	
+	// Yes. Assert that the inode's link count is zero.
+	ASSERT(pUnit->m_inode.m_nLinks == 0);
+	
+	// This will delete the inode.
+	pUnit->m_inode.m_deletionTime = GetUnixTime();
+	
+	// Free all the blocks.
+	for (uint32_t i = 0; i < 12; i++)
+	{
+		Ext2FreeBlock(pFS, pUnit->m_inode.m_directBlockPointer[i]);
+	}
+	
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_singlyIndirBlockPtr, 1);
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_doublyIndirBlockPtr, 2);
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_triplyIndirBlockPtr, 3);
+	
+	Ext2FlushInode(pFS, pUnit);
+	
+	Ext2FreeInode(pFS, pUnit->m_inodeNumber);
+	
+	// delete the inode from the cache unit
+	Ext2RemoveInodeCacheUnit(pFS, pUnit->m_inodeNumber);
+}
+
