@@ -89,48 +89,178 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	}
 }
 
-void Ext2AddInodeToCacheRecursive(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrUnit, Ext2InodeCacheUnit* pUnitNew)
+// The cache unit storage is a pre-sorted array of Ext2InodeCacheUnit pointers.
+
+void Ext2ExpandCacheUnitStorage(Ext2FileSystem* pFS, size_t newSize)
 {
-	if (pCurrUnit->m_inodeNumber == pUnitNew->m_inodeNumber)
-	{
-		SLogMsg("NOTE: Inode %d is already cached.", pUnitNew->m_inodeNumber);
-		
-		// copy the data anyways
-		pCurrUnit->m_inode = pUnitNew->m_inode;
-		pCurrUnit->m_node  = pUnitNew->m_node;
-		
-		// free the new unit.
-		MmFree(pUnitNew);
-		
-		return;
+	ASSERT(newSize >= pFS->m_nInodeCacheCapacity);
+	
+	pFS->m_pInodeCache = MmReAllocateK(pFS->m_pInodeCache, newSize * sizeof(Ext2InodeCacheUnit*));
+	
+	memset(&pFS->m_pInodeCache[pFS->m_nInodeCacheCapacity], 0, sizeof(Ext2InodeCacheUnit*) * (newSize - pFS->m_nInodeCacheCapacity));
+	
+	pFS->m_nInodeCacheCapacity = newSize;
+}
+
+void Ext2ShrinkCacheUnitStorage(Ext2FileSystem* pFS, size_t newSize)
+{
+	ASSERT(newSize < pFS->m_nInodeCacheCapacity);
+	
+	pFS->m_pInodeCache = MmReAllocateK(pFS->m_pInodeCache, newSize * sizeof(Ext2InodeCacheUnit*));
+	pFS->m_nInodeCacheCapacity = newSize;
+}
+
+// Unsafe version, ordering must be ensured!
+void Ext2AddCacheUnitAt(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit, uint32_t where)
+{
+	ASSERT(where <= pFS->m_nInodeCacheCount);
+	
+	if (where < pFS->m_nInodeCacheCount)
+	{	
+		memmove(&pFS->m_pInodeCache[where + 1], &pFS->m_pInodeCache[where], sizeof(Ext2InodeCacheUnit*) * (pFS->m_nInodeCacheCount - where));
 	}
 	
-	if (pCurrUnit->m_inodeNumber < pUnitNew->m_inodeNumber)
+	pFS->m_pInodeCache[where] = pUnit;
+	pFS->m_nInodeCacheCount++;
+}
+
+void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
+{
+	if (pUnit->m_pBlockBuffer)
 	{
-		// Add to the right. If there's nothing, put it right there.
-		if (!pCurrUnit->pRight)
-		{
-			pCurrUnit->pRight = pUnitNew;
-			pUnitNew->pParent = pCurrUnit;
-		}
+		MmFree(pUnit->m_pBlockBuffer);
+		pUnit->m_pBlockBuffer = NULL;
+	}
+	
+	MmFree(pUnit);
+}
+
+void Ext2RemoveCacheUnitAt(Ext2FileSystem *pFS, uint32_t where)
+{
+	ASSERT(where < pFS->m_nInodeCacheCount);
+	
+	Ext2FreeInodeCacheUnit(pFS->m_pInodeCache[where]);
+	pFS->m_pInodeCache[where] = NULL;
+	
+	memmove(&pFS->m_pInodeCache[where], &pFS->m_pInodeCache[where + 1], (pFS->m_nInodeCacheCount - where - 1) * sizeof(Ext2InodeCacheUnit*));
+}
+
+Ext2InodeCacheUnit* Ext2GetCacheUnitAt(Ext2FileSystem* pFS, int unitNo)
+{
+	if (unitNo < 0) return NULL;
+	
+	uint32_t unit = (uint32_t)unitNo;
+	if (unit >= pFS->m_nInodeCacheCount) return NULL;
+
+	return pFS->m_pInodeCache[unit];
+}
+
+Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	if (pFS->m_nInodeCacheCount == 0) return NULL;
+	if (pFS->m_nInodeCacheCount == 1)
+	{
+		if (pFS->m_pInodeCache[0]->m_inodeNumber == inodeNo)
+			return pFS->m_pInodeCache[0];
+		
+		return NULL;
+	}
+	
+	// Perform a binary search.
+	uint32_t where = 0;
+	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
+	
+	while (left < right)
+	{
+		where = left + (right - left) / 2;
+		
+		if (pFS->m_pInodeCache[where]->m_inodeNumber < inodeNo) // before this, there are ONLY elements that have a smaller inode number
+			left = where + 1;
 		else
+			right = where;
+	}
+	
+	where = right;
+	
+	if (where >= pFS->m_nInodeCacheCount) return NULL;
+	
+	// Check if this is actually the inode number.
+	Ext2InodeCacheUnit* pUnit = pFS->m_pInodeCache[where];
+	
+	if (pUnit->m_inodeNumber != inodeNo) return NULL;
+	
+	return pUnit;
+}
+
+bool Ext2AddInodeCacheUnitToCache(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+{
+	// Do we need to actually expand the cache unit storage?
+	ASSERT(pFS->m_nInodeCacheCount <= pFS->m_nInodeCacheCapacity);
+	
+	if (pFS->m_nInodeCacheCount == pFS->m_nInodeCacheCapacity)
+	{
+		// Expand
+		Ext2ExpandCacheUnitStorage(pFS, pFS->m_nInodeCacheCapacity + EXT2_CACHE_UNIT_EXPAND_BY);
+	}
+	
+	// Determine where we need to add the cache unit using a binary search
+	uint32_t where = 0;
+	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
+	
+	while (left < right)
+	{
+		where = left + (right - left) / 2;
+		
+		if (pFS->m_pInodeCache[where]->m_inodeNumber < pUnit->m_inodeNumber) // before this, there are ONLY elements that have a smaller inode number
+			left = where + 1;
+		else
+			right = where;
+	}
+	
+	where = right;
+	
+	// if the unit is already there
+	if (where < pFS->m_nInodeCacheCount)
+	{
+		if (pFS->m_pInodeCache[where]->m_inodeNumber == pUnit->m_inodeNumber)
 		{
-			Ext2AddInodeToCacheRecursive(pFS, pCurrUnit->pRight, pUnitNew);
+			//don't add it again
+			return false;
 		}
 	}
-	else
+	
+	// Add it!
+	Ext2AddCacheUnitAt(pFS, pUnit, where);
+	
+	// we should probably ensure nothing bad is actually happening
+	ASSERT(pFS->m_pInodeCache[where] == pUnit);
+	
+	return true;
+}
+
+void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
+{
+	if (!pFS->m_nInodeCacheCount) return;
+	
+	uint32_t where = 0;
+	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
+	
+	while (left < right)
 	{
-		// Add to the left. If there's nothing, put it right there.
-		if (!pCurrUnit->pLeft)
-		{
-			pCurrUnit->pLeft = pUnitNew;
-			pUnitNew->pParent = pCurrUnit;
-		}
+		where = left + (right - left) / 2;
+		
+		if (pFS->m_pInodeCache[where]->m_inodeNumber < inodeNo) // before this, there are ONLY elements that have a smaller inode number
+			left = where + 1;
 		else
-		{
-			Ext2AddInodeToCacheRecursive(pFS, pCurrUnit->pLeft, pUnitNew);
-		}
+			right = where;
 	}
+	
+	where = right;
+	
+	if (where >= pFS->m_nInodeCacheCount) return;
+	if (pFS->m_pInodeCache[where]->m_inodeNumber != inodeNo) return;
+	
+	Ext2RemoveCacheUnitAt(pFS, where);
 }
 
 // Adds an inode to the binary search tree.
@@ -154,18 +284,7 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 		pUnit->m_node.m_perms &= ~PERM_WRITE;
 	}
 	
-	// Trivial case: the root is empty.
-	if (!pFS->m_pInodeCacheRoot)
-	{
-		// Setting the left, right and parent pointers to null is already taken care of by the memset.
-		// Update the root.
-		pFS->m_pInodeCacheRoot = pUnit;
-	}
-	else
-	{
-		// Binary search a place where to put it.
-		Ext2AddInodeToCacheRecursive(pFS, pFS->m_pInodeCacheRoot, pUnit);
-	}
+	Ext2AddInodeCacheUnitToCache(pFS, pUnit);
 	
 	// determine a rough hint. This is just the maximum block address.
 	pUnit->m_nBlockAllocHint = 0;
@@ -181,100 +300,6 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	if (pUnit->m_nBlockAllocHint < pUnit->m_inode.m_triplyIndirBlockPtr) pUnit->m_nBlockAllocHint = pUnit->m_inode.m_triplyIndirBlockPtr;
 	
 	return pUnit;
-}
-
-Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnitRecursive(Ext2InodeCacheUnit* pCurrentUnit, uint32_t inodeNo)
-{
-	if (!pCurrentUnit) return NULL;
-	
-	if (pCurrentUnit->m_inodeNumber == inodeNo) return pCurrentUnit;
-	
-	// Look at the children.
-	if (pCurrentUnit->m_inodeNumber < inodeNo)
-	{
-		// Right.
-		return Ext2LookUpInodeCacheUnitRecursive(pCurrentUnit->pRight, inodeNo);
-	}
-	else
-	{
-		// Left.
-		return Ext2LookUpInodeCacheUnitRecursive(pCurrentUnit->pLeft, inodeNo);
-	}
-}
-
-Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
-{
-	return Ext2LookUpInodeCacheUnitRecursive(pFS->m_pInodeCacheRoot, inodeNo);
-}
-
-void Ext2DumpInodeCacheTreeRec(Ext2InodeCacheUnit* pNode, int numDashes)
-{
-	if (!pNode) return;
-	
-	for (int i = 0; i < numDashes; i++) SLogMsgNoCr("-");
-	SLogMsg("%d", pNode->m_inodeNumber);
-	
-	Ext2DumpInodeCacheTreeRec(pNode->pLeft,  1);
-	Ext2DumpInodeCacheTreeRec(pNode->pRight, 1);
-}
-
-void Ext2DumpInodeCacheTree(Ext2FileSystem* pFS)
-{
-	Ext2DumpInodeCacheTreeRec(pFS->m_pInodeCacheRoot, 0);
-}
-
-/*
-void Ext2InodeCacheUnitShiftNodes(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
-{
-	
-}
-*/
-
-void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
-{
-	if (pUnit->m_pBlockBuffer)
-	{
-		MmFree(pUnit->m_pBlockBuffer);
-		pUnit->m_pBlockBuffer = NULL;
-	}
-	
-	MmFree(pUnit);
-}
-
-void Ext2DeleteInodeCacheUnit(UNUSED Ext2FileSystem* pFS, UNUSED Ext2InodeCacheUnit* pUnit)
-{
-	/*if (pUnit->pLeft == NULL)
-	{
-		Ext2InodeCacheUnitShiftNodes(pFS, pUnit, pUnit->pRight);
-		return;
-	}
-	if (pUnit->pRight == NULL)
-	{
-		Ext2InodeCacheUnitShiftNodes(pFS, pUnit, pUnit->pLeft);
-		return;
-	}*/
-	
-	// TODO: Won't bother for now.
-}
-
-void Ext2DeleteInodeCacheLeaf(Ext2InodeCacheUnit* pUnit)
-{
-	if (!pUnit) return;
-	
-	// delete the left
-	Ext2DeleteInodeCacheLeaf(pUnit->pLeft);
-	
-	// delete the right
-	Ext2DeleteInodeCacheLeaf(pUnit->pRight);
-	
-	// delete ourselves
-	Ext2FreeInodeCacheUnit(pUnit);
-}
-
-void Ext2DeleteInodeCacheTree(Ext2FileSystem* pFS)
-{
-	Ext2DeleteInodeCacheLeaf(pFS->m_pInodeCacheRoot);
-	pFS->m_pInodeCacheRoot = NULL;
 }
 
 void Ext2ReadInodeMetaData(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pOutputInode)

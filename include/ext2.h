@@ -16,6 +16,9 @@
 #include <memory.h>
 #include <storabs.h>
 
+#define EXT2_CACHE_UNIT_CAPACITY_MIN (64)
+#define EXT2_CACHE_UNIT_EXPAND_BY    (64)
+
 #define EXT2_SIGNATURE (0xEF53)
 
 typedef union Ext2SuperBlock
@@ -319,7 +322,8 @@ typedef struct Ext2FileSystem
 	uint32_t m_blocksPerInodeBitmap;
 	
 	Ext2BlockGroupDescriptor *m_pBlockGroups;
-	Ext2InodeCacheUnit       *m_pInodeCacheRoot;
+	Ext2InodeCacheUnit      **m_pInodeCache;
+	uint32_t                  m_nInodeCacheCapacity, m_nInodeCacheCount;
 	
 	uint8_t *m_pBlockBuffer;
 }

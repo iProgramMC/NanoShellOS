@@ -535,8 +535,12 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	SLogMsg("Mounting Ext2 partition...  Last place where it was mounted: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 	
+	// Initialize the inode cache array.
+	pFS->m_nInodeCacheCount    = 0;
+	pFS->m_nInodeCacheCapacity = EXT2_CACHE_UNIT_CAPACITY_MIN;
+	pFS->m_pInodeCache         = MmAllocate(sizeof(Ext2InodeCacheUnit*) * pFS->m_nInodeCacheCapacity);
+	
 	pFS->m_bMounted = true;
-	pFS->m_pInodeCacheRoot = NULL;
 	pFS->m_pBlockGroups    = NULL;
 	
 	// TODO: We should probably do a ceil division rather than a floor one.
@@ -581,30 +585,15 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	Ext2TestFunction();
 }
 
+#define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
+
 void FsExt2Cleanup(Ext2FileSystem* pFS)
 {
-	if (pFS->m_pBlockGroups)
-	{
-		MmFree(pFS->m_pBlockGroups);
-		pFS->m_pBlockGroups = NULL;
-	}
-	if (pFS->m_pBlockBuffer)
-	{
-		MmFree(pFS->m_pBlockBuffer);
-		pFS->m_pBlockBuffer = NULL;
-	}
-	if (pFS->m_pBlockBitmapPtr)
-	{
-		MmFree(pFS->m_pBlockBitmapPtr);
-		pFS->m_pBlockBitmapPtr = NULL;
-	}
-	if (pFS->m_pInodeBitmapPtr)
-	{
-		MmFree(pFS->m_pInodeBitmapPtr);
-		pFS->m_pInodeBitmapPtr = NULL;
-	}
-	
-	Ext2DeleteInodeCacheTree(pFS);
+	SAFE_DELETE(pFS->m_pBlockGroups);
+	SAFE_DELETE(pFS->m_pBlockBuffer);
+	SAFE_DELETE(pFS->m_pBlockBitmapPtr);
+	SAFE_DELETE(pFS->m_pInodeBitmapPtr);
+	SAFE_DELETE(pFS->m_pInodeCache);
 	
 	pFS->m_bMounted = false;
 }
