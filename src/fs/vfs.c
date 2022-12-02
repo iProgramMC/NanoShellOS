@@ -22,14 +22,14 @@ char g_cwd[PATH_MAX+2];
 
 void FsAddReference(FileNode* pNode)
 {
-	SLogMsg("FsAddReference(%s) -> %d", pNode->m_name, pNode->m_refCount + 1);
+	//SLogMsg("FsAddReference(%s) -> %d", pNode->m_name, pNode->m_refCount + 1);
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
 	
 	pNode->m_refCount++;
 }
 void FsReleaseReference(FileNode* pNode)
 {
-	SLogMsg("FsReleaseReference(%s) -> %d", pNode->m_name, pNode->m_refCount - 1);
+	//SLogMsg("FsReleaseReference(%s) -> %d", pNode->m_name, pNode->m_refCount - 1);
 	
 	// if it's permanent, return
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
