@@ -16,8 +16,8 @@
 #include <memory.h>
 #include <storabs.h>
 
-#define EXT2_CACHE_UNIT_CAPACITY_MIN (64)
-#define EXT2_CACHE_UNIT_EXPAND_BY    (64)
+// Counts how many buckets a hash table contains.
+#define C_EXT2_HASH_TABLE_BUCKET_COUNT (256)
 
 #define EXT2_SIGNATURE (0xEF53)
 
@@ -284,7 +284,7 @@ enum
 typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
-	struct Ext2InodeCacheUnit *pLeft, *pRight, *pParent;
+	struct Ext2InodeCacheUnit *pNext, *pPrev;
 	bool m_bPermanent; // if false, this can get deleted if its reference count (will add soon) is zero
 	
 	FileNode  m_node;
@@ -324,8 +324,12 @@ typedef struct Ext2FileSystem
 	uint32_t m_blocksPerInodeBitmap;
 	
 	Ext2BlockGroupDescriptor *m_pBlockGroups;
-	Ext2InodeCacheUnit      **m_pInodeCache;
-	uint32_t                  m_nInodeCacheCapacity, m_nInodeCacheCount;
+	
+	struct 
+	{
+		Ext2InodeCacheUnit *pFirst, *pLast;
+	}
+	m_inodeHashTable [C_EXT2_HASH_TABLE_BUCKET_COUNT];
 	
 	uint8_t *m_pBlockBuffer;
 }

@@ -89,41 +89,6 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	}
 }
 
-// The cache unit storage is a pre-sorted array of Ext2InodeCacheUnit pointers.
-
-void Ext2ExpandCacheUnitStorage(Ext2FileSystem* pFS, size_t newSize)
-{
-	ASSERT(newSize >= pFS->m_nInodeCacheCapacity);
-	
-	pFS->m_pInodeCache = MmReAllocateK(pFS->m_pInodeCache, newSize * sizeof(Ext2InodeCacheUnit*));
-	
-	memset(&pFS->m_pInodeCache[pFS->m_nInodeCacheCapacity], 0, sizeof(Ext2InodeCacheUnit*) * (newSize - pFS->m_nInodeCacheCapacity));
-	
-	pFS->m_nInodeCacheCapacity = newSize;
-}
-
-void Ext2ShrinkCacheUnitStorage(Ext2FileSystem* pFS, size_t newSize)
-{
-	ASSERT(newSize < pFS->m_nInodeCacheCapacity);
-	
-	pFS->m_pInodeCache = MmReAllocateK(pFS->m_pInodeCache, newSize * sizeof(Ext2InodeCacheUnit*));
-	pFS->m_nInodeCacheCapacity = newSize;
-}
-
-// Unsafe version, ordering must be ensured!
-void Ext2AddCacheUnitAt(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit, uint32_t where)
-{
-	ASSERT(where <= pFS->m_nInodeCacheCount);
-	
-	if (where < pFS->m_nInodeCacheCount)
-	{	
-		memmove(&pFS->m_pInodeCache[where + 1], &pFS->m_pInodeCache[where], sizeof(Ext2InodeCacheUnit*) * (pFS->m_nInodeCacheCount - where));
-	}
-	
-	pFS->m_pInodeCache[where] = pUnit;
-	pFS->m_nInodeCacheCount++;
-}
-
 void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
 {
 	if (pUnit->m_pBlockBuffer)
@@ -135,137 +100,100 @@ void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
 	MmFree(pUnit);
 }
 
-void Ext2RemoveCacheUnitAt(Ext2FileSystem *pFS, uint32_t where)
+//quick and dirty hash function. Not cryptographically secure or anything, but good enough for a hash table
+//This is in the range [0 - C_EXT2_HASH_TABLE_BUCKET_COUNT)
+static ALWAYS_INLINE uint32_t Ext2GetInodeHash(uint32_t inodeNumber)
 {
-	ASSERT(where < pFS->m_nInodeCacheCount);
-	
-	Ext2FreeInodeCacheUnit(pFS->m_pInodeCache[where]);
-	pFS->m_pInodeCache[where] = NULL;
-	
-	memmove(&pFS->m_pInodeCache[where], &pFS->m_pInodeCache[where + 1], (pFS->m_nInodeCacheCount - where - 1) * sizeof(Ext2InodeCacheUnit*));
-}
-
-Ext2InodeCacheUnit* Ext2GetCacheUnitAt(Ext2FileSystem* pFS, int unitNo)
-{
-	if (unitNo < 0) return NULL;
-	
-	uint32_t unit = (uint32_t)unitNo;
-	if (unit >= pFS->m_nInodeCacheCount) return NULL;
-
-	return pFS->m_pInodeCache[unit];
+	return inodeNumber % C_EXT2_HASH_TABLE_BUCKET_COUNT;
 }
 
 Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 {
-	if (pFS->m_nInodeCacheCount == 0) return NULL;
-	if (pFS->m_nInodeCacheCount == 1)
+	uint32_t hash = Ext2GetInodeHash(inodeNo);
+	
+	Ext2InodeCacheUnit* pUnit = pFS->m_inodeHashTable[hash].pFirst;
+	
+	while (pUnit)
 	{
-		if (pFS->m_pInodeCache[0]->m_inodeNumber == inodeNo)
-			return pFS->m_pInodeCache[0];
+		if (pUnit->m_inodeNumber == inodeNo)
+			return pUnit;
 		
-		return NULL;
+		pUnit = pUnit->pNext;
 	}
 	
-	// Perform a binary search.
-	uint32_t where = 0;
-	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
-	
-	while (left < right)
-	{
-		where = left + (right - left) / 2;
-		
-		if (pFS->m_pInodeCache[where]->m_inodeNumber < inodeNo) // before this, there are ONLY elements that have a smaller inode number
-			left = where + 1;
-		else
-			right = where;
-	}
-	
-	where = right;
-	
-	if (where >= pFS->m_nInodeCacheCount) return NULL;
-	
-	// Check if this is actually the inode number.
-	Ext2InodeCacheUnit* pUnit = pFS->m_pInodeCache[where];
-	
-	if (pUnit->m_inodeNumber != inodeNo) return NULL;
-	
-	return pUnit;
+	return NULL;
 }
 
-bool Ext2AddInodeCacheUnitToCache(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
+void Ext2AddInodeCacheUnitToCache(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
 {
-	// Do we need to actually expand the cache unit storage?
-	ASSERT(pFS->m_nInodeCacheCount <= pFS->m_nInodeCacheCapacity);
+	uint32_t hash = Ext2GetInodeHash(pUnit->m_inodeNumber);
 	
-	if (pFS->m_nInodeCacheCount == pFS->m_nInodeCacheCapacity)
+	// Append to the last. If this hash bucket doesn't have a 'last', it also doesn't have a 'first',
+	// so set this unit as the last AND first of this hash bucket.
+	if (pFS->m_inodeHashTable[hash].pLast)
 	{
-		// Expand
-		Ext2ExpandCacheUnitStorage(pFS, pFS->m_nInodeCacheCapacity + EXT2_CACHE_UNIT_EXPAND_BY);
+		pUnit->pPrev = pFS->m_inodeHashTable[hash].pLast;
+		pUnit->pNext = NULL;
+		pFS->m_inodeHashTable[hash].pLast->pNext = pUnit;
+		pFS->m_inodeHashTable[hash].pLast        = pUnit;
 	}
-	
-	// Determine where we need to add the cache unit using a binary search
-	uint32_t where = 0;
-	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
-	
-	while (left < right)
+	else
 	{
-		where = left + (right - left) / 2;
-		
-		if (pFS->m_pInodeCache[where]->m_inodeNumber < pUnit->m_inodeNumber) // before this, there are ONLY elements that have a smaller inode number
-			left = where + 1;
-		else
-			right = where;
+		pFS->m_inodeHashTable[hash].pLast = pFS->m_inodeHashTable[hash].pFirst = pUnit;
+		pUnit->pPrev = pUnit->pNext = NULL;
 	}
-	
-	where = right;
-	
-	// if the unit is already there
-	if (where < pFS->m_nInodeCacheCount)
-	{
-		if (pFS->m_pInodeCache[where]->m_inodeNumber == pUnit->m_inodeNumber)
-		{
-			//don't add it again
-			return false;
-		}
-	}
-	
-	// Add it!
-	Ext2AddCacheUnitAt(pFS, pUnit, where);
-	
-	// we should probably ensure nothing bad is actually happening
-	ASSERT(pFS->m_pInodeCache[where] == pUnit);
-	
-	return true;
 }
 
 void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 {
-	if (!pFS->m_nInodeCacheCount) return;
+	uint32_t hash = Ext2GetInodeHash(inodeNo);
 	
-	uint32_t where = 0;
-	uint32_t left = 0, right = pFS->m_nInodeCacheCount;
-	
-	while (left < right)
+	if (pFS->m_inodeHashTable[hash].pFirst->m_inodeNumber == inodeNo)
 	{
-		where = left + (right - left) / 2;
+		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pFirst;
 		
-		if (pFS->m_pInodeCache[where]->m_inodeNumber < inodeNo) // before this, there are ONLY elements that have a smaller inode number
-			left = where + 1;
-		else
-			right = where;
+		pFS->m_inodeHashTable[hash].pFirst = pToFree->pNext;
+		pFS->m_inodeHashTable[hash].pFirst->pPrev = NULL;
+		
+		Ext2FreeInodeCacheUnit(pToFree);
+		return;
 	}
 	
-	where = right;
+	if (pFS->m_inodeHashTable[hash].pLast->m_inodeNumber == inodeNo)
+	{
+		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pLast;
+		
+		pFS->m_inodeHashTable[hash].pLast = pToFree->pPrev;
+		pFS->m_inodeHashTable[hash].pLast->pNext = NULL;
+		
+		Ext2FreeInodeCacheUnit(pToFree);
+		return;
+	}
 	
-	if (where >= pFS->m_nInodeCacheCount) return;
-	if (pFS->m_pInodeCache[where]->m_inodeNumber != inodeNo) return;
+	// we have both a pPrev and a pNext -- only pFirst and pLast don't.
+	Ext2InodeCacheUnit* pUnit = pFS->m_inodeHashTable[hash].pFirst;
 	
-	Ext2RemoveCacheUnitAt(pFS, where);
+	while (pUnit)
+	{
+		if (pUnit->m_inodeNumber == inodeNo)
+		{
+			pUnit->pPrev->pNext = pUnit->pNext;
+			pUnit->pNext->pPrev = pUnit->pPrev;
+			
+			Ext2FreeInodeCacheUnit(pUnit);
+			return;
+		}
+		
+		pUnit = pUnit->pNext;
+	}
 }
 
 // Adds an inode to the binary search tree.
 Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
 {
+	// Note: Don't check if this inode was already cached. Maybe it was cached under a
+	// different name. We want to be tolerant to hard links, too. :)
+	
 	// Create a new inode cache unit:
 	Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
 	memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));
