@@ -212,7 +212,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	goto TRY_AGAIN;
 }
 
-int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName)
+int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, bool bForceDirsToo)
 {
 	//note: I don't think we want to allocate something in the heap right now.
 	char name[256];
@@ -228,7 +228,7 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 		// look through all the dentries
 		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
 		
-		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer;
+		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer, *pPrevDirEnt = pDirEnt;
 		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
 		
 		while (pDirEnt < pEndPoint)
@@ -242,12 +242,36 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 				uint32_t oldEntrySize  = pDirEnt->m_entrySize;
 				uint32_t oldEntryInode = pDirEnt->m_inode;
 				
-				//move the next entry backwards
-				Ext2DirEnt* pNextDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
+				// get the inode itself. This inode's reference count will be decreased.
+				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, pName, false);
 				
-				memmove(pDirEnt, pNextDirEnt, pNextDirEnt->m_entrySize);
+				// Add a reference to this while we delete it.
+				FsAddReference(&pDestUnit->m_node);
 				
-				pNextDirEnt->m_entrySize += oldEntrySize;
+				if ((pDestUnit->m_node.m_type & FILE_TYPE_DIRECTORY) && !bForceDirsToo)
+				{
+					FsReleaseReference(&pDestUnit->m_node);
+					
+					// can't delete directories right now!
+					return -EISDIR;
+				}
+				
+				// If this is the first directory entry, move the next one backwards over this one
+				// note: this case is unlikely, since this is usually the '.' entry, UNLESS this is
+				// the root.
+				if (pPrevDirEnt == pDirEnt)
+				{
+					Ext2DirEnt* pNextDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
+					
+					memmove(pDirEnt, pNextDirEnt, pNextDirEnt->m_entrySize);
+					
+					pDirEnt->m_entrySize += oldEntrySize;
+				}
+				// well, it's not, so just expand the previous over this one
+				else
+				{
+					pPrevDirEnt->m_entrySize += oldEntrySize;
+				}
 				
 				// write!
 				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
@@ -255,11 +279,8 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 				// force a refresh
 				pUnit->m_nLastBlockRead = ~0u;
 				
-				// Now, get the entry itself. This inode's reference count will be decreased.
-				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, pName, false);
-				
 				// decrease the inode's reference count
-				ASSERT(pDestUnit->m_inode.m_nLinks >= 0);
+				ASSERT(pDestUnit->m_inode.m_nLinks > 0);
 				pDestUnit->m_inode.m_nLinks--;
 				
 				if (pDestUnit->m_inode.m_nLinks == 0)
@@ -270,9 +291,13 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 				// flush its data.
 				Ext2FlushInode(pFS, pDestUnit);
 				
+				// Remove the reference - we're done with it.
+				FsReleaseReference(&pDestUnit->m_node);
+				
 				return ENOTHING;
 			}
 			
+			pPrevDirEnt = pDirEnt;
 			pDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
 		}
 	}
@@ -423,12 +448,12 @@ int Ext2UnlinkFile(FileNode* pNode, const char* pName)
 	
 	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
 	
-	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName);
+	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName, false);
 }
 
 void Ext2FileOnUnreferenced(FileNode* pNode)
 {
-	SLogMsg("File %s unreferenced", pNode->m_name);
+	//SLogMsg("File %s unreferenced", pNode->m_name);
 	
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -449,12 +474,14 @@ void Ext2FileOnUnreferenced(FileNode* pNode)
 	// Free all the blocks.
 	for (uint32_t i = 0; i < 12; i++)
 	{
+		if (pUnit->m_inode.m_directBlockPointer[i] == 0) continue;
+		
 		Ext2FreeBlock(pFS, pUnit->m_inode.m_directBlockPointer[i]);
 	}
 	
-	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_singlyIndirBlockPtr, 1);
-	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_doublyIndirBlockPtr, 2);
-	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_triplyIndirBlockPtr, 3);
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_singlyIndirBlockPtr, 0);
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_doublyIndirBlockPtr, 1);
+	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_triplyIndirBlockPtr, 2);
 	
 	Ext2FlushInode(pFS, pUnit);
 	

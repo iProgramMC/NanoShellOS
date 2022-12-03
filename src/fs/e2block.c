@@ -150,6 +150,15 @@ void Ext2BlockBitmapCheck(Ext2FileSystem* pFS, uint32_t blockNo, bool bWrite, bo
 			pData[bitOffset] |=  (1 << bitIndex);
 		else
 			pData[bitOffset] &= ~(1 << bitIndex);
+		
+		Ext2FlushBlockBitmap(pFS, bgd);
+		
+		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[bgd];
+		pBG->m_nFreeBlocks++;
+		Ext2FlushBlockGroupDescriptor(pFS, bgd);
+		
+		pFS->m_superBlock.m_nFreeBlocks++;
+		Ext2FlushSuperBlock(pFS);
 	}
 	else
 	{
@@ -178,7 +187,6 @@ void Ext2CheckBlockMarkUsed(Ext2FileSystem* pFS, uint32_t blockNo)
 
 void Ext2FreeBlock(Ext2FileSystem *pFS, uint32_t blockNo)
 {
-	//SLogMsg("Ext2FreeBlock(%x)", blockNo);
 	Ext2CheckBlockMarkFree(pFS, blockNo);
 }
 
@@ -194,12 +202,14 @@ void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS)
 
 void Ext2FreeIndirectList(Ext2FileSystem* pFS, uint32_t blockNo, int indirs)
 {
+	if (blockNo == 0) return;
+	
 	uint32_t buffer[pFS->m_blockSize / sizeof(uint32_t)];
 	uint32_t entriesPerBlock = pFS->m_blockSize / sizeof(uint32_t);
 	
 	ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, buffer) == DEVERR_SUCCESS);
 	
-	for (uint32_t i = 0; i <= entriesPerBlock; i++)
+	for (uint32_t i = 0; i < entriesPerBlock; i++)
 	{
 		if (buffer[i] == 0) continue;
 		

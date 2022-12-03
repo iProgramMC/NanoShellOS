@@ -152,6 +152,17 @@ void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 {
 	uint32_t hash = Ext2GetInodeHash(inodeNo);
 	
+	// if we're both the first and last
+	if (pFS->m_inodeHashTable[hash].pFirst->m_inodeNumber == inodeNo && pFS->m_inodeHashTable[hash].pFirst == pFS->m_inodeHashTable[hash].pLast)
+	{
+		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pFirst;
+		pFS->m_inodeHashTable[hash].pFirst = pFS->m_inodeHashTable[hash].pLast = NULL;
+		
+		Ext2FreeInodeCacheUnit(pToFree);
+		return;
+	}
+	
+	// if we are the first and not the last, we're bound to have a 'next'
 	if (pFS->m_inodeHashTable[hash].pFirst->m_inodeNumber == inodeNo)
 	{
 		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pFirst;
@@ -163,6 +174,7 @@ void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 		return;
 	}
 	
+	// if we are the last and not the first, we're bound to have a 'prev'
 	if (pFS->m_inodeHashTable[hash].pLast->m_inodeNumber == inodeNo)
 	{
 		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pLast;
@@ -786,8 +798,6 @@ uint32_t Ext2AllocateInode(Ext2FileSystem* pFS)
 		if (pData[k] == ~0u)
 			continue;
 		
-		SLogMsg("CHECKING ENTRY %d...", k);
-		
 		for (uint32_t l = 0; l < 32; l++)
 		{
 			if (pData[k] & (1 << l)) continue;
@@ -834,6 +844,15 @@ void Ext2InodeBitmapCheck(Ext2FileSystem* pFS, uint32_t inodeNo, bool bWrite, bo
 			pData[bitOffset] |=  (1 << bitIndex);
 		else
 			pData[bitOffset] &= ~(1 << bitIndex);
+		
+		Ext2FlushInodeBitmap(pFS, bgd);
+		
+		Ext2BlockGroupDescriptor *pBG = &pFS->m_pBlockGroups[bgd];
+		pBG->m_nFreeInodes++;
+		Ext2FlushBlockGroupDescriptor(pFS, bgd);
+		
+		pFS->m_superBlock.m_nFreeInodes++;
+		Ext2FlushSuperBlock(pFS);
 	}
 	else
 	{
