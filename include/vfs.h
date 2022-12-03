@@ -52,6 +52,7 @@ typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, c
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int             (*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
 typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
@@ -62,18 +63,26 @@ struct tagFsPoolUnit;
 typedef struct FSNodeS
 {
 	uint32_t           m_refCount;
+	void*              m_pFileSystemHandle; // used to check if two FileNodes are part of the same file system
 	
+	//note: try not to use the m_name field. On ext2, it's going to always be the first thing that was found with that inode.
 	char 	           m_name[128]; //+nullterm, so actually 127 chars
 	uint32_t           m_type;
 	uint32_t           m_perms;
 	uint32_t           m_flags;
 	uint32_t           m_inode;      //device specific
 	uint32_t           m_length;     //file size
-	uint32_t           m_implData;   //implementation data. TODO
+	
+	// implementation data
+	uint32_t           m_implData;
 	uint32_t           m_implData1;
 	uint32_t           m_implData2;
 	uint32_t           m_implData3;
-	uint64_t           m_modifyTime, m_createTime;
+	
+	// timing
+	uint32_t           m_modifyTime;
+	uint32_t           m_createTime;
+	uint32_t           m_accessTime;
 	
 	// File callbacks
 	FileReadFunc       Read;
@@ -99,6 +108,8 @@ typedef struct FSNodeS
 	// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
 	// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
 	FileUnlinkFileFunc UnlinkFile;
+	// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
+	FileRenameOpFunc   RenameOp;
 	// This function is called everytime the reference count of a file reaches zero.
 	FileOnUnreferencedFunc OnUnreferenced;
 }
@@ -305,6 +316,9 @@ void EraseFileNode (FileNode* pFileNode);
 	
 	// Removes a link to a file. If this is the last reference to a file, the file is deleted.
 	int FiUnlinkFile (const char *pfn);
+	
+	// Moves a file from 'source' path to 'destination' path.
+	int FiRename(const char* pfnOld, const char* pfnNew);
 	
 #endif
 

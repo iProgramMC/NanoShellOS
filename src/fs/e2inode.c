@@ -21,6 +21,8 @@ void Ext2FileOnUnreferenced(FileNode* pNode);
 int Ext2UnlinkFile(FileNode* pNode, const char* pName);
 int Ext2CreateFile(FileNode* pNode, const char* pName);
 
+int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName);
+
 // *************************
 //   Section : Inode Cache
 // *************************
@@ -83,6 +85,7 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 		pFileNode->FindDir = Ext2FindDir;
 		pFileNode->CreateFile = Ext2CreateFile;
 		pFileNode->UnlinkFile = Ext2UnlinkFile;
+		pFileNode->RenameOp   = Ext2RenameOp;
 	}
 	else
 	{
@@ -220,6 +223,7 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	
 	pUnit->m_node.m_implData  = (uint32_t)pUnit; // for faster lookup
 	pUnit->m_node.m_implData1 = (uint32_t)pFS;
+	pUnit->m_node.m_pFileSystemHandle = pFS;
 	
 	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
 	

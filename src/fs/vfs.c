@@ -912,6 +912,131 @@ int FiChangeDir (const char *pfn)
 	return -ENOTHING;
 }
 
+//note: This only works with absolute paths that have been checked for length.
+int FiRenameSub(const char* pfnOld, const char* pfnNew)
+{
+	char bufferOld[PATH_MAX], bufferNew[PATH_MAX];
+	
+	strcpy(bufferOld, pfnOld);
+	strcpy(bufferNew, pfnNew);
+	
+	char *pSlashOld, *pSlashNew;
+	pSlashOld = strrchr(bufferOld, '/');
+	pSlashNew = strrchr(bufferNew, '/');
+	
+	//well, these SHOULD be paths with at least one slash inside.
+	ASSERT(pSlashOld && pSlashNew);
+	
+	*pSlashOld = *pSlashNew = 0;
+	
+	char* pDirOld = bufferOld, *pDirNew = bufferNew, *pNameOld = pSlashOld + 1, *pNameNew = pSlashNew + 1;
+	
+	// resolve the directories
+	FileNode* pDirNodeOld = FsResolvePath(pDirOld);
+	
+	if (!pDirNodeOld) return -ENOENT;
+	
+	FileNode* pDirNodeNew = FsResolvePath(pDirNew);
+	
+	if (!pDirNodeNew)
+	{
+		FsReleaseReference(pDirNodeOld);
+		return -ENOENT;
+	}
+	
+	if (pDirNodeOld->m_pFileSystemHandle != pDirNodeNew->m_pFileSystemHandle)
+	{
+		// No cross file system action allowed. Must use manual copy / delete combo.
+		FsReleaseReference(pDirNodeOld);
+		FsReleaseReference(pDirNodeNew);
+		return -ENXIO;
+	}
+	
+	if (!(pDirNodeOld->m_type & FILE_TYPE_DIRECTORY) || !(pDirNodeNew->m_type & FILE_TYPE_DIRECTORY))
+	{
+		FsReleaseReference(pDirNodeOld);
+		FsReleaseReference(pDirNodeNew);
+		return -ENOTDIR;
+	}
+	
+	if (!pDirNodeOld->RenameOp)
+	{
+		return -ENOTSUP;
+	}
+	
+	// If the file already exists we must overwrite it. If we can't do that, simply bail.
+	FileNode* pNodeWeWillOverwrite = pDirNodeNew->FindDir(pDirNodeNew, pNameNew);
+	if (pNodeWeWillOverwrite)
+	{
+		int result = -ENOTSUP; // can't overwrite the entry
+		
+		// If we have an unlink function in the new dir node:
+		if (pDirNodeNew->UnlinkFile)
+		{
+			// Try to unlink this.
+			result = pDirNodeNew->UnlinkFile(pDirNodeNew, pNameNew);
+		}
+		
+		// if we couldn't
+		if (result != -ENOTHING)
+		{
+			FsReleaseReference(pDirNodeOld);
+			FsReleaseReference(pDirNodeNew);
+			return result;
+		}
+		
+		FsReleaseReference(pNodeWeWillOverwrite);
+	}
+	
+	// okay, now, we should be able to just perform the rename operation
+	int result = pDirNodeOld->RenameOp(pDirNodeOld, pDirNodeNew, pNameOld, pNameNew);
+	
+	FsReleaseReference(pDirNodeOld);
+	FsReleaseReference(pDirNodeNew);
+	
+	return result;
+}
+
+int FiRename(const char* pfnOld, const char* pfnNew)
+{
+	SLogMsg("FiRename('%s', '%s')", pfnOld, pfnNew);
+	
+	// not a relative path
+	if (pfnOld[0] != '/')
+	{
+		char buffer[PATH_MAX];
+		if (strlen(pfnOld) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
+		
+		strcpy(buffer, g_cwd);
+		if (strcmp(g_cwd, "/") != 0)
+			strcat(buffer, "/");
+		strcat(buffer, pfnOld);
+		
+		return FiRename(buffer, pfnNew);
+	}
+	
+	if (pfnNew[0] != '/')
+	{
+		char buffer[PATH_MAX];
+		if (strlen(pfnNew) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
+		
+		strcpy(buffer, g_cwd);
+		if (strcmp(g_cwd, "/") != 0)
+			strcat(buffer, "/");
+		strcat(buffer, pfnNew);
+		
+		return FiRename(pfnOld, buffer);
+	}
+	
+	if (strlen(pfnOld) >= PATH_MAX) return -ENAMETOOLONG;
+	if (strlen(pfnNew) >= PATH_MAX) return -ENAMETOOLONG;
+	
+	// If they're the same file, just don't do anything
+	if (strcmp(pfnOld, pfnNew) == 0) return -ENOTHING;
+	
+	return FiRenameSub(pfnOld, pfnNew);
+}
+
 #endif
 
 static const char* ErrorStrings[] = {
@@ -920,7 +1045,7 @@ static const char* ErrorStrings[] = {
 	"File exists",
 	"Interrupted system call",
 	"Invalid argument",
-	"I/O error",
+	"Input/output error",
 	"Is a directory",
 	"Too many symbolic links",
 	"Too many open files",
@@ -930,7 +1055,7 @@ static const char* ErrorStrings[] = {
 	"Out of stream resources",
 	"No space left on device",
 	"Not a directory",
-	"No such device or address",
+	"Invalid cross file system operation",
 	"Value is too large for defined data type",
 	"Read only file system",
 	"Already open",
@@ -939,6 +1064,7 @@ static const char* ErrorStrings[] = {
 	"Bad file descriptor",
 	"Illegal seek (is FIFO)",
 	"Computer bought the farm",
+	"Operation not supported",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

@@ -580,6 +580,33 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 			LogMsg("Done");
 		}
 	}
+	else if (strcmp (token, "rename") == 0)
+	{
+		char* pSrcFileName = Tokenize (&state, NULL, " ");
+		if (!pSrcFileName)      goto fail_rename;
+		if (*pSrcFileName == 0) goto fail_rename;
+		
+		char* pDstFileName = Tokenize (&state, NULL, " ");
+		if (!pDstFileName)      goto fail_rename;
+		if (*pDstFileName == 0) goto fail_rename;
+		
+		int status = FiRename(pSrcFileName, pDstFileName);
+		
+		if (status < 0)
+		{
+			LogMsg("rename: %s -> %s: %s", pSrcFileName, pDstFileName, GetErrNoString(status));
+		}
+		else
+		{
+			LogMsg("Done");
+		}
+		
+		goto no_fail_rename;
+	fail_rename:;
+		LogMsg("Usage: rename <source> <destination>");
+		LogMsg("Moves a file from 'source' to 'destination'. Cross file system 'rename' is not allowed for now.");
+	no_fail_rename:;
+	}
 	else if (strcmp (token, "movedata") == 0)
 	{
 		LogMsg("Starting to copy...");

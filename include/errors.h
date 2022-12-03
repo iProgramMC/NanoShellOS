@@ -26,6 +26,7 @@ enum
 	EBADF,         // Bad file descriptor
 	ESPIPE,        // Illegal seek
 	EIEIO,         // Computer bought the farm
+	ENOTSUP,       // Operation not supported
 	ECOUNT,
 };
 	
@@ -52,10 +53,10 @@ enum
 #define ERR_TEXT_FILE_BUSY         (-ETXTBUSY)
 #define ERR_BAD_FILE_DES           (-EBADF)
 #define ERR_ILLEGAL_SEEK           (-ESPIPE)
+#define ERR_NOT_SUPPORTED          (-ENOTSUP)
 
 enum
 {
-	ERR_NOT_SUPPORTED = 0x80000001, ENOTSUP   = -ERR_NOT_SUPPORTED,
 	ERR_CANCELED      = 0x80000002, ECANCELED = -ERR_CANCELED,
 	ERR_FILE_TOO_BIG  = 0x80000003, EFBIG     = -ERR_FILE_TOO_BIG,
 };

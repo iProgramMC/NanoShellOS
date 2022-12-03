@@ -100,6 +100,8 @@ static uint32_t Ext2CalculateDirEntSize(Ext2DirEnt* pDirEnt)
 	return sz;
 }
 
+// TODO: Don't duplicate the same code. Ext2AddDirectoryEntry and Ext2RemoveDirectoryEntry share similar skeleton.
+
 void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator)
 {
 	//note: I don't think we want to allocate something in the heap right now.
@@ -212,7 +214,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	goto TRY_AGAIN;
 }
 
-int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, bool bForceDirsToo)
+int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, bool bForceDirsToo, bool bDontDeleteInode, uint32_t* pInodeOut, uint8_t* pTypeIndicatorOut)
 {
 	//note: I don't think we want to allocate something in the heap right now.
 	char name[256];
@@ -241,6 +243,9 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 				//we found the entry!
 				uint32_t oldEntrySize  = pDirEnt->m_entrySize;
 				uint32_t oldEntryInode = pDirEnt->m_inode;
+				
+				if (pInodeOut)         *pInodeOut         = pDirEnt->m_inode;
+				if (pTypeIndicatorOut) *pTypeIndicatorOut = pDirEnt->m_typeIndicator;
 				
 				// get the inode itself. This inode's reference count will be decreased.
 				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, pName, false);
@@ -278,12 +283,12 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 				
 				// force a refresh
 				pUnit->m_nLastBlockRead = ~0u;
-				
 				// decrease the inode's reference count
 				ASSERT(pDestUnit->m_inode.m_nLinks > 0);
 				pDestUnit->m_inode.m_nLinks--;
 				
-				if (pDestUnit->m_inode.m_nLinks == 0)
+				// note: This boolean flag is only used when renaming something.
+				if (pDestUnit->m_inode.m_nLinks == 0 && !bDontDeleteInode)
 				{
 					pDestUnit->m_bAboutToBeDeleted = true;
 				}
@@ -305,6 +310,33 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 	
 	return -ENOENT;
 	
+}
+
+int Ext2RenameDirectoryEntry(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pOldUnit, Ext2InodeCacheUnit* pNewUnit, const char* pOldName, const char* pNewName)
+{
+	uint32_t inodeNo       = 0;
+	uint8_t  typeIndicator = 0;
+	
+	// remove the old entry. Make sure to not actually delete the inode.
+	int result = Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, &inodeNo, &typeIndicator);
+	if (result < 0) return result;
+	
+	Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
+	
+	return -ENOTHING;
+}
+
+int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName)
+{
+	if (pSrcNode->m_implData1 != pDstNode->m_implData1) return -ENXIO;
+	
+	// since they're a same we can choose whichever side we want
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pSrcNode->m_implData1;
+	
+	Ext2InodeCacheUnit* pSrcIcu = (Ext2InodeCacheUnit*)pSrcNode->m_implData;
+	Ext2InodeCacheUnit* pDstIcu = (Ext2InodeCacheUnit*)pDstNode->m_implData;
+	
+	return Ext2RenameDirectoryEntry(pFS, pSrcIcu, pDstIcu, pSrcName, pDstName);
 }
 
 DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
@@ -448,7 +480,7 @@ int Ext2UnlinkFile(FileNode* pNode, const char* pName)
 	
 	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
 	
-	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName, false);
+	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName, false, false, NULL, NULL);
 }
 
 void Ext2FileOnUnreferenced(FileNode* pNode)
