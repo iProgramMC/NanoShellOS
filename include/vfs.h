@@ -48,9 +48,9 @@ typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
 typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
 typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
 typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
-typedef bool            (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
+typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int             (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef int             (*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
 typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
@@ -175,8 +175,6 @@ void FsMountRamDisk(void* pRamDisk);
 #if 1
 
 void FsInit ();
-FileNode* CreateFileNode (FileNode* pParent);
-void EraseFileNode (FileNode* pFileNode);
 
 #endif
 
@@ -319,6 +317,9 @@ void EraseFileNode (FileNode* pFileNode);
 	
 	// Moves a file from 'source' path to 'destination' path.
 	int FiRename(const char* pfnOld, const char* pfnNew);
+	
+	// Create a new directory.
+	int FiMakeDir(const char* pPath);
 	
 #endif
 

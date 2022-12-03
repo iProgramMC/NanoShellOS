@@ -100,6 +100,8 @@ void Ext2DumpInode(Ext2Inode* pInode, const char* pInfo)
 	LogMsg("singly block pointer: %x", pInode->m_singlyIndirBlockPtr);
 	LogMsg("doubly block pointer: %x", pInode->m_doublyIndirBlockPtr);
 	LogMsg("triply block pointer: %x", pInode->m_triplyIndirBlockPtr);
+	
+	LogMsg("link count: %d", pInode->m_nLinks);
 }
 
 // Note: Before using this, make sure you've initialized pFS->m_pBlockBuffer to the super block's contents.
@@ -221,7 +223,6 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			
 			pMem += pFS->m_blockSize;
 		}
-		
 	}
 }
 
@@ -527,6 +528,11 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	if (pFS->m_blockSize > 8192)
 	{
 		LogMsg("WARNING: Block size is %d > 8192, you may experience problems!", pFS->m_blockSize);
+	}
+	
+	if (!(requiredFeatures & E2_REQ_DIR_TYPE_FIELD))
+	{
+		LogMsg("WARNING: This ext2 partition does not support directory type field. May want to refrain from creating any new files here.");
 	}
 	
 	// Set up and cache basic info about the file system.

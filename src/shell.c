@@ -699,6 +699,30 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 		
 	fail_movedata:;
 	}
+	else if (strcmp (token, "mkdir") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			int status = FiMakeDir(fileName);
+			if (status < 0)
+			{
+				LogMsg("mkdir: %s: %s", fileName, GetErrNoString(status));
+			}
+			else
+			{
+				LogMsg("Done");
+			}
+		}
+	}
 	else if (strcmp (token, "fts") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");

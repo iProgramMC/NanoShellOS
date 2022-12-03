@@ -20,6 +20,7 @@ void Ext2FileEmpty(FileNode* pNode);
 void Ext2FileOnUnreferenced(FileNode* pNode);
 int Ext2UnlinkFile(FileNode* pNode, const char* pName);
 int Ext2CreateFile(FileNode* pNode, const char* pName);
+int Ext2CreateDir (FileNode* pNode, const char* pName);
 
 int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName);
 
@@ -83,6 +84,7 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	{
 		pFileNode->ReadDir = Ext2ReadDir;
 		pFileNode->FindDir = Ext2FindDir;
+		pFileNode->CreateDir  = Ext2CreateDir;
 		pFileNode->CreateFile = Ext2CreateFile;
 		pFileNode->UnlinkFile = Ext2UnlinkFile;
 		pFileNode->RenameOp   = Ext2RenameOp;
@@ -210,9 +212,6 @@ void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 // Adds an inode to the binary search tree.
 Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
 {
-	// Note: Don't check if this inode was already cached. Maybe it was cached under a
-	// different name. We want to be tolerant to hard links, too. :)
-	
 	// Create a new inode cache unit:
 	Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
 	memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));

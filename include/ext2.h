@@ -398,7 +398,7 @@ void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS);
 void Ext2LoadInodeBitmaps(Ext2FileSystem *pFS);
 
 // Flush the block group descriptor table.
-void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, UNUSED uint32_t bgdIndex);
+void Ext2FlushBlockGroupDescriptor(Ext2FileSystem *pFS, uint32_t bgdIndex);
 
 // Allocate an inode and set it as used. This does not initialize the inode.
 uint32_t Ext2AllocateInode(Ext2FileSystem* pFS);

@@ -148,7 +148,7 @@ int FsUnlinkFile(FileNode* pNode, const char* pName)
 	if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
 	
 	// if there's no way to unlink a file
-	if (!pNode->UnlinkFile) return -EIO;
+	if (!pNode->UnlinkFile) return -ENOTSUP;
 	
 	return pNode->UnlinkFile(pNode, pName);
 }
@@ -157,10 +157,26 @@ int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
 	if (!pDirNode) return -EIO;
 	
-	if (!pDirNode->CreateFile) return -EIO;
+	if (!pDirNode->CreateFile) return -ENOTSUP;
 	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
 	
 	return pDirNode->CreateFile(pDirNode, pFileName);
+}
+
+int FsCreateDir(FileNode* pDirNode, const char *pFileName)
+{
+	if (!pDirNode) return -EIO;
+	if (!pDirNode->CreateDir) return -ENOTSUP;
+	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+	
+	FileNode* pChildIfExists = FsFindDir(pDirNode, pFileName);
+	if (pChildIfExists)
+	{
+		FsReleaseReference(pChildIfExists);
+		return -EEXIST;
+	}
+	
+	return pDirNode->CreateDir(pDirNode, pFileName);
 }
 
 FileNode* FsResolvePath (const char* pPath)
@@ -226,9 +242,10 @@ FileNode* FsResolvePath (const char* pPath)
 #if 1
 // Basic functions
 
-
 void FsRootInit();
+
 void FsInitializeDevicesDir();
+
 //First time setup of the file manager
 void FsInit ()
 {
@@ -236,6 +253,7 @@ void FsInit ()
 	FsRootInit();
 	FsInitializeDevicesDir();
 }
+
 #endif
 
 // File Descriptor handlers:
@@ -782,7 +800,6 @@ int FiTellSize (int fd)
 	return rv;
 }
 
-
 extern char g_cwd[PATH_MAX+2];
 
 int FiUnlinkFile (const char *pfn)
@@ -818,8 +835,14 @@ int FiUnlinkFile (const char *pfn)
 	if (buffer[0] == 0)
 		buffer[0] = '/', buffer[1] = 0;
 	
+	LockAcquire(&g_FileSystemLock);
+	
 	FileNode *pDir = FsResolvePath (buffer);
-	if (!pDir) return -ENOENT;
+	if (!pDir)
+	{
+		LockFree(&g_FileSystemLock);
+		return -ENOENT;
+	}
 	
 	// note: The file node is as valid as there is a reference to it.
 	// FsResolvePath adds a reference to the node, so it will only be invalid
@@ -827,6 +850,7 @@ int FiUnlinkFile (const char *pfn)
 	int errorCode = FsUnlinkFile (pDir, r + 1);
 	
 	FsReleaseReference(pDir);
+	LockFree(&g_FileSystemLock);
 	
 	return errorCode;
 }
@@ -840,6 +864,8 @@ int FiChangeDir (const char *pfn)
 	
 	if (pfn[0] == '/')
 	{
+		LockAcquire(&g_FileSystemLock);
+		
 		// Absolute Path
 		FileNode *pNode = FsResolvePath (pfn);
 		if (!pNode) return -EEXIST;
@@ -847,6 +873,7 @@ int FiChangeDir (const char *pfn)
 		if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
 		{
 			FsReleaseReference(pNode);
+			LockFree(&g_FileSystemLock);
 			return -ENOTDIR;
 		}
 		
@@ -854,11 +881,13 @@ int FiChangeDir (const char *pfn)
 		
 		//this should work!
 		strcpy (g_cwd, pfn);
+		
+		LockFree(&g_FileSystemLock);
+		
 		return -ENOTHING;
 	}
 	
 	if (strcmp (pfn, PATH_THISDIR) == 0) return -ENOTHING;
-	
 	
 	char cwd_work [sizeof (g_cwd)];
 	memset (cwd_work, 0, sizeof cwd_work);
@@ -890,17 +919,22 @@ int FiChangeDir (const char *pfn)
 		strcat (cwd_work, pfn);
 	}
 	
+	LockAcquire(&g_FileSystemLock);
+	
 	//resolve the path
 	FileNode *pNode = FsResolvePath (cwd_work);
 	
 	if (!pNode)
 	{
+		LockFree(&g_FileSystemLock);
+		
 		return -ENOENT; //does not exist
 	}
 	
 	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
 	{
 		FsReleaseReference(pNode);
+		LockFree(&g_FileSystemLock);
 		return -ENOTDIR; //not a directory
 	}
 	
@@ -908,6 +942,8 @@ int FiChangeDir (const char *pfn)
 	
 	//this should work!
 	strcpy (g_cwd, cwd_work);
+	
+	LockFree(&g_FileSystemLock);
 	
 	return -ENOTHING;
 }
@@ -931,16 +967,23 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	
 	char* pDirOld = bufferOld, *pDirNew = bufferNew, *pNameOld = pSlashOld + 1, *pNameNew = pSlashNew + 1;
 	
+	LockAcquire(&g_FileSystemLock);
+	
 	// resolve the directories
 	FileNode* pDirNodeOld = FsResolvePath(pDirOld);
 	
-	if (!pDirNodeOld) return -ENOENT;
+	if (!pDirNodeOld)
+	{
+		LockFree(&g_FileSystemLock);
+		return -ENOENT;
+	}
 	
 	FileNode* pDirNodeNew = FsResolvePath(pDirNew);
 	
 	if (!pDirNodeNew)
 	{
 		FsReleaseReference(pDirNodeOld);
+		LockFree(&g_FileSystemLock);
 		return -ENOENT;
 	}
 	
@@ -949,6 +992,7 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 		// No cross file system action allowed. Must use manual copy / delete combo.
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
+		LockFree(&g_FileSystemLock);
 		return -ENXIO;
 	}
 	
@@ -956,11 +1000,15 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	{
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
+		LockFree(&g_FileSystemLock);
 		return -ENOTDIR;
 	}
 	
 	if (!pDirNodeOld->RenameOp)
 	{
+		FsReleaseReference(pDirNodeOld);
+		FsReleaseReference(pDirNodeNew);
+		LockFree(&g_FileSystemLock);
 		return -ENOTSUP;
 	}
 	
@@ -982,6 +1030,7 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 		{
 			FsReleaseReference(pDirNodeOld);
 			FsReleaseReference(pDirNodeNew);
+			LockFree(&g_FileSystemLock);
 			return result;
 		}
 		
@@ -993,14 +1042,13 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	
 	FsReleaseReference(pDirNodeOld);
 	FsReleaseReference(pDirNodeNew);
+	LockFree(&g_FileSystemLock);
 	
 	return result;
 }
 
 int FiRename(const char* pfnOld, const char* pfnNew)
 {
-	SLogMsg("FiRename('%s', '%s')", pfnOld, pfnNew);
-	
 	// not a relative path
 	if (pfnOld[0] != '/')
 	{
@@ -1035,6 +1083,56 @@ int FiRename(const char* pfnOld, const char* pfnNew)
 	if (strcmp(pfnOld, pfnNew) == 0) return -ENOTHING;
 	
 	return FiRenameSub(pfnOld, pfnNew);
+}
+
+static int FiMakeDirSub(char* pPath)
+{
+	char* pSlashPtr = strrchr(pPath, '/');
+	ASSERT(pSlashPtr);
+	
+	*pSlashPtr = 0;
+	
+	char* pDirName = pPath, *pFileName = pSlashPtr + 1;
+	
+	FileNode *pNode = FsResolvePath(pDirName);
+	if (!pNode) return -ENOENT;
+	
+	int status = FsCreateDir(pNode, pFileName);
+	
+	FsReleaseReference(pNode);
+	
+	return status;
+}
+
+int FiMakeDir(const char* pPath)
+{
+	if (*pPath == 0) return -ENOENT;
+	
+	char buf[PATH_MAX];
+	
+	if (*pPath == '/')
+	{
+		if (strlen (pPath) >= PATH_MAX) return -ENAMETOOLONG;
+		
+		strcpy( buf, pPath );
+	}
+	else
+	{
+		if (strlen (pPath) + strlen (g_cwd) + 1 >= PATH_MAX - 2) return -ENAMETOOLONG;
+		
+		strcpy( buf, g_cwd );
+		if (strcmp( g_cwd, "/" ))
+			strcat( buf, "/" );
+		strcat( buf, pPath );
+	}
+	
+	LockAcquire(&g_FileSystemLock);
+	
+	int status = FiMakeDirSub(buf);
+	
+	LockFree(&g_FileSystemLock);
+	
+	return status;
 }
 
 #endif
