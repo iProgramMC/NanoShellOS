@@ -80,9 +80,9 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [x] \*        Create a file entry.
 - [x] \*        Rename a file entry.
 - [x] \*        Unlink a file.
-- [ ] \*        Create a directory.
-- [ ] \*        Remove an empty directory.
-- [ ] \*        Do all these things with flying colors from `e2fsck`.
+- [x] \*        Create a directory.
+- [x] \*        Remove an empty directory.
+- [x] \*        Do all these things with flying colors from `e2fsck`.
 - [ ] \*        Fix most edge cases.
 - [ ] FAT32 (not going to focus on this right now, probably in 2023):
 - [ ] \*        Read only support.

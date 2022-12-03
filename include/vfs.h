@@ -52,6 +52,7 @@ typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef int             (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int             (*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
 typedef int             (*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
 typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
@@ -97,17 +98,17 @@ typedef struct FSNodeS
 	FileFindDirFunc    FindDir;
 	// Closes a directory.
 	FileCloseDirFunc   CloseDir;
-	// Creates an empty file and sets it up inside the file system. On FAT32, this does not allocate another cluster
-	// to store the file in. Windows does not, in fact, do this, so a zero-byte file only occupies its entry's worth
-	// of space.
+	// Creates an empty file and sets it up inside the file system.
 	FileCreateFileFunc CreateFile;
 	// Removes all the contents of a file.
 	FileEmptyFileFunc  EmptyFile;
-	// Creates an empty directory and sets up all the necessary stuff.  On FAT32, also creates the '.' and '..' links.
+	// Creates an empty directory and sets up all the necessary stuff.
 	FileCreateDirFunc  CreateDir;
 	// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
 	// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
 	FileUnlinkFileFunc UnlinkFile;
+	// Removes an empty directory.
+	FileRemoveDirFunc  RemoveDir;
 	// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
 	FileRenameOpFunc   RenameOp;
 	// This function is called everytime the reference count of a file reaches zero.
@@ -320,6 +321,9 @@ void FsInit ();
 	
 	// Create a new directory.
 	int FiMakeDir(const char* pPath);
+	
+	// Delete an empty directory.
+	int FiRemoveDir(const char* pPath);
 	
 #endif
 

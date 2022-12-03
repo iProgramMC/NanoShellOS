@@ -18,7 +18,10 @@ FileNode *Ext2FindDir(FileNode* pNode, const char* pName);
 
 void Ext2FileEmpty(FileNode* pNode);
 void Ext2FileOnUnreferenced(FileNode* pNode);
+
 int Ext2UnlinkFile(FileNode* pNode, const char* pName);
+int Ext2RemoveDir (FileNode* pNode);
+
 int Ext2CreateFile(FileNode* pNode, const char* pName);
 int Ext2CreateDir (FileNode* pNode, const char* pName);
 
@@ -82,11 +85,12 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	// TODO: ReadDir() and other calls if this is a directory.
 	if (pFileNode->m_type == FILE_TYPE_DIRECTORY)
 	{
-		pFileNode->ReadDir = Ext2ReadDir;
-		pFileNode->FindDir = Ext2FindDir;
+		pFileNode->ReadDir    = Ext2ReadDir;
+		pFileNode->FindDir    = Ext2FindDir;
 		pFileNode->CreateDir  = Ext2CreateDir;
 		pFileNode->CreateFile = Ext2CreateFile;
 		pFileNode->UnlinkFile = Ext2UnlinkFile;
+		pFileNode->RemoveDir  = Ext2RemoveDir;
 		pFileNode->RenameOp   = Ext2RenameOp;
 	}
 	else

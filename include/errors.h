@@ -28,6 +28,8 @@ enum
 	EIEIO,         // Computer bought the farm
 	ENOTSUP,       // Operation not supported
 	EXDEV,         // Cross device operation not supported
+	EBUSY,         // Resource is busy
+	ENOTEMPTY,     // Directory is not empty
 	ECOUNT,
 };
 	

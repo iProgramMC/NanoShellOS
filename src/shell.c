@@ -699,6 +699,30 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 		
 	fail_movedata:;
 	}
+	else if (strcmp (token, "rmdir") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+		}
+		else
+		{
+			int status = FiRemoveDir(fileName);
+			if (status < 0)
+			{
+				LogMsg("rmdir: %s: %s", fileName, GetErrNoString(status));
+			}
+			else
+			{
+				LogMsg("Done");
+			}
+		}
+	}
 	else if (strcmp (token, "mkdir") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");

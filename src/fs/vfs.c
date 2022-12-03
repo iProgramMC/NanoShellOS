@@ -1135,6 +1135,28 @@ int FiMakeDir(const char* pPath)
 	return status;
 }
 
+int FiRemoveDir(const char* pPath)
+{
+	if (*pPath == 0) return -EBUSY;
+	
+	LockAcquire(&g_FileSystemLock);
+	
+	FileNode* pNode = FsResolvePath(pPath);
+	
+	if (!pNode->RemoveDir)
+	{
+		LockFree(&g_FileSystemLock);
+		return -ENOTSUP;
+	}
+	
+	int status = pNode->RemoveDir(pNode);
+	
+	FsReleaseReference(pNode);
+	LockFree(&g_FileSystemLock);
+	
+	return status;
+}
+
 #endif
 
 static const char* ErrorStrings[] = {
@@ -1164,6 +1186,8 @@ static const char* ErrorStrings[] = {
 	"Computer bought the farm",
 	"Operation not supported",
 	"Cross device operation not supported",
+	"Resource is busy",
+	"Directory is not empty",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

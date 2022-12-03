@@ -214,7 +214,8 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	goto TRY_AGAIN;
 }
 
-int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, bool bForceDirsToo, bool bDontDeleteInode, uint32_t* pInodeOut, uint8_t* pTypeIndicatorOut)
+// note: Don't use this behemoth directly. Instead, use one of the functions that use this behind the scenes.
+static int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, bool bForceDirsToo, bool bDontDeleteInode, bool bByInode, uint32_t nInodeIn, uint32_t* pInodeOut, uint8_t* pTypeIndicatorOut)
 {
 	//note: I don't think we want to allocate something in the heap right now.
 	char name[256];
@@ -235,10 +236,13 @@ int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, con
 		
 		while (pDirEnt < pEndPoint)
 		{
-			memcpy(name, pDirEnt->m_name, pDirEnt->m_nameLength);
-			name[pDirEnt->m_nameLength] = 0;
+			if (!bByInode)
+			{
+				memcpy(name, pDirEnt->m_name, pDirEnt->m_nameLength);
+				name[pDirEnt->m_nameLength] = 0;
+			}
 			
-			if (strcmp(name, pName) == 0)
+			if ((bByInode && pDirEnt->m_inode == nInodeIn) || (!bByInode && strcmp(name, pName) == 0))
 			{
 				//we found the entry!
 				uint32_t oldEntrySize  = pDirEnt->m_entrySize;
@@ -360,7 +364,7 @@ int Ext2RenameDirectoryEntry(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pOldUnit, 
 	uint8_t  typeIndicator = 0;
 	
 	// remove the old entry. Make sure to not actually delete the inode.
-	int result = Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, &inodeNo, &typeIndicator);
+	int result = Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, false, 0, &inodeNo, &typeIndicator);
 	if (result < 0) return result;
 	
 	Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
@@ -602,7 +606,7 @@ int Ext2UnlinkFile(FileNode* pNode, const char* pName)
 	
 	ASSERT(pUnit->m_inodeNumber == pNode->m_inode);
 	
-	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName, false, false, NULL, NULL);
+	return Ext2RemoveDirectoryEntry(pFS, pUnit, pName, false, false, false, 0, NULL, NULL);
 }
 
 void Ext2FileOnUnreferenced(FileNode* pNode)
@@ -637,11 +641,84 @@ void Ext2FileOnUnreferenced(FileNode* pNode)
 	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_doublyIndirBlockPtr, 1);
 	Ext2FreeIndirectList(pFS, pUnit->m_inode.m_triplyIndirBlockPtr, 2);
 	
+	bool bIsDirectory = pUnit->m_node.m_type & FILE_TYPE_DIRECTORY;
+	
 	Ext2FlushInode(pFS, pUnit);
 	
 	Ext2FreeInode(pFS, pUnit->m_inodeNumber);
+	
+	// if it's a directory, also reduce the nDirs count in the local block group
+	if (bIsDirectory)
+	{
+		uint32_t bgd = (pUnit->m_inodeNumber - 1) / pFS->m_inodesPerGroup;
+		
+		pFS->m_pBlockGroups[bgd].m_nDirs--;
+		
+		Ext2FlushBlockGroupDescriptor(pFS, bgd);
+	}
 	
 	// delete the inode from the cache unit
 	Ext2RemoveInodeCacheUnit(pFS, pUnit->m_inodeNumber);
 }
 
+int Ext2RemoveDir(FileNode* pNode)
+{
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	// check if we are empty
+	DirEnt de; uint32_t index = 0;
+	while (Ext2ReadDir(pNode, &index, &de) != NULL)
+	{
+		// if it's not '.' or '..'
+		if (strcmp(de.m_name, ".") != 0 && strcmp(de.m_name, "..") != 0)
+		{
+			//well, this directory isn't actually empty
+			return -ENOTEMPTY;
+		}
+	}
+	
+	// if there is a '..' entry, we can remove ourselves.
+	FileNode* pDotDotEntry = Ext2FindDir(pNode, "..");
+	if (!pDotDotEntry) return -EBUSY;
+	
+	// if there's a link across file systems for some reason (e.g. if something's mounted INSIDE of this file system)
+	if (pDotDotEntry->m_pFileSystemHandle != pNode->m_pFileSystemHandle)
+	{
+		FsReleaseReference(pDotDotEntry);
+		return -EBUSY;
+	}
+	
+	Ext2InodeCacheUnit* pParentUnit = (Ext2InodeCacheUnit*)pDotDotEntry->m_implData;
+	
+	// remove the '..' link from ourselves. The '..' link points to the parent.
+	pParentUnit->m_inode.m_nLinks--;
+	
+	// remove the '.' link from ourselves. This simply involves decreasing our link count by one.
+	pInode->m_nLinks--;
+	
+	// remove this entry from the parent. This will decrease our link count by one, if successful.
+	int status = Ext2RemoveDirectoryEntry(pFS, pParentUnit, NULL, true, false, true, pNode->m_inode, NULL, NULL);
+	if (status < 0)
+	{
+		// revert the changes
+		pParentUnit->m_inode.m_nLinks++;
+		pInode->m_nLinks++;
+		
+		// bail
+		FsReleaseReference(pDotDotEntry);
+		return status;
+	}
+	
+	// we could remove this entry from the parent. Ideally, our link count should be zero now.
+	ASSERT(pInode->m_nLinks == 0);
+	
+	// flush our changes to the parent unit
+	Ext2FlushInode(pFS, pParentUnit);
+	
+	FsReleaseReference(pDotDotEntry);
+	
+	// wait until someone else removes our reference.
+	return -ENOTHING;
+}
