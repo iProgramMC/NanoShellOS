@@ -993,7 +993,7 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
 		LockFree(&g_FileSystemLock);
-		return -ENXIO;
+		return -EXDEV;
 	}
 	
 	if (!(pDirNodeOld->m_type & FILE_TYPE_DIRECTORY) || !(pDirNodeNew->m_type & FILE_TYPE_DIRECTORY))
@@ -1153,7 +1153,7 @@ static const char* ErrorStrings[] = {
 	"Out of stream resources",
 	"No space left on device",
 	"Not a directory",
-	"Invalid cross file system operation",
+	"No such device or address",
 	"Value is too large for defined data type",
 	"Read only file system",
 	"Already open",
@@ -1163,6 +1163,7 @@ static const char* ErrorStrings[] = {
 	"Illegal seek (is FIFO)",
 	"Computer bought the farm",
 	"Operation not supported",
+	"Cross device operation not supported",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

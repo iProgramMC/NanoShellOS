@@ -27,6 +27,7 @@ enum
 	ESPIPE,        // Illegal seek
 	EIEIO,         // Computer bought the farm
 	ENOTSUP,       // Operation not supported
+	EXDEV,         // Cross device operation not supported
 	ECOUNT,
 };
 	
@@ -54,6 +55,7 @@ enum
 #define ERR_BAD_FILE_DES           (-EBADF)
 #define ERR_ILLEGAL_SEEK           (-ESPIPE)
 #define ERR_NOT_SUPPORTED          (-ENOTSUP)
+#define ERR_CROSS_DEVICE           (-EXDEV)
 
 enum
 {

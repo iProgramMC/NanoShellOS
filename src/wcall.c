@@ -106,7 +106,7 @@ void LogString(const char* pText)
 int FiUnlinkFile2(UNUSED const char* pText)
 {
 	// TODO
-	return  -ENXIO;
+	return  -EXDEV;
 }
 
 void SetWindowIcon (Window* pWindow, int icon)

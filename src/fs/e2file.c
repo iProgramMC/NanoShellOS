@@ -370,7 +370,7 @@ int Ext2RenameDirectoryEntry(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pOldUnit, 
 
 int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName)
 {
-	if (pSrcNode->m_implData1 != pDstNode->m_implData1) return -ENXIO;
+	if (pSrcNode->m_implData1 != pDstNode->m_implData1) return -EXDEV;
 	
 	// since they're a same we can choose whichever side we want
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pSrcNode->m_implData1;
