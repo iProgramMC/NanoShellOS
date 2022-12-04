@@ -69,9 +69,6 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [ ] NVMe?
 - [ ] USB stick device driver
 #### File system
-
-This branch is meant as an overhaul to how the VFS in NanoShell is structured. Here are my plans.
-- [x] Rewrite root directory code.
 - [x] EXT2:
 - [x] \*        Read only support.
 - [x] \*        Expand a file.
@@ -94,7 +91,6 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [ ] \*        Create a directory.
 - [ ] \*        Remove an empty directory.
 - [ ] \*        Do all these things with flying colors from `chkdsk`.
-- [ ] Integrate these changes into the NanoShell we all know and love. :)
 
 #### The future
 - [ ] An installer, which deploys [Limine](https://github.com/limine-bootloader/limine) onto a system, creates a FAT32 (or EXT2?) file system and creates a working installation of NanoShell
