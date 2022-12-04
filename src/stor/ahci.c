@@ -672,7 +672,7 @@ void StAhciInit()
 {
 	if (!g_ahciControllerNum)
 	{
-		LogMsg("No AHCI controllers found.");
+		SLogMsg("No AHCI controllers found.");
 		return;
 	}
 	LogMsg("Initializing AHCI controllers...");

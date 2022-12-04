@@ -13,7 +13,7 @@ This software is licensed under the GNU General Public License version 3, except
 
 ## Want to contribute?
 
-[JUST DO IT!](https://www.youtube.com/watch?v=ZXsQAXx_ao0) Kidding aside, feel free to make a pull request! (I'd like it even more if you could help me clean up the source!)
+[Just do it!](https://www.youtube.com/watch?v=ZXsQAXx_ao0) Kidding aside, feel free to make a pull request! (I'd like it even more if you could help me clean up the source!)
 
 [Coding style guidelines](coding_style.md)
 
@@ -83,7 +83,7 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [x] \*        Create a directory.
 - [x] \*        Remove an empty directory.
 - [x] \*        Do all these things with flying colors from `e2fsck`.
-- [ ] FAT32 (not going to focus on this right now, probably in 2023):
+- [ ] FAT32:
 - [ ] \*        Read only support.
 - [ ] \*        Expand a file.
 - [ ] \*        Shrink a file.

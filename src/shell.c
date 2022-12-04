@@ -156,24 +156,7 @@ extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 uint64_t ReadTSC();
 
-void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode);
-
 void ShellExecuteCommand(char* p)
-{
-	FileNode* pCwdNode = FsResolvePath (g_cwd);
-	
-	if (!pCwdNode)
-	{
-		LogMsg("ERROR: Current working directory is no longer available (deleted?)");
-		return;
-	}
-	
-	ShellExecuteCommandSub(p, pCwdNode);
-	
-	FsReleaseReference(pCwdNode);
-}
-
-void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 {
 	TokenState state;
 	state.m_bInitted = 0;

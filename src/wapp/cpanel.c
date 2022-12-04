@@ -546,6 +546,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_DESKTOP);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Terminal settings",   ICON_COMMAND);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Launcher",            ICON_HOME);
+			/*
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Environment Paths",   ICON_DIRECTIONS);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Permissions",         ICON_RESTRICTED);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Serial Port",         ICON_SERIAL);
@@ -553,6 +554,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Date and Time",       ICON_CLOCK);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Password Lock",       ICON_LOCK);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "App Memory Limit",    ICON_RESMON);
+			*/
 			
 			break;
 		}

@@ -13,7 +13,7 @@
 #include<stdbool.h>
 
 //#define EXPERIMENTAL
-#define EXPERIMENTAL_RSDPTR
+//#define EXPERIMENTAL_RSDPTR
 #define EXPERIMENTAL_VMWARE
 
 typedef char byte;
@@ -42,8 +42,10 @@ void KeEnableInterrupts();
 #define cli KeDisableInterrupts()  //asm("cli")
 #define sti KeEnableInterrupts ()  //asm("sti")
 
-#define VersionNumber 94
-#define VersionString "V0.94"
+// December 4, 2022. This marks Version 1.00 of the operating system,
+// simply because I decided to make it 1.00 now. :-)
+#define VersionNumber 100
+#define VersionString "V1.00"
 
 #define UNUSED __attribute__((unused))
 
