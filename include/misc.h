@@ -155,7 +155,12 @@ TimeStruct* TmReadTime();
 /**
  * Gets the current time in seconds since 1 January 1970.
  */
-int GetUnixTime();
+int GetEpochTime();
+
+/**
+ * Converts epoch time into human readable time (TimeStruct)
+ */
+void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut);
 
 /**
  * Stops all kernel activity forcefully. Only use this if something

@@ -184,7 +184,7 @@ int GetRawTickCount()
 // functions on my system (used gmtime, matches exactly with a call to time(NULL))
 static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
-int GetUnixTime()
+int GetEpochTime()
 {
 	TimeStruct ts = *TmReadTime();
 	
@@ -205,6 +205,37 @@ int GetUnixTime()
 	}
 	
 	return days * 86400 + ts.hours * 3600 + ts.minutes * 60 + ts.seconds;
+}
+
+void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
+{
+	// Separate the amount of days from the rest of the time.
+	int days = utime / 86400, secs = utime % 86400;
+
+	// Turn the secs into hours, minutes and seconds. This is trivial.
+	pOut->hours = secs / 3600;
+	pOut->minutes = secs / 60 % 60;
+	pOut->seconds = secs % 60;
+
+	// Get the year number.
+	int year = 1970;
+	while (days >= 365 + (year % 4 == 0))
+	{
+		days -= 365 + (year % 4 == 0);
+		year++;
+	}
+
+	// Get the month number.
+	int month = 1;
+	while (days >= s_daysPerMonth[month])
+	{
+		days -= s_daysPerMonth[month];
+		month++;
+	}
+
+	pOut->day   = days + 1;
+	pOut->month = month;
+	pOut->year  = year;
 }
 
 extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;

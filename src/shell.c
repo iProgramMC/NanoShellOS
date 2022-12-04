@@ -816,19 +816,81 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 	}
 	else if (strcmp (token, "ls") == 0)
 	{
-		uint8_t color = g_currentConsole->color;
+		enum
+		{
+			SW_UNK  = (1 << 0),
+			SW_BARE = (1 << 1),
+			SW_DATE = (1 << 2),
+			SW_INO  = (1 << 3),
+			SW_HELP = (1 << 4),
+			SW_CR   = (1 << 5),
+		};
 		
-		FileNode* pNode = g_pCwdNode;
-		LogMsg("\x01\x0F" "Directory of %s", pNode->m_name, pNode);
+		int switches = 0;
+		
+		const char* pPathToList = g_cwd;
+		
+		// parse other parameters if applicable
+		char* parm = Tokenize (&state, NULL, " ");
+		while (parm)
+		{
+			// if it starts with a dash, it's a switch or combination of switches.
+			if (*parm == '-')
+			{
+				parm++;
+				while (*parm)
+				{
+					switch (*parm)
+					{
+						case 'h': switches |= SW_HELP; break;
+						case 'i': switches |= SW_INO;  break;
+						case 'd': switches |= SW_DATE; break;
+						case 'b': switches |= SW_BARE; break;
+						case 'c': switches |= SW_CR;   break;
+						default:  switches |= SW_UNK;  break;
+					}
+					parm++;
+				}
+			}
+			
+			// TODO: allow listing paths other than the cwd
+			
+			parm = Tokenize (&state, NULL, " ");
+		}
+		
+		if (switches & SW_UNK)
+		{
+			LogMsg("One or more unknown switches have been provided.");
+		}
+		if (switches & (SW_HELP | SW_UNK))
+		{
+			LogMsg("Usage: ls [-ibdh]");
+			LogMsg("-h: Help. Shows this list.");
+			LogMsg("-i: Display inode numbers next to files.");
+			LogMsg("-b: List the directory in a bare format.");
+			LogMsg("-d: Show human readable dates next to files.");
+			LogMsg("-c: Show creation date instead of modification date. Use with -d.");
+			return;
+		}
+		
+		// specific color codes
+		
+		const char * red    = "\x1b[91m";
+		const char * blue   = "\x1b[94m";
+		const char * normal = "\x1b[97m";
+		
+		uint8_t color = g_currentConsole->color;
 		
 		bool bareMode = false;
 		
-		int dd = FiOpenDir (g_cwd);
+		int dd = FiOpenDir (pPathToList);
 		if (dd < 0)
 		{
-			LogMsg("ls: cannot list '%s': %s", g_cwd, GetErrNoString(dd));
+			LogMsg("ls: cannot list '%s': %s", pPathToList, GetErrNoString(dd));
 			return;
 		}
+		
+		LogMsg("%sDirectory of %s", normal, pPathToList);
 		
 		FiRewindDir(dd);
 		
@@ -844,29 +906,74 @@ void ShellExecuteCommandSub(char* p, FileNode* g_pCwdNode)
 			StatResult statResult;
 			int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
 			
+			const char* auxStr = "";
+			char buffer [256];
+			memset( buffer, 0, sizeof buffer );
+			
+			if (switches & SW_DATE)
+			{
+				// This shows the last modified date.
+				uint32_t date = statResult.m_modifyTime;
+				
+				if (switches & SW_CR)
+					date = statResult.m_createTime;
+				
+				TimeStruct ts;
+				GetHumanTimeFromEpoch( date, &ts );
+				
+				sprintf( buffer, "%02d/%02d/%04d %02d:%02d:%02d  ", ts.day, ts.month, ts.year, ts.hours, ts.minutes, ts.seconds );
+				
+				auxStr = buffer;
+			}
+			
+			if (switches & SW_INO)
+			{
+				char buf[20];
+				
+				sprintf( buf, " %9u ", statResult.m_inode );
+				
+				// hack
+				if (buf[10] != ' ')
+				{
+					memmove(buf, buf + 1, sizeof buf);
+					buf[10] = ' ';
+				}
+				
+				
+				strcat( buffer, buf );
+				
+				auxStr = buffer;
+			}
+			
 			if (res < 0)
 			{
 				LogMsg("ls: cannot stat '%s': %s", pDirEnt->m_name, GetErrNoString(res));
 				continue;
 			}
-			#define THING "\x10"
+			
 			if (statResult.m_type & FILE_TYPE_DIRECTORY)
 			{
-				LogMsg("%c%c%c\x02" THING "\x01\x0C%s\x01\x0F",
+				LogMsg("%s%c%c%c           %s%s%s",
+					auxStr,
 					"-r"[!!(statResult.m_perms & PERM_READ )],
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
-					pDirEnt->m_name
+					red,
+					pDirEnt->m_name,
+					normal
 				);
 			}
 			else
 			{
-				LogMsg("%c%c%c %d\x02" THING "%s",
+				LogMsg("%s%c%c%c %9d %s%s%s",
+					auxStr,
 					"-r"[!!(statResult.m_perms & PERM_READ )],
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
 					statResult.m_size,
-					pDirEnt->m_name
+					blue,
+					pDirEnt->m_name,
+					normal
 				);
 			}
 			#undef THING

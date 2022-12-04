@@ -516,6 +516,10 @@ int Ext2CreateFileAndInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir,
 		default: typeIndicator = 0;
 	}
 	
+	fakeUnit.m_inode.m_lastAccessTime =
+	fakeUnit.m_inode.m_creationTime   =
+	fakeUnit.m_inode.m_lastModTime    = GetEpochTime();
+	
 	Ext2FlushInode(pFS, &fakeUnit);
 	
 	// Add a directory entry to it.
@@ -627,7 +631,7 @@ void Ext2FileOnUnreferenced(FileNode* pNode)
 	ASSERT(pUnit->m_inode.m_nLinks == 0);
 	
 	// This will delete the inode.
-	pUnit->m_inode.m_deletionTime = GetUnixTime();
+	pUnit->m_inode.m_deletionTime = GetEpochTime();
 	
 	// Free all the blocks.
 	for (uint32_t i = 0; i < 12; i++)
