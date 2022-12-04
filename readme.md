@@ -72,7 +72,7 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 
 This branch is meant as an overhaul to how the VFS in NanoShell is structured. Here are my plans.
 - [x] Rewrite root directory code.
-- [ ] EXT2:
+- [x] EXT2:
 - [x] \*        Read only support.
 - [x] \*        Expand a file.
 - [x] \*        Shrink a file.
@@ -83,7 +83,6 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [x] \*        Create a directory.
 - [x] \*        Remove an empty directory.
 - [x] \*        Do all these things with flying colors from `e2fsck`.
-- [ ] \*        Fix most edge cases.
 - [ ] FAT32 (not going to focus on this right now, probably in 2023):
 - [ ] \*        Read only support.
 - [ ] \*        Expand a file.
@@ -95,7 +94,6 @@ This branch is meant as an overhaul to how the VFS in NanoShell is structured. H
 - [ ] \*        Create a directory.
 - [ ] \*        Remove an empty directory.
 - [ ] \*        Do all these things with flying colors from `chkdsk`.
-- [ ] \*        Fix most edge cases.
 - [ ] Integrate these changes into the NanoShell we all know and love. :)
 
 #### The future
