@@ -16,7 +16,7 @@ qemu-system-i386.exe                            ^
 -debugcon stdio                                 ^
 -display sdl                                    ^
 -accel tcg                                      ^
--hda %nspath%\vdisk.vdi                         ^
+-hda %nspath%\vdiske2.vdi                       ^
 -monitor telnet:127.0.0.1:55555,server,nowait
 
 : -s -S                                         -- for debugging with GDB
@@ -28,6 +28,7 @@ qemu-system-i386.exe                            ^
 :qemu-system-i386 -m 16M -drive file=\\.\PHYSICALDRIVE1,format=raw
 rem -s -S 
 
+:-drive file=%nspath%\vdiske2.raw,format=raw,index=0,media=disk ^
 :-drive id=disk,file=%nspath%\vdisk.vdi,if=none  ^
 :-device ahci,id=ahci                            ^
 :-device ide-hd,drive=disk,bus=ahci.0            ^

@@ -69,14 +69,33 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [ ] NVMe?
 - [ ] USB stick device driver
 #### File system
-- [x] Root contains several files which are packed neatly into the executable
-- [x] Mounting other file systems to the main one
-- [x] FAT32 support (quite messy, I'll probably redo it at some point)
-- [ ] FiRenameFile
-- [ ] FiMakeDir
-- [ ] EXT2 file system support?
-- [ ] Don't allocate filenodes, instead, use an inode descriptor which is static and doesn't occupy space on the heap (only applies to disk-backed file systems)
-- [ ] Cleaning up after a while of not having used a certain directory page (can't apply to root or ram disks, you know why)
+
+This branch is meant as an overhaul to how the VFS in NanoShell is structured. Here are my plans.
+- [x] Rewrite root directory code.
+- [x] EXT2:
+- [x] \*        Read only support.
+- [x] \*        Expand a file.
+- [x] \*        Shrink a file.
+- [x] \*        Write data to a file.
+- [x] \*        Create a file entry.
+- [x] \*        Rename a file entry.
+- [x] \*        Unlink a file.
+- [x] \*        Create a directory.
+- [x] \*        Remove an empty directory.
+- [x] \*        Do all these things with flying colors from `e2fsck`.
+- [ ] FAT32 (not going to focus on this right now, probably in 2023):
+- [ ] \*        Read only support.
+- [ ] \*        Expand a file.
+- [ ] \*        Shrink a file.
+- [ ] \*        Write data to a file.
+- [ ] \*        Create a file entry.
+- [ ] \*        Rename a file entry.
+- [ ] \*        Delete a file.
+- [ ] \*        Create a directory.
+- [ ] \*        Remove an empty directory.
+- [ ] \*        Do all these things with flying colors from `chkdsk`.
+- [ ] Integrate these changes into the NanoShell we all know and love. :)
+
 #### The future
 - [ ] An installer, which deploys [Limine](https://github.com/limine-bootloader/limine) onto a system, creates a FAT32 (or EXT2?) file system and creates a working installation of NanoShell
 - [ ] An in-built IDE (which depends on the compiler thing I mentioned earlier)

@@ -16,6 +16,8 @@ bool g_bAreInterruptsEnabled       = false;
 bool g_bAreInterruptsEnabledBackup = false;
 int  g_nInterruptRecursionCount    = 0;
 
+extern Console *g_focusedOnConsole, *g_currentConsole, g_debugConsole;
+
 NO_RETURN void KeStopSystem()
 {
 	SLogMsg("System has been stopped!");
@@ -121,10 +123,16 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 	regs.edx = (uint32_t)nLine;
 	
 	SLogMsg("Assertion failed: %s", pStr);
-	SLogMsg("Dumping backtrace below:");
-	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "", NULL, true);
+	
+	g_currentConsole = &g_debugConsole;
 	
 	KeBugCheck(BC_EX_ASSERTION_FAILED, &regs);
+	
+	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "", NULL, true);
+	
+	LogMsg("The system has been stopped.");
+	
+	KeStopSystem();
 	
 	return false;
 }
@@ -207,8 +215,8 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProc
 	else
 		LogMsg("No stack trace is available.");
 }
+
 void ShellExecuteCommand(char* p);
-extern Console* g_focusedOnConsole, g_debugConsole;
 void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 {
 	g_focusedOnConsole = &g_debugConsole;
@@ -289,6 +297,8 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 #endif
 	
 	LogMsg("System halted.");
+	
+	KeStopSystem();
 	while (1) hlt;
 }
 

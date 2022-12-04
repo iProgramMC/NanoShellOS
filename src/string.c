@@ -238,8 +238,11 @@ void strcat(char* dest, const char* after)
 	memcpy(end, after, strlen(after) + 1);
 }
 
-char* strchr (char* stringToSearch, const char characterToSearchFor)
+char* strchr (const char* stringToSearch1, const char characterToSearchFor)
 {
+	// discard the 'const' qualifier, because the function was defined this way
+	char* stringToSearch = (char*)stringToSearch1;
+	
 	while (*stringToSearch)
 	{
 		if (*stringToSearch == characterToSearchFor)
@@ -251,8 +254,11 @@ char* strchr (char* stringToSearch, const char characterToSearchFor)
 	return NULL;
 }
 
-char* strrchr (char* stringToSearch, const char characterToSearchFor)
+char* strrchr (const char* stringToSearch1, const char characterToSearchFor)
 {
+	// discard the 'const' qualifier, because the function was defined this way
+	char* stringToSearch = (char*)stringToSearch1;
+	
 	int sl = strlen (stringToSearch);
 	
 	char*  p1 = stringToSearch + sl - 1;

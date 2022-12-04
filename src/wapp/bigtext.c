@@ -140,11 +140,13 @@ void NotepadOnSave(UNUSED Window* pWindow)
 			sprintf(buffer, "The file '%s' already exists.\n\nWould you like to replace it?", data);
 			if (MessageBox(pWindow, buffer, "Notepad", ICON_WARNING << 16 | MB_YESNO) == MBID_NO)
 			{
+				FiClose(fd);
 				MmFreeK(data);
 				return;
 			}
 		}
 		
+		FiClose(fd);
 		strcpy (NOTEPDATA(pWindow)->m_filename, data);
 		NOTEPDATA(pWindow)->m_untitled = false;
 		MmFreeK(data);
@@ -156,7 +158,7 @@ void NotepadOnSave(UNUSED Window* pWindow)
 	if (fd < 0)
 	{
 		char buffer[1024];
-		sprintf(buffer, "Could not save to %s, try saving to another directory.", NOTEPDATA(pWindow)->m_filename);
+		sprintf(buffer, "Could not save to %s, try saving to another directory.  %s", NOTEPDATA(pWindow)->m_filename, GetErrNoString(fd));
 		MessageBox(pWindow, buffer, "Notepad", ICON_WARNING << 16 | MB_OK);
 		NOTEPDATA(pWindow)->m_untitled = true;
 		return;

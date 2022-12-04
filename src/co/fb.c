@@ -11,6 +11,8 @@
 #include <string.h>
 #include "../mm/memoryi.h"
 
+#define USE_SHIFT_SCREEN 1
+
 uint16_t TextModeMakeChar(uint8_t fgbg, uint8_t chr);
 
 extern uint32_t g_vgaColorsToRGB [];
@@ -59,6 +61,9 @@ void CoVbeScrollUpByOne(Console *this)
 	else
 	{
 		//NOTE: This is actually slower than the VidShiftScreen method on qemu... probably because I have to re-render a lot.
+	#if USE_SHIFT_SCREEN
+		VidShiftScreen(1 << (3 + g_uses8by16Font));
+	#else
 		for (int y = 0; y < this->height - 1; y++)
 		{
 			for (int x = 0; x < this->width; x++)
@@ -74,6 +79,7 @@ void CoVbeScrollUpByOne(Console *this)
 				}
 			}
 		}
+	#endif
 		
 		for (int x = 0; x < this->width; x++)
 		{

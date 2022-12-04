@@ -144,7 +144,8 @@ static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t 
 	return size;
 }
 
-void ShellExecuteCommand(char* p);
+void FsRootCreateFileAt(const char* path, void* pContents, size_t sz);
+
 void UartInit(uint8_t com_num)
 {
 	//COM1 and COM2
@@ -192,18 +193,16 @@ void UartInit(uint8_t com_num)
 	WritePort (Port+1, IER_ERBFI | IER_ETBEI);
 	
 	// Ok, port init has completed, now add it to the file system
-	FileNode *pDirNode = FsResolvePath ("/Device");
 	
-	if (!pDirNode)
-	{
-		LogMsg("Could not locate /Device while trying to setup serial port fifo, quitting");
-		KeStopSystem();
-	}
+	char name[] = "/Device/ComX";
+	name[11] = '1' + com_num;
 	
-	// Add a node to it
-	FileNode *pNode = CreateFileNode (pDirNode);
-	strcpy(pNode->m_name, "ComX");
-	pNode->m_name[3] = '1' + com_num;
+	FsRootCreateFileAt(name, NULL, 0);
+	FileNode *pNode = FsResolvePath(name);
+	
+	ASSERT(pNode && "Couldn't add that file to the root?");
+	
+	pNode->m_refCount = NODE_IS_PERMANENT;
 	
 	pNode->m_perms  = PERM_READ | PERM_WRITE;
 	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;

@@ -35,6 +35,7 @@ void MbCheckMem();
 void MbCheckCmdLine();
 void MmMarkStuffReadOnly();
 void FsFatInit();
+void FsExt2Init();
 void FsInitRdInit();
 void CfgLoadFromCmdLine();
 void CfgLoadFromMainFile();
@@ -81,7 +82,8 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	FsInit();
 	StIdeInit();
 	StAhciInit();
-	FsFatInit();
+	//FsFatInit();
+	FsExt2Init();
 	FsInitRdInit();
 	UartInit(0);
 	CfgLoadFromMainFile();

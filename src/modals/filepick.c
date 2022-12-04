@@ -40,7 +40,7 @@ void FilePickerUpdate (Window *pWindow)
 	FileNode *pFolderNode = FsResolvePath (pCwd);
 	
 	DirEnt* pEnt = NULL;
-	int i = 0;
+	uint32_t i = 0;
 	
 	if (!FsOpenDir(pFolderNode))
 	{
@@ -48,7 +48,8 @@ void FilePickerUpdate (Window *pWindow)
 		return;
 	}
 	
-	while ((pEnt = FsReadDir (pFolderNode, i)) != 0)
+	DirEnt ent;
+	while ((pEnt = FsReadDir (pFolderNode, &i, &ent)) != 0)
 	{
 		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
 		
@@ -59,9 +60,12 @@ void FilePickerUpdate (Window *pWindow)
 		else
 		{
 			AddElementToList (pWindow, 100002, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
-			i++;
+			
+			FsReleaseReference(pNode);
 		}
 	}
+	
+	FsReleaseReference(pFolderNode);
 }
 
 void FilePickerCdBack (Window *pWindow)
@@ -107,59 +111,66 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 			FileNode *pFolderNode = FsResolvePath (pCwd);
 			const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
 			
-			FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
 			if (strcmp (pFileName, PATH_PARENTDIR) == 0)
 			{
 				FilePickerCdBack(pWindow);
 			}
-			else if (pFileNode)
+			else
 			{
-				if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
+				FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
+				if (pFileNode)
 				{
-					OnBusy(pWindow);
-					
-					// Is a directory.  Navigate to it.
-					int size = strlen (pCwd) * 2;
-					char cwd_copy[size];
-					strcpy(cwd_copy, pCwd);
-					
-					if (cwd_copy[1] != 0)
-						strcat (cwd_copy, "/");
-					
-					strcat (cwd_copy, pFileName);
-					
-					FileNode *pCurrent = FsResolvePath (cwd_copy);
-					if (!pCurrent)
+					if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
 					{
-						char buffer [256];
-						sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.", pFileName);
-						MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+						OnBusy(pWindow);
+						
+						// Is a directory.  Navigate to it.
+						int size = strlen (pCwd) * 2;
+						char cwd_copy[size];
+						strcpy(cwd_copy, pCwd);
+						
+						if (cwd_copy[1] != 0)
+							strcat (cwd_copy, "/");
+						
+						strcat (cwd_copy, pFileName);
+						
+						FileNode *pCurrent = FsResolvePath (cwd_copy);
+						if (!pCurrent)
+						{
+							char buffer [256];
+							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.", pFileName);
+							MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+						}
+						else
+						{
+							SetTextInputText (pWindow, 100001, cwd_copy);
+							FilePickerUpdate (pWindow);
+							RequestRepaint   (pWindow);
+							
+							FsReleaseReference(pCurrent);
+						}
+						
+						OnNotBusy(pWindow);
 					}
 					else
 					{
-						SetTextInputText (pWindow, 100001, cwd_copy);
-						FilePickerUpdate (pWindow);
-						RequestRepaint   (pWindow);
+						size_t len1 = strlen (pFileName);
+						size_t len2 = strlen (pCwd);
+						pWindow->m_data = MmAllocateK(len1 + len2 + 3);
+						strcpy (pWindow->m_data, pCwd);
+						if (strcmp (pCwd, "/"))
+							strcat (pWindow->m_data, "/");
+						strcat (pWindow->m_data, pFileName);
 					}
 					
-					OnNotBusy(pWindow);
+					FsReleaseReference(pFileNode);
 				}
 				else
 				{
-					size_t len1 = strlen (pFileName);
-					size_t len2 = strlen (pCwd);
-					pWindow->m_data = MmAllocateK(len1 + len2 + 3);
-					strcpy (pWindow->m_data, pCwd);
-					if (strcmp (pCwd, "/"))
-						strcat (pWindow->m_data, "/");
-					strcat (pWindow->m_data, pFileName);
+					char buffer [256];
+					sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
+					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 				}
-			}
-			else
-			{
-				char buffer [256];
-				sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-				MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 			}
 		}
 		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)

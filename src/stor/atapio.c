@@ -27,7 +27,7 @@ static bool StIdeWaitBusy (uint16_t base)
 	while (ReadPort (base + 7) & BSY_FLAG)
 	{
 		countWait++;
-		if (countWait >= 1000000)
+		if (countWait >= 10000000)
 		{
 			return false;
 		}
@@ -120,11 +120,11 @@ DriveStatus StIdeDriveWrite(uint32_t lba, const void* pDest, uint8_t driveID, ui
 	}
 	
 	//LBA: 28 bits
-	WritePort (base+6, (uint8_t)((lba & 0x0F000000)>>8) | driveType);
+	WritePort (base+6, (uint8_t)((lba & 0x0F000000)>>24) | driveType);
 	WritePort (base+2, nBlocks);
 	WritePort (base+3, (uint8_t)((lba & 0x000000FF)));
 	WritePort (base+4, (uint8_t)((lba & 0x0000FF00)>>8));
-	WritePort (base+5, (uint8_t)((lba & 0x00FF0000)>>8));
+	WritePort (base+5, (uint8_t)((lba & 0x00FF0000)>>16));
 	WritePort (base+7, CMD_WRITE);
 	
 	uint16_t* pDestW = (uint16_t*)pDest;

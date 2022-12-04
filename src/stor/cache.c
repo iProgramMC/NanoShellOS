@@ -130,7 +130,10 @@ void StShrinkCacheUnitStorage(CacheRegister* pReg, size_t newSize)
 //unsafe version, ordering must be ensured!
 CacheUnit* StAddCacheUnitAt(CacheRegister* pReg, uint32_t lba, int where, void *pData)
 {
-	memmove(&pReg->m_pCacheUnits[where + 1], &pReg->m_pCacheUnits[where], sizeof(CacheUnit) * (pReg->m_nCacheUnitCount - where));
+	if ((size_t)where < pReg->m_nCacheUnitCount)
+	{
+		memmove(&pReg->m_pCacheUnits[where + 1], &pReg->m_pCacheUnits[where], sizeof(CacheUnit) * (pReg->m_nCacheUnitCount - where));
+	}
 
 	CacheUnit* pUnit = &pReg->m_pCacheUnits[where];
 

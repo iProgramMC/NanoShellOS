@@ -179,6 +179,65 @@ int GetRawTickCount()
 	return g_nRtcTicks;
 }
 
+// This function tries to approximate unix time the best that it can.
+// This does not take into account leap seconds. Despite that, it matches the time
+// functions on my system (used gmtime, matches exactly with a call to time(NULL))
+static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+int GetEpochTime()
+{
+	TimeStruct ts = *TmReadTime();
+	
+	int year = ts.year - 1970;
+	int days = 365 * year + 1;
+	
+	// (almost) every 4 years since 1972 are leap years. Count them in
+	// This should work again. (year - 2 + 4) / 4 = (year - 2) / 4 + 1.
+	int leapYears = (year + 2) / 4;
+	days += leapYears;
+	
+	// based on the month, determine the day
+	for (int month = 1; month < ts.month; month++)
+	{
+		days += s_daysPerMonth[month];
+		if (month == 2 && ts.year % 4 == 0) // February -- leap year
+			days++;
+	}
+	
+	return days * 86400 + ts.hours * 3600 + ts.minutes * 60 + ts.seconds;
+}
+
+void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
+{
+	// Separate the amount of days from the rest of the time.
+	int days = utime / 86400, secs = utime % 86400;
+
+	// Turn the secs into hours, minutes and seconds. This is trivial.
+	pOut->hours = secs / 3600;
+	pOut->minutes = secs / 60 % 60;
+	pOut->seconds = secs % 60;
+
+	// Get the year number.
+	int year = 1970;
+	while (days >= 365 + (year % 4 == 0))
+	{
+		days -= 365 + (year % 4 == 0);
+		year++;
+	}
+
+	// Get the month number.
+	int month = 1;
+	while (days >= s_daysPerMonth[month])
+	{
+		days -= s_daysPerMonth[month];
+		month++;
+	}
+
+	pOut->day   = days + 1;
+	pOut->month = month;
+	pOut->year  = year;
+}
+
 extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
 extern int g_nSeconds;
 int gEarliestTickCount;
@@ -585,7 +644,7 @@ char g_cmdline [1024];
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), November 2022 - " VersionString);
+	LogMsg("NanoShell (TM), December 2022 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper, MpGetNumAvailablePages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
 }
