@@ -50,6 +50,7 @@ void PaintLoadImage(Window* pWindow, const char* pFN)
 	SetImageCtlCurrentImage (pWindow, 1000, pImage);
 	
 	MmFree(pImage); // gotta free it. The control has already copied it
+	MmFree(pData);
 }
 
 void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int parm2)
