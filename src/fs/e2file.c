@@ -581,7 +581,7 @@ int Ext2CreateDir(FileNode* pFileNode, const char* pName)
 	Ext2FileWrite(pNewFile, 0, pFS->m_blockSize, buffer);
 	
 	// Increase the number of directories in this inode's block group by 1.
-	uint32_t bgdIndex = (newDirInode - 1) / pFS->m_inodesPerGroup;
+	uint32_t bgdIndex = (pFileNode->m_inode - 1) / pFS->m_inodesPerGroup;
 	Ext2BlockGroupDescriptor* pDescriptor = &pFS->m_pBlockGroups[bgdIndex];
 	pDescriptor->m_nDirs++;
 	Ext2FlushBlockGroupDescriptor(pFS, bgdIndex);
