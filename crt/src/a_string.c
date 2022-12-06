@@ -11,16 +11,87 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+// Character operations
+
+int isalnum(int c)
+{
+	return (c  >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
+
+int isalpha(int c)
+{
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+int isascii(int c)
+{
+	return (c >= 0 && c < 0x80);
+}
+
+int isblank(int c)
+{
+	return (c == ' ' || c == '\n' || c == '\0');
+}
+
+int iscntrl(int c)
+{
+	return (c >= 0 && c <= 0x1F);
+}
+
+bool isdigit(int c)
+{
+	return (c >= '0' && c <= '9');
+}
+
+int isgraph(int c)
+{
+	return (c >= '!' && c <= 0x7E);
+}
+
+int islower(int c)
+{
+	return (c >= 'a' && c <= 'z');
+}
+
+int isprint(int c)
+{
+	return (c >= ' ' && c <= 0x7E);
+}
+
+int isspace(int c)
+{
+	return (c == ' ' || c == '\n');
+}
+
+int isupper(int c)
+{
+	return (c >= 'A' && c <= 'Z');
+}
+
+int isxdigit(int c)
+{
+	return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+}
+
+int tolower (int c)
+{
+	if (isupper(c)) return c + ('a' - 'A'); else return c;
+}
+
+int toupper (int c)
+{
+	if (islower(c)) return c - ('a' - 'A'); else return c;
+}
+
+// Memory operations.
+
 int memcmp(const void* ap, const void* bp, size_t size)
 {
-	const uint8_t* a = (const uint8_t*) ap;
-	const uint8_t* b = (const uint8_t*) bp;
+	const char* a = (const char*) ap;
+	const char* b = (const char*) bp;
 	for (size_t i = 0; i < size; i++)
 	{
-		if (a[i] < b[i])
-			return -1;
-		else if (b[i] < a[i])
-			return 1;
+		if (a[i] != b[i]) return a[i] - b[i];
 	}
 	return 0;
 }
@@ -60,6 +131,8 @@ void* memset(void* bufptr, uint8_t val, size_t size)
 	}
 	return bufptr;
 }
+
+// String operations.
 
 size_t strgetlento(const char* str, char chr) 
 {
@@ -150,38 +223,18 @@ int strcmp(const char* as, const char* bs)
 {
 	size_t al = strlen(as);
 	size_t bl = strlen(bs);
-	if(al < bl)
+	if (al < bl)
 	{
 		return -1;
 	}
-	else if(al > bl)
+	else if (al > bl)
 	{
 		return 1;
 	}
-	else if(al == bl)
+	else if (al == bl)
 	{
-		return memcmp((void*)as, (void*)bs, al + 1);//Also compare null term
+		return memcmp((void*)as, (void*)bs, al + 1); // Also compare null term
 	}
-	return 0;
-}
-
-int strncmp(const char* s1, const char* s2, size_t n)
-{
-	if (n == 0)
-		return 0;
-	
-	do
-	{
-		if (*s1 != *s2)
-			return *(uint8_t*)s1 - *(uint8_t*)s2;
-		
-		s2++;
-		
-		if (*s1++ == 0)
-			break;
-	}
-	while (--n != 0);
-	
 	return 0;
 }
 
@@ -191,18 +244,7 @@ void strcat(char* dest, const char* after)
 	memcpy(end, after, strlen(after) + 1);
 }
 
-char* strchr (char* stringToSearch, const char characterToSearchFor)
-{
-	while (*stringToSearch)
-	{
-		if (*stringToSearch == characterToSearchFor)
-		{
-			return stringToSearch;
-		}
-		stringToSearch++;
-	}
-	return NULL;
-}
+char* strchr (const char* str, int c);
 
 char* Tokenize (TokenState* pState, char* pString, char* separator)
 {
@@ -259,19 +301,6 @@ char *strdup (const char *pText)
 	return p;
 }
 
-int toupper(int c)
-{
-	if (c >= 'a' && c <= 'z')
-		return c + 'A' - 'a';
-	return c;
-}
-int tolower(int c)
-{
-	if (c >= 'A' && c <= 'Z')
-		return c + 'a' - 'A';
-	return c;
-}
-
 char * strncpy(char *dst, const char *src, size_t n)
 {
 	if (n != 0)
@@ -292,34 +321,6 @@ char * strncpy(char *dst, const char *src, size_t n)
 		while (--n != 0);
 	}
 	return (dst);
-}
-
-char * strstr(char *string, char *substring)
-{
-    char *a, *b;
-
-    b = substring;
-    if (*b == 0)
-		return string;
-	
-    for ( ; *string != 0; string += 1)
-	{
-		if (*string != *b)
-			continue;
-		
-		a = string;
-		while (1)
-		{
-			if (*b == 0)
-				return string;
-			
-			if (*a++ != *b++)
-				break;
-		}
-		
-		b = substring;
-    }
-    return NULL;
 }
 
 char* itoa(int value, char* buffer, int radix)
@@ -353,4 +354,159 @@ char* itoa(int value, char* buffer, int radix)
 char* ltoa(long value, char* buffer, int radix)
 {
 	return itoa((int)value, buffer, radix);
+}
+
+static char* strchr_i(const char* s, int c, bool bReturnNulPos)
+{
+	// promotion to 'char' intended
+	char* sc = (char*) s;
+	
+	while (*sc)
+	{
+		if (*sc == c) return sc;
+		
+		sc++;
+	}
+	
+	// assert(*sc == 0);
+	
+	return bReturnNulPos ? sc : NULL;
+}
+
+char* strchr(const char* s, int c)
+{
+	return strchr_i(s, c, false);
+}
+
+char* strchrnul(const char* s, int c)
+{
+	return strchr_i(s, c, true);
+}
+
+char* strrchr(const char* s, int c)
+{
+	// promotion to 'char' intended
+	char* sc = (char*) s;
+	while (*sc) sc++;
+	
+	while (sc != s)
+	{
+		sc--;
+		if (*sc == c) return sc;
+	}
+	
+	return NULL;
+}
+
+void puts (const char* s)
+{
+	_I_PutString(s);
+}
+
+void putchar (int c)
+{
+	char str[2];
+	str[0] = c;
+	str[1] = 0;
+	_I_PutString(str);
+}
+
+int atox(const char* str) 
+{
+	int f = 0;
+	int s = 1;
+	int i = 0;
+	if (str[0] == '-')
+	{
+		i++;
+		s = -1;
+	}
+	for (; str[i] != '\0'; i++)
+	{
+		f = f * 16;
+		if (str[i] >= 'a' && str[i] <= 'f')
+			f += str[i] - 'a' + 0xa;
+		else if (str[i] >= 'A' && str[i] <= 'F')
+			f += str[i] - 'A' + 0xA;
+		else
+			f += str[i] - '0';
+	}
+	
+	return s * f;
+}
+
+size_t strnlen(const char* ptext, size_t n)
+{
+	size_t k = 0;
+	while (*ptext)
+	{
+		k++;
+		if (k == n) return n;
+		ptext++;
+	}
+	return k;
+}
+
+int strncmp(const char *s1, const char *s2, register size_t n)
+{
+	unsigned char u1, u2;
+	while (n-- > 0)
+	{
+		u1 = (unsigned char) *s1++;
+		u2 = (unsigned char) *s2++;
+		if (u1 != u2)
+			return u1 - u2;
+		if (u1 == '\0')
+			return 0;
+	}
+	return 0;
+}
+
+char * strstr (const char *s1, const char *s2)
+{
+	const char *p = s1;
+	const size_t len = strlen (s2);
+	for (; (p = strchr (p, *s2)) != 0; p++)
+	{
+		if (strncmp (p, s2, len) == 0)
+			return (char *)p;
+	}
+	return (0);
+}
+
+double atof(const char *arr)
+{
+	double value = 0;
+	bool decimal = 0;
+	double scale = 1;
+	int negative = 0; 
+	
+	// parse the negative sign
+	if (*arr == '-')
+	{
+		arr++;
+		negative = 1;
+	}
+	
+	while (*arr)
+	{
+		// if we're parsing the decimal part
+		if (decimal)
+		{
+			scale /= 10;
+			value += (*arr - '0') * scale;
+		}
+		else
+		{
+			if (*arr == '.') 
+				decimal = 1;
+			else
+				value = value * 10.0 + (*arr - '0');
+		}
+		arr++;
+	}
+	
+	if (negative) value = -value;
+	
+	return  value;
 }

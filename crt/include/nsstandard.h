@@ -24,6 +24,7 @@ __attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
 
 // Miscellanea
 int GetRandom();
+int abs(int i);
 
 // Logging
 void LogMsg    (const char* Format, ...);
@@ -56,13 +57,30 @@ void   memtolower (char* as, int w);
 void   memtoupper (char* as, int w);
 size_t strgetlento(const char* str, char chr);
 int    atoi       (const char* str);
+int    atox       (const char* str);
+double atof       (const char *arr);
 char*  strdup     (const char *pText);
 char*  strstr     (char *string, char *substring);
 char*  strncpy    (char *dst, const char *src, size_t n);
+int    isalnum    (int c);
+int    isalpha    (int c);
+int    isascii    (int c);
+int    isblank    (int c);
+int    iscntrl    (int c);
+int    isdigit    (int c);
+int    isgraph    (int c);
+int    islower    (int c);
+int    isprint    (int c);
+int    isspace    (int c);
+int    isupper    (int c);
+int    isxdigit   (int c);
 int    toupper    (int c);
 int    tolower    (int c);
 char*  itoa       (int value, char* buffer, int radix);
 char*  ltoa       (long value, char* buffer, int radix);
+char*  strchr     (const char* s, int c);
+char*  strrchr    (const char* s, int c);
+char*  strchrnul  (const char* s, int c);
 
 // Optimized memory operations to word width
 
