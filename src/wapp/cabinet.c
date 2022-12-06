@@ -126,6 +126,10 @@ IconType CabGetIconBasedOnName(const char *pName, int pType)
 	{
 		icon = ICON_FILE_MKDOWN;
 	}
+	else if (EndsWith (pName, ".tga") || EndsWith (pName, ".bmp"))
+	{
+		icon = ICON_FILE_IMAGE;
+	}
 	else if (EndsWith (pName, ".tar") || EndsWith (pName, ".mrd"))
 	{
 		icon = ICON_TAR_ARCHIVE;//ICON_CABINET_COMBINE;
@@ -265,6 +269,19 @@ void PopupUserMountWindow(Window* pWindow)
 	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90-18+TITLE_BAR_HEIGHT, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
 }
 
+void CabinetDetermineResourceLaunchFailure(Window* pWindow, RESOURCE_STATUS status, const char* context, const char* filename)
+{
+	if (status == RESOURCE_LAUNCH_SUCCESS) return;
+	
+	char buffer[1024], buffes[1024];
+	ASSERT(strlen(filename) < 512);
+	
+	sprintf(buffes, GetResourceErrorText(status), filename);
+	sprintf(buffer, "The %s '%s' could not be loaded.\n\n%s", context, filename, buffes);
+	
+	MessageBox(pWindow, buffer, "Cabinet - Error Opening File", ICON_ERROR << 16 | MB_OK);
+}
+
 void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -341,7 +358,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 								strcat (filename, pFileName);
 								//CabinetExecute(pWindow, filename);
 								RESOURCE_STATUS status = LaunchResource(filename);
-								SLogMsg("Resource launch status: %x", status);
+								CabinetDetermineResourceLaunchFailure(pWindow, status, "executable file", filename);
 								
 								OnNotBusy(pWindow);
 							}
@@ -364,7 +381,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 								strcat (filename, pFileName);
 								//CabinetExecute(pWindow, filename);
 								RESOURCE_STATUS status = LaunchResource(filename);
-								SLogMsg("Resource launch status: %x", status);
+								CabinetDetermineResourceLaunchFailure(pWindow, status, "script file", filename);
 								
 								OnNotBusy(pWindow);
 							}
@@ -382,7 +399,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							strcat (filename, pFileName);
 							//CabinetExecute(pWindow, filename);
 							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
+							CabinetDetermineResourceLaunchFailure(pWindow, status, "text file", filename);
 							
 							OnNotBusy(pWindow);
 						}
@@ -419,7 +436,24 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							strcat (filename, pFileName);
 							//CabinetExecute(pWindow, filename);
 							RESOURCE_STATUS status = LaunchResource(filename);
-							SLogMsg("Resource launch status: %x", status);
+							CabinetDetermineResourceLaunchFailure(pWindow, status, "Markdown help file", filename);
+							
+							OnNotBusy(pWindow);
+						}
+						else if (EndsWith (pFileName, ".tga") || EndsWith (pFileName, ".bmp"))
+						{
+							OnBusy(pWindow);
+							
+							// Get the file name.
+							char filename[1024];
+							strcpy (filename, "image:");
+							strcat (filename, g_cabinetCWD);
+							if (g_cabinetCWD[1] != 0)
+								strcat (filename, "/");
+							strcat (filename, pFileName);
+							//CabinetExecute(pWindow, filename);
+							RESOURCE_STATUS status = LaunchResource(filename);
+							CabinetDetermineResourceLaunchFailure(pWindow, status, "image", filename);
 							
 							OnNotBusy(pWindow);
 						}

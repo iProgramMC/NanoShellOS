@@ -105,6 +105,33 @@ RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 
+RESOURCE_STATUS ScribbleLaunchResource(const char* pResource)
+{
+	char *buffer = (char*)MmAllocate(512);
+	strcpy (buffer, pResource);
+	
+	int errorCode = 0;
+	Task* pTask = KeStartTask(PrgPaintTask, (int)buffer, &errorCode);
+	if (errorCode != TASK_SUCCESS)
+	{
+		MmFree(buffer);
+		char buffer1[1024];
+        sprintf (buffer1, "Cannot create thread to execute '%s'. Out of memory?", pResource);
+        MessageBox(NULL, buffer1, "Error", ICON_ERROR << 16 | MB_OK);
+		
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	}
+	
+	// After the task was created, give it a tag.
+	KeVerifyInterruptsEnabled;
+	cli;
+	KeTaskAssignTag(pTask, "Scribble");
+	sti;
+	
+	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
+	return RESOURCE_LAUNCH_SUCCESS;
+}
+
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID);
 RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 
@@ -122,6 +149,7 @@ const RESOURCE_INVOKE g_ResourceInvokes[] = {
 	NULL,//RESOURCE_EXCONSOLE
 	CabinetExecute,//RESOURCE_EXWINDOW
 	HelpOpenResource,//RESOURCE_HELP
+	ScribbleLaunchResource,//RESOURCE_IMAGE
 };
 
 RESOURCE_TYPE ResolveProtocolString(const char* protocol)
@@ -133,6 +161,7 @@ RESOURCE_TYPE ResolveProtocolString(const char* protocol)
 	if (STREQ(protocol, "exconsole"))  return RESOURCE_EXCONSOLE;
 	if (STREQ(protocol, "exwindow"))   return RESOURCE_EXWINDOW;
 	if (STREQ(protocol, "help"))       return RESOURCE_HELP;
+	if (STREQ(protocol, "image"))      return RESOURCE_IMAGE;
 	return RESOURCE_NONE;
 }
 

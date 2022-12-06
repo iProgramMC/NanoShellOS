@@ -24,14 +24,14 @@ void PaintLoadImage(Window* pWindow, const char* pFN)
 		snprintf(buffer, 1023, "Can't open '%s' (%d), try another", buffer, fd);
 		MessageBox(pWindow, buffer, "Scribble", MB_OK | ICON_ERROR << 16);
 		
-		break;
+		return;
 	}
 	uint8_t* pData = MmAllocate(FiTellSize(fd));
 	if (!pData)
 	{
 		MessageBox(pWindow, "Insufficient memory to complete this operation.", "Scribble", MB_OK | ICON_ERROR << 16);
 		FiClose(fd);
-		break;
+		return;
 	}
 	FiRead(fd, pData, FiTellSize(fd));
 	FiClose(fd);
@@ -44,7 +44,7 @@ void PaintLoadImage(Window* pWindow, const char* pFN)
 		MmFree(pData);
 		SLogMsg("Got error code %d while reading the image", erc);
 		MessageBox(pWindow, "This is not a valid image file that NanoShell can read.", "Scribble", MB_OK | ICON_ERROR << 16);
-		break;
+		return;
 	}
 	
 	SetImageCtlCurrentImage (pWindow, 1000, pImage);
@@ -61,26 +61,23 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 			Rectangle r;
 			RECT (r, 10, 10 + TITLE_BAR_HEIGHT, DEF_SCRIB_WID - 20, DEF_SCRIB_HEI - TITLE_BAR_HEIGHT - 20- 40);
 			
-			// a la C#'s  new Bitmap(320,200);
+			// TODO: we shouldn't need to do this if we have the data
 			Image *pImage = BitmapAllocate(320, 200, 0x00FFFFFF);
-			
-			/*VBEData m_data;
-			// a la C#'s Graphics.FromBitmap
-			BuildGraphCtxBasedOnImage(&m_data, pImage);
-			
-			VidSetVBEData(&m_data);
-			
-			// Draw an example image.
-			VidBlitImage(GetIconImage (ICON_COMPUTER_PANIC, 96),2,2);
-			
-			VidSetVBEData(&pWindow->m_vbeData);*/
-			
 			
 			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_PAN | IMAGECTL_PEN);
 			
 			MmFree (pImage);//no leaks!!
 			
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			
+			if (pWindow->m_data)
+			{
+				const char* data = (const char*)pWindow->m_data;
+				
+				PaintLoadImage(pWindow, data);
+				
+				MmFree(pWindow->m_data);
+			}
 			
 			int width_thing = DEF_SCRIB_WID - 20;
 			int button_spac = width_thing / 6;
