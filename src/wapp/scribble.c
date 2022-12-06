@@ -13,6 +13,45 @@
 #define DEF_SCRIB_WID 500
 #define DEF_SCRIB_HEI 400
 extern Image *g_background;
+
+void PaintLoadImage(Window* pWindow, const char* pFN)
+{
+	// load a file
+	int fd = FiOpen(pFN, O_RDONLY);
+	if (fd < 0)
+	{
+		char buffer[1024];
+		snprintf(buffer, 1023, "Can't open '%s' (%d), try another", buffer, fd);
+		MessageBox(pWindow, buffer, "Scribble", MB_OK | ICON_ERROR << 16);
+		
+		break;
+	}
+	uint8_t* pData = MmAllocate(FiTellSize(fd));
+	if (!pData)
+	{
+		MessageBox(pWindow, "Insufficient memory to complete this operation.", "Scribble", MB_OK | ICON_ERROR << 16);
+		FiClose(fd);
+		break;
+	}
+	FiRead(fd, pData, FiTellSize(fd));
+	FiClose(fd);
+	
+	// try to load it as an image
+	int erc = 0;
+	Image *pImage = LoadImageFile(pData, &erc);
+	if (!pImage)
+	{
+		MmFree(pData);
+		SLogMsg("Got error code %d while reading the image", erc);
+		MessageBox(pWindow, "This is not a valid image file that NanoShell can read.", "Scribble", MB_OK | ICON_ERROR << 16);
+		break;
+	}
+	
+	SetImageCtlCurrentImage (pWindow, 1000, pImage);
+	
+	MmFree(pImage); // gotta free it. The control has already copied it
+}
+
 void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -98,40 +137,9 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 					char *pFN = FilePickerBox (pWindow, "Type in a file path to open.", "Scribble", NULL);
 					if (!pFN) break;
 					
-					// load a file
-					int fd = FiOpen(pFN, O_RDONLY);
-					if (fd < 0)
-					{
-						char buffer[1024];
-						snprintf(buffer, 1023, "Can't open '%s' (%d), try another", buffer, fd);
-						MessageBox(pWindow, buffer, "Scribble", MB_OK | ICON_ERROR << 16);
-						
-						break;
-					}
-					uint8_t* pData = MmAllocate(FiTellSize(fd));
-					if (!pData)
-					{
-						MessageBox(pWindow, "Insufficient memory to complete this operation.", "Scribble", MB_OK | ICON_ERROR << 16);
-						FiClose(fd);
-						break;
-					}
-					FiRead(fd, pData, FiTellSize(fd));
-					FiClose(fd);
+					PaintLoadImage(pWindow, pFN);
 					
-					// try to load it as an image
-					int erc = 0;
-					Image *pImage = LoadImageFile(pData, &erc);
-					if (!pImage)
-					{
-						MmFree(pData);
-						SLogMsg("Got error code %d while reading the image", erc);
-						MessageBox(pWindow, "This is not a valid image file that NanoShell can read.", "Scribble", MB_OK | ICON_ERROR << 16);
-						break;
-					}
-					
-					SetImageCtlCurrentImage (pWindow, 1000, pImage);
-					
-					MmFree(pImage); // gotta free it. The control has already copied it
+					MmFree(pFN);
 					
 					break;
 				}
@@ -145,11 +153,12 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 	}
 }
 
-void PrgPaintTask (__attribute__((unused)) int argument)
+void PrgPaintTask (int argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("Scribble!", CW_AUTOPOSITION, CW_AUTOPOSITION, DEF_SCRIB_WID, DEF_SCRIB_HEI, PrgPaintProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_DRAW;
+	pWindow->m_data   = (void*)argument;
 	
 	if (!pWindow)
 	{
@@ -157,11 +166,5 @@ void PrgPaintTask (__attribute__((unused)) int argument)
 		return;
 	}
 	
-	// setup:
-	//ShowWindow(pWindow);
-	
-	// event loop:
-#if THREADING_ENABLED
 	while (HandleMessages (pWindow));
-#endif
 }
