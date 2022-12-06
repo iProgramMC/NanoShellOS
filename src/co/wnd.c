@@ -32,6 +32,9 @@ void CoWndPlotChar (Console *this, int x, int y, char c)
 }
 void CoWndRefreshChar (Console *this, int x, int y)
 {
+	// TODO: Actually have a proper fix. I think this is a race condition where the terminal window updates the blinking cursor during a scroll operation.
+	if (y >= this->height) return;
+	
 	VBEData* backup = g_vbeData;
 	g_vbeData = this->m_vbeData;
 	uint16_t cd = this->textBuffer[y * this->width + x];

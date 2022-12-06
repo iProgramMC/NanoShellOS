@@ -114,21 +114,26 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 				//Cursor flashing shall only occur if the window is selected to save on CPU time
 				if (pWindow->m_isSelected)
 				{
-					if (pConsole->m_cursorFlashTimer > GetTickCount())
+					//TODO: fix this properly by locking the entire console
+					cli;
+					int cursorX = pConsole->curX, cursorY = pConsole->curY;
+					sti;
+					
+					if (pConsole->m_cursorFlashTimer > GetTickCount() && cursorX > 0 && cursorY > 0 && cursorX <= pConsole->width && cursorY <= pConsole->height)
 					{
 						if (pConsole->m_cursorFlashState)
 						{
 							VidPlotChar(
 								'_',
-								pConsole->offX + pConsole->curX * pConsole->cwidth,
-								pConsole->offY + pConsole->curY * pConsole->cheight,
-								g_vgaColorsToRGB[(pConsole->textBuffer[pConsole->curY * pConsole->width + pConsole->curX] >> 8) & 0xF],
+								pConsole->offX + cursorX* pConsole->cwidth,
+								pConsole->offY + cursorY * pConsole->cheight,
+								g_vgaColorsToRGB[(pConsole->textBuffer[cursorY * pConsole->width + cursorX] >> 8) & 0xF],
 								TRANSPARENT
 							);
 						}
 						else
 						{
-							CoRefreshChar(pConsole, pConsole->curX, pConsole->curY);
+							CoRefreshChar(pConsole, cursorX, cursorY);
 						}
 					}
 					else
