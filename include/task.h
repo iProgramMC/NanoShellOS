@@ -80,6 +80,8 @@ enum
 	SUSPENSION_UNTIL_TASK_EXPIRY,    // Suspension until a task expires (for example, waiting for a worker task to finish)
 	SUSPENSION_UNTIL_TIMER_EXPIRY,   // Suspension until the timer expires
 	SUSPENSION_UNTIL_WM_UPDATE,      // Suspension until the window manager updates
+	SUSPENSION_UNTIL_PIPE_WRITE,     // Suspension until a certain pipe is written to
+	SUSPENSION_UNTIL_PIPE_READ,      // Suspension until a certain pipe is read from
 };
 
 // Task structure definition:
@@ -128,6 +130,9 @@ typedef struct
 	uint32_t       m_cpuTimeTotal, m_cpuTimeFull; //the CPU time actually used, the CPU time used at full speed
 	
 	uint64_t       m_nIdentifier;
+	
+	void*          m_pPipeWaitingToWrite;
+	void*          m_pPipeWaitingToRead;
 }
 Task;
 
@@ -222,6 +227,16 @@ void WaitTask (Task* pTask);
 void WaitProcess(void* pProcess);
 
 /***********************************************************
+    Waits until a pipe gets written to.
+***********************************************************/
+void WaitPipeWrite(void* pPipe);
+
+/***********************************************************
+    Waits until a pipe gets read from.
+***********************************************************/
+void WaitPipeRead(void* pPipe);
+
+/***********************************************************
     Waits a certain number of milliseconds.
 ***********************************************************/
 void WaitMS (int ms);
@@ -252,6 +267,18 @@ void KeUnsuspendTasksWaitingForProc(void *pProc);
 	for the window manager
 ***********************************************************/
 void KeUnsuspendTasksWaitingForWM();
+
+/***********************************************************
+    Internal function to unsuspend all tasks waiting
+	for a pipe to be read from
+***********************************************************/
+void KeUnsuspendTasksWaitingForPipeRead(void* pPipe);
+
+/***********************************************************
+    Internal function to unsuspend all tasks waiting
+	for a pipe to be written to
+***********************************************************/
+void KeUnsuspendTasksWaitingForPipeWrite(void* pPipe);
 
 #include <lock.h>
 

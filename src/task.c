@@ -311,6 +311,7 @@ Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, co
 	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
 }
 
+// TODO: A lot of the code is the same. Maybe we should not repeat ourselves.
 void KeUnsuspendTasksWaitingForProc(void *pProc)
 {
 	// let everyone know that this process is gone
@@ -329,6 +330,45 @@ void KeUnsuspendTasksWaitingForProc(void *pProc)
 		}
 	}
 }
+
+void KeUnsuspendTasksWaitingForPipeWrite(void *pProc)
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_PIPE_WRITE) continue;
+		
+		if (pCurTask->m_pPipeWaitingToWrite == pProc)
+		{
+			// Unsuspend this process, they're done waiting!
+			KeReviveTask(pCurTask);
+		}
+	}
+}
+
+void KeUnsuspendTasksWaitingForPipeRead(void *pProc)
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_PIPE_READ) continue;
+		
+		if (pCurTask->m_pPipeWaitingToRead == pProc)
+		{
+			// Unsuspend this process, they're done waiting!
+			KeReviveTask(pCurTask);
+		}
+	}
+}
+
 void KeUnsuspendTasksWaitingForWM()
 {
 	// let everyone know that this process is gone
@@ -552,6 +592,29 @@ void WaitTask (Task* pTaskToWait)
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
+
+void WaitPipeWrite (void* pPipe)
+{
+	Task *pTask = KeGetRunningTask();
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_WRITE;
+	pTask->m_pPipeWaitingToWrite  = pPipe;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+
+void WaitPipeRead (void* pPipe)
+{
+	Task *pTask = KeGetRunningTask();
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_READ;
+	pTask->m_pPipeWaitingToRead   = pPipe;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+
 void WaitProcess (void* pProcessToWait1)
 {
 	Process* pProcessToWait = (Process*)pProcessToWait1;
@@ -572,6 +635,7 @@ void WaitProcess (void* pProcessToWait1)
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
+
 void WaitMS (int ms)
 {
 	if (ms <= 0) return;
@@ -589,6 +653,7 @@ void WaitMS (int ms)
 		KeTaskDone();
 	}
 }
+
 void WaitUntilWMUpdate()
 {
 	Task *pTask = KeGetRunningTask();
@@ -600,6 +665,7 @@ void WaitUntilWMUpdate()
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
+
 SAI bool IsTaskSuspended(Task *pTask, int tick_count)
 {
 	switch (pTask->m_suspensionType)

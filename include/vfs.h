@@ -31,6 +31,7 @@ enum
 	FILE_TYPE_FILE,
 	FILE_TYPE_CHAR_DEVICE,
 	FILE_TYPE_BLOCK_DEVICE,
+	FILE_TYPE_PIPE,
 	FILE_TYPE_DIRECTORY  = 8,
 	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
 };
@@ -75,10 +76,24 @@ typedef struct FSNodeS
 	uint32_t           m_length;     //file size
 	
 	// implementation data
-	uint32_t           m_implData;
-	uint32_t           m_implData1;
-	uint32_t           m_implData2;
-	uint32_t           m_implData3;
+	union
+	{
+		struct
+		{
+			uint32_t           m_implData;
+			uint32_t           m_implData1;
+			uint32_t           m_implData2;
+			uint32_t           m_implData3;
+		};
+		struct
+		{
+			uint8_t* buffer;
+			uint32_t bufferSize;
+			uint32_t bufferTail;
+			uint32_t bufferHead;
+		}
+		m_pipe;
+	};
 	
 	// timing
 	uint32_t           m_modifyTime;

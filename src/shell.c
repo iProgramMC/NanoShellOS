@@ -49,6 +49,7 @@ static void SetJumpTest()
 	}
 }
 
+void FsPipeTest();
 void MemorySpy();
 void ShellTaskTest(int arg)
 {
@@ -220,6 +221,10 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "lh") == 0)
 	{
 		StDebugDumpAll();
+	}
+	else if (strcmp (token, "pipetest") == 0)
+	{
+		FsPipeTest();
 	}
 	else if (strcmp (token, "sjt") == 0)
 	{
@@ -785,9 +790,19 @@ void ShellExecuteCommand(char* p)
 			
 			FiSeek(fd, 0, SEEK_END);
 			
-			char text[] = "Hello World from FiWrite!\n\n\n";
+			const char* text; uint32_t sz;
+			if (state.m_pContinuation && *state.m_pContinuation)
+			{
+				text = state.m_pContinuation;
+				sz   = strlen(text);
+			}
+			else
+			{
+				text = "Hello World from FiWrite!\n\n\n";
+				sz   = 28;
+			}
 			
-			FiWrite(fd, text, sizeof(text)-1);//do not also print the null terminator
+			FiWrite(fd, (void*)text, sz);//do not also print the null terminator
 			
 			FiClose (fd);
 			LogMsg("Done");
@@ -858,9 +873,14 @@ void ShellExecuteCommand(char* p)
 		
 		// specific color codes
 		
-		const char * red    = "\x1b[91m";
-		const char * blue   = "\x1b[94m";
-		const char * normal = "\x1b[97m";
+		const char * colordire = "\x1b[91m";
+		const char * colorfile = "\x1b[94m";
+		const char * colorpipe = "\x1b[92m";
+		const char * colorblkd = "\x1b[93m";
+		const char * colorchrd = "\x1b[95m";
+		const char * colormntp = "\x1b[96m";
+		const char * colorunkf = "\x1b[98m";
+		const char * normal    = "\x1b[97m";
 		
 		uint8_t color = g_currentConsole->color;
 		
@@ -934,6 +954,19 @@ void ShellExecuteCommand(char* p)
 				continue;
 			}
 			
+			if (statResult.m_type & FILE_TYPE_MOUNTPOINT)
+			{
+				LogMsg("%s%c%c%c           %s%s%s",
+					auxStr,
+					"-r"[!!(statResult.m_perms & PERM_READ )],
+					"-w"[!!(statResult.m_perms & PERM_WRITE)],
+					"-x"[!!(statResult.m_perms & PERM_EXEC )],
+					colormntp,
+					pDirEnt->m_name,
+					normal
+				);
+			}
+			else
 			if (statResult.m_type & FILE_TYPE_DIRECTORY)
 			{
 				LogMsg("%s%c%c%c           %s%s%s",
@@ -941,20 +974,29 @@ void ShellExecuteCommand(char* p)
 					"-r"[!!(statResult.m_perms & PERM_READ )],
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
-					red,
+					colordire,
 					pDirEnt->m_name,
 					normal
 				);
 			}
 			else
 			{
+				const char* color = colorunkf;
+				switch (statResult.m_type)
+				{
+					case FILE_TYPE_FILE:   color = colorfile;
+					case FILE_TYPE_PIPE:   color = colorpipe;
+					case FILE_TYPE_CHAR_DEVICE:   color = colorchrd;
+					case FILE_TYPE_BLOCK_DEVICE:  color = colorblkd;
+				}
+				
 				LogMsg("%s%c%c%c %9d %s%s%s",
 					auxStr,
 					"-r"[!!(statResult.m_perms & PERM_READ )],
 					"-w"[!!(statResult.m_perms & PERM_WRITE)],
 					"-x"[!!(statResult.m_perms & PERM_EXEC )],
 					statResult.m_size,
-					blue,
+					color,
 					pDirEnt->m_name,
 					normal
 				);

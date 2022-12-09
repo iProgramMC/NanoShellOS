@@ -281,12 +281,15 @@ void FiDebugDump()
 
 static int FiFindFreeFileDescriptor(const char* reqPath)
 {
+	/*
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (g_FileNodeToDescriptor[i].m_bOpen)
 			if (strcmp (g_FileNodeToDescriptor[i].m_sPath, reqPath) == 0)
 				return -EAGAIN;
 	}
+	*/
+	
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (!g_FileNodeToDescriptor[i].m_bOpen)

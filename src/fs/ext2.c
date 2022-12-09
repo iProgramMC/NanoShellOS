@@ -473,7 +473,7 @@ void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
 }
 
 //NOTE: This makes a copy!!
-void FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
+FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
 
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
