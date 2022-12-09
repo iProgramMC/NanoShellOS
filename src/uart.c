@@ -122,25 +122,35 @@ short UartGetPortBase(uint8_t com_num)
 	return g_uart_port_bases[com_num];
 }
 
-static uint32_t FsSerialRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
+static uint32_t FsSerialRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool bBlock)
 {
-	//TODO
-	memset (pBuffer, 0, size);
+	char* pText = (char*)pBuffer;
+	for (uint32_t i = 0; i < size; i++)
+	{
+		if (!UartReadSingleChar(pNode->m_inode, pText + i, bBlock))
+			return i;
+	}
+	
 	return size;
 }
 
-static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, UNUSED void* pBuffer)
+static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, UNUSED void* pBuffer, bool bBlock)
 {
 	const char* pText = (const char*)pBuffer;
 	for (uint32_t i = 0; i < size; i++)
 	{
-		UartWriteSingleChar(pNode->m_inode, *(pText++));
+		if (!UartWriteSingleChar(pNode->m_inode, *(pText++), bBlock))
+			return i;
 		
 		// Since we are potentially writing to a terminal, a newline will not also go back
 		// to the beginning of the line. We need to send them a return to start of line.
 		if (*pText == '\n')
-			UartWriteSingleChar (pNode->m_inode, '\r');
+		{
+			if (!UartWriteSingleChar (pNode->m_inode, '\r', bBlock))
+				return i;
+		}
 	}
+	
 	return size;
 }
 
@@ -218,22 +228,33 @@ void UartInit(uint8_t com_num)
 	char* pnText = pText;
 	while (*pnText)
 	{
-		UartWriteSingleChar(com_num, *pnText);
+		UartWriteSingleChar(com_num, *pnText, true);
 		pnText++;
 	}
 	
 }
 
-void UartWriteSingleChar(uint8_t com_num, char c)
+bool UartWriteSingleChar(uint8_t com_num, char c, bool bBlock)
 {
-	while (!UartIsTransmitEmpty(com_num)) asm("pause");
+	while (!UartIsTransmitEmpty(com_num))
+	{
+		if (!bBlock) return false;
+		asm("pause");
+	}
 	
 	WritePort(g_uart_port_bases[com_num], c);
+	
+	return true;
 }
 
-char UartReadSingleChar(uint8_t com_num)
+bool UartReadSingleChar(uint8_t com_num, char*c, bool bBlock)
 {
-	while (UartIsReceiveEmpty (com_num)) asm("pause");
+	while (UartIsReceiveEmpty (com_num))
+	{
+		if (!bBlock) return false;
+		asm("pause");
+	}
 	
-	return ReadPort (g_uart_port_bases[com_num]);
+	*c = ReadPort (g_uart_port_bases[com_num]);
+	return true;
 }

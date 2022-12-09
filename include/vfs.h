@@ -41,8 +41,8 @@ enum
 #define PERM_EXEC  (4)
 
 // Function pointer definitions so we can just call `file_node->Read(...);` etc.
-typedef uint32_t 		(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*);
-typedef uint32_t 		(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, void*);
+typedef uint32_t 		(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
+typedef uint32_t 		(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
 typedef bool     		(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
 typedef void     		(*FileCloseFunc)      (struct FSNodeS*);
 typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
@@ -162,8 +162,8 @@ FileNode* FsGetRootNode();
 //Remember the definitions above.
 
 //These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
-uint32_t FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-uint32_t FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+uint32_t FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block);
+uint32_t FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block);
 bool     FsOpen      (FileNode* pNode, bool read, bool write);
 void     FsClose     (FileNode* pNode);
 bool     FsOpenDir   (FileNode* pNode);
@@ -232,6 +232,7 @@ void FsInit ();
 		int       m_nStreamOffset;
 		int       m_nFileEnd;
 		bool      m_bIsFIFO; //is a char device, basically
+		bool      m_bBlocking;
 		
 		const char* m_openFile;
 		int       m_openLine;
@@ -268,6 +269,7 @@ void FsInit ();
 	#define O_RDWR   (O_RDONLY | O_WRONLY)
 	#define O_APPEND (4)
 	#define O_CREAT  (8)
+	#define O_NONBLOCK (16)
 	#define O_EXEC   (1024)
 	
 	//lseek whences

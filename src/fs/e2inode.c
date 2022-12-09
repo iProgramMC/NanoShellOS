@@ -10,8 +10,8 @@
 #include <ext2.h>
 
 // File operations.
-uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
-uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer);
+uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
+uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
 
 DirEnt   *Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent);
 FileNode *Ext2FindDir(FileNode* pNode, const char* pName);

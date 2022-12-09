@@ -167,7 +167,7 @@ static FileNode* FsRootFindDir(FileNode* pFileNode, const char* pFileName)
 	return NULL;
 }
 
-static uint32_t FsRootRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+static uint32_t FsRootRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	//check lengths
 	if (offset > pNode->m_length)

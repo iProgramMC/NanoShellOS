@@ -72,27 +72,27 @@ bool FsPipeWriteSingleByte(FileNode* pPipeNode, uint8_t data, bool bBlock)
 	return true;
 }
 
-uint32_t FsPipeRead(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t FsPipeRead(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool block)
 {
 	uint8_t* pBufferBytes = (uint8_t*)pBuffer;
 	
 	for (uint32_t i = 0; i < size; i++)
 	{
 		// if we couldn't read one byte, just return
-		if (!FsPipeReadSingleByte(pPipeNode, pBufferBytes + i, true))
+		if (!FsPipeReadSingleByte(pPipeNode, pBufferBytes + i, block))
 			return i;
 	}
 	
 	return size;
 }
 
-uint32_t FsPipeWrite(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t FsPipeWrite(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool block)
 {
 	uint8_t* pBufferBytes = (uint8_t*)pBuffer;
 	
 	for (uint32_t i = 0; i < size; i++)
 	{
-		if (!FsPipeWriteSingleByte(pPipeNode, pBufferBytes[i], true))
+		if (!FsPipeWriteSingleByte(pPipeNode, pBufferBytes[i], block))
 			return i;
 	}
 	

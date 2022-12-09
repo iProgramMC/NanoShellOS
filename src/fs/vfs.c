@@ -44,24 +44,24 @@ void FsReleaseReference(FileNode* pNode)
 	}
 }
 
-uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	if (pNode)
 	{
 		if (pNode->Read)
-			return pNode->Read(pNode, offset, size, pBuffer);
+			return pNode->Read(pNode, offset, size, pBuffer, block);
 		else return 0;
 	}
 	else return 0;
 }
 
-uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	if (pNode)
 	{
 		if (pNode->Write)
 		{
-			return pNode->Write(pNode, offset, size, pBuffer);
+			return pNode->Write(pNode, offset, size, pBuffer, block);
 		}
 		else return 0;
 	}
@@ -279,7 +279,7 @@ void FiDebugDump()
 	LogMsg("Done");
 }
 
-static int FiFindFreeFileDescriptor(const char* reqPath)
+static int FiFindFreeFileDescriptor(UNUSED const char* reqPath)
 {
 	/*
 	for (int i = 0; i < FD_MAX; i++)
@@ -450,7 +450,8 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	pDesc->m_openLine	 	= srcLine;
 	pDesc->m_nStreamOffset 	= 0;
 	pDesc->m_nFileEnd		= pFile->m_length;
-	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE;
+	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE || pFile->m_type == FILE_TYPE_PIPE;
+	pDesc->m_bBlocking      = !(oflag & O_NONBLOCK);
 	
 	LockFree (&g_FileSystemLock);
 	
@@ -697,7 +698,7 @@ size_t FiRead (int fd, void *pBuf, int nBytes)
 		return -EINVAL;
 	}
 	
-	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf);
+	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
 	if (rv < 0) 
 	{
 		LockFree (&g_FileSystemLock);
@@ -724,7 +725,7 @@ size_t FiWrite (int fd, void *pBuf, int nBytes)
 		return -EINVAL;
 	}
 	
-	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf);
+	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
 	if (rv < 0) 
 	{
 		LockFree (&g_FileSystemLock);

@@ -13,7 +13,7 @@
 #define COM2 1
 
 void UartInit(uint8_t com_num);
-void UartWriteSingleChar(uint8_t com_num, char c);
-char UartReadSingleChar (uint8_t com_num);
+bool UartWriteSingleChar(uint8_t com_num, char c, bool block);
+bool UartReadSingleChar (uint8_t com_num, char*c, bool block);
 
 #endif//_UART_H

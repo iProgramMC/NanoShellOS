@@ -25,7 +25,7 @@ static int FileTypeToExt2TypeHint(int fileType)
 	return E2_DETI_UNKNOWN;
 }
 
-uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -47,7 +47,7 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 	return size;
 }
 
-uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer)
+uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -203,7 +203,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	pNewDirEnt->m_entrySize = pFS->m_blockSize;
 	
 	// Write it
-	ASSERT(Ext2FileWrite(&pUnit->m_node, pUnit->m_inode.m_size, pFS->m_blockSize, buffer));
+	ASSERT(Ext2FileWrite(&pUnit->m_node, pUnit->m_inode.m_size, pFS->m_blockSize, buffer, true));
 	
 	if (offset < 1)
 		offset = 0;
@@ -393,7 +393,7 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	
 	uint32_t tempBuffer[2] = { 0 };
 	
-	if (!Ext2FileRead(pNode, *index, sizeof(uint32_t) + sizeof(uint16_t), tempBuffer)) return NULL;
+	if (!Ext2FileRead(pNode, *index, sizeof(uint32_t) + sizeof(uint16_t), tempBuffer, true)) return NULL;
 	
 	// The entry length is in tempBuffer[1].
 	tempBuffer[1] &= 0xFFFF;
@@ -411,7 +411,7 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	// if it's bigger, chances are it's a Padding entry.
 	if (tempBuffer[1] < pFS->m_blockSize)
 	{
-		if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData)) return NULL;
+		if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData, true)) return NULL;
 	}
 	
 	(*index) += d.dirEnt->m_entrySize;
@@ -578,7 +578,7 @@ int Ext2CreateDir(FileNode* pFileNode, const char* pName)
 	if (!pNewFile) return -EIO;
 	
 	// Write it to the file.
-	Ext2FileWrite(pNewFile, 0, pFS->m_blockSize, buffer);
+	Ext2FileWrite(pNewFile, 0, pFS->m_blockSize, buffer, true);
 	
 	// Increase the number of directories in this inode's block group by 1.
 	uint32_t bgdIndex = (pFileNode->m_inode - 1) / pFS->m_inodesPerGroup;
