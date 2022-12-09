@@ -256,8 +256,9 @@ void KillFont (int fontID)
 // Standard font rendering
 #if 1 
 	__attribute__((always_inline))
-	static inline int GetCharWidthInl(char c)
+	static inline int GetCharWidthInl(char chr)
 	{
+		uint8_t c = (uint8_t) chr;
 		if (g_pCurrentFont[2] == FONTTYPE_BITMAP)
 		{
 			if (c > '~' || c < ' ') c = '?';
@@ -354,8 +355,9 @@ void KillFont (int fontID)
 		return "Unknown Font";
 	}
 	
-	void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
+	void VidPlotChar (char chr, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
 	{
+		uint8_t c = (uint8_t) chr;
 		if (!g_pCurrentFont) {
 			SLogMsg("Darn it (VidPlotChar)!");
 			return;
