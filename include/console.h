@@ -19,6 +19,7 @@ enum ConsoleType {
 	CONSOLE_TYPE_SERIAL, // just plain old serial
 	CONSOLE_TYPE_E9HACK, // Port E9 hack - qemu and bochs support this.
 	CONSOLE_TYPE_WINDOW,
+	CONSOLE_TYPE_FILE,
 };
 
 #define KB_BUF_SIZE 512

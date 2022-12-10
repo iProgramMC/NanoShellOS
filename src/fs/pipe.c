@@ -7,6 +7,8 @@
 //  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
 //  ***************************************************************
 
+// Note: Pipe objects aren't actually a part of the VFS - they're just file descriptions.
+
 #include <vfs.h>
 #include <task.h>
 #include <string.h>
@@ -103,6 +105,7 @@ void FsPipeOnUnreferenced(FileNode* pPipeNode)
 {
 	MmFree(pPipeNode->m_pipe.buffer);
 	pPipeNode->m_pipe.buffer = NULL;
+	MmFree(pPipeNode);
 }
 
 void FsPipeInitialize(FileNode* pPipeNode)
@@ -118,42 +121,84 @@ void FsPipeInitialize(FileNode* pPipeNode)
 
 FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
 
-void* FsPipeCreate(const char* pFileName)
+// note: this gives the file node 1 reference. Use FsReleaseReference to release this final reference.
+FileNode* FsPipeCreate(const char* pName)
 {
 	// TODO: add to any path
-	FileNode fn;
-	memset(&fn, 0, sizeof fn);
+	FileNode* pfn = MmAllocate(sizeof(FileNode));
+	memset(pfn, 0, sizeof *pfn);
 	
-	FsPipeInitialize(&fn);
-	fn.m_refCount = NODE_IS_PERMANENT;
+	FsPipeInitialize(pfn);
+	pfn->m_refCount = 1;
+	pfn->m_perms = PERM_READ | PERM_WRITE;
+	strcpy(pfn->m_name, pName);
 	
-	fn.m_perms = PERM_READ | PERM_WRITE;
-	
-	strcpy(fn.m_name, pFileName);
-	
-	return FsRootAddArbitraryFileNodeToRoot(pFileName, &fn);
+	return pfn;
 }
 
-//void* FsPipeDelete(
+//note: friendly name can be NULL
+int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags)
+{
+	if (!pFriendlyName || !*pFriendlyName)
+		pFriendlyName = "pipe";
+	
+	FileNode* pFN = FsPipeCreate(pFriendlyName);
+	
+	// Open the read head.
+	fds[0] = FiOpenFileNode(pFN, oflags | O_RDONLY);
+	
+	if (fds[0] < 0)
+	{
+		// release the reference from FsPipeCreate. This should unload the pipe.
+		FsReleaseReference(pFN);
+		
+		// return the error code returned by trying to open it for reading
+		return fds[0];
+	}
+	
+	// Open the write head.
+	fds[1] = FiOpenFileNode(pFN, oflags | O_WRONLY);
+	
+	if (fds[1] < 0)
+	{
+		// close the read head
+		FiClose(fds[0]);
+		fds[0] = -1;
+		
+		// release the reference from FsPipeCreate. This should unload the pipe.
+		FsReleaseReference(pFN);
+		
+		// return the error code returned by trying to open it for writing.
+		return fds[1];
+	}
+	
+	// release the reference from FsPipeCreate. After this,
+	// closing both endsshould unload the pipe.
+	FsReleaseReference(pFN);
+	
+	return -ENOTHING;
+}
 
 void FsPipeTest()
 {
-	FsPipeCreate("pipe1");
+	int fds[2];
 	
-	int fd = FiOpen("/pipe1", O_WRONLY);
+	int erc = FiCreatePipe("test", fds, O_NONBLOCK);
 	
-	FiWrite(fd, "Hello, NanoShell!", 17);
+	if (erc < 0)
+	{
+		LogMsg("pipetest: %s", GetErrNoString(erc));
+		return;
+	}
 	
-	FiClose(fd);
+	FiWrite(fds[1], "Hello, NanoShell!", 17);
 	
-	char buffer[20];
+	char buffer[18];
+	buffer[17] = 0;
+	FiRead(fds[0], buffer, 17);
+	LogMsg("The pipe of fortune reads... '%s'. How strange.", buffer);
 	
-	fd = FiOpen("/pipe1", O_RDONLY);
-	
-	FiRead(fd, buffer, 17);
-	
-	LogMsg("Got: '%s'", buffer);
-	
-	FiClose(fd);
+	FiClose(fds[0]);
+	FiClose(fds[1]);
 }
 

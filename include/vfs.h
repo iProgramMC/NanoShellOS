@@ -283,6 +283,10 @@ void FsInit ();
 	int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine);
 	#define FiOpen(pFileName, oflag)  FiOpenD(pFileName,oflag,__FILE__,__LINE__)
 	
+	// Opens an arbitrary file node and returns its descriptor.
+	int FiOpenFileNodeD (FileNode* pFileNode, int oflag, const char* srcFile, int srcLine);
+	#define FiOpenFileNode(pFileNode, oflag)  FiOpenFileNodeD(pFileNode,oflag,__FILE__,__LINE__)
+	
 	// Closes a file and frees its descriptor for use.
 	int FiClose (int fd);
 	
@@ -340,7 +344,10 @@ void FsInit ();
 	int FiMakeDir(const char* pPath);
 	
 	// Delete an empty directory.
-	int FiRemoveDir(const char* pPath);
+	int FiRemoveDir(const char* path);
+	
+	// Create a pipe set.
+	int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags);
 	
 #endif
 

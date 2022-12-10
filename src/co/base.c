@@ -65,37 +65,45 @@ void CoColorFlip (Console *this);
 	// Function forward definitions
 	#if 1
 		void CoE9xClearScreen  (Console *this);
+		void CoFilClearScreen  (Console *this);
 		void CoSerClearScreen  (Console *this);
 		void CoVbeClearScreen  (Console *this);
 		void CoVgaClearScreen  (Console *this);
 		void CoWndClearScreen  (Console *this);
 		void CoE9xInit         (Console *this);
+		void CoFilInit         (Console *this);
 		void CoSerInit         (Console *this);
 		void CoVbeInit         (Console *this);
 		void CoVgaInit         (Console *this);
 		void CoWndInit         (Console *this);
 		void CoNopKill         (Console *this);
+		void CoFilKill         (Console *this);
 		void CoVbeKill         (Console *this);
 		void CoWndKill         (Console *this);
 		void CoE9xPlotChar     (Console *this, int,  int,  char);
+		void CoFilPlotChar     (Console *this, int,  int,  char);
 		void CoSerPlotChar     (Console *this, int,  int,  char);
 		void CoVbePlotChar     (Console *this, int,  int,  char);
 		void CoVgaPlotChar     (Console *this, int,  int,  char);
 		void CoWndPlotChar     (Console *this, int,  int,  char);
 		bool CoE9xPrintCharInt (Console *this, char, char, bool);
+		bool CoFilPrintCharInt (Console *this, char, char, bool);
 		bool CoSerPrintCharInt (Console *this, char, char, bool);
 		bool CoVisComPrnChrInt (Console *this, char, char, bool);//common for visual consoles
 		void CoE9xRefreshChar  (Console *this, int,  int);
+		void CoFilRefreshChar  (Console *this, int,  int);
 		void CoSerRefreshChar  (Console *this, int,  int);
 		void CoVbeRefreshChar  (Console *this, int,  int);
 		void CoVgaRefreshChar  (Console *this, int,  int);
 		void CoWndRefreshChar  (Console *this, int,  int);
 		void CoE9xUpdateCursor (Console *this);
+		void CoFilUpdateCursor (Console *this);
 		void CoSerUpdateCursor (Console *this);
 		void CoVbeUpdateCursor (Console *this);
 		void CoVgaUpdateCursor (Console *this);
 		void CoWndUpdateCursor (Console *this);
 		void CoE9xScrollUpByOne(Console *this);
+		void CoFilScrollUpByOne(Console *this);
 		void CoSerScrollUpByOne(Console *this);
 		void CoVbeScrollUpByOne(Console *this);
 		void CoVgaScrollUpByOne(Console *this);
@@ -123,6 +131,7 @@ void CoColorFlip (Console *this);
 			CoSerClearScreen,
 			CoE9xClearScreen,
 			CoWndClearScreen,
+			CoFilClearScreen,
 		};
 		static tCoInit g_init[] = {
 			NULL,
@@ -131,6 +140,7 @@ void CoColorFlip (Console *this);
 			CoSerInit,
 			CoE9xInit,
 			CoWndInit,
+			CoFilInit,
 		};
 		static tCoKill g_kill[] = {
 			NULL,
@@ -139,6 +149,7 @@ void CoColorFlip (Console *this);
 			CoNopKill,
 			CoNopKill,
 			CoWndKill,
+			CoFilKill,
 		};
 		static tCoPlotChar g_plot_char[] = {
 			NULL,
@@ -147,6 +158,7 @@ void CoColorFlip (Console *this);
 			CoSerPlotChar,
 			CoE9xPlotChar,
 			CoWndPlotChar,
+			CoFilPlotChar,
 		};
 		static tCoPrintCharInt g_print_char_int[] = {
 			NULL,
@@ -155,6 +167,7 @@ void CoColorFlip (Console *this);
 			CoSerPrintCharInt,
 			CoE9xPrintCharInt,
 			CoVisComPrnChrInt,
+			CoFilPrintCharInt,
 		};
 		static tCoRefreshChar g_refresh_char[] = {
 			NULL,
@@ -163,6 +176,7 @@ void CoColorFlip (Console *this);
 			CoSerRefreshChar,
 			CoE9xRefreshChar,
 			CoWndRefreshChar,
+			CoFilRefreshChar,
 		};
 		static tCoUpdateCursor g_update_cursor[] = {
 			NULL,
@@ -171,6 +185,7 @@ void CoColorFlip (Console *this);
 			CoSerUpdateCursor,
 			CoE9xUpdateCursor,
 			CoWndUpdateCursor,
+			CoFilUpdateCursor,
 		};
 		static tCoUpdateCursor g_scroll_up_by_one[] = {
 			NULL,
@@ -179,6 +194,7 @@ void CoColorFlip (Console *this);
 			CoSerScrollUpByOne,
 			CoE9xScrollUpByOne,
 			CoWndScrollUpByOne,
+			CoFilScrollUpByOne,
 		};
 	#endif
 	

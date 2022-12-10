@@ -279,22 +279,24 @@ void FiDebugDump()
 	LogMsg("Done");
 }
 
-static int FiFindFreeFileDescriptor(UNUSED const char* reqPath)
+static int FiFindFreeFileDescriptor(const char* reqPath)
 {
-	/*
-	for (int i = 0; i < FD_MAX; i++)
+	if (reqPath && *reqPath)
 	{
-		if (g_FileNodeToDescriptor[i].m_bOpen)
-			if (strcmp (g_FileNodeToDescriptor[i].m_sPath, reqPath) == 0)
-				return -EAGAIN;
+		for (int i = 0; i < FD_MAX; i++)
+		{
+			if (g_FileNodeToDescriptor[i].m_bOpen)
+				if (strcmp (g_FileNodeToDescriptor[i].m_sPath, reqPath) == 0)
+					return -EAGAIN;
+		}
 	}
-	*/
 	
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (!g_FileNodeToDescriptor[i].m_bOpen)
 			return i;
 	}
+	
 	return -ENFILE;
 }
 
@@ -329,7 +331,7 @@ bool FiIsValidDirDescriptor(int fd)
 	return g_DirNodeToDescriptor[fd].m_bOpen;
 }
 
-int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
+static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
@@ -342,60 +344,72 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	
 	//find the node:
 	bool hasClearedAlready = false;
-	FileNode* pFile = FsResolvePath(pFileName);
-	if (!pFile)
+	bool bPassedFileNodeDirectly = false;
+	
+	FileNode* pFile;
+	
+	if (pFileNode)
 	{
-		// Allow creation, if O_CREAT was specified and we need to write data
-		if ((oflag & O_CREAT) && (oflag & O_WRONLY))
+		pFile = pFileNode;
+		bPassedFileNodeDirectly = true;
+	}
+	else
+	{
+		pFile = FsResolvePath(pFileName);
+		if (!pFile)
 		{
-			// Resolve the directory's name
-			char fileName[strlen(pFileName) + 1];
-			strcpy (fileName, pFileName);
-			
-			char* fileNameSimple = NULL;
-			
-			for (int i = strlen (pFileName); i >= 0; i--)
+			// Allow creation, if O_CREAT was specified and we need to write data
+			if ((oflag & O_CREAT) && (oflag & O_WRONLY))
 			{
-				if (fileName[i] == '/')
+				// Resolve the directory's name
+				char fileName[strlen(pFileName) + 1];
+				strcpy (fileName, pFileName);
+				
+				char* fileNameSimple = NULL;
+				
+				for (int i = strlen (pFileName); i >= 0; i--)
 				{
-					fileName[i] = 0;
-					fileNameSimple = fileName + i + 1;
-					break;
+					if (fileName[i] == '/')
+					{
+						fileName[i] = 0;
+						fileNameSimple = fileName + i + 1;
+						break;
+					}
+				}
+				
+				FileNode* pDir = FsResolvePath(fileName);
+				if (!pDir)
+				{
+					//couldn't even find parent dir
+					LockFree (&g_FileSystemLock);
+					return -ENOENT;
+				}
+				
+				// Try creating a file
+				if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
+				{
+					LockFree (&g_FileSystemLock);
+					return -ENOSPC;
+				}
+				
+				pFile = FsFindDir(pDir, fileNameSimple);
+				
+				FsReleaseReference(pDir);
+				
+				hasClearedAlready = true;
+				
+				if (!pFile)
+				{
+					LockFree (&g_FileSystemLock);
+					return -ENOSPC;
 				}
 			}
-			
-			FileNode* pDir = FsResolvePath(fileName);
-			if (!pDir)
+			else
 			{
-				//couldn't even find parent dir
+				//Can't append to/read from a missing file!
 				LockFree (&g_FileSystemLock);
 				return -ENOENT;
 			}
-			
-			// Try creating a file
-			if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
-			{
-				LockFree (&g_FileSystemLock);
-				return -ENOSPC;
-			}
-			
-			pFile = FsFindDir(pDir, fileNameSimple);
-			
-			FsReleaseReference(pDir);
-			
-			hasClearedAlready = true;
-			
-			if (!pFile)
-			{
-				LockFree (&g_FileSystemLock);
-				return -ENOSPC;
-			}
-		}
-		else
-		{
-			//Can't append to/read from a missing file!
-			LockFree (&g_FileSystemLock);
-			return -ENOENT;
 		}
 	}
 	
@@ -443,8 +457,13 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	
 	//we have all the perms, let's write the filenode there:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	
+	if (pFileName)
+		strcpy(pDesc->m_sPath, pFileName);
+	else
+		strcpy(pDesc->m_sPath, "");
+	
 	pDesc->m_bOpen 			= true;
-	strcpy(pDesc->m_sPath, pFileName);
 	pDesc->m_pNode 			= pFile;
 	pDesc->m_openFile	 	= srcFile;
 	pDesc->m_openLine	 	= srcLine;
@@ -452,6 +471,13 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	pDesc->m_nFileEnd		= pFile->m_length;
 	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE || pFile->m_type == FILE_TYPE_PIPE;
 	pDesc->m_bBlocking      = !(oflag & O_NONBLOCK);
+	
+	// if we passed the reference already, add 1 to the reference counter of this node.
+	// otherwise, FsResolvePath or FsCreateFile have already done that.
+	if (bPassedFileNodeDirectly)
+	{
+		FsAddReference(pFile);
+	}
 	
 	LockFree (&g_FileSystemLock);
 	
@@ -462,6 +488,16 @@ int FiOpenD (const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	return fd;
+}
+
+int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
+{
+	return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
+}
+
+int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
+{
+	return FiOpenInternal(NULL, pFileNode, oflag, srcFile, srcLine);
 }
 
 int FiClose (int fd)
