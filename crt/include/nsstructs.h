@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // https://github.com/jezze/subc
 typedef struct
@@ -18,7 +19,7 @@ typedef JumpBufferTag JumpBuffer[1], jmp_buf[1];
 //TODO
 
 typedef uint8_t BYTE;
-typedef uint8_t bool;
+
 #define false 0
 #define true 1
 
