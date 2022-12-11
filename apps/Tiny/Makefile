@@ -27,6 +27,9 @@ APP_O_FILES=$(patsubst $(SRC_DIR)/%,$(BLD_DIR)/%.o,$(APP_C_FILES) $(APP_S_FILES)
 
 all: application
 
+clean:
+	rm -rf $(BLD_DIR)/*
+	rm $(APP_TARGET)
 
 application: $(APP_TARGET)
 

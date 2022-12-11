@@ -28,6 +28,9 @@ LIB_O_FILES=$(patsubst $(LIS_DIR)/%,$(BLD_DIR)/%.o,$(LIB_C_FILES) $(LIB_S_FILES)
 
 all: application
 
+clean:
+	rm -rf $(BLD_DIR)/*
+	rm $(APP_TARGET)
 
 application: $(APP_TARGET)
 

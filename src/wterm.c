@@ -271,11 +271,9 @@ void TerminalHostTask(int arg)
 	{
 		if (GetTickCount() > timeout)
 		{
-			timeout += 10;
-			if (pWindow->m_isSelected || basic_console.m_dirty)
-			{
-				WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-			}
+			timeout += pWindow->m_isSelected ? 10 : 20;
+			
+			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
 		}
 	}
 	

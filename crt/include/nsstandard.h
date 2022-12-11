@@ -33,7 +33,7 @@ void printf    (const char* Format, ...);
 
 // Assertion
 void OnAssertionFail(const char *cond_msg, const char *file, int line);
-#define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__)); } while (0)
+#define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__); } while (0)
 #define ASSERT assert
 
 // Memory management
