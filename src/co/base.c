@@ -580,9 +580,8 @@ void CoAddToInputQueue (Console* this, char input)
 	if (!input) return;
 	
 	this->m_inputBuffer[this->m_inputBufferEnd++] = input;
-	while
-	   (this->m_inputBufferEnd >= KB_BUF_SIZE)
-		this->m_inputBufferEnd -= KB_BUF_SIZE;
+	
+	this->m_inputBufferEnd %= KB_BUF_SIZE;
 }
 
 bool CoAnythingOnInputQueue (Console* this)
@@ -595,9 +594,9 @@ char CoReadFromInputQueue (Console* this)
 	if (CoAnythingOnInputQueue(this))
 	{
 		char k = this->m_inputBuffer[this->m_inputBufferBeg++];
-		while
-		   (this->m_inputBufferBeg >= KB_BUF_SIZE)
-			this->m_inputBufferBeg -= KB_BUF_SIZE;
+		
+		this->m_inputBufferBeg %= KB_BUF_SIZE;
+		
 		return k;
 	}
 	else return 0;
