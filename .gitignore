@@ -18,7 +18,6 @@ apps/ArduNS/*
 fs/Bin/ArduNS.nse
 fs/Bin/Dink.nse
 apps/Dink/*
-apps/NesEmu/*
 apps/LimnEmu/*
 
 #NES ROMs which I will not risk making public
