@@ -724,17 +724,10 @@ SAI int GetNextTask()
 	return -1;
 }
 
-void ExCheckDyingProcesses(void* pProcToAvoid);
-void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
+// Saves the internal context of the currently running thread. This can be stuff such as
+// the VBE context, console context, font context, system call number, FX registers etc.
+void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 {
-	register uint64_t tsc = ReadTSC();
-	if (bCameFromPIT)
-	{
-		g_twoPitIntsAgo = g_onePitIntAgo;
-		g_onePitIntAgo  = tsc;
-	}
-	g_pProcess = NULL;
-	
 	Task* pTask = KeGetRunningTask();
 	//Please note that tasking code does not use the FPU, so we should be safe just saving it here.
 	if (pTask)
@@ -759,14 +752,63 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		g_kernelFontContext    = g_pCurrentFont;
 		g_kernelSysCallNum     = *pSysCallNum;
 	}
+	
+	// Revert to a standard context.
 	MuiResetHeap();
+	g_currentConsole = &g_debugConsole;
+	g_vbeData        = &g_mainScreenVBEData;
+}
+
+void KeRestoreTaskInternalContext()
+{
+	// note: this may have changed since the KeSaveTaskInternalContext within the function
+	Task* pNewTask = KeGetRunningTask();
+	
+	if (pNewTask)
+	{
+		KeFxRestore(pNewTask->m_fpuState);
+		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
+		g_vbeData        = pNewTask->m_pVBEContext;
+		g_currentConsole = pNewTask->m_pConsoleContext;
+		g_pCurrentFont   = pNewTask->m_pFontContext;
+		*pSysCallNum     = pNewTask->m_sysCallNum;
+		g_pProcess = (Process*)pNewTask->m_pProcess;
+		MuiUseHeap (pNewTask->m_pCurrentHeap);
+	}
+	else
+	{
+		KeFxRestore(g_kernelFPUState);
+		memcpy (g_cwd, g_kernelCwd, sizeof (g_cwd));
+		g_vbeData = g_kernelVBEContext;
+		g_currentConsole = g_kernelConsoleContext;
+		g_pCurrentFont = g_kernelFontContext;
+		*pSysCallNum     = g_kernelSysCallNum;
+		g_pProcess = NULL;
+		MuiUseHeap (g_kernelHeapContext);
+	}
+}
+
+void ExCheckDyingProcesses(void* pProcToAvoid);
+
+void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
+{
+	register uint64_t tsc = ReadTSC();
+	if (bCameFromPIT)
+	{
+		g_twoPitIntsAgo = g_onePitIntAgo;
+		g_onePitIntAgo  = tsc;
+	}
+	g_pProcess = NULL;
+	
+	KeSaveTaskInternalContext(pSaveState);
+	
+	Task* pTask = KeGetRunningTask();
 	
 	void *pProc = NULL;
 	if (pTask) pProc = pTask->m_pProcess;
 	
 	KeCheckDyingTasks(pTask);
 	ExCheckDyingProcesses(pProc);
-	
 	
 	Task* pNewTask = NULL;
 	
@@ -795,38 +837,16 @@ void KeSwitchTask(bool bCameFromPIT, CPUSaveState* pSaveState)
 		g_kernelCpuTimeTotal += totalTime;
 	}
 	
+	KeRestoreTaskInternalContext();
+	
 	if (pNewTask)
 	{
 		pNewTask->m_lastSwitchTime = tsc;
-		
-		//first, restore this task's FPU registers:
-		KeFxRestore(pNewTask->m_fpuState);
-		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
-		g_vbeData        = pNewTask->m_pVBEContext;
-		g_currentConsole = pNewTask->m_pConsoleContext;
-		g_pCurrentFont   = pNewTask->m_pFontContext;
-		*pSysCallNum     = pNewTask->m_sysCallNum;
-		
-		g_pProcess = (Process*)pNewTask->m_pProcess;
-		
-		MuiUseHeap (pNewTask->m_pCurrentHeap);
 		KeRestoreStandardTask(pNewTask);
 	}
 	else
 	{
 		g_kernelLastSwitchTime = tsc;
-		//Kernel task
-		//first, restore the kernel task's FPU registers:
-		KeFxRestore(g_kernelFPUState);
-		memcpy (g_cwd, g_kernelCwd, sizeof (g_cwd));
-		g_vbeData = g_kernelVBEContext;
-		g_currentConsole = g_kernelConsoleContext;
-		g_pCurrentFont = g_kernelFontContext;
-		*pSysCallNum     = g_kernelSysCallNum;
-		
-		g_pProcess = NULL;
-		
-		MuiUseHeap (g_kernelHeapContext);
 		KeRestoreKernelTask();
 	}
 }
