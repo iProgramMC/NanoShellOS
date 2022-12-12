@@ -29,7 +29,7 @@ bool g_interruptsAvailable = false;
 
 void KeHandleSsFailureC()
 {
-	LogMsg("Unrecoverable stack error");
+	ILogMsg("Unrecoverable stack error");
 }
 
 #ifdef EXPERIMENTAL
@@ -221,7 +221,7 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 	//kernel task or a task crashing baaaadly
 	if (g_hasAlreadyThrownException)
 	{
-		LogMsg("Recursive exception detected.  Goodbye, cruel world!");
+		ILogMsg("Recursive exception detected.  Goodbye, cruel world!");
 		KeStopSystem();
 	}
 	g_hasAlreadyThrownException = true;
@@ -298,7 +298,7 @@ void KeTimerInit()
  */
 void IrqTimer()
 {
-	//LogMsg("Timer!");
+	//ILogMsg("Timer!");
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
 }

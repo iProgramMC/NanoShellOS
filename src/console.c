@@ -10,6 +10,7 @@
 #include <console.h>
 #include <string.h>
 #include <print.h>
+#include <misc.h>
 
 extern Console* g_currentConsole;
 
@@ -23,7 +24,11 @@ extern void KeTaskDone();
 char CoGetChar()
 {
 	while (!CoAnythingOnInputQueue (g_currentConsole))
-		KeTaskDone();
+	{
+		// TODO: Maybe suspend this task unless there's something on an input queue.
+		WaitMS(1);
+	}
+	
 	return CoReadFromInputQueue (g_currentConsole);
 }
 
@@ -96,6 +101,8 @@ void CLogMsgNoCr (Console* pConsole, const char* fmt, ...)
 
 void LogMsg (const char* fmt, ...)
 {
+	KeVerifyInterruptsEnabled;
+	
 	////allocate a buffer well sized
 	char cr[8192];
 	va_list list;
@@ -110,12 +117,40 @@ void LogMsg (const char* fmt, ...)
 
 void LogMsgNoCr (const char* fmt, ...)
 {
+	KeVerifyInterruptsEnabled;
+	
 	////allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
 	vsprintf(cr, fmt, list);
 	CoPrintString(g_currentConsole, cr);
+	
+	va_end(list);
+}
+
+void ILogMsg (const char* fmt, ...)
+{
+	////allocate a buffer well sized
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsprintf(cr, fmt, list);
+	
+	sprintf (cr + strlen(cr), "\n");
+	CoPrintString(&g_debugConsole, cr);
+	
+	va_end(list);
+}
+
+void ILogMsgNoCr (const char* fmt, ...)
+{
+	////allocate a buffer well sized
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsprintf(cr, fmt, list);
+	CoPrintString(&g_debugConsole, cr);
 	
 	va_end(list);
 }

@@ -270,7 +270,6 @@ KeCPUID:
 
 
 extern WindowCall
-extern LogMsg
 extern UserCallStuffNotSupportedC
 ; Window manager call stuff
 global UserCallStuff

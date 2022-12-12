@@ -352,7 +352,7 @@ static void AhciPortCommandWait (AhciDevice *pDev, int cmdSlot)
 		// If there's been an error:
 		if (pDev->m_pPort->m_intStatus & PXI_TFE) // Task File Error
 		{
-			LogMsg("AHCI Port command %d failed!", cmdSlot);
+			ILogMsg("AHCI Port command %d failed!", cmdSlot);
 			return;
 		}
 		
@@ -363,7 +363,7 @@ static void AhciPortCommandWait (AhciDevice *pDev, int cmdSlot)
 	
 	if (pDev->m_pPort->m_intStatus & PXI_TFE)
 	{
-		LogMsg("AHCI Port command %d failed!", cmdSlot);
+		ILogMsg("AHCI Port command %d failed!", cmdSlot);
 		return;
 	}
 }
@@ -390,7 +390,7 @@ static void AhciDumpDevRecord(AhciDevice *pDev)
 		model_number[i] = 0;
 	}
 	
-	LogMsg("Found AHCI drive (address %x): '%s'", pDev, model_number);
+	ILogMsg("Found AHCI drive (address %x): '%s'", pDev, model_number);
 }
 
 static void AhciPortIdentify (AhciDevice *pDev)
@@ -664,7 +664,7 @@ void AhciPortInit(AhciDevice *pDev)
 	}
 	else
 	{
-		LogMsg("Reading Failed!");
+		ILogMsg("Reading Failed!");
 	}
 }
 
@@ -675,7 +675,7 @@ void StAhciInit()
 		SLogMsg("No AHCI controllers found.");
 		return;
 	}
-	LogMsg("Initializing AHCI controllers...");
+	ILogMsg("Initializing AHCI controllers...");
 	for (int i = 0; i < g_ahciControllerNum; i++)
 	{
 		AhciControllerInit (&g_ahciControllers[i]);

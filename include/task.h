@@ -204,7 +204,7 @@ void KeExit();
 /***********************************************************
     Kills a task by process index.
 ***********************************************************/
-void KeKillThreadByPID (int proc);
+bool KeKillThreadByPID (int proc);
 
 /***********************************************************
     Gets a task by task identifier (RID).

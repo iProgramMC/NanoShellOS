@@ -219,7 +219,7 @@ char KbWaitForKeyAndGet()
 {
 	while (KbIsBufferEmpty()) 
 	{
-		hlt; hlt; hlt; hlt;
+		WaitMS(1);
 	}
 	return KbGetKeyFromBuffer();
 }

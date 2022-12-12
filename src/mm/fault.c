@@ -98,7 +98,7 @@ void MmOnPageFault(Registers *pRegs)
 				
 				if (frame == 0)
 				{
-					LogMsg("Out of memory, d'oh!");
+					SLogMsg("Out of memory, d'oh!");
 					goto _INVALID_PAGE_FAULT;
 				}
 				
@@ -170,7 +170,7 @@ void MmOnPageFault(Registers *pRegs)
 				
 				if (frame == 0)
 				{
-					LogMsg("Out of memory, d'oh!");
+					SLogMsg("Out of memory, d'oh!");
 					goto _INVALID_PAGE_FAULT;
 				}
 				

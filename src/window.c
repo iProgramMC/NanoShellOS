@@ -1519,7 +1519,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	if (!g_windowManagerRunning)
 	{
-		LogMsg("This program does not run in the command line.");
+		LogMsg("WARNING: This program is a GUI program. It does not run in emergency text mode. To run this program, run the command \"w\" in the console.");
 		return NULL;
 	}
 	
@@ -1603,7 +1603,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (!pWnd->m_vbeData.m_framebuffer32)
 	{
 		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
-		LogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
+		ILogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);
 		return NULL;
@@ -1630,7 +1630,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (!pWnd->m_pControlArray)
 	{
 		// The framebuffer fit, but this didn't
-		LogMsg("Couldn't allocate pControlArray for window, out of memory!");
+		ILogMsg("Couldn't allocate pControlArray for window, out of memory!");
 		MmFreeK(pWnd->m_vbeData.m_framebuffer32);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);
@@ -2090,11 +2090,11 @@ void SetupWindowManager()
 	//CreateTestWindows();
 	UpdateDepthBuffer();
 	
-	VidSetFont(FONT_BASIC);
+	//VidSetFont(FONT_BASIC);
 	//VidSetFont(FONT_TAMSYN_BOLD);
 	//VidSetFont(FONT_TAMSYN_REGULAR);
 	//VidSetFont(FONT_FAMISANS);
-	//VidSetFont(FONT_GLCD);
+	VidSetFont(FONT_GLCD);
 	//VidSetFont(FONT_BIGTEST);
 	
 	LogMsg("\n\n\n");
@@ -2473,7 +2473,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			g_shutdownProcessing = true;
 			if (pTask == NULL)
 			{
-				LogMsg("Cannot spawn shutdown processing task!  That's... weird.");
+				ILogMsg("Cannot spawn shutdown processing task!  That's... weird.");
 				g_shutdownRequest = false;
 			}
 		}
@@ -2538,7 +2538,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	if (!pWindow->m_pControlArray)
 	{
 		VidSetVBEData(NULL);
-		LogMsg("No pControlArray?");
+		ILogMsg("No pControlArray?");
 		return -1;
 	}
 	int index = -1;

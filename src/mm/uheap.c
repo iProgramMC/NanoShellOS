@@ -257,7 +257,7 @@ bool MuiKillHeap(UserHeap* pHeap)
 {
 	if (g_pCurrentUserHeap == pHeap)
 	{
-		LogMsg("ERROR: Not allowed to delete currently used heap!");
+		ILogMsg("ERROR: Not allowed to delete currently used heap!");
 		SLogMsg("ERROR: Not allowed to delete currently used heap!");
 		KeStopSystem();
 	}
@@ -266,7 +266,7 @@ bool MuiKillHeap(UserHeap* pHeap)
 	if (pHeap->m_nRefCount < 0)
 	{
 		// Uh oh
-		LogMsg("Heap %p has reference count %d, uh oh", pHeap, pHeap->m_nRefCount);
+		ILogMsg("Heap %p has reference count %d, uh oh", pHeap, pHeap->m_nRefCount);
 		KeStopSystem();
 	}
 	

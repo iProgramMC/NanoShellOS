@@ -99,7 +99,7 @@ uint32_t MrReferencePage(uintptr_t page)
 		
 		if (!g_refCountRoot.m_level1[aSplit.level1])
 		{
-			LogMsg("Uh oh, can't reference count physical page %x", page);
+			ILogMsg("Uh oh, can't reference count physical page %x", page);
 			KeStopSystem();
 			return 0;
 		}
@@ -144,7 +144,7 @@ uint32_t MrUnreferencePage(uintptr_t page)
 	{
 		// No
 		SLogMsg("Couldn't unreference physical page %x, was never referenced?", page);
-		 LogMsg("Couldn't unreference physical page %x, was never referenced?", page);
+		ILogMsg("Couldn't unreference physical page %x, was never referenced?", page);
 		KeStopSystem();
 	}
 	
@@ -154,7 +154,7 @@ uint32_t MrUnreferencePage(uintptr_t page)
 	{
 		// No
 		SLogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
-		 LogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
+		ILogMsg("Couldn't unreference physical page %x, its reference count is zero...", page);
 		KeStopSystem();
 	}
 	
@@ -197,7 +197,7 @@ void MrDebug()
 			for (int j = 0; j < 1024; j++)
 			{
 				if (g_refCountRoot.m_level1[i]->m_refCounts[j])
-					LogMsg("Page %x has ref count %d", i<<22|j<<12, g_refCountRoot.m_level1[i]->m_refCounts[j]);
+					ILogMsg("Page %x has ref count %d", i<<22|j<<12, g_refCountRoot.m_level1[i]->m_refCounts[j]);
 			}
 		}
 	}

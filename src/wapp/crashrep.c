@@ -79,9 +79,9 @@ void CrashReportWindow( int argument )
 	
 	if (!pWindow)
 	{
-		LogMsg("Could not create crash report window!");
-		LogMsg("Some task crashed, here is its register dump:");
-		LogMsg("%s", string);
+		ILogMsg("Could not create crash report window!");
+		ILogMsg("Some task crashed, here is its register dump:");
+		ILogMsg("%s", string);
 		return;
 	}
 	
@@ -118,8 +118,8 @@ void CrashReporterCheck()
 		
 		if (!pCrashInfo)
 		{
-			LogMsg("Could not create crash report task.");
-			LogMsg("Some task crashed, here is its register dump:");
+			ILogMsg("Could not create crash report task.");
+			ILogMsg("Some task crashed, here is its register dump:");
 			DumpRegisters(&crashInfo.m_regs);
 			return;
 		}
@@ -135,8 +135,8 @@ void CrashReporterCheck()
 		
 		if (!pTask)
 		{
-			LogMsg("Could not create crash report task.");
-			LogMsg("Some task crashed, here is its register dump:");
+			ILogMsg("Could not create crash report task.");
+			ILogMsg("Some task crashed, here is its register dump:");
 			DumpRegisters(&pCrashInfo->m_regs);
 			MmFree(pCrashInfo);
 		}
@@ -145,7 +145,6 @@ void CrashReporterCheck()
 		if (crashInfo.m_pTaskKilled->m_pProcess)
 		{
 			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
-			SLogMsg("Killing Process %s...", p->sIdentifier);
 			p->bWaitingForCrashAck = false;
 			ExKillProcess(p);
 		}
@@ -163,7 +162,6 @@ extern bool g_windowManagerRunning;
 bool IsWindowManagerTask (Task *pTask);
 void CrashReporterCheckNoWindow()
 {
-	
 	if (KeDidATaskCrash())
 	{
 		// OMG! A task died? Call the ambulance!!!
@@ -182,14 +180,13 @@ void CrashReporterCheckNoWindow()
 		KeAcknowledgeTaskCrash();
 		
 		// Print the crash output
-		LogMsg("Task %x (tag: '%s') has crashed, here're its details:", pCrashInfo->m_pTaskKilled, pCrashInfo->m_tag);
+		ILogMsg("Task %x (tag: '%s') has crashed, here're its details:", pCrashInfo->m_pTaskKilled, pCrashInfo->m_tag);
 		Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
 		KeLogExceptionDetails(BC_EX_DEBUG, &pCrashInfo->m_regs, crashInfo.m_pTaskKilled->m_pProcess);
 		
 		// Kill the process
 		if (crashInfo.m_pTaskKilled->m_pProcess)
 		{
-			SLogMsg("Killing Process %s...", p->sIdentifier);
 			p->bWaitingForCrashAck = false;
 			ExKillProcess(p);
 		}

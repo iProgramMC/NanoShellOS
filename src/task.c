@@ -57,17 +57,13 @@ SAI void KeReviveTask (Task *pTask)
 	pTask->m_suspensionType = SUSPENSION_NONE;
 }
 
-void KeKillThreadByPID (int proc)
+bool KeKillThreadByPID (int proc)
 {
-	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return;
+	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return false;
 	
-	if (!g_runningTasks[proc].m_bExists) return;
+	if (!g_runningTasks[proc].m_bExists) return false;
 	
-	if (!KeKillTask(&g_runningTasks[proc]))
-	{
-		LogMsg("Can't kill task!");
-	}
-	else LogMsg("Killed task with pid %d", proc);
+	return KeKillTask(&g_runningTasks[proc]);
 }
 
 // stupid hack... but I think that's what other OSes do (issue a SIGTERM 
@@ -122,16 +118,16 @@ void KeTaskDebugDump(void)
 	KeVerifyInterruptsEnabled;
 	cli;
 	bool any_tasks = false;
-	LogMsg("Listing tasks.");
+	ILogMsg("Listing tasks.");
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
 		Task* t = g_runningTasks + i;
 		if (!t->m_bExists) continue;
 		any_tasks = true;
-		LogMsg("- %d  F:%x  AL:%d AF:%s AS:%s", i, t->m_pFunction, t->m_authorLine, t->m_authorFunc, t->m_authorFile);
+		ILogMsg("- %d  F:%x  AL:%d AF:%s AS:%s", i, t->m_pFunction, t->m_authorLine, t->m_authorFunc, t->m_authorFile);
 	}
 	if (!any_tasks)
-		LogMsg("No tasks currently running.");
+		ILogMsg("No tasks currently running.");
 	
 	KeVerifyInterruptsDisabled;
 	sti;
@@ -420,7 +416,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_bMarkedForDeletion = true;
 		if (!interrupt)
 		{
-			 LogMsg("KEResetTask: WTF?");
+			ILogMsg("KEResetTask: WTF?");
 			SLogMsg("KEResetTask: WTF?");
 			KeStopSystem ();
 		}
@@ -517,7 +513,7 @@ void KeExit()
 {
 	if (!KeGetRunningTask())
 	{
-		LogMsg("Stopping system!?");
+		ILogMsg("Stopping system!?");
 		KeStopSystem();
 	}
 	

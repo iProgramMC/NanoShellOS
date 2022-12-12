@@ -115,7 +115,7 @@ void PciProbe ()
 				uint16_t DeviceID = PciUGetDeviceID  (bus,slot,func);
 				uint16_t ClassID  = PciUGetClassID   (bus,slot,func);
 				uint16_t SClassID = PciUGetSubClassID(bus,slot,func);
-				LogMsg("Vendor: %x  Device: %x.  ClassID: %x, SubclassID: %x", VendorID, DeviceID,  ClassID,SClassID);
+				ILogMsg("Vendor: %x  Device: %x.  ClassID: %x, SubclassID: %x", VendorID, DeviceID,  ClassID,SClassID);
 
 				if ((VendorID == VENDORID_QEMU       && DeviceID == DEVICEID_BXGFX    ) || 
 					(VendorID == VENDORID_VIRTUALBOX && DeviceID == DEVICEID_BXGFXVBOX)

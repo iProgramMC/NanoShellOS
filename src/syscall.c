@@ -9,8 +9,9 @@
 #include <memory.h>
 #include <userspace/syscalls.h>
 
-void OnSyscallReceived (Registers* pRegs)
+void OnSyscallReceived (UNUSED Registers* pRegs)
 {
+	/*
 	switch (pRegs->esi)
 	{
 		case LOGMSG:
@@ -30,4 +31,7 @@ void OnSyscallReceived (Registers* pRegs)
 			DumpRegisters(pRegs);
 			break;
 	}
+	*/
+	
+	ILogMsg("WARNING: This system call protocol is unsupported for now.");
 }

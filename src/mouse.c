@@ -53,7 +53,7 @@ void MouseWaitN (uint8_t type, const char* waiter, int waiterL)
 		}
 	}
 	g_mouseAvailable = false;
-	LogMsg("PS/2 mouse took too long to respond, guessed it's not available. (%s:%d)",waiter,waiterL);
+	ILogMsg("PS/2 mouse took too long to respond, guessed it's not available. (%s:%d)",waiter,waiterL);
 }
 #define MouseWait(x) MouseWaitN(x, __FILE__, __LINE__)
 void MouseWrite (uint8_t write)
@@ -272,7 +272,7 @@ void IrqMouse()
 #if 1
 void MouseInit()
 {
-	LogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
+	ILogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//return;//don't have it for now
 	uint8_t _status;
 	
@@ -344,6 +344,8 @@ void MouseInit()
 		g_ps2MouseAvail = true;
 	}
 	else
-		LogMsg("PS/2 Mouse failed to initialize!");
+	{
+		ILogMsg("PS/2 Mouse failed to initialize!");
+	}
 }
 #endif

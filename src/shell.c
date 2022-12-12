@@ -1085,7 +1085,14 @@ void ShellExecuteCommand(char* p)
 		
 		int proc = atoi (procNum);
 		
-		KeKillThreadByPID (proc);
+		if (KeKillThreadByPID (proc))
+		{
+			LogMsg("Can't find task with PID %d", proc);
+		}
+		else
+		{
+			LogMsg("Killed task with pid %d", proc);
+		}
 	}
 	else if (strcmp (token, "check") == 0)
 	{

@@ -31,11 +31,11 @@ NO_RETURN void KeStopSystem()
 }
 void DumpRegisters (Registers* pRegs)
 {
-	LogMsg("Registers:");
-	LogMsg("EAX=%x CS=%b EIP=%x EFLGS=%x", pRegs->eax, pRegs->cs, pRegs->eip, pRegs->eflags);
-	LogMsg("EBX=%x       ESP=%x EBP=%x",   pRegs->ebx,            pRegs->esp, pRegs->ebp);
-	LogMsg("ECX=%x       ESI=%x CR2=%x",   pRegs->ecx,            pRegs->esi, pRegs->cr2);
-	LogMsg("EDX=%x       EDI=%x",          pRegs->edx,            pRegs->edi);
+	ILogMsg("Registers:");
+	ILogMsg("EAX=%x CS=%b EIP=%x EFLGS=%x", pRegs->eax, pRegs->cs, pRegs->eip, pRegs->eflags);
+	ILogMsg("EBX=%x       ESP=%x EBP=%x",   pRegs->ebx,            pRegs->esp, pRegs->ebp);
+	ILogMsg("ECX=%x       ESI=%x CR2=%x",   pRegs->ecx,            pRegs->esi, pRegs->cr2);
+	ILogMsg("EDX=%x       EDI=%x",          pRegs->edx,            pRegs->edi);
 }
 //WORK: make sure the string you pass in here is large enough!!!
 void DumpRegistersToString (char* pStr, Registers* pRegs)
@@ -130,7 +130,7 @@ bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, in
 	
 	PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "", NULL, true);
 	
-	LogMsg("The system has been stopped.");
+	ILogMsg("The system has been stopped.");
 	
 	KeStopSystem();
 	
@@ -145,7 +145,7 @@ void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag, void* pPr
 	Process *pProc = (Process*)pProcVoid;
 	PLogMsg logMsg = SLogMsg;
 	if (bPrintToScreen)
-		logMsg = LogMsg;
+		logMsg = ILogMsg;
 	
 	const char* pFunctionCrashedInside = "";
 	if (pProc)
@@ -188,7 +188,7 @@ void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag, void* pPr
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProcVoid)
 {
 	Process *pProc = (Process*)pProcVoid;
-	LogMsg("*** STOP: %x", reason);
+	ILogMsg("*** STOP: %x", reason);
 	
 	if (reason == BC_EX_ASSERTION_FAILED)
 	{
@@ -197,8 +197,8 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProc
 		const char *pAssertionFunc = (const char*)pRegs->ecx;
 		int         pAssertionLine =              pRegs->edx;
 		
-		LogMsg("Assertion failed:");
-		LogMsg("'%s' at %s:%d [%s]", pAssertionMsg,pAssertionFile,pAssertionLine,pAssertionFunc);
+		ILogMsg("Assertion failed:");
+		ILogMsg("'%s' at %s:%d [%s]", pAssertionMsg,pAssertionFile,pAssertionLine,pAssertionFunc);
 		
 		return;
 	}
@@ -213,7 +213,9 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProc
 		PrintBackTrace(stk, pRegs->eip, "", pProc, true);
 	}
 	else
-		LogMsg("No stack trace is available.");
+	{
+		ILogMsg("No stack trace is available.");
+	}
 }
 
 void ShellExecuteCommand(char* p);
@@ -221,13 +223,13 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 {
 	g_focusedOnConsole = &g_debugConsole;
 	
-	LogMsg("A problem has been detected and NanoShell has shut down to prevent damage to your computer.\n\n");
-	LogMsg("%s\n", g_pBugCheckReasonText[reason]);
+	ILogMsg("A problem has been detected and NanoShell has shut down to prevent damage to your computer.\n\n");
+	ILogMsg("%s\n", g_pBugCheckReasonText[reason]);
 	if (reason <= BC_EX_RESERVED8)
 	{
-		LogMsg("\nYou may now restart your computer, or log the crash details somewhere to use later.\n");
+		ILogMsg("\nYou may now restart your computer, or log the crash details somewhere to use later.\n");
 	}
-	LogMsg("\nTechnical Information:");
+	ILogMsg("\nTechnical Information:");
 	
 	KeLogExceptionDetails (reason, pRegs, ExGetRunningProc());
 	
@@ -241,8 +243,8 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	RenderIcon(ICON_COMPUTER_PANIC, x_mid, y_mid);
 	
 #ifdef ALLOW_POST_CRASH_DEBUG
-	LogMsg("NanoShell has been put into debug mode.");
-	LogMsg("Press 'M' to list memory allocations, or '?' for help.");
+	ILogMsg("NanoShell has been put into debug mode.");
+	ILogMsg("Press 'M' to list memory allocations, or '?' for help.");
 	
 	//remap PICs to only enable keyboard interrupt:
 	WritePort (0x21, 0b11111101);
@@ -260,17 +262,17 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 		char buf = CoGetChar();
 		if (buf == '/' || buf == '?')
 		{
-			LogMsg("Bug check help:");
-			LogMsg("- ? or /: list available commands");
-			LogMsg("- m or M: list allocated memory regions");
-			LogMsg("- h or H: halt system");
-			LogMsg("- r or R: re-print exception details");
-			LogMsg("- s or S: execute a shell command");
+			ILogMsg("Bug check help:");
+			ILogMsg("- ? or /: list available commands");
+			ILogMsg("- m or M: list allocated memory regions");
+			ILogMsg("- h or H: halt system");
+			ILogMsg("- r or R: re-print exception details");
+			ILogMsg("- s or S: execute a shell command");
 		}
 		else if (buf == 's' || buf == 'S')
 		{
 			char shellcmd[256];
-			LogMsgNoCr("DEBUGSHELL>");
+			ILogMsgNoCr("DEBUGSHELL>");
 			CoGetString (shellcmd, 256);
 			
 			ShellExecuteCommand(shellcmd);
@@ -289,14 +291,14 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 		}
 		else
 		{
-			LogMsg("Press '?' to list a list of commands.");
+			ILogMsg("Press '?' to list a list of commands.");
 		}
 	}
 	
 	cli;
 #endif
 	
-	LogMsg("System halted.");
+	ILogMsg("System halted.");
 	
 	KeStopSystem();
 	while (1) hlt;
@@ -310,7 +312,7 @@ void KeInterruptSanityCheck()
 	
 	if (bAreInterruptsActuallyOn != g_bAreInterruptsEnabled)
 	{
-		LogMsg("bAreInterruptsActuallyOn: %d  g_bAreInterruptsEnabled: %d  EFLAGS: %x", bAreInterruptsActuallyOn, g_bAreInterruptsEnabled, eFlags);
+		ILogMsg("bAreInterruptsActuallyOn: %d  g_bAreInterruptsEnabled: %d  EFLAGS: %x", bAreInterruptsActuallyOn, g_bAreInterruptsEnabled, eFlags);
 		ASSERT(false);
 	}
 }

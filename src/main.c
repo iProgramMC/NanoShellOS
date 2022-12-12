@@ -69,13 +69,13 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	PciInit();
 	VidInit();
 	CbInit();
-	KePrintSystemVersion();
 	BgaInitIfApplicable();
 	MbCheckCmdLine();
 	KiPermitTaskSwitching();
 	SbInit();
 	KbInit();
-	KiIrqEnable();
+	KiIrqEnable();  // After this, interrupts are enabled.
+	KePrintSystemVersion();
 	KiTimingWait();
 	CfgInit();
 	CfgLoadFromCmdLine();

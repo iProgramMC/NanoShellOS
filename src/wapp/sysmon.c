@@ -48,6 +48,8 @@ const char *GetTaskSuspendStateStr (int susp_type)
 		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Wait Task";
 		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Sleeping";
 		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Wait Process";
+		case SUSPENSION_UNTIL_PIPE_READ:
+		case SUSPENSION_UNTIL_PIPE_WRITE: return "Wait Pipe";
 	}
 	return "Unknown";
 }

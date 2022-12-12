@@ -108,7 +108,7 @@ void* MhSetupPage(int index, uint32_t* pPhysOut)
 		uintptr_t frame = MpRequestFrame(true);
 		if (!frame)
 		{
-			LogMsg("Out of memory in MhSetupPage?!");
+			SLogMsg("Out of memory in MhSetupPage?!");
 			return NULL;
 		}
 		
@@ -453,7 +453,7 @@ extern char l_code_and_rodata_start[], l_code_and_rodata_end[];
 extern uint32_t g_pageTableArray[];
 void MmMarkStuffReadOnly()
 {
-	LogMsg("Code and rodata: %p - %p",l_code_and_rodata_start,l_code_and_rodata_end);
+	ILogMsg("Code and rodata: %p - %p",l_code_and_rodata_start,l_code_and_rodata_end);
 
 	uint32_t crap;
 	for (crap = (uint32_t) l_code_and_rodata_start;

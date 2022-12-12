@@ -114,12 +114,6 @@ void CoKill(Console *this);
 void CoAddToInputQueue     (Console *this, char input);
 bool CoAnythingOnInputQueue(Console* this);
 char CoReadFromInputQueue  (Console* this);
-void CLogMsg (Console *this, const char* fmt, ...);
-void CLogMsgNoCr (Console *this, const char* fmt, ...);
-void LogMsg (const char* fmt, ...);
-void LogMsgNoCr (const char* fmt, ...);
-void SLogMsg (const char* fmt, ...);
-void SLogMsgNoCr (const char* fmt, ...);
 void LogHexDumpData (void* pData, int size);
 void ResetConsole();
 void SetConsole(Console* pConsole);
@@ -131,5 +125,23 @@ char CoGetChar   ();
 void CoGetString (char* buffer, int buffer_size);
 
 void CoKickOff(); // main.c calls this
+
+// The LogMsg family
+
+// CLogMsg - Log a message on any console object.
+void CLogMsg (Console *this, const char* fmt, ...);
+void CLogMsgNoCr (Console *this, const char* fmt, ...);
+
+// LogMsg - Log a message to the current console. Must have interrupts enabled.
+void LogMsg (const char* fmt, ...);
+void LogMsgNoCr (const char* fmt, ...);
+
+// LogMsg - Log a message to the screen. Can have interrupts disabled.
+void ILogMsg (const char* fmt, ...);
+void ILogMsgNoCr (const char* fmt, ...);
+
+// SLogMsg - Log a message to the debug console (0xE9 port). Can have interrupts disabled.
+void SLogMsg (const char* fmt, ...);
+void SLogMsgNoCr (const char* fmt, ...);
 
 #endif//_CONSOLE_H

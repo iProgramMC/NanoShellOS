@@ -652,7 +652,7 @@ void MbSetup (uint32_t check, uint32_t mbaddr)
 {
 	if (check != 0x2badb002)
 	{
-		LogMsg("NanoShell has not booted from a Multiboot-compatible bootloader.  A bootloader such as GRUB is required to run NanoShell.");
+		ILogMsg("NanoShell has not booted from a Multiboot-compatible bootloader.  A bootloader such as GRUB is required to run NanoShell.");
 		KeStopSystem();
 	}
 	
@@ -686,9 +686,9 @@ void MbCheckMem()
 	{
 		SwitchMode(0);
 		CoInitAsText(&g_debugConsole);
-		LogMsg("NanoShell has not found enough extended memory.	16Mb of extended "
-		       "memory is\nrequired to run NanoShell.    You may need to upgrade "
-		       "your computer.");
+		ILogMsg("NanoShell has not found enough extended memory.	16Mb of extended "
+		        "memory is\nrequired to run NanoShell.    You may need to upgrade "
+		        "your computer.");
 		KeStopSystem();
 	}
 }
@@ -696,9 +696,9 @@ void MbCheckCmdLine()
 {
 	if (strcmp (g_cmdline, "No!") == 0 || g_cmdline[0] == 0)
 	{
-		LogMsg("NanoShell cannot boot, because either:");
-		LogMsg("- no cmdline was passed");
-		LogMsg("- cmdline's address was %x%s", g_pMultibootInfo->cmdline, g_pMultibootInfo->cmdline >= 0x100000 ? " (was bigger than 1 MB)" : "");
+		ILogMsg("NanoShell cannot boot, because either:");
+		ILogMsg("- no cmdline was passed");
+		ILogMsg("- cmdline's address was %x%s", g_pMultibootInfo->cmdline, g_pMultibootInfo->cmdline >= 0x100000 ? " (was bigger than 1 MB)" : "");
 		KeStopSystem();
 	}
 }
@@ -710,7 +710,7 @@ bool KiEmergencyMode()
 	{
 		if (strcmp(pEntry->value, "yes") == 0)
 		{
-			LogMsg("Using emergency text mode");
+			ILogMsg("Using emergency text mode");
 		}
 		else
 		{
@@ -718,7 +718,9 @@ bool KiEmergencyMode()
 		}
 	}
 	else
-		LogMsg("No 'emergency' config key found, using text mode");
+	{
+		ILogMsg("No 'emergency' config key found, using text mode");
+	}
 	return textMode;
 }
 void KiLaunch (TaskedFunction func)

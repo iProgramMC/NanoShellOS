@@ -96,7 +96,7 @@ uintptr_t MpRequestFrame(bool bIsKernelHeap)
 	if (frame == 0xFFFFFFFFu)
 	{
 		// Out of memory.
-		LogMsg("Out of memory in MpRequestFrame");
+		ILogMsg("Out of memory in MpRequestFrame");
 		return 0;
 	}
 	
@@ -128,7 +128,7 @@ void MpInitialize(multiboot_info_t* mbi)
 	//adding extra complexity is a no-go for now
 	if (addr >= 0x100000)
 	{
-		LogMsg("OS state not supported.  Mmap address: %x  Mmap len: %x", addr, len);
+		ILogMsg("OS state not supported.  Mmap address: %x  Mmap len: %x", addr, len);
 		KeStopSystem();
 	}
 	
@@ -165,7 +165,7 @@ void MpInitialize(multiboot_info_t* mbi)
 		//Usually the mods table is below 1m.
 		if (mbi->mods_addr >= 0x100000)
 		{
-			LogMsg("Module table starts at %x.  OS state not supported", mbi->mods_addr);
+			ILogMsg("Module table starts at %x.  OS state not supported", mbi->mods_addr);
 			KeStopSystem();
 		}
 		

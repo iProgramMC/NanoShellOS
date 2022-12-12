@@ -276,7 +276,7 @@ static bool SbReset()
 
     return true;
 fail:
-	LogMsg("Failed to reset SB16: %d", status);
+	ILogMsg("Failed to reset SB16: %d", status);
 	return false;
 }
 
@@ -340,7 +340,7 @@ static void SbSetupIrq() {
 
     u8 v = MIXER_IRQ;
     if (v != MIXER_IRQ) {
-		LogMsg("SB16 has incorrect IRQ: %d", v);
+		ILogMsg("SB16 has incorrect IRQ: %d", v);
 		return;
     }
 }
