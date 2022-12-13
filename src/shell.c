@@ -29,7 +29,6 @@
 #include <image.h>
 
 char g_lastCommandExecuted[256] = {0};
-extern Console* g_currentConsole;
 
 static JumpBuffer g_setJumpTest_JumpBuffer;
 
@@ -113,35 +112,23 @@ extern void KeTaskDone();
 
 typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom);
 
-void VidPrintTestingPattern();
-void VidPrintTestingPattern2();
-void GraphicsTest()
+void ShellClearScreen()
 {
-	CoClearScreen(g_currentConsole);
+	LogMsgNoCr("\e[2J\e[1;1H");
+}
+
+static int s_ShellSetColorLutBg[] = { 40, 44, 42, 46, 41, 45, 43, 47,100,104,102,106,101,105,103,107 };
+static int s_ShellSetColorLutFg[] = { 30, 34, 32, 36, 31, 35, 33, 37, 90, 94, 92, 96, 91, 95, 93, 97 };
+
+void ShellSetColor(uint8_t fgbg)
+{
+	char ansiCmd [64];
+	int bgColorCode = s_ShellSetColorLutBg[fgbg >> 4];
+	int fgColorCode = s_ShellSetColorLutFg[fgbg & 0xF];
 	
-	// Show the testing pattern first
+	sprintf(ansiCmd, "\e[%d;%dm", bgColorCode, fgColorCode);
 	
-	VidPrintTestingPattern();
-	
-	g_currentConsole->curX = g_currentConsole->curY = 0;
-	LogMsg("Press any key to advance");
-	CoGetChar();
-	
-	VidDrawRect(0x00FF00, 100, 150, 250, 250);
-	
-	//lines, triangles, polygons, circles perhaps?
-	VidDrawHLine (0xEE00FF, 100, 500, 400);
-	VidDrawVLine (0xEE00FF, 150, 550, 15);
-	
-	VidPlotChar('A', 200, 100, 0xFF, 0xFF00);
-	VidTextOut("Hello, opaque background world.\nI support newlines too!", 300, 150, 0xFFE, 0xAEBAEB);
-	VidTextOut("Hello, transparent background world.\nI support newlines too!", 300, 182, 0xFFFFFF, TRANSPARENT);
-	VidShiftScreen(10);
-	
-	g_currentConsole->curX = g_currentConsole->curY = 0;
-	LogMsg("Test complete! Strike a key to exit.");
-	CoGetChar();
-	g_currentConsole->color = 0x1F;
+	LogMsgNoCr(ansiCmd);
 }
 
 int  g_nextTaskNum    = 0;
@@ -316,7 +303,9 @@ void ShellExecuteCommand(char* p)
 		for (int y = 0; y < 16; y++)
 			for (int x = 0; x < 16; x++)
 			{
-				CoPlotChar(g_currentConsole, x, y, (y<<4)|x);
+				char chr = (y<<4)|x;
+				if (chr == '\n' || chr == '\b' || chr == '\e' || chr == '\r' || chr == '\0' || chr == '\1') chr = '.';
+				LogMsg("\e[%d;%dH%c", x+1, y+1, chr);
 			}
 	}
 	else if (strcmp (token, "el") == 0)
@@ -470,7 +459,7 @@ void ShellExecuteCommand(char* p)
 			int result; char data[2];
 			while ((result = FiRead(fd, data, 1), result > 0))
 			{
-				CoPrintChar(g_currentConsole, data[0]);
+				LogMsgNoCr("%c", data[0]);
 			}
 			
 			FiClose (fd);
@@ -506,7 +495,6 @@ void ShellExecuteCommand(char* p)
 			
 			while ((result = FiRead(fd, data, 1), result > 0))
 			{
-				//CoPrintChar(g_currentConsole, data[0]);
 				if (offset % 16 == 0)
 				{
 					currentLineOffset = offset;
@@ -882,8 +870,6 @@ void ShellExecuteCommand(char* p)
 		const char * colorunkf = "\x1b[98m";
 		const char * normal    = "\x1b[97m";
 		
-		uint8_t color = g_currentConsole->color;
-		
 		bool bareMode = false;
 		
 		int dd = FiOpenDir (pPathToList);
@@ -1004,13 +990,9 @@ void ShellExecuteCommand(char* p)
 			#undef THING
 		}
 		
-		g_currentConsole->color = color;
+		LogMsgNoCr("%s", normal);
 		
 		FiCloseDir(dd);
-	}
-	else if (strcmp (token, "gt") == 0)
-	{
-		GraphicsTest();
 	}
 	else if (strcmp (token, "xyzzy") == 0)
 	{
@@ -1176,8 +1158,7 @@ void ShellExecuteCommand(char* p)
 	}
 	else if (strcmp (token, "cls") == 0)
 	{
-		CoClearScreen (g_currentConsole);
-		g_currentConsole->curX = g_currentConsole->curY = 0;
+		ShellClearScreen();
 	}
 	else if (strcmp (token, "gv") == 0)
 	{
@@ -1278,29 +1259,6 @@ void ShellExecuteCommand(char* p)
 			hlt;
 		}
 	}
-	else if (strcmp (token, "mode") == 0)
-	{
-		if (VidIsAvailable())
-		{
-			LogMsg("Must use emergency text-mode shell to change mode.");
-			return;
-		}
-		char* modeNum = Tokenize (&state, NULL, " ");
-		if (!modeNum)
-		{
-			LogMsg("Expected mode number");
-		}
-		else if (*modeNum == 0)
-		{
-			LogMsg("Expected mode number");
-		}
-		else
-		{
-			SwitchMode (*modeNum - '0');
-			//PrInitialize();
-			CoInitAsText(g_currentConsole);
-		}
-	}
 	else if (strcmp (token, "font") == 0)
 	{
 		char* fontNum = Tokenize (&state, NULL, " ");
@@ -1345,7 +1303,7 @@ void ShellExecuteCommand(char* p)
 			else if (c2 >= 'A' && c2 <= 'F') c2 -= 'A'-0xA;
 			else if (c2 >= 'a' && c2 <= 'f') c2 -= 'a'-0xA;
 			
-			g_currentConsole->color = c1 << 4 | c2;
+			ShellSetColor(c1 << 4 | c2);
 		}
 	}
 	else if (strcmp (token, "sysinfo") == 0)
@@ -1384,18 +1342,8 @@ void ShellPrintMotd()
 	//TODO: Hmm, maybe we should allow multiline MOTD
 	const char *pValue = CfgGetEntryValue("Shell::Motd");
 	
-	bool bCenter = CfgEntryMatches ("Shell::MotdCenter", "yes");
+	//bool bCenter = CfgEntryMatches ("Shell::MotdCenter", "yes");
 	
-	if (bCenter)
-	{
-		int slen = strlen (pValue);
-		if (slen <= g_currentConsole->width)
-		{
-			//output a number of spaces until the motd itself
-			int up_to = (g_currentConsole->width - slen) / 2;
-			for (int i = 0; i < up_to; i++) LogMsgNoCr(" ");
-		}
-	}
 	LogMsg("%s", pValue);
 }
 

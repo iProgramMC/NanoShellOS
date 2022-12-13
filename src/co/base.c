@@ -444,6 +444,30 @@ void CoVisComOnAnsiEscCode(Console *this)
 					}
 					break;
 				}
+				case 'J': // Erase in Display
+				{
+					int pos = 0;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					switch (pos)
+					{
+						case 0: // clear from cursor to end of screen
+							for (int i = this->curX; i < this->width; i++) CoPlotChar(this, i, this->curY, ' ');
+							break;
+						case 1: // clear from beginning of the screen to the cursor
+							for (int i = 0; i <= this->curX; i++) CoPlotChar(this, i, this->curY, ' ');
+							break;
+						case 2: // clear the display
+						case 3:
+							CoClearScreen(this);
+							//NB: Only DOS ANSI.SYS moves the cursor to the upper left. So you must also send a '\e[1;1H'
+							break;
+					}
+					
+					break;
+				}
 			}
 			break;
 		}
@@ -543,7 +567,7 @@ bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor
 		}
 		
 		// if this is the end:
-		if (!bFirstChar && strchr("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~", c) != NULL)
+		if (!bFirstChar && strchr("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\a", c) != NULL)
 		{
 			this->m_usingAnsiEscCode = false;
 			CoVisComOnAnsiEscCode(this);
