@@ -75,11 +75,11 @@ void CoGetString(char* buffer, int max_size)
 
 void CLogMsg (Console* pConsole, const char* fmt, ...)
 {
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
 	sprintf (cr + strlen(cr), "\n");
 	CoPrintString(pConsole, cr);
@@ -89,11 +89,11 @@ void CLogMsg (Console* pConsole, const char* fmt, ...)
 
 void CLogMsgNoCr (Console* pConsole, const char* fmt, ...)
 {
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr), fmt, list);
 	CoPrintString(pConsole, cr);
 	
 	va_end(list);
@@ -101,13 +101,14 @@ void CLogMsgNoCr (Console* pConsole, const char* fmt, ...)
 
 void LogMsg (const char* fmt, ...)
 {
+	// Mf you better be in an interrupt enabled context
 	KeVerifyInterruptsEnabled;
 	
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
 	sprintf (cr + strlen(cr), "\n");
 	CoPrintString(g_currentConsole, cr);
@@ -117,13 +118,14 @@ void LogMsg (const char* fmt, ...)
 
 void LogMsgNoCr (const char* fmt, ...)
 {
+	// Mf you better be in an interrupt enabled context
 	KeVerifyInterruptsEnabled;
 	
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr), fmt, list);
 	CoPrintString(g_currentConsole, cr);
 	
 	va_end(list);
@@ -131,11 +133,11 @@ void LogMsgNoCr (const char* fmt, ...)
 
 void ILogMsg (const char* fmt, ...)
 {
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
 	sprintf (cr + strlen(cr), "\n");
 	CoPrintString(&g_debugConsole, cr);
@@ -145,22 +147,22 @@ void ILogMsg (const char* fmt, ...)
 
 void ILogMsgNoCr (const char* fmt, ...)
 {
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr), fmt, list);
 	CoPrintString(&g_debugConsole, cr);
 	
 	va_end(list);
 }
 
 void SLogMsg (const char* fmt, ...){
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
 	sprintf (cr + strlen(cr), "\n");
 	CoPrintString(&g_debugSerialConsole, cr);
@@ -170,11 +172,11 @@ void SLogMsg (const char* fmt, ...){
 
 void SLogMsgNoCr (const char* fmt, ...)
 {
-	////allocate a buffer well sized
+	//allocate a buffer well sized
 	char cr[8192];
 	va_list list;
 	va_start(list, fmt);
-	vsprintf(cr, fmt, list);
+	vsnprintf(cr, sizeof(cr), fmt, list);
 	CoPrintString(&g_debugSerialConsole, cr);
 	
 	va_end(list);
