@@ -480,25 +480,6 @@ bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor
 	{
 		switch (c)
 		{
-			case '\x01':
-				//allow foreground color switching.
-				//To use this, just type `\x01\x0B`, for example, to switch to bright cyan
-				//Typing \x00 will end the parsing, so you can use \x01\x10, or \x01\x30.
-				
-				if (!next) break;
-				char color = next & 0xF;
-				this->color = (this->color & 0xF0) | color;
-				return true;
-			case '\x02':
-				//change X coordinate
-				//To use this, just type `\x02\x0B`, for example, to move cursorX to 11
-				
-				if (!next) break;
-				char xcoord = next;
-				if (xcoord >= this->width)
-					xcoord = this->width - 1;
-				this->curX = xcoord;
-				return true;
 			case '\e':
 			{
 				// ASCII escape code.

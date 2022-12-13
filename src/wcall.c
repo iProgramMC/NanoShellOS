@@ -388,10 +388,10 @@ const void *WindowCall[] = {
 		
 		WaitMS,
 	
-	// System Calls V1.22- 07/01/2022
+	// System Calls V1.22- 07/02/2022
 		SetIcon,
 	
-	// System Calls V1.23- 10/01/2022
+	// System Calls V1.23- 10/02/2022
 		GetVersionNumber,
 		
 	// System Calls V1.24- 11/03/2022

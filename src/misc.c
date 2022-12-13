@@ -569,17 +569,17 @@ void KePrintSystemInfoAdvanced()
 	LogMsg("g_cpuidLastLeaf: %d", g_cpuidLastLeaf);*/
 	
 	//nativeshell style:
-	LogMsg("\x01\x0BNanoShell Operating System " VersionString);
-	LogMsg("\x01\x0CVersion Number: %d", VersionNumber);
+	LogMsg("\e[96mNanoShell Operating System " VersionString);
+	LogMsg("\e[91mVersion Number: %d", VersionNumber);
 	
-	LogMsg("\x01\x0F-------------------------------------------------------------------------------");
-	LogMsg("\x01\x09[CPU] Name: %s", GetCPUName());
-	LogMsg("\x01\x09[CPU] x86 Family %d Model %d Stepping %d.  Feature bits: %d",
+	LogMsg("\e[97m-------------------------------------------------------------------------------");
+	LogMsg("\e[94m[CPU] Name: %s", GetCPUName());
+	LogMsg("\e[94m[CPU] x86 Family %d Model %d Stepping %d.  Feature bits: %d",
 			g_cpuidFeatureBits.m_familyID, g_cpuidFeatureBits.m_model, g_cpuidFeatureBits.m_steppingID);
-	LogMsg("\x01\x0A[RAM] PageSize: 4K. Physical pages: %d. Total usable RAM: %d Kb", MpGetNumAvailablePages(), MpGetNumAvailablePages()*4);
-	LogMsg("\x01\x0A[VID] Screen resolution: %dx%d.  Textmode size: %dx%d characters, of type %d.", GetScreenSizeX(), GetScreenSizeY(), 
+	LogMsg("\e[92m[RAM] PageSize: 4K. Physical pages: %d. Total usable RAM: %d Kb", MpGetNumAvailablePages(), MpGetNumAvailablePages()*4);
+	LogMsg("\e[92m[VID] Screen resolution: %dx%d.  Textmode size: %dx%d characters, of type %d.", GetScreenSizeX(), GetScreenSizeY(), 
 																						g_debugConsole.width, g_debugConsole.height, g_debugConsole.type);
-	LogMsg("\x01\x0F");
+	LogMsg("\e[97m");
 }
 
 void KePrintSystemInfo()
@@ -590,19 +590,19 @@ void KePrintSystemInfo()
 	char timingInfo[128];
 	timingInfo[0] = 0;
 	FormatTime(timingInfo, FORMAT_TYPE_VAR, GetTickCount() / 1000);
-	LogMsg("\x01\x0E N    N       "      "\x01\x0C OS:       \x01\x0FNanoShell Operating System");
-	LogMsg("\x01\x0E NN   N       "      "\x01\x0C Kernel:   \x01\x0F%s (%d)", VersionString, VersionNumber);
-	LogMsg("\x01\x0E N N  N       "      "\x01\x0C Uptime:   \x01\x0F%s", timingInfo);
-	LogMsg("\x01\x0E N  N N       "      "\x01\x0C CPU:      \x01\x0F%s", GetCPUName());
-	LogMsg("\x01\x0E N   NN       "      "\x01\x0C CPU type: \x01\x0F%s", GetCPUType());
-	LogMsg("\x01\x0E N    N\x01\x0D SSSS  \x01\x0C Memory:   \x01\x0F%d KB / %d KB", (npp-nfpp)*4, npp*4);
-	LogMsg("\x01\x0D       S    S "      "\x01\x0C ");
-	LogMsg("\x01\x0D       S      "      "\x01\x0C ");
-	LogMsg("\x01\x0D        SSSS  "      "\x01\x0C ");
-	LogMsg("\x01\x0D            S "      "\x01\x0C ");
-	LogMsg("\x01\x0D       S    S "      "\x01\x0C ");
-	LogMsg("\x01\x0D        SSSS  "      "\x01\x0C ");
-	LogMsg("\x01\x0F");
+	LogMsg("\e[93m N    N       "    "\e[91m OS:       \e[97mNanoShell Operating System");
+	LogMsg("\e[93m NN   N       "    "\e[91m Kernel:   \e[97m%s (%d)", VersionString, VersionNumber);
+	LogMsg("\e[93m N N  N       "    "\e[91m Uptime:   \e[97m%s", timingInfo);
+	LogMsg("\e[93m N  N N       "    "\e[91m CPU:      \e[97m%s", GetCPUName());
+	LogMsg("\e[93m N   NN       "    "\e[91m CPU type: \e[97m%s", GetCPUType());
+	LogMsg("\e[93m N    N\e[95m SSSS  \e[91m Memory:   \e[97m%d KB / %d KB", (npp-nfpp)*4, npp*4);
+	LogMsg("\e[95m       S    S "    "\e[91m ");
+	LogMsg("\e[95m       S      "    "\e[91m ");
+	LogMsg("\e[95m        SSSS  "    "\e[91m ");
+	LogMsg("\e[95m            S "    "\e[91m ");
+	LogMsg("\e[95m       S    S "    "\e[91m ");
+	LogMsg("\e[95m        SSSS  "    "\e[91m ");
+	LogMsg("\e[97m");
 }
 #endif
 
