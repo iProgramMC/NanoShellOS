@@ -27,6 +27,7 @@
 #include <config.h>
 #include <clip.h>
 #include <image.h>
+#include <ansi.h>
 
 char g_lastCommandExecuted[256] = {0};
 
@@ -114,7 +115,7 @@ typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom
 
 void ShellClearScreen()
 {
-	LogMsgNoCr("\e[2J\e[1;1H");
+	LogMsgNoCr(ANSI_CLEAR_SCREEN ANSI_GO_TO(1, 1));
 }
 
 static int s_ShellSetColorLutBg[] = { 40, 44, 42, 46, 41, 45, 43, 47,100,104,102,106,101,105,103,107 };
@@ -241,10 +242,10 @@ void ShellExecuteCommand(char* p)
 		LogMsg(
 		//"\e[15T" // Scroll 15 lines up
 		"You can't see this!"
-		"\e[1K"    // Erase from beginning of the line to the cursor's position.
-		"\e[30G"   // Move cursor horizontally to x=30
+		ANSI_CLEAR_LINE_TO_BEGIN    // Erase from beginning of the line to the cursor's position.
+		ANSI_GO_IN_LINE(30)         // Move cursor horizontally to x=30
 		"Testing at 30 characters!"
-		"\e[2;2H"  // Move cursor at (1, 1) - coordinates are 1 based
+		ANSI_GO_TO(2, 2)            // Move cursor at (1, 1) - coordinates are 1 based
 		"Testing at (1, 1)!"
 		"\e[94m"   // Set foreground color to bright red
 		" Now in blue."
@@ -519,7 +520,7 @@ void ShellExecuteCommand(char* p)
 				offset++;
 			}
 			
-			LogMsgNoCr("\e[60G");
+			LogMsgNoCr(ANSI_GO_IN_LINE(60));
 			
 			for (int i = currentLineOffset; i < offset; i++)
 			{

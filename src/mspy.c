@@ -9,6 +9,7 @@
 #include <misc.h>
 #include <print.h>
 #include <string.h>
+#include <ansi.h>
 
 //#define c g_currentConsole
 //extern Console *g_currentConsole;
@@ -17,7 +18,7 @@ bool MmIsPageMapped(uint32_t pageAddr);
 
 static uint32_t GoTo(bool *quit)
 {
-	LogMsgNoCr("\e[1;1HGo Where? (hex address - type q<\x0B to cancel)");
+	LogMsgNoCr(ANSI_GO_TO(1,1) "Go Where? (hex address - type q<\x0B to cancel)");
 	
 	char str[9];
 	str[8] = 0;
@@ -36,7 +37,7 @@ static uint32_t Search(bool *bNoMatch, char* str, uint32_t start)
 	int slen = strlen (str);
 	
 	//remove this row
-	LogMsg("\e[1;1H\e[0JPlease wait...");
+	LogMsg(ANSI_GO_TO(1,1) ANSI_CLEAR_LINE_TO_END "Please wait...");
 	
 	int pindex = start & 0xFFF;
 	
@@ -58,7 +59,7 @@ static uint32_t Search(bool *bNoMatch, char* str, uint32_t start)
 		}
 	}
 	
-	LogMsgNoCr("\e[1;1H");
+	LogMsgNoCr(ANSI_GO_TO(1,1));
 	
 	*bNoMatch = true;
 	
@@ -67,21 +68,20 @@ static uint32_t Search(bool *bNoMatch, char* str, uint32_t start)
 
 static void UpdateScreen(uint32_t address, bool groupAsInts, int numRows)
 {
-	LogMsgNoCr("\e[1;1H\e[7m");
+	LogMsgNoCr(ANSI_GO_TO(1,1) ANSI_INVERT);
 	
 	char str[] = "Memory Spy - 0x????????";
 	sprintf(str + 15, "%x", address);
 	
-	LogMsgNoCr(str);
-	LogMsgNoCr("\e[0J");
+	LogMsgNoCr("%s" ANSI_CLEAR_LINE_TO_END, str);
 	
 	//print the bottom bar - This uses a really high number to go to the real bottom
-	LogMsgNoCr("\e[1;999H\e[A");
-	LogMsgNoCr("[ or ]: Advance page   - or =: Advance line  G: GoTo  Z: Search String   X: Next Match");
-	LogMsgNoCr("\e[0J\e[1;999H");
-	LogMsgNoCr("T or Y: Advance screen   R: Group as %s" "   Q: Quit  C: Refresh\e[0J", groupAsInts ? "bytes" : "ints ");
+	LogMsgNoCr(ANSI_GO_TO(1, 999) ANSI_GO_UP(1));
+	LogMsgNoCr("[ or ]: Advance page   - or =: Advance line  G: GoTo  Z: Search String   X: Next Match" ANSI_CLEAR_LINE_TO_END);
+	LogMsgNoCr(ANSI_GO_TO(1, 999));
+	LogMsgNoCr("T or Y: Advance screen   R: Group as %s" "   Q: Quit  C: Refresh" ANSI_CLEAR_LINE_TO_END, groupAsInts ? "bytes" : "ints ");
 	
-	LogMsgNoCr("\e[27m\e[1;3H");
+	LogMsgNoCr(ANSI_UNINVERT ANSI_GO_TO(1,3));
 	
 	// print from the start:
 	for (int y = 0; y < numRows; y++)
@@ -152,7 +152,7 @@ static void UpdateScreen(uint32_t address, bool groupAsInts, int numRows)
 
 void MemorySpy()
 {
-	LogMsgNoCr("\e[2J\e[1;1H");
+	LogMsgNoCr(ANSI_CLEAR_SCREEN ANSI_GO_TO(1,1));
 	
 	uint32_t address = 0xC0000000;
 	bool groupAsInts = false;
@@ -180,7 +180,7 @@ void MemorySpy()
 				else if (chr == '-') address -= 16;
 				else if (chr == '=') address += 16;
 				else if (chr == 'r') groupAsInts ^= 1;
-				else if (chr == 'c') LogMsgNoCr("\e[2J\e[1;1H");
+				else if (chr == 'c') LogMsgNoCr(ANSI_CLEAR_SCREEN ANSI_GO_TO(1,1));
 				else if (chr == 'q')
 				{
 					bRunning = false;
@@ -197,7 +197,7 @@ void MemorySpy()
 				{
 					bool q = false;
 					
-					LogMsg("\e[1;1HSearch for what? (type nothing to cancel):");
+					LogMsg(ANSI_GO_TO(1,1) "Search for what? (type nothing to cancel):");
 					
 					str[64] = 0;
 					CoGetString(str, 65);
@@ -208,7 +208,7 @@ void MemorySpy()
 						if (!q)
 						{
 							address = a & 0xfffffff0;
-							LogMsgNoCr("\e[2J\e[1;1H");
+							LogMsgNoCr(ANSI_CLEAR_SCREEN ANSI_GO_TO(1,1));
 							lastMatch = a;
 							SLogMsg("Last Match: %x", a);
 						}
@@ -225,7 +225,7 @@ void MemorySpy()
 						if (!q)
 						{
 							address = a & 0xfffffff0;
-							LogMsgNoCr("\e[2J\e[1;1H");
+							LogMsgNoCr(ANSI_CLEAR_SCREEN ANSI_GO_TO(1,1));
 							lastMatch = a;
 						}
 						else SLogMsg("No Match");
@@ -240,5 +240,5 @@ void MemorySpy()
 		WaitMS(16);
 	}
 	
-	LogMsg("\e[2J\e[1;1HGoodbye!");
+	LogMsg(ANSI_CLEAR_SCREEN ANSI_GO_TO(1,1) "Goodbye!");
 }
