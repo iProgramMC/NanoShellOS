@@ -10,6 +10,7 @@
 #include <main.h>
 #include <string.h>
 #include <pci.h>
+#include <lock.h>
 
 // Enums
 enum {
@@ -120,6 +121,7 @@ typedef struct
 	DriveID    m_driveID;
 	CacheUnit* m_pCacheUnits;
 	size_t     m_nCacheUnitCapacity, m_nCacheUnitCount;
+	SafeLock   m_lock;
 }
 CacheRegister;
 

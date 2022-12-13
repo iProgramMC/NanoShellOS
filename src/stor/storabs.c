@@ -36,6 +36,8 @@
 
 extern void KeTaskDone (void);
 
+static SafeLock      s_driveLocks    [0x100];
+
 // Caching interface
 #ifdef ENABLE_CACHING
 static CacheRegister s_cacheRegisters[0x100];//max driveID = 0xFF.
@@ -187,33 +189,61 @@ static DriveIsAvailableCallback g_IsAvailableCallbacks[] = {
 
 DriveStatus StDeviceReadNoCache(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBlocks)
 {
+	LockAcquire(&s_driveLocks[driveId]);
+	
 	DriveType driveType = StGetDriveType(driveId);
 	if (driveType == DEVICE_UNKNOWN)
+	{
+		LockFree(&s_driveLocks[driveId]);
 		return DEVERR_NOTFOUND;
+	}
 	
 	uint8_t driveSubId = g_GetSubIDCallbacks[driveType](driveId);
 	
-	return g_ReadCallbacks[driveType](lba, pDest, driveSubId, nBlocks);
+	DriveStatus status = g_ReadCallbacks[driveType](lba, pDest, driveSubId, nBlocks);
+	
+	LockFree(&s_driveLocks[driveId]);
+	
+	return status;
 }
+
 DriveStatus StDeviceWriteNoCache(uint32_t lba, const void* pSrc, DriveID driveId, uint8_t nBlocks)
 {
+	LockAcquire(&s_driveLocks[driveId]);
+	
 	DriveType driveType = StGetDriveType(driveId);
 	if (driveType == DEVICE_UNKNOWN)
+	{
+		LockFree(&s_driveLocks[driveId]);
 		return DEVERR_NOTFOUND;
+	}
 	
 	uint8_t driveSubId = g_GetSubIDCallbacks[driveType](driveId);
 	
-	return g_WriteCallbacks[driveType](lba, pSrc, driveSubId, nBlocks);
+	DriveStatus status = g_WriteCallbacks[driveType](lba, pSrc, driveSubId, nBlocks);
+	
+	LockFree(&s_driveLocks[driveId]);
+	
+	return status;
 }
+
 bool StIsDriveAvailable (DriveID driveId)
 {
+	LockAcquire(&s_driveLocks[driveId]);
+	
 	DriveType driveType = StGetDriveType(driveId);
 	if (driveType == DEVICE_UNKNOWN)
-		return false;
+	{
+		LockFree(&s_driveLocks[driveId]);
+		return DEVERR_NOTFOUND;
+	}
 	
 	uint8_t driveSubId = g_GetSubIDCallbacks[driveType](driveId);
 	
-	return g_IsAvailableCallbacks[driveType](driveSubId);
+	bool b = g_IsAvailableCallbacks[driveType](driveSubId);
+	LockFree(&s_driveLocks[driveId]);
+	
+	return b;
 }
 
 DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBlocks)
@@ -222,6 +252,8 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 	uint8_t* pDestBytes = pDest;
 	
 	CacheRegister *pReg = &s_cacheRegisters[driveId];
+	LockAcquire(&pReg->m_lock);
+	
 	if (!pReg->m_bUsed)
 	{
 		StCacheInit(pReg, driveId);
@@ -248,6 +280,7 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 		pUnit->m_lastAccess = GetTickCount();
 		memcpy (pDestBytes + index * BLOCK_SIZE, pUnit->m_pData + blockNo * BLOCK_SIZE, BLOCK_SIZE);
 	}
+	LockFree(&pReg->m_lock);
 	
 	return DEVERR_SUCCESS;
 	
@@ -266,6 +299,8 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 	uint8_t* pSrcBytes = (uint8_t*)pSrc;
 	
 	CacheRegister *pReg = &s_cacheRegisters[driveId];
+	LockAcquire(&pReg->m_lock);
+	
 	if (!pReg->m_bUsed)
 	{
 		StCacheInit(pReg, driveId);
@@ -293,6 +328,7 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 		pUnit->m_lastAccess = GetTickCount();
 		memcpy (pUnit->m_pData + blockNo * BLOCK_SIZE, pSrcBytes + index * BLOCK_SIZE, BLOCK_SIZE);
 	}
+	LockFree(&pReg->m_lock);
 	
 	return DEVERR_SUCCESS;
 	
@@ -306,8 +342,10 @@ void StFlushAllCaches()
 	for (int id = 0; id < 0x100; id++)
 	{
 		CacheRegister *pReg = &s_cacheRegisters[id];
+		LockAcquire(&pReg->m_lock);
 		if (pReg->m_bUsed)
 			StFlushAllCacheUnits(pReg);
+		LockFree(&pReg->m_lock);
 	}
 }
 
@@ -316,11 +354,13 @@ void StDebugDumpAll()
 	for (int id = 0; id < 0x100; id++)
 	{
 		CacheRegister *pReg = &s_cacheRegisters[id];
+		LockAcquire(&pReg->m_lock);
 		if (pReg->m_bUsed)
 		{
 			LogMsg("Info for drive ID %b", id);
 			StDebugDump (pReg);
 		}
+		LockFree(&pReg->m_lock);
 	}
 }
 
