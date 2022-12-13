@@ -353,6 +353,35 @@ void CoVisComOnAnsiEscCode(Console *this)
 		case '[': {
 			switch (lastChar)
 			{
+				case 'A':
+				case 'B':
+				case 'C':
+				case 'D':
+				{
+					int cx = this->curX, cy = this->curY;
+					
+					int pos = 1;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					switch (lastChar)
+					{
+						case 'A': cy--; break;
+						case 'B': cy++; break;
+						case 'C': cx--; break;
+						case 'D': cy++; break;
+					}
+					
+					if (cx < 0) cx = 0;
+					if (cy < 0) cy = 0;
+					if (cx >= this->width)  cx = this->width  - 1;
+					if (cy >= this->height) cy = this->height - 1;
+					
+					this->curX = cx, this->curY = cy;
+					
+					break;
+				}
 				case 'm':
 				{
 					// parse SGR

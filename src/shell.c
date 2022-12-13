@@ -1151,9 +1151,9 @@ void ShellExecuteCommand(char* p)
 		LogMsg("- If [/f] is specified, a full-screen menu will popup");
 		LogMsg("- bytes will be printed as groups of 4 unless [/b] is specified");
 		LogMsg("- numBytes will be capped off at 4096 and rounded down to 32");
-		LogMsg("- pageNumber must represent a \x01\x0CVALID\x01\x0F and \x01\x0CMAPPED\x01\x0F address.");
+		LogMsg("- pageNumber must represent a VALID and MAPPED address.");
 		LogMsg("- if it's not valid or mapped then the system may CRASH or HANG!");
-		LogMsg("- pageNumber is in\x01\x0C HEXADECIMAL\x01\x0F");
+		LogMsg("- pageNumber is in HEXADECIMAL");
 	dont_print_usage:;
 	}
 	else if (strcmp (token, "cls") == 0)
