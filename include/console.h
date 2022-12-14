@@ -73,6 +73,8 @@ enum
 	ANSI_FLAG_DIM       = (1 << 4),
 	ANSI_FLAG_ITALIC    = (1 << 5),
 	ANSI_FLAG_STRIKETHR = (1 << 6),
+	ANSI_FLAG_FG_COLOR  = (1 << 7),
+	ANSI_FLAG_BG_COLOR  = (1 << 8),
 	//WORK: Add more here
 };
 
@@ -95,6 +97,7 @@ typedef struct ConsoleStruct {
 	char m_ansiEscCode[64];
 	bool m_usingAnsiEscCode;
 	uint32_t m_ansiAttributes;
+	uint8_t  m_ansiBgColorBackup, m_ansiFgColorBackup;
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

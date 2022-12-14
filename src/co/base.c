@@ -280,21 +280,41 @@ void CoVisParseSGR(Console *this, char *contents)
 		// Set foreground colors
 		/**/ if (n >= ANSI_ATTR_SETFGCOLORS && n <= ANSI_ATTR_SETFGCOLORS + 7)
 		{
+			if (!(this->m_ansiAttributes & ANSI_FLAG_FG_COLOR))
+			{
+				this->m_ansiAttributes |= ANSI_FLAG_FG_COLOR;
+				this->m_ansiFgColorBackup = this->color;
+			}
 			this->color = (this->color & 0xF0) | g_ansiToVGAColors[n - ANSI_ATTR_SETFGCOLORS];
 		}
 		// Set background colors
 		else if (n >= ANSI_ATTR_SETBGCOLORS && n <= ANSI_ATTR_SETBGCOLORS + 7)
 		{
+			if (!(this->m_ansiAttributes & ANSI_FLAG_BG_COLOR))
+			{
+				this->m_ansiAttributes |= ANSI_FLAG_BG_COLOR;
+				this->m_ansiBgColorBackup = this->color;
+			}
 			this->color = (this->color & 0x0F) | g_ansiToVGAColors[n - ANSI_ATTR_SETBGCOLORS] << 4;
 		}
 		// Set bright foreground colors
 		else if (n >= ANSI_ATTR_SETFGCOLRLS && n <= ANSI_ATTR_SETFGCOLRLS + 7)
 		{
+			if (!(this->m_ansiAttributes & ANSI_FLAG_FG_COLOR))
+			{
+				this->m_ansiAttributes |= ANSI_FLAG_FG_COLOR;
+				this->m_ansiFgColorBackup = this->color;
+			}
 			this->color = (this->color & 0xF0) | g_ansiToVGAColors[n - ANSI_ATTR_SETFGCOLRLS + 8];
 		}
 		// Set bright background colors
 		else if (n >= ANSI_ATTR_SETBGCOLRLS && n <= ANSI_ATTR_SETBGCOLRLS + 7)
 		{
+			if (!(this->m_ansiAttributes & ANSI_FLAG_BG_COLOR))
+			{
+				this->m_ansiAttributes |= ANSI_FLAG_BG_COLOR;
+				this->m_ansiBgColorBackup = this->color;
+			}
 			this->color = (this->color & 0x0F) | g_ansiToVGAColors[n - ANSI_ATTR_SETBGCOLRLS + 8] << 4;
 			if (this->type == CONSOLE_TYPE_TEXT) // Text mode?
 			{
@@ -313,13 +333,26 @@ void CoVisParseSGR(Console *this, char *contents)
 				this->m_ansiAttributes |= ANSI_FLAG_NEGATIVE;
 				break;
 			case ANSI_ATTR_SETBGCOLORD:
-				this->color = (this->color & 0x0F) | (DefaultConsoleColor & 0xF0);
+				if (this->m_ansiAttributes & ANSI_FLAG_BG_COLOR) 
+				{
+					this->color = (this->color & 0x0F) | (this->m_ansiBgColorBackup & 0xF0);
+					this->m_ansiAttributes &= ~ANSI_FLAG_BG_COLOR;
+				}
 				break;
 			case ANSI_ATTR_SETFGCOLORD:
-				this->color = (this->color & 0xF0) | (DefaultConsoleColor & 0x0F);
+				if (this->m_ansiAttributes & ANSI_FLAG_FG_COLOR) 
+				{
+					this->color = (this->color & 0xF0) | (this->m_ansiFgColorBackup & 0x0F);
+					this->m_ansiAttributes &= ~ANSI_FLAG_FG_COLOR;
+				}
 				break;
 			case ANSI_ATTR_NONEGATIVE:
 				this->m_ansiAttributes &=~ANSI_FLAG_NEGATIVE;
+				break;
+			case ANSI_ATTR_OFF:
+				if (this->m_ansiAttributes & ANSI_FLAG_FG_COLOR) this->color = (this->color & 0xF0) | (this->m_ansiFgColorBackup & 0x0F);
+				if (this->m_ansiAttributes & ANSI_FLAG_BG_COLOR) this->color = (this->color & 0x0F) | (this->m_ansiBgColorBackup & 0xF0);
+				this->m_ansiAttributes = 0;
 				break;
 			// WORK: Add more features here
 		}
@@ -493,6 +526,20 @@ void CoVisComOnAnsiEscCode(Console *this)
 							CoClearScreen(this);
 							//NB: Only DOS ANSI.SYS moves the cursor to the upper left. So you must also send a '\e[1;1H'
 							break;
+					}
+					
+					break;
+				}
+				case 'P': // NanoShell specific : Permanentize a color scheme.
+				{
+					int pos = 0;
+					
+					if (*contentsAfter)
+						pos = atoi (contentsAfter);
+					
+					if (pos == 1337)
+					{
+						this->m_ansiAttributes &= ~(ANSI_FLAG_BG_COLOR | ANSI_FLAG_FG_COLOR);
 					}
 					
 					break;

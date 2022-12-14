@@ -25,6 +25,9 @@
 #define ANSI_INVERT                 "\e[7m"
 #define ANSI_UNINVERT               "\e[27m"
 
+// This is a NanoShell specific color code.
+#define ANSI_PERMANENTIZE           "\e[1337P"
+
 // Color codes
 enum
 {

@@ -127,7 +127,7 @@ void ShellSetColor(uint8_t fgbg)
 	int bgColorCode = s_ShellSetColorLutBg[fgbg >> 4];
 	int fgColorCode = s_ShellSetColorLutFg[fgbg & 0xF];
 	
-	sprintf(ansiCmd, "\e[%d;%dm", bgColorCode, fgColorCode);
+	sprintf(ansiCmd, "\e[%d;%dm" ANSI_PERMANENTIZE, bgColorCode, fgColorCode);
 	
 	LogMsgNoCr(ansiCmd);
 }
