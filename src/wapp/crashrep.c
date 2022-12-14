@@ -140,6 +140,10 @@ void CrashReporterCheck()
 			DumpRegisters(&pCrashInfo->m_regs);
 			MmFree(pCrashInfo);
 		}
+		else
+		{
+			KeUnsuspendTask(pTask);
+		}
 		
 		// Kill the process
 		if (crashInfo.m_pTaskKilled->m_pProcess)

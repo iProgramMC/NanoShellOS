@@ -1202,12 +1202,14 @@ void ShellExecuteCommand(char* p)
 	{
 		int errorCode = 0;
 		Task* task = KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
+		KeUnsuspendTask(task);
 		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
 	}
 	else if (strcmp (token, "st") == 0)
 	{
 		int errorCode = 0;
 		Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
+		KeUnsuspendTask(task);
 		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
 	}
 	else if (strcmp (token, "tt") == 0)
@@ -1215,7 +1217,8 @@ void ShellExecuteCommand(char* p)
 		int errorCode = 0;
 		for (int i = 0; i < 64; i++)
 		{
-			KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
+			Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
+			if (task) KeUnsuspendTask(task);
 		}
 		LogMsg("Tasks have been spawned.");
 	}
@@ -1224,7 +1227,8 @@ void ShellExecuteCommand(char* p)
 		int errorCode = 0;
 		for (int i = 0; i < 1024; i++)
 		{
-			KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
+			Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
+			if (task) KeUnsuspendTask(task);
 		}
 		LogMsg("Tasks have been spawned.");
 	}
@@ -1233,7 +1237,8 @@ void ShellExecuteCommand(char* p)
 		int errorCode = 0;
 		for (int i = 0; i < 128; i++)
 		{
-			KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
+			Task* task = KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
+			if (task) KeUnsuspendTask(task);
 		}
 		LogMsg("Tasks have been spawned.");
 	}

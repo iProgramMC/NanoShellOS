@@ -216,6 +216,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->pSymTab   = pProc->pStrTab = NULL;
 	pProc->nSymTabEntries = 0;
 	
+	KeUnsuspendTaskUnsafe(pTask);
+	
 	MuiUseHeap (pBkp);
 	
 	KeVerifyInterruptsDisabled;

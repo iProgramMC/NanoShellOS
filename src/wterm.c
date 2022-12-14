@@ -261,6 +261,8 @@ void TerminalHostTask(int arg)
 		
 		pWindow->m_pSubThread = pTask;
 		
+		KeUnsuspendTask(pTask);
+		
 		ShellInit();
 	}
 	

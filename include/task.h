@@ -257,6 +257,13 @@ void KiTaskSystemInit();
 void KeTaskDebugDump();
 
 /***********************************************************
+    Removes any suspension a task might have.
+	Use this after a successful KeStartTask.
+***********************************************************/
+void KeUnsuspendTaskUnsafe(Task* pTask);
+void KeUnsuspendTask(Task* pTask);
+
+/***********************************************************
     Internal function to unsuspend all tasks waiting
 	for a certain process handle
 ***********************************************************/

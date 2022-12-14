@@ -2054,7 +2054,8 @@ void WindowManagerOnShutdown(void)
 {
 	//create a task
 	UNUSED int useless = 0;
-	KeStartTask(WindowManagerOnShutdownTask, 0, &useless);
+	Task* task = KeStartTask(WindowManagerOnShutdownTask, 0, &useless);
+	KeUnsuspendTask(task);
 }
 void SetupWindowManager()
 {
@@ -2112,6 +2113,7 @@ void SetupWindowManager()
 	//create the taskbar task.
 	errorCode = 0;
 	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
+	KeUnsuspendTask(pTask);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 #endif
@@ -2470,6 +2472,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		{
 			int errorCode = 0;
 			Task *pTask = KeStartTask(ShutdownProcessing, 0, &errorCode);
+			KeUnsuspendTask(pTask);
 			g_shutdownProcessing = true;
 			if (pTask == NULL)
 			{

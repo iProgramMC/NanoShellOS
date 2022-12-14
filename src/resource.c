@@ -68,11 +68,9 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
     }
 	
-	// After the task was created, give it a tag.
-	KeVerifyInterruptsEnabled;
-	cli;
+	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, pFileName);
-	sti;
+	KeUnsuspendTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;
@@ -95,11 +93,9 @@ RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	}
 	
-	// After the task was created, give it a tag.
-	KeVerifyInterruptsEnabled;
-	cli;
+	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, "Notepad");
-	sti;
+	KeUnsuspendTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;
@@ -122,11 +118,9 @@ RESOURCE_STATUS ScribbleLaunchResource(const char* pResource)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	}
 	
-	// After the task was created, give it a tag.
-	KeVerifyInterruptsEnabled;
-	cli;
+	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, "Scribble");
-	sti;
+	KeUnsuspendTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;

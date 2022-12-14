@@ -728,8 +728,13 @@ void KiLaunch (TaskedFunction func)
 	int err_code = 0;
 	//TODO: spawn a process instead
 	Task* pTask = KeStartTask(func, 0, &err_code);
+	
 	if (!pTask)
 		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);
+	
 	KeTaskAssignTag(pTask, "init");
+	
+	// And take off!
+	KeUnsuspendTask(pTask);
 }
 #endif

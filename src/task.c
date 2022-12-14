@@ -57,6 +57,19 @@ SAI void KeReviveTask (Task *pTask)
 	pTask->m_suspensionType = SUSPENSION_NONE;
 }
 
+void KeUnsuspendTaskUnsafe(Task* pTask)
+{
+	KeReviveTask(pTask);
+}
+
+void KeUnsuspendTask(Task* pTask)
+{
+	KeVerifyInterruptsEnabled;
+	cli;
+	KeReviveTask(pTask);
+	sti;
+}
+
 bool KeKillThreadByPID (int proc)
 {
 	if (proc < 0 || proc >= (int)ARRAY_COUNT (g_runningTasks)) return false;
@@ -262,6 +275,10 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		pTask->m_bMarkedForDeletion = false;
 		pTask->m_pProcess = pProc;
 		pTask->m_nIdentifier = ReadTSC();
+		
+		// Task is suspended by default. Use KeUnsuspendTask to unsuspend a task.
+		pTask->m_suspensionType = SUSPENSION_TOTAL;
+		pTask->m_bSuspended     = true;
 		
 		UserHeap* pBkp = MuGetCurrentHeap();
 		

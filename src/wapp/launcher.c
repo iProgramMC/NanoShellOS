@@ -47,6 +47,9 @@ RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchSystem()
@@ -56,6 +59,9 @@ RESOURCE_STATUS LaunchSystem()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchIconTest()
@@ -65,6 +71,9 @@ RESOURCE_STATUS LaunchIconTest()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchTextShell()
@@ -74,6 +83,9 @@ RESOURCE_STATUS LaunchTextShell()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchPaint()
@@ -83,6 +95,9 @@ RESOURCE_STATUS LaunchPaint()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 
@@ -93,6 +108,9 @@ RESOURCE_STATUS LaunchControlPanel()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchNotepad()
@@ -102,6 +120,9 @@ RESOURCE_STATUS LaunchNotepad()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchCabinet()
@@ -111,6 +132,9 @@ RESOURCE_STATUS LaunchCabinet()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchVBuilder()
@@ -120,6 +144,9 @@ RESOURCE_STATUS LaunchVBuilder()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 RESOURCE_STATUS LaunchMagnifier()
@@ -129,6 +156,9 @@ RESOURCE_STATUS LaunchMagnifier()
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 
@@ -526,6 +556,9 @@ void LaunchLauncher()
 	//create the program manager task.
 	errorCode = 0;
 	pTask = KeStartTask(LauncherEntry, 0, &errorCode);
+	
+	KeUnsuspendTask(pTask);
+	
 	DebugLogMsg("Created launcher task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 
@@ -704,6 +737,9 @@ void LaunchRun()
 	
 	errorCode = 0;
 	pTask = KeStartTask(RunPopupEntry, 0, &errorCode);
+	
+	KeUnsuspendTask(pTask);
+	
 	DebugLogMsg("Created run popup task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
 
