@@ -8,7 +8,7 @@
 /**
  * A short description of what this module is responsible for:
  *
- * This module is responisble for parsing away drive numbers, and using
+ * This module is responsible for parsing away drive numbers, and using
  * the drivers meant for them.
  *
  * The mapping of the drive numbers is as follows:
