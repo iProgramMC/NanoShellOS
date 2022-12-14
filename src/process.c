@@ -61,6 +61,16 @@ void ExDisposeProcess(Process *pProc)
 		MhFree(pProc->pStrTab);
 		pProc->pStrTab = NULL;
 	}
+	if (pProc->pFdTable)
+	{
+		MhFree(pProc->pFdTable);
+		pProc->pFdTable = NULL;
+	}
+	if (pProc->pDdTable)
+	{
+		MhFree(pProc->pDdTable);
+		pProc->pDdTable = NULL;
+	}
 }
 
 void ExCheckDyingProcesses(Process *pProcToAvoid)
@@ -215,6 +225,10 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->pDetail   = pDetail;
 	pProc->pSymTab   = pProc->pStrTab = NULL;
 	pProc->nSymTabEntries = 0;
+	pProc->pFdTable = MhAllocate(sizeof(uint32_t) * C_MAX_FDS_PER_TABLE, NULL);
+	pProc->pDdTable = MhAllocate(sizeof(uint32_t) * C_MAX_FDS_PER_TABLE, NULL);
+	memset(pProc->pFdTable, 0, sizeof(uint32_t) * C_MAX_FDS_PER_TABLE);
+	memset(pProc->pDdTable, 0, sizeof(uint32_t) * C_MAX_FDS_PER_TABLE);
 	
 	KeUnsuspendTaskUnsafe(pTask);
 	

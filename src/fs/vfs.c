@@ -279,7 +279,7 @@ void FiDebugDump()
 	LogMsg("Done");
 }
 
-static int FiFindFreeFileDescriptor(const char* reqPath)
+static int FhFindFreeFileDescriptor(const char* reqPath)
 {
 	if (reqPath && *reqPath)
 	{
@@ -300,7 +300,7 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	return -ENFILE;
 }
 
-static int FiFindFreeDirDescriptor(const char* reqPath)
+static int FhFindFreeDirDescriptor(const char* reqPath)
 {
 	for (int i = 0; i < FD_MAX; i++)
 	{
@@ -319,23 +319,25 @@ static int FiFindFreeDirDescriptor(const char* reqPath)
 //TODO: improve MT
 SafeLock g_FileSystemLock;
 
-bool FiIsValidDescriptor(int fd)
+bool FhIsValidDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
 	return g_FileNodeToDescriptor[fd].m_bOpen;
 }
 
-bool FiIsValidDirDescriptor(int fd)
+bool FhIsValidDirDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
 	return g_DirNodeToDescriptor[fd].m_bOpen;
 }
 
-static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
+int FhSeek (int fd, int offset, int whence);
+
+int FhOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
-	int fd = FiFindFreeFileDescriptor(pFileName);
+	int fd = FhFindFreeFileDescriptor(pFileName);
 	if (fd < 0)
 	{
 		LockFree (&g_FileSystemLock);
@@ -484,26 +486,16 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 	if ((oflag & O_APPEND) && (oflag & O_WRONLY))
 	{
 		// Automatically seek to the end
-		FiSeek(fd, SEEK_END, 0);
+		FhSeek(fd, SEEK_END, 0);
 	}
 	
 	return fd;
 }
 
-int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
-{
-	return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
-}
-
-int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
-{
-	return FiOpenInternal(NULL, pFileNode, oflag, srcFile, srcLine);
-}
-
-int FiClose (int fd)
+int FhClose (int fd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -525,11 +517,11 @@ int FiClose (int fd)
 	return -ENOTHING;
 }
 
-int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
+int FhOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 {
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
-	int dd = FiFindFreeDirDescriptor(pFileName);
+	int dd = FhFindFreeDirDescriptor(pFileName);
 	if (dd < 0)
 	{
 		LockFree (&g_FileSystemLock);
@@ -574,10 +566,10 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	return dd;
 }
 
-int FiCloseDir (int dd)
+int FhCloseDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
+	if (!FhIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -599,10 +591,10 @@ int FiCloseDir (int dd)
 	return -ENOTHING;
 }
 
-DirEnt* FiReadDir (int dd)
+DirEnt* FhReadDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
+	if (!FhIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return NULL;
@@ -621,10 +613,10 @@ DirEnt* FiReadDir (int dd)
 	return &pDesc->m_sCurDirEnt;
 }
 
-int FiSeekDir (int dd, int loc)
+int FhSeekDir (int dd, int loc)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
+	if (!FhIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -643,15 +635,15 @@ int FiSeekDir (int dd, int loc)
 	return -ENOTHING;
 }
 
-int FiRewindDir (int dd)
+int FhRewindDir (int dd)
 {
-	return FiSeekDir (dd, 0);
+	return FhSeekDir (dd, 0);
 }
 
-int FiTellDir (int dd)
+int FhTellDir (int dd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
+	if (!FhIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -663,10 +655,10 @@ int FiTellDir (int dd)
 	return pDesc->m_nStreamOffset;
 }
 
-int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
+int FhStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
+	if (!FhIsValidDirDescriptor(dd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -719,10 +711,10 @@ int FiStat (const char *pFileName, StatResult* pOut)
 	return -ENOTHING;
 }
 
-size_t FiRead (int fd, void *pBuf, int nBytes)
+size_t FhRead (int fd, void *pBuf, int nBytes)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -745,11 +737,10 @@ size_t FiRead (int fd, void *pBuf, int nBytes)
 	return rv;
 }
 
-//TODO
-size_t FiWrite (int fd, void *pBuf, int nBytes)
+size_t FhWrite (int fd, void *pBuf, int nBytes)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -772,10 +763,10 @@ size_t FiWrite (int fd, void *pBuf, int nBytes)
 	return rv;
 }
 
-int FiSeek (int fd, int offset, int whence)
+int FhSeek (int fd, int offset, int whence)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -814,10 +805,10 @@ int FiSeek (int fd, int offset, int whence)
 	return -ENOTHING;
 }
 
-int FiTell (int fd)
+int FhTell (int fd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;
@@ -827,10 +818,10 @@ int FiTell (int fd)
 	return rv;
 }
 
-int FiTellSize (int fd)
+int FhTellSize (int fd)
 {
 	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
+	if (!FhIsValidDescriptor(fd))
 	{
 		LockFree (&g_FileSystemLock);
 		return -EBADF;

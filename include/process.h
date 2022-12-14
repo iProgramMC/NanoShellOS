@@ -22,6 +22,8 @@
 	
 ***************************************************************/
 
+#define C_MAX_FDS_PER_TABLE (1024) // The page size is 4096 bytes, so it can fit 1024 uint32_t's.
+
 struct Proc;
 
 typedef void (*DeathProc) (struct Proc*);
@@ -46,6 +48,9 @@ struct Proc
 	void* pSymTab, *pStrTab;
 	int   nSymTabEntries;
 	bool  bWaitingForCrashAck;
+	
+	SafeLock sFileTableLock;
+	uint32_t *pFdTable, *pDdTable; // File and directory descriptor tables
 };
 typedef struct Proc Process;
 
