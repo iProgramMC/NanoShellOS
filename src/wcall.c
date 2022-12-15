@@ -98,10 +98,7 @@ const char* FiGetCwd ()
 	return g_cwd;
 }
 
-void LogString(const char* pText)
-{
-	LogMsgNoCr("%s", pText);
-}
+void LogString(const char* pText); // now in console.c
 
 int FiUnlinkFile2(UNUSED const char* pText)
 {

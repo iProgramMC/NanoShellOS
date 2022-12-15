@@ -21,6 +21,10 @@ struct DirEntS;
 
 #define DEVICES_DIR "/" FS_DEVICE_NAME
 
+#define FD_STDIN    (0)
+#define FD_STDOUT   (1)
+#define FD_STDERR   (2)
+
 // if the node has this many references, it's clear we never want it gone
 // The root node has this property.
 #define NODE_IS_PERMANENT (2000000000)

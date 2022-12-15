@@ -14,6 +14,7 @@
 #include <task.h>
 #include <vfs.h>
 
+static bool s_bInitializedFDs = false;
 extern Console* g_currentConsole;
 
 bool CoInputBufferEmpty()
@@ -25,13 +26,9 @@ extern void KeTaskDone();
 
 char CoGetChar()
 {
-	while (!CoAnythingOnInputQueue (g_currentConsole))
-	{
-		// TODO: Maybe suspend this task unless there's something on an input queue.
-		WaitMS(1);
-	}
-	
-	return CoReadFromInputQueue (g_currentConsole);
+	char b = 0;
+	FiRead(FD_STDIN, &b, 1);
+	return b;
 }
 
 void CoKickOff()
@@ -50,8 +47,6 @@ void CoGetString(char* buffer, int max_size)
 		char k = CoGetChar();
 		if (k == '\n')
 		{
-			//return:
-			LogMsgNoCr("%c", k);
 			buffer[index++] = 0;
 			return;
 		}
@@ -59,7 +54,6 @@ void CoGetString(char* buffer, int max_size)
 		{
 			if (index > 0)
 			{
-				LogMsgNoCr("%c", k);
 				index--;
 				buffer[index] = 0;
 			}
@@ -67,10 +61,8 @@ void CoGetString(char* buffer, int max_size)
 		else
 		{
 			buffer[index++] = k;
-			LogMsgNoCr("%c", k);
 		}
 	}
-	LogMsg("");
 	buffer[index] = 0;
 }
 
@@ -101,6 +93,18 @@ void CLogMsgNoCr (Console* pConsole, const char* fmt, ...)
 	va_end(list);
 }
 
+void LogString(const char* str)
+{
+	if (s_bInitializedFDs)
+	{
+		FiWrite(FD_STDOUT, (void*)str, strlen(str));
+	}
+	else
+	{
+		CoPrintString(&g_debugConsole, str);
+	}
+}
+
 void LogMsg (const char* fmt, ...)
 {
 	// Mf you better be in an interrupt enabled context
@@ -113,7 +117,7 @@ void LogMsg (const char* fmt, ...)
 	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
 	
 	sprintf (cr + strlen(cr), "\n");
-	CoPrintString(g_currentConsole, cr);
+	LogString(cr);
 	
 	va_end(list);
 }
@@ -128,7 +132,7 @@ void LogMsgNoCr (const char* fmt, ...)
 	va_list list;
 	va_start(list, fmt);
 	vsnprintf(cr, sizeof(cr), fmt, list);
-	CoPrintString(g_currentConsole, cr);
+	LogString(cr);
 	
 	va_end(list);
 }
@@ -285,4 +289,31 @@ void FsInitializeConsoleFiles()
 	pNode->Read     = FsTeletypeRead;
 	pNode->Write    = FsTeletypeWrite;
 	pNode->m_implData = (uint32_t)&g_debugSerialConsole;
+	
+	// Open the files as file descriptor 0, 1, 2.
+	int filedes[3];
+	
+	filedes[0] = FiOpen(DEVICES_DIR "/ConVid", O_WRONLY);
+	filedes[1] = FiOpen(DEVICES_DIR "/ConVid", O_RDONLY | O_FORCE);
+	filedes[2] = FiOpen(DEVICES_DIR "/ConVid", O_RDONLY | O_FORCE);
+	
+	// Check if they actually were.
+	
+	if (filedes[0] != FD_STDIN)
+	{
+		SLogMsg("ERROR: filedes[0] = %d", filedes[0]);
+		ASSERT(filedes[0] != FD_STDIN && "STDIN should have been opened in FD 0.");
+	}
+	if (filedes[1] != FD_STDOUT)
+	{
+		SLogMsg("ERROR: filedes[1] = %d", filedes[1]);
+		ASSERT(filedes[1] != FD_STDOUT && "STDOUT should have been opened in FD 1.");
+	}
+	if (filedes[2] != FD_STDERR)
+	{
+		SLogMsg("ERROR: filedes[2] = %d", filedes[2]);
+		ASSERT(filedes[2] != FD_STDERR && "STDERR should have been opened in FD 2.");
+	}
+	
+	s_bInitializedFDs = true; // LogMsg will now redirect output through here.
 }
