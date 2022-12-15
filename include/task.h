@@ -82,6 +82,7 @@ enum
 	SUSPENSION_UNTIL_WM_UPDATE,      // Suspension until the window manager updates
 	SUSPENSION_UNTIL_PIPE_WRITE,     // Suspension until a certain pipe is written to
 	SUSPENSION_UNTIL_PIPE_READ,      // Suspension until a certain pipe is read from
+	SUSPENSION_UNTIL_DEBUG_WRITE,    // Suspension until the debug console is written to
 };
 
 // Task structure definition:
@@ -227,6 +228,11 @@ void WaitTask (Task* pTask);
 void WaitProcess(void* pProcess);
 
 /***********************************************************
+    Waits until the debug console gets written to.
+***********************************************************/
+void WaitDebugWrite ();
+
+/***********************************************************
     Waits until a pipe gets written to.
 ***********************************************************/
 void WaitPipeWrite(void* pPipe);
@@ -286,6 +292,12 @@ void KeUnsuspendTasksWaitingForPipeRead(void* pPipe);
 	for a pipe to be written to
 ***********************************************************/
 void KeUnsuspendTasksWaitingForPipeWrite(void* pPipe);
+
+/***********************************************************
+    Internal function to unsuspend all tasks waiting
+	for the debug console to be written to
+***********************************************************/
+void KeUnsuspendTasksWaitingForDebugWrite();
 
 #include <lock.h>
 

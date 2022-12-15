@@ -8,7 +8,7 @@
 #include <string.h>
 #include <window.h>
 #include <clip.h>
-
+#include <task.h>
 
 #define inb(a) ReadPort(a)
 #define outb(a,b) WritePort(a,b)
@@ -167,7 +167,8 @@ void KbAddKeyToBuffer(char key)
 	while (KeyboardBufferEnd >= KB_BUF_SIZE)
 		KeyboardBufferEnd -= KB_BUF_SIZE;
 	
-	CoAddToInputQueue (g_focusedOnConsole, key);
+	CoAddToInputQueue (&g_debugConsole, key);
+	KeUnsuspendTasksWaitingForDebugWrite();
 }
 bool KbIsBufferEmpty()
 {

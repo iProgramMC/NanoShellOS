@@ -12,12 +12,14 @@
 struct FSNodeS;
 struct DirEntS;
 
-#define PATH_SEP ('/')
-#define PATH_THISDIR (".")
-#define PATH_PARENTDIR ("..")
+#define PATH_SEP       '/'
+#define PATH_THISDIR   "."
+#define PATH_PARENTDIR ".."
 
 #define FS_DEVICE_NAME "Device"
 #define FS_FSROOT_NAME "FSRoot"
+
+#define DEVICES_DIR "/" FS_DEVICE_NAME
 
 // if the node has this many references, it's clear we never want it gone
 // The root node has this property.
@@ -271,6 +273,7 @@ void FsInit ();
 	#define O_CREAT  (8)
 	#define O_NONBLOCK (16)
 	#define O_EXEC   (1024)
+	#define O_FORCE  (2048) // If this file is already open, force it to open again. Use carefully.
 	
 	//lseek whences
 	#define SEEK_SET 0

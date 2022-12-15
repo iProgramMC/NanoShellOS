@@ -337,7 +337,10 @@ int FhOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 {
 	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
-	int fd = FhFindFreeFileDescriptor(pFileName);
+	
+	bool bForceEvenIfOpenAlready = (oflag & O_FORCE) != 0;
+	
+	int fd = FhFindFreeFileDescriptor(bForceEvenIfOpenAlready ? "" : pFileName);
 	if (fd < 0)
 	{
 		LockFree (&g_FileSystemLock);

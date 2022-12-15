@@ -363,6 +363,22 @@ void KeUnsuspendTasksWaitingForPipeWrite(void *pProc)
 	}
 }
 
+void KeUnsuspendTasksWaitingForDebugWrite()
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_DEBUG_WRITE) continue;
+		
+		// Unsuspend this process, they're done waiting!
+		KeReviveTask(pCurTask);
+	}
+}
+
 void KeUnsuspendTasksWaitingForPipeRead(void *pProc)
 {
 	// let everyone know that this process is gone
@@ -601,6 +617,16 @@ void WaitTask (Task* pTaskToWait)
 	
 	pTask->m_suspensionType       = SUSPENSION_UNTIL_TASK_EXPIRY;
 	pTask->m_pWaitedTaskOrProcess = pTaskToWait;
+	pTask->m_bSuspended           = true;
+	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+
+void WaitDebugWrite ()
+{
+	Task *pTask = KeGetRunningTask();
+	
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_DEBUG_WRITE;
 	pTask->m_bSuspended           = true;
 	
 	while (pTask->m_bSuspended) KeTaskDone();

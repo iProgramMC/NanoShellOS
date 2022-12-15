@@ -204,7 +204,7 @@ void UartInit(uint8_t com_num)
 	
 	// Ok, port init has completed, now add it to the file system
 	
-	char name[] = "/Device/ComX";
+	char name[] = DEVICES_DIR "/ComX";
 	name[11] = '1' + com_num;
 	
 	FsRootCreateFileAt(name, NULL, 0);

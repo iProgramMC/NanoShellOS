@@ -11,6 +11,8 @@
 #include <string.h>
 #include <print.h>
 #include <misc.h>
+#include <task.h>
+#include <vfs.h>
 
 extern Console* g_currentConsole;
 
@@ -217,4 +219,70 @@ void LogHexDumpData (void* pData, int size)
 	}
 }
 
+static uint32_t FsTeletypeRead(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool bBlock)
+{
+	Console* pConsole = (Console*)pNode->m_implData;
+	
+	if (pConsole != &g_debugConsole) return 0; // we REALLY can't read from here.
+	
+	char* pBufferChr = (char*)pBuffer; uint32_t read = 0;
+	
+	while (read < size)
+	{
+		while (!CoAnythingOnInputQueue(pConsole))
+		{
+			if (!bBlock) return read;
+			
+			WaitDebugWrite();
+		}
+		
+		char chr;
+		*pBufferChr++ = chr = CoReadFromInputQueue(pConsole);
+		
+		// TODO allow disabling this
+		CoPrintChar(pConsole, chr);
+		
+		read++;
+	}
+	
+	return read; // Can't read anything!
+}
 
+static uint32_t FsTeletypeWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
+{
+	Console* pConsole = (Console*)pNode->m_implData;
+	const char* pText = (const char*)pBuffer;
+	for (uint32_t i = 0; i < size; i++)
+	{
+		CoPrintChar(pConsole, *(pText++));
+	}
+	return size;
+}
+void FsRootCreateFileAt(const char* path, void* pContents, size_t sz);
+
+// Create two files, 'ConDbg' and 'ConVid'.
+void FsInitializeConsoleFiles()
+{
+	FsRootCreateFileAt(DEVICES_DIR "/ConVid", NULL, 0);
+	FsRootCreateFileAt(DEVICES_DIR "/ConDbg", NULL, 0);
+	
+	FileNode* pNode;
+	
+	pNode = FsResolvePath(DEVICES_DIR "/ConVid"); ASSERT(pNode);
+	pNode->m_refCount = NODE_IS_PERMANENT;
+	pNode->m_perms  = PERM_READ | PERM_WRITE;
+	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;
+	pNode->m_length = 0;
+	pNode->Read     = FsTeletypeRead;
+	pNode->Write    = FsTeletypeWrite;
+	pNode->m_implData = (uint32_t)&g_debugConsole;
+	
+	pNode = FsResolvePath(DEVICES_DIR "/ConDbg"); ASSERT(pNode);
+	pNode->m_refCount = NODE_IS_PERMANENT;
+	pNode->m_perms  = PERM_READ | PERM_WRITE;
+	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;
+	pNode->m_length = 0;
+	pNode->Read     = FsTeletypeRead;
+	pNode->Write    = FsTeletypeWrite;
+	pNode->m_implData = (uint32_t)&g_debugSerialConsole;
+}

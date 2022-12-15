@@ -393,6 +393,8 @@ void FsInitializeInitRd(void* pRamDisk)
 	SLogMsg("Init ramdisk is fully setup!");
 }
 
+void FsInitializeConsoleFiles();
+
 void FsInitRdInit()
 {
 	// Initialize the ramdisk
@@ -430,7 +432,7 @@ void FsInitRdInit()
 
 void FsInitializeDevicesDir()
 {
-	
+	FsInitializeConsoleFiles();
 }
 
 #endif
