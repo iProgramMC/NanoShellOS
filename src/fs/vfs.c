@@ -899,7 +899,11 @@ int FiChangeDir (const char *pfn)
 		
 		// Absolute Path
 		FileNode *pNode = FsResolvePath (pfn);
-		if (!pNode) return -EEXIST;
+		if (!pNode)
+		{
+			LockFree(&g_FileSystemLock);
+			return -ENOENT;
+		}
 		
 		if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
 		{
