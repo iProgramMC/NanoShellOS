@@ -16,6 +16,11 @@
 #include <process.h>
 #include <vfs.h>
 
+#define FDLogMsg(...)
+//#define FDLogMsg SLogMsg
+
+#define FD_INVALID (~0U)
+
 uint32_t* FsGetFdTable()
 {
 	Process* pProcess = ExGetRunningProc();
@@ -85,7 +90,7 @@ static int FiFindFreeFileDescriptor()
 	uint32_t* fdTable = FsGetFdTable();
 	for (int i = 0; i < C_MAX_FDS_PER_TABLE; i++)
 	{
-		if (fdTable[i] == 0) return i;
+		if (fdTable[i] == FD_INVALID) return i;
 	}
 	return -EMFILE;
 }
@@ -95,7 +100,7 @@ static int FiFindFreeDirDescriptor()
 	uint32_t* fdTable = FsGetFdTable();
 	for (int i = 0; i < C_MAX_FDS_PER_TABLE; i++)
 	{
-		if (fdTable[i] == 0) return i;
+		if (fdTable[i] == FD_INVALID) return i;
 	}
 	return -EMFILE;
 }
@@ -135,11 +140,16 @@ int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	int handle = FhOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
 	if (handle < 0) return handle;
 	
-	if (!pProc) return handle;
+	if (!pProc)
+	{
+		FDLogMsg("FiOpenD() => %d (kernel)", handle);
+		return handle;
+	}
 	
 	FsGetFdTable()[freeSpot] = handle;
 	
 	LockFree(&pProc->sFileTableLock);
+	FDLogMsg("FiOpenD() => %d [%d]", freeSpot, handle);
 	return freeSpot;
 }
 
@@ -162,7 +172,11 @@ int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int src
 	int handle = FhOpenInternal(NULL, pFileNode, oflag, srcFile, srcLine);
 	if (handle < 0) return handle;
 	
-	if (!pProc) return handle;
+	if (!pProc)
+	{
+		FDLogMsg("FiOpenDirD() => %d (kernel)", handle);
+		return handle;
+	}
 	
 	FsGetFdTable()[freeSpot] = handle;
 	
@@ -172,6 +186,7 @@ int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int src
 
 int FiClose(int fd)
 {
+	FDLogMsg("FiClose(%d)", fd);
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
 	Process* pProc = ExGetRunningProc();
@@ -185,7 +200,7 @@ int FiClose(int fd)
 			return status;
 		}
 		// status is zero. Remove it from the FD table
-		FsGetFdTable()[fd] = 0;
+		FsGetFdTable()[fd] = FD_INVALID;
 		LockFree(&pProc->sFileTableLock);
 		return -ENOTHING;
 	}
@@ -254,11 +269,13 @@ int FiOpenDirD(const char* pFileName, const char* srcFile, int srcLine)
 	FsGetDdTable()[freeSpot] = handle;
 	
 	LockFree(&pProc->sFileTableLock);
+	FDLogMsg("FiOpenDirD() => %d [%d]", freeSpot, handle);
 	return freeSpot;
 }
 
 int FiCloseDir(int dd)
 {
+	FDLogMsg("FiCloseDir(%d)", dd);
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return handle;
 	Process* pProc = ExGetRunningProc();
@@ -272,7 +289,7 @@ int FiCloseDir(int dd)
 			return status;
 		}
 		// status is zero. Remove it from the FD table
-		FsGetDdTable()[dd] = 0;
+		FsGetDdTable()[dd] = FD_INVALID;
 		LockFree(&pProc->sFileTableLock);
 		return -ENOTHING;
 	}
