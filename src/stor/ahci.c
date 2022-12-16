@@ -668,8 +668,12 @@ void AhciPortInit(AhciDevice *pDev)
 	}
 }
 
+void PciFindAhciDevices();
+
 void StAhciInit()
 {
+	PciFindAhciDevices();
+	
 	if (!g_ahciControllerNum)
 	{
 		SLogMsg("No AHCI controllers found.");

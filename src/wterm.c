@@ -8,6 +8,7 @@
 #include <icon.h>
 #include <wbuiltin.h>
 #include <misc.h>
+#include <process.h>
 
 int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
 
@@ -28,7 +29,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 		case EVENT_CLICKCURSOR:
 			//CLogMsgNoCr(pConsole, "Clicked! ");
 			break;
-		case EVENT_KEYPRESS:
+		case EVENT_KEYRAW:
 		{
 			//CoPrintChar(pConsole, (char)parm1);
 			break;
@@ -156,9 +157,26 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 	}
 }
 extern void ShellInit(void);
+
 //! NOTE: arg is a pointer to an array of 4 ints.
+
 void TerminalHostTask(int arg)
 {
+	// Setup a pipe duplex.
+	int fds[2];
+	int errCode = FiCreatePipe("TerminalHost", fds, O_NONBLOCK);
+	if (errCode < 0)
+	{
+		SLogMsg("TerminalHost could not create a terminal instance. %s", GetErrNoString(errCode));
+		return;
+	}
+	
+	ASSERT(fds[0] == FD_STDOUT && fds[1] == FD_STDIN);
+	
+	// Duplicate this handle
+	FiDuplicateHandle(fds[1]);
+	
+	
 	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, 80, 25 };
 	
 	bool providedShellCmd = false, hookDebugConsole = false;
@@ -280,5 +298,19 @@ void TerminalHostTask(int arg)
 	}
 	
 	//KeKillTask(pTask);
+}
+
+int TerminalHostStart(int arg)
+{
+	// Create a new process. This will contain the TerminalHostTask.
+	int errCode = 0;
+	Process* pProc = ExCreateProcess(TerminalHostTask, arg, "TerminalHost", 0, &errCode, NULL);
+	if (!pProc)
+	{
+		SLogMsg("ERROR in TerminalHostStart: %d", errCode);
+		return -1;
+	}
+	
+	return 0;
 }
 

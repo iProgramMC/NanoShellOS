@@ -228,6 +228,8 @@ void KeConstructTask (Task* pTask)
 
 void ExOnThreadExit (Process* pProc, Task* pTask);
 
+bool ExAddTaskToProcess(Process* pProc, Task* pTask);
+
 Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	Process *pProc = (Process*)pProcVoid;
@@ -235,7 +237,8 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 	void *pStack = MhAllocate(C_STACK_BYTES_PER_TASK, NULL);
 	if (!pStack)
 	{
-		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
+		if (pErrorCodeOut)
+			*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
 		return NULL;
 	}
 	
@@ -250,7 +253,8 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 	
 	if (i == C_MAX_TASKS)
 	{
-		*pErrorCodeOut = TASK_ERROR_TOO_MANY_TASKS;
+		if (pErrorCodeOut)
+			*pErrorCodeOut = TASK_ERROR_TOO_MANY_TASKS;
 		
 		// Pre-free the pre-allocated stack. Don't need it lying around
 		if (pStack)
@@ -263,6 +267,20 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 	{
 		//Setup our new task here:
 		Task* pTask = &g_runningTasks[i];
+		
+		if (pProc)
+		{
+			// try to add this spot for now. Since interrupts are clear, should anything fail, nothing will reference this currently empty spot.
+			if (!ExAddTaskToProcess(pProc, pTask))
+			{
+				// hm, couldn't add the task to the process. That must mean there is no more space for us. So return.
+				if (pErrorCodeOut)
+					*pErrorCodeOut = TASK_ERROR_TOO_MANY_TASKS_IN_PROCESS;
+				return NULL;
+			}
+			
+		}
+		
 		memset (pTask, 0, sizeof *pTask);
 		
 		pTask->m_pFunction = function;
@@ -307,7 +325,8 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 	}
 	else
 	{
-		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
+		if (pErrorCodeOut)
+			*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
 		return NULL;
 	}
 }

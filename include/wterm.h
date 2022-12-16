@@ -13,5 +13,6 @@
 #include <shell.h>
 
 void TerminalHostTask(int arg);
+int TerminalHostStart(int arg);
 
 #endif//_WTERM_H

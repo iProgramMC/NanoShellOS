@@ -170,6 +170,16 @@ Process* ExGetProcessByRID(uint64_t rid)
 	return NULL;
 }
 
+bool ExAddTaskToProcess(Process* pProc, Task* pTask)
+{
+	SLogMsg("ExAddTaskToProcess");
+	if (pProc->nTasks >= (int)ARRAY_COUNT(pProc->sTasks))
+		return false;
+	
+	pProc->sTasks[pProc->nTasks++] = pTask;
+	return true;
+}
+
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail)
 {
 	LockAcquire (&gProcessLock);
@@ -219,8 +229,6 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	// Setup the process structure.
 	pProc->bActive  = true;
 	pProc->bWillDie = false;
-	pProc->nTasks = 1;
-	pProc->sTasks[0] = pTask;
 	pProc->nIdentifier = ReadTSC();
 	pProc->pDetail   = pDetail;
 	pProc->pSymTab   = pProc->pStrTab = NULL;

@@ -56,9 +56,7 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 	strcat (buffer, "\n");
 	
 	// Create the Launch Executable thread with the file descriptor as its parameter.
-	int errorCode = 0;
-    Task* pTask = KeStartTask (TerminalHostTask, (int)buffer, &errorCode);
-    if (errorCode != TASK_SUCCESS)
+	if (TerminalHostStart((int)buffer) < 0)
     {
 		MmFree(buffer);
 		char buffer1[1024];
@@ -67,10 +65,6 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 		
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
     }
-	
-	// After the task was created, give it a tag and start it.
-	KeTaskAssignTag(pTask, pFileName);
-	KeUnsuspendTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;

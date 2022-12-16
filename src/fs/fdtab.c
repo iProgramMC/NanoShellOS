@@ -105,6 +105,28 @@ static int FiFindFreeDirDescriptor()
 	return -EMFILE;
 }
 
+/*
+int FiDuplicateHandle(int fd)
+{
+	Process* pProc = ExGetRunningProc();
+	if (!pProc) return -ENOTSUP;
+	
+	LockAcquire(&pProc->sFileTableLock);
+	int freeSpot = FiFindFreeFileDescriptor();
+	if (freeSpot < 0)
+	{
+		LockFree(&pProc->sFileTableLock);
+		return freeSpot;
+	}
+	
+	uint32_t* fdTable = FsGetFdTable();
+	fdTable[freeSpot] = fdTable[fd];
+	
+	LockFree(&pProc->sFileTableLock);
+	return freeSpot;
+}
+*/
+
 // note: This returns a global level file handle.
 int FhOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine);
 int FhClose (int fd);

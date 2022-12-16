@@ -356,6 +356,9 @@ void FsInit ();
 	// Create a pipe set.
 	int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags);
 	
+	// Duplicate a file handle. Must be in a process context to do this.
+	int FiDuplicateHandle(int fd);
+	
 #endif
 
 #endif//_VFS_H

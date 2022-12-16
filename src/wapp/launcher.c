@@ -78,13 +78,8 @@ RESOURCE_STATUS LaunchIconTest()
 }
 RESOURCE_STATUS LaunchTextShell()
 {
-	UNUSED int errorCode = 0;
-	Task* pTask = KeStartTask(TerminalHostTask, 0, &errorCode);
-	
-	if (!pTask)
+	if (TerminalHostStart(0) < 0)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
-	
-	KeUnsuspendTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
