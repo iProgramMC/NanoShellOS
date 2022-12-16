@@ -476,6 +476,7 @@ int FhOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 	pDesc->m_nFileEnd		= pFile->m_length;
 	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE || pFile->m_type == FILE_TYPE_PIPE;
 	pDesc->m_bBlocking      = !(oflag & O_NONBLOCK);
+	pDesc->m_nOpenFlags     = oflag;
 	
 	// if we passed the reference already, add 1 to the reference counter of this node.
 	// otherwise, FsResolvePath or FsCreateFile have already done that.
@@ -729,13 +730,17 @@ size_t FhRead (int fd, void *pBuf, int nBytes)
 		return -EINVAL;
 	}
 	
-	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_nOpenFlags & O_DUPL0) { pDesc->m_nStreamOffset = 0; }
+	if (pDesc->m_nOpenFlags & O_DUPL1) { pDesc->m_nStreamOffset = 1; }
+	
+	int rv = FsRead (pDesc->m_pNode, (uint32_t)pDesc->m_nStreamOffset, (uint32_t)nBytes, pBuf, pDesc->m_bBlocking);
 	if (rv < 0) 
 	{
 		LockFree (&g_FileSystemLock);
 		return rv;
 	}
-	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	pDesc->m_nStreamOffset += rv;
 	LockFree (&g_FileSystemLock);
 	return rv;
 }
@@ -755,13 +760,17 @@ size_t FhWrite (int fd, void *pBuf, int nBytes)
 		return -EINVAL;
 	}
 	
-	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_nOpenFlags & O_DUPL0) { pDesc->m_nStreamOffset = 1; }
+	if (pDesc->m_nOpenFlags & O_DUPL1) { pDesc->m_nStreamOffset = 0; }
+	
+	int rv = FsWrite (pDesc->m_pNode, (uint32_t)pDesc->m_nStreamOffset, (uint32_t)nBytes, pBuf, pDesc->m_bBlocking);
 	if (rv < 0) 
 	{
 		LockFree (&g_FileSystemLock);
 		return rv;
 	}
-	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	pDesc->m_nStreamOffset += rv;
 	LockFree (&g_FileSystemLock);
 	return rv;
 }

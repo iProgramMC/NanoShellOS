@@ -25,6 +25,8 @@ struct DirEntS;
 #define FD_STDOUT   (1)
 #define FD_STDERR   (2)
 
+#define C_PIPE_DUPLEX_BUF_COUNT (2)
+
 // if the node has this many references, it's clear we never want it gone
 // The root node has this property.
 #define NODE_IS_PERMANENT (2000000000)
@@ -82,24 +84,19 @@ typedef struct FSNodeS
 	uint32_t           m_length;     //file size
 	
 	// implementation data
-	union
+	uint32_t           m_implData;
+	uint32_t           m_implData1;
+	uint32_t           m_implData2;
+	uint32_t           m_implData3;
+	
+	struct
 	{
-		struct
-		{
-			uint32_t           m_implData;
-			uint32_t           m_implData1;
-			uint32_t           m_implData2;
-			uint32_t           m_implData3;
-		};
-		struct
-		{
-			uint8_t* buffer;
-			uint32_t bufferSize;
-			uint32_t bufferTail;
-			uint32_t bufferHead;
-		}
-		m_pipe;
-	};
+		uint8_t* buffer;
+		uint32_t bufferSize;
+		uint32_t bufferTail;
+		uint32_t bufferHead;
+	}
+	m_pipe[C_PIPE_DUPLEX_BUF_COUNT];
 	
 	// timing
 	uint32_t           m_modifyTime;
@@ -239,6 +236,7 @@ void FsInit ();
 		int       m_nFileEnd;
 		bool      m_bIsFIFO; //is a char device, basically
 		bool      m_bBlocking;
+		int       m_nOpenFlags;
 		
 		const char* m_openFile;
 		int       m_openLine;
@@ -251,6 +249,7 @@ void FsInit ();
 		char      m_sPath[PATH_MAX+2];
 		uint32_t  m_nStreamOffset;
 		DirEnt    m_sCurDirEnt;
+		int       m_nOpenFlags;
 		
 		const char* m_openFile;
 		int       m_openLine;
@@ -277,7 +276,9 @@ void FsInit ();
 	#define O_CREAT  (8)
 	#define O_NONBLOCK (16)
 	#define O_EXEC   (1024)
-	#define O_FORCE  (2048) // If this file is already open, force it to open again. Use carefully.
+	#define O_FORCE  (2048)  // If this file is already open, force it to open again. Use carefully.
+	#define O_DUPL0  (16384) // This file is opened as pipe duplex 0 (write to fd[1], read from fd[0])
+	#define O_DUPL1  (32768) // This file is opened as pipe duplex 1 (write to fd[1], read from fd[0])
 	
 	//lseek whences
 	#define SEEK_SET 0

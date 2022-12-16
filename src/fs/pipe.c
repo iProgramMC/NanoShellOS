@@ -19,10 +19,10 @@
 // TODO: Allow O_NONBLOCK. This would require re-doing the read/write system calls.
 extern SafeLock g_FileSystemLock;
 
-bool FsPipeReadSingleByte(FileNode* pPipeNode, uint8_t* pOut, bool bBlock)
+bool FsPipeReadSingleByte(FileNode* pPipeNode, uint8_t* pOut, bool bBlock, uint32_t offset)
 {
 	// if the tail and the head are the same (i.e. there is nothing on the queue right now)
-	if (pPipeNode->m_pipe.bufferTail == pPipeNode->m_pipe.bufferHead)
+	if (pPipeNode->m_pipe[offset].bufferTail == pPipeNode->m_pipe[offset].bufferHead)
 	{
 		if (!bBlock)
 			return false;
@@ -38,20 +38,20 @@ bool FsPipeReadSingleByte(FileNode* pPipeNode, uint8_t* pOut, bool bBlock)
 	}
 	
 	// read a byte from the buffer
-	*pOut = pPipeNode->m_pipe.buffer[pPipeNode->m_pipe.bufferTail];
+	*pOut = pPipeNode->m_pipe[offset].buffer[pPipeNode->m_pipe[offset].bufferTail];
 	
 	// increment the tail
-	pPipeNode->m_pipe.bufferTail = (pPipeNode->m_pipe.bufferTail + 1) % pPipeNode->m_pipe.bufferSize;
+	pPipeNode->m_pipe[offset].bufferTail = (pPipeNode->m_pipe[offset].bufferTail + 1) % pPipeNode->m_pipe[offset].bufferSize;
 	
 	KeUnsuspendTasksWaitingForPipeRead(pPipeNode);
 	
 	return true;
 }
 
-bool FsPipeWriteSingleByte(FileNode* pPipeNode, uint8_t data, bool bBlock)
+bool FsPipeWriteSingleByte(FileNode* pPipeNode, uint8_t data, bool bBlock, uint32_t offset)
 {
 	// if the tail and the head are the same (i.e. there is nothing on the queue right now)
-	while ((pPipeNode->m_pipe.bufferHead + 1) % pPipeNode->m_pipe.bufferSize == pPipeNode->m_pipe.bufferTail)
+	while ((pPipeNode->m_pipe[offset].bufferHead + 1) % pPipeNode->m_pipe[offset].bufferSize == pPipeNode->m_pipe[offset].bufferTail)
 	{
 		if (!bBlock)
 			return false;
@@ -66,8 +66,8 @@ bool FsPipeWriteSingleByte(FileNode* pPipeNode, uint8_t data, bool bBlock)
 		LockAcquire(&g_FileSystemLock);
 	}
 	
-	pPipeNode->m_pipe.buffer[pPipeNode->m_pipe.bufferHead] = data;
-	pPipeNode->m_pipe.bufferHead = (pPipeNode->m_pipe.bufferHead + 1) % pPipeNode->m_pipe.bufferSize;
+	pPipeNode->m_pipe[offset].buffer[pPipeNode->m_pipe[offset].bufferHead] = data;
+	pPipeNode->m_pipe[offset].bufferHead = (pPipeNode->m_pipe[offset].bufferHead + 1) % pPipeNode->m_pipe[offset].bufferSize;
 	
 	KeUnsuspendTasksWaitingForPipeWrite(pPipeNode);
 	
@@ -81,7 +81,7 @@ uint32_t FsPipeRead(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size, 
 	for (uint32_t i = 0; i < size; i++)
 	{
 		// if we couldn't read one byte, just return
-		if (!FsPipeReadSingleByte(pPipeNode, pBufferBytes + i, block))
+		if (!FsPipeReadSingleByte(pPipeNode, pBufferBytes + i, block, offset))
 			return i;
 	}
 	
@@ -94,7 +94,7 @@ uint32_t FsPipeWrite(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size,
 	
 	for (uint32_t i = 0; i < size; i++)
 	{
-		if (!FsPipeWriteSingleByte(pPipeNode, pBufferBytes[i], block))
+		if (!FsPipeWriteSingleByte(pPipeNode, pBufferBytes[i], block, offset))
 			return i;
 	}
 	
@@ -103,17 +103,25 @@ uint32_t FsPipeWrite(FileNode* pPipeNode, UNUSED uint32_t offset, uint32_t size,
 
 void FsPipeOnUnreferenced(FileNode* pPipeNode)
 {
-	MmFree(pPipeNode->m_pipe.buffer);
-	pPipeNode->m_pipe.buffer = NULL;
+	for (int i = 0; i < C_PIPE_DUPLEX_BUF_COUNT; i++)
+	{
+		MmFree(pPipeNode->m_pipe[i].buffer);
+		pPipeNode->m_pipe[i].buffer = NULL;
+	}
 	MmFree(pPipeNode);
 }
 
 void FsPipeInitialize(FileNode* pPipeNode)
 {
 	pPipeNode->m_type            = FILE_TYPE_PIPE;
-	pPipeNode->m_pipe.buffer     = MmAllocate(C_DEFAULT_PIPE_SIZE);
-	pPipeNode->m_pipe.bufferSize = C_DEFAULT_PIPE_SIZE;
-	pPipeNode->m_pipe.bufferTail = pPipeNode->m_pipe.bufferHead = 0;
+	
+	for (int i = 0; i < C_PIPE_DUPLEX_BUF_COUNT; i++)
+	{
+		pPipeNode->m_pipe[i].buffer     = MmAllocate(C_DEFAULT_PIPE_SIZE);
+		pPipeNode->m_pipe[i].bufferSize = C_DEFAULT_PIPE_SIZE;
+		pPipeNode->m_pipe[i].bufferTail = pPipeNode->m_pipe[i].bufferHead = 0;
+	}
+	
 	pPipeNode->OnUnreferenced    = FsPipeOnUnreferenced;
 	pPipeNode->Read              = FsPipeRead;
 	pPipeNode->Write             = FsPipeWrite;
@@ -145,7 +153,7 @@ int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags)
 	FileNode* pFN = FsPipeCreate(pFriendlyName);
 	
 	// Open the read head.
-	fds[0] = FiOpenFileNode(pFN, oflags | O_RDONLY);
+	fds[0] = FiOpenFileNode(pFN, oflags | O_RDWR | O_DUPL0);
 	
 	if (fds[0] < 0)
 	{
@@ -157,7 +165,7 @@ int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags)
 	}
 	
 	// Open the write head.
-	fds[1] = FiOpenFileNode(pFN, oflags | O_WRONLY);
+	fds[1] = FiOpenFileNode(pFN, oflags | O_RDWR | O_DUPL1);
 	
 	if (fds[1] < 0)
 	{
@@ -191,12 +199,15 @@ void FsPipeTest()
 		return;
 	}
 	
-	FiWrite(fds[1], "Hello, NanoShell!", 17);
+	FiWrite(fds[1], "Hello, NanoShell. Wrote to fd[1]!", 33);
+	FiWrite(fds[0], "Hello, NanoShell. Wrote to fd[0]!", 33);
 	
-	char buffer[18];
-	buffer[17] = 0;
-	FiRead(fds[0], buffer, 17);
-	LogMsg("The pipe of fortune reads... '%s'. How strange.", buffer);
+	char buffer[35];
+	buffer[33] = 0;
+	FiRead(fds[0], buffer, 33);
+	LogMsg("The fd[0] of fortune reads... '%s'. How strange.", buffer);
+	FiRead(fds[1], buffer, 33);
+	LogMsg("The fd[1] of fortune reads... '%s'. How strange.", buffer);
 	
 	FiClose(fds[0]);
 	FiClose(fds[1]);

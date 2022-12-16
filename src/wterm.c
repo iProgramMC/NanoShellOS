@@ -162,6 +162,7 @@ extern void ShellInit(void);
 
 void TerminalHostTask(int arg)
 {
+	/*
 	// Setup a pipe duplex.
 	int fds[2];
 	int errCode = FiCreatePipe("TerminalHost", fds, O_NONBLOCK);
@@ -175,7 +176,7 @@ void TerminalHostTask(int arg)
 	
 	// Duplicate this handle
 	FiDuplicateHandle(fds[1]);
-	
+	*/
 	
 	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, 80, 25 };
 	
