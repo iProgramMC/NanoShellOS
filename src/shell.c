@@ -991,7 +991,7 @@ void ShellExecuteCommand(char* p)
 			#undef THING
 		}
 		
-		LogMsgNoCr("%s", normal);
+		LogMsgNoCr("\x1B[0m");
 		
 		FiCloseDir(dd);
 	}

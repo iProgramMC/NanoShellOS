@@ -275,7 +275,7 @@ void SetCursor(Cursor* pCursor)
 
 void SetMouseVisible (bool b)
 {
-	g_isMouseVisible = b;
+	g_isMouseVisible = b && IsWindowManagerRunning();
 	if (!g_isMouseVisible)
 	{
 		for (int i = 0; i < g_currentCursor->height; i++)
@@ -1316,6 +1316,9 @@ static inline void RenderCursorStretchy(void)
 
 void RenderCursor(void)
 {
+	if (!IsWindowManagerRunning())
+		return;
+	
 	if (g_currentCursor->m_transparency)
 		RenderCursorTransparent();
 	else if (g_currentCursor->m_resizeMode)

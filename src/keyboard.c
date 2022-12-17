@@ -273,6 +273,10 @@ bool ShiftPressed()
 	return (KbGetKeyState(KEY_LSHIFT) == KEY_PRESSED ||
 			KbGetKeyState(KEY_RSHIFT) == KEY_PRESSED);
 }
+bool CtrlPressed()
+{
+	return (KbGetKeyState(KEY_CTRL) == KEY_PRESSED);
+}
 bool g_virtualMouseEnabled = true;
 int  g_virtualMouseSpeed = 5;
 bool g_virtualMouseHadUpdatesBefore = false;
@@ -428,7 +432,28 @@ void UpdateFakeMouse()
 
 char KbMapAtCodeToChar(char kc)
 {
-	return KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)];
+	if (CtrlPressed())
+	{
+		if (kc >= KEY_A && kc <= KEY_Z)
+		{
+			return kc - KEY_A + 1; // ^A == 0x01, ^Z == 0x1A
+		}
+		else switch (kc)
+		{
+			case KEY_BRACKET_LEFT:   return '\x1B';
+			case KEY_BACKSLASH:      return '\x1C';
+			case KEY_BRACKET_RIGHT:  return '\x1D';
+			case KEY_2:              if (ShiftPressed()) { return '\x00'; } break; // note: this is controversial
+			case KEY_6:              if (ShiftPressed()) { return '\x1E'; } break;
+			case KEY_MINUS:          if (ShiftPressed()) { return '\x1F'; } break;
+		}
+		
+		return 0;
+	}
+	else
+	{
+		return KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)];
+	}
 }
 //extern void WmTest();
 extern void KeTaskTest();
