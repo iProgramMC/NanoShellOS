@@ -8,7 +8,8 @@ NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed
 
 #### Be advised that this is beta-level software and you should not expect any stability from it.
 
-This software is licensed under the GNU General Public License version 3, except in:
+This software is licensed under the GNU General Public License version 3 or later, except in:
+* [CorruptedByCPU/doomgeneric](https://github.com/CorruptedByCPU/doomgeneric) is licensed under the GNU GPL v2.
 * [klange/NyanCat](https://github.com/klange/nyancat) is licensed under the [NCSA license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License).
 * [mintsuki/freestanding-headers](https://github.com/mintsuki/freestanding-headers) is licensed under the [BSD Zero-clause License](https://en.wikipedia.org/wiki/BSD_licenses#0-clause_license_(%22BSD_Zero_Clause_License%22)).
 
