@@ -160,7 +160,11 @@ int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
 	}
 	
 	int handle = FhOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
-	if (handle < 0) return handle;
+	if (handle < 0)
+	{
+		LockFree(&pProc->sFileTableLock);
+		return handle;
+	}
 	
 	if (!pProc)
 	{
@@ -192,7 +196,11 @@ int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int src
 	}
 	
 	int handle = FhOpenInternal(NULL, pFileNode, oflag, srcFile, srcLine);
-	if (handle < 0) return handle;
+	if (handle < 0)
+	{
+		LockFree(&pProc->sFileTableLock);
+		return handle;
+	}
 	
 	if (!pProc)
 	{
@@ -215,7 +223,7 @@ int FiClose(int fd)
 	if (pProc)
 	{
 		LockAcquire(&pProc->sFileTableLock);
-		int status = FhClose(fd);
+		int status = FhClose(handle);
 		if (status < 0)
 		{
 			LockFree(&pProc->sFileTableLock);
@@ -228,7 +236,7 @@ int FiClose(int fd)
 	}
 	else
 	{
-		return FhClose(fd);
+		return FhClose(handle);
 	}
 }
 
@@ -236,35 +244,35 @@ int FiTell(int fd)
 {
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
-	return FhTell(fd);
+	return FhTell(handle);
 }
 
 int FiTellSize(int fd)
 {
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
-	return FhTellSize(fd);
+	return FhTellSize(handle);
 }
 
 size_t FiRead (int fd, void *pBuf, int nBytes)
 {
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
-	return FhRead(fd, pBuf, nBytes);
+	return FhRead(handle, pBuf, nBytes);
 }
 
 size_t FiWrite (int fd, void *pBuf, int nBytes)
 {
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
-	return FhWrite(fd, pBuf, nBytes);
+	return FhWrite(handle, pBuf, nBytes);
 }
 
 int FiSeek (int fd, int offset, int whence)
 {
 	int handle = FileDescriptorToGlobalFileHandle(fd);
 	if (handle < 0) return handle;
-	return FhSeek(fd, offset, whence);
+	return FhSeek(handle, offset, whence);
 }
 
 int FiOpenDirD(const char* pFileName, const char* srcFile, int srcLine)
@@ -284,7 +292,11 @@ int FiOpenDirD(const char* pFileName, const char* srcFile, int srcLine)
 	}
 	
 	int handle = FhOpenDirD(pFileName, srcFile, srcLine);
-	if (handle < 0) return handle;
+	if (handle < 0)
+	{
+		LockFree(&pProc->sFileTableLock);
+		return handle;
+	}
 	
 	if (!pProc) return handle;
 	
@@ -304,7 +316,7 @@ int FiCloseDir(int dd)
 	if (pProc)
 	{
 		LockAcquire(&pProc->sFileTableLock);
-		int status = FhCloseDir(dd);
+		int status = FhCloseDir(handle);
 		if (status < 0)
 		{
 			LockFree(&pProc->sFileTableLock);
@@ -317,7 +329,7 @@ int FiCloseDir(int dd)
 	}
 	else
 	{
-		return FhCloseDir(dd);
+		return FhCloseDir(handle);
 	}
 }
 
@@ -325,33 +337,33 @@ int FiRewindDir(int dd)
 {
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return handle;
-	return FhRewindDir(dd);
+	return FhRewindDir(handle);
 }
 
 int FiTellDir(int dd)
 {
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return handle;
-	return FhTellDir(dd);
+	return FhTellDir(handle);
 }
 
 int FiSeekDir(int dd, int loc)
 {
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return handle;
-	return FhSeekDir(dd, loc);
+	return FhSeekDir(handle, loc);
 }
 
 DirEnt* FiReadDir(int dd)
 {
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return NULL;
-	return FhReadDir(dd);
+	return FhReadDir(handle);
 }
 
 int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
 	int handle = DirDescriptorToGlobalDirHandle(dd);
 	if (handle < 0) return handle;
-	return FhStatAt(dd, pFileName, pOut);
+	return FhStatAt(handle, pFileName, pOut);
 }

@@ -282,6 +282,8 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "ph") == 0)
 	{
 		LogMsg("Current Heap: %p", MuGetCurrentHeap());
+		LogMsg("Current Task: %p", KeGetRunningTask());
+		LogMsg("Current Proc: %p", ExGetRunningProc());
 	}
 	else if (strcmp (token, "cd") == 0)
 	{

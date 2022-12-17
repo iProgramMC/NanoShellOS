@@ -49,7 +49,9 @@ uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, 
 	if (pNode)
 	{
 		if (pNode->Read)
+		{
 			return pNode->Read(pNode, offset, size, pBuffer, block);
+		}
 		else return 0;
 	}
 	else return 0;
@@ -761,8 +763,8 @@ size_t FhWrite (int fd, void *pBuf, int nBytes)
 	}
 	
 	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
-	if (pDesc->m_nOpenFlags & O_DUPL0) { pDesc->m_nStreamOffset = 1; }
-	if (pDesc->m_nOpenFlags & O_DUPL1) { pDesc->m_nStreamOffset = 0; }
+	if (pDesc->m_nOpenFlags & O_DUPL0) { pDesc->m_nStreamOffset = 0; }
+	if (pDesc->m_nOpenFlags & O_DUPL1) { pDesc->m_nStreamOffset = 1; }
 	
 	int rv = FsWrite (pDesc->m_pNode, (uint32_t)pDesc->m_nStreamOffset, (uint32_t)nBytes, pBuf, pDesc->m_bBlocking);
 	if (rv < 0) 

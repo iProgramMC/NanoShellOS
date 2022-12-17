@@ -27,7 +27,11 @@ extern void KeTaskDone();
 char CoGetChar()
 {
 	char b = 0;
-	FiRead(FD_STDIN, &b, 1);
+	while (FiRead(FD_STDIN, &b, 1) == 0)
+	{
+		// wait for it TODO
+		WaitMS(2);
+	}
 	return b;
 }
 
@@ -47,6 +51,7 @@ void CoGetString(char* buffer, int max_size)
 		char k = CoGetChar();
 		if (k == '\n')
 		{
+			LogMsgNoCr("%c", k);
 			buffer[index++] = 0;
 			return;
 		}
@@ -54,6 +59,7 @@ void CoGetString(char* buffer, int max_size)
 		{
 			if (index > 0)
 			{
+				LogMsgNoCr("%c", k);
 				index--;
 				buffer[index] = 0;
 			}
@@ -61,8 +67,10 @@ void CoGetString(char* buffer, int max_size)
 		else
 		{
 			buffer[index++] = k;
+			LogMsgNoCr("%c", k);
 		}
 	}
+	LogMsg("");
 	buffer[index] = 0;
 }
 
@@ -242,9 +250,6 @@ static uint32_t FsTeletypeRead(FileNode* pNode, UNUSED uint32_t offset, uint32_t
 		
 		char chr;
 		*pBufferChr++ = chr = CoReadFromInputQueue(pConsole);
-		
-		// TODO allow disabling this
-		CoPrintChar(pConsole, chr);
 		
 		read++;
 	}

@@ -358,7 +358,10 @@ void FsInit ();
 	int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags);
 	
 	// Duplicate a file handle. Must be in a process context to do this.
-	int FiDuplicateHandle(int fd);
+	//int FiDuplicateHandle(int fd);
+	
+	// Create a pipe duplex. Close both file handles to get rid of it.
+	int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags);
 	
 #endif
 

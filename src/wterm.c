@@ -9,6 +9,7 @@
 #include <wbuiltin.h>
 #include <misc.h>
 #include <process.h>
+#include <vfs.h>
 
 int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
 
@@ -21,50 +22,42 @@ void CoRefreshChar (Console *this, int x, int y);
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void KeKillThreadsByConsole(Console *pConsole);
 
+char KbMapAtCodeToChar(char kc);
+
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	Console* pConsole = (Console*)pWindow->m_data;
 	switch (messageType)
 	{
 		case EVENT_CLICKCURSOR:
+		{
 			//CLogMsgNoCr(pConsole, "Clicked! ");
 			break;
+		}
 		case EVENT_KEYRAW:
 		{
-			//CoPrintChar(pConsole, (char)parm1);
+			unsigned char key_code = (unsigned char) parm1 & 0x7F;
+			
+			if (key_code != 0xE0 && (~parm1 & 0x80))
+			{
+				char chr = KbMapAtCodeToChar((char)key_code);
+				
+				SLogMsg("WriteChr: %b", chr);
+				
+				if (chr != 0)
+					FiWrite(FD_STDIN, &chr, 1);
+			}
+			
 			break;
 		}
 		case EVENT_CLOSE:
 		case EVENT_DESTROY:
 		{
-			if (pConsole)
+			CoKill(pConsole);
+			if (pConsole->textBuffer)
 			{
-				// Restore keyboard input
-				if (g_focusedOnConsole == pConsole)
-				{
-					g_focusedOnConsole =  &g_debugConsole;
-				}
-				if (g_currentConsole == pConsole)
-				{
-					g_currentConsole =  &g_debugConsole;
-				}
-				
-				// Kill the tasks using this console.
-				
-				// Make sure to kill the shell first, so that programs called by it won't wait for something to go away
-				// Maybe I should add some kind of memory ownership system to the kernel heap, but I don't know...
-				if (pWindow->m_pSubThread)
-				{
-					KeKillTask(pWindow->m_pSubThread);
-					pWindow->m_pSubThread = NULL;
-				}
-				
-				// Kill the other threads using this console.
-				KeKillThreadsByConsole(pConsole);
-				
-				CoKill(pConsole);
-				MmFree(pConsole);
-				pWindow->m_data = NULL;
+				MmFree(pConsole->textBuffer);
+				pConsole->textBuffer = NULL;
 			}
 			
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
@@ -72,6 +65,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			break;
 		}
 		case EVENT_PAINT:
+		{
 			if (pConsole)
 			{
 				pConsole->m_dirty = true;
@@ -86,10 +80,28 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 				
 				RenderButtonShapeSmallInsideOut (r, 0xBFBFBF, 0x808080, TRANSPARENT);
 			}
+		}
 		case EVENT_UPDATE:
 		{
 			if (pConsole)
 			{
+				// This will read from the stdin
+				char oneByte;
+				uint32_t read = FiRead(FD_STDOUT, &oneByte, 1);
+				uint32_t chances = 2;
+				
+				if (read > 0)
+				{
+					char buffer[2048];
+					CoPrintChar(pConsole, oneByte);
+					while ((read = FiRead(FD_STDOUT, &buffer, sizeof buffer)) > 0 && chances > 0)
+					{
+						for (uint32_t i = 0; i < read; i++)
+							CoPrintChar(pConsole, buffer[i]);
+						chances--;
+					}
+				}
+				
 				VidSetFont(pConsole->font);//we like this font right here
 				if (pConsole->m_dirty)
 				{
@@ -162,7 +174,6 @@ extern void ShellInit(void);
 
 void TerminalHostTask(int arg)
 {
-	/*
 	// Setup a pipe duplex.
 	int fds[2];
 	int errCode = FiCreatePipe("TerminalHost", fds, O_NONBLOCK);
@@ -172,34 +183,27 @@ void TerminalHostTask(int arg)
 		return;
 	}
 	
-	ASSERT(fds[0] == FD_STDOUT && fds[1] == FD_STDIN);
+	// The application will read (stdin) from fd[0] and write (stdout) to fd[1].
+	// The terminal will handle the incoming data from fd[0] (written to fd[1] by the application),
+	// and pass on keypresses and stuff through fd[1] (it will be read from fd[0] on the application side)
+	ASSERT(fds[0] == FD_STDIN && fds[1] == FD_STDOUT);
 	
-	// Duplicate this handle
-	FiDuplicateHandle(fds[1]);
-	*/
+	// Duplicate this handle for stderr. TODO
+	//FiDuplicateHandle(fds[1]);
 	
 	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, 80, 25 };
 	
-	bool providedShellCmd = false, hookDebugConsole = false;
+	bool providedShellCmd = false;
+	
 	char* shellcmd = (char*)arg;
-	if (shellcmd)
-	{
-		providedShellCmd = true;
-		if (strcmp (shellcmd, "--HookDebugConsole") == 0)
-		{
-			hookDebugConsole = true;
-			
-			providedShellCmd = false;
-			MmFree(shellcmd);
-			shellcmd = NULL;
-		}
-	}
+	
+	if (shellcmd) providedShellCmd = true;
 	
 	VidSetFont(g_TerminalFont);//we like this font right here
 	int charWidth = GetCharWidth('W'), charHeite = GetLineHeight();
 	VidSetFont(SYSTEM_FONT);
 	Window *pWindow = CreateWindow(
-		hookDebugConsole ? "NanoShell debug console" : "NanoShell Terminal", 
+		"NanoShell Terminal", 
 		array[0], array[1], 
 		array[2] *  charWidth + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS, 
 		array[3] *  charHeite + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
@@ -216,6 +220,7 @@ void TerminalHostTask(int arg)
 	pWindow->m_iconID = ICON_COMMAND;
 	memset (&basic_console, 0, sizeof(basic_console));
 	
+	// Create a text buffer.
 	int size = sizeof(uint16_t) * array[2] * array[3];
 	uint16_t* pBuffer = (uint16_t*)MmAllocate(size);
 	memset (pBuffer, 0, size);
@@ -237,68 +242,74 @@ void TerminalHostTask(int arg)
 	basic_console.curY = 0;
 	basic_console.m_cursorFlashTimer = 0;
 	
-	Console* pConsole = MmAllocate(sizeof (Console));
-	memcpy(pConsole, &basic_console, sizeof basic_console);
+	Console* pConsole = &basic_console;
 	
-	pWindow->m_data  = pConsole;
-	g_currentConsole = pConsole;
-	pWindow->m_consoleToFocusKeyInputsTo = pConsole;
+	//note: this is a stack variable, but it should be fine, since the window procedure is
+	//only run within the stack trace of this function.
+	pWindow->m_data = pConsole;
+	
+	
+	//g_currentConsole = pConsole;
+	//pWindow->m_consoleToFocusKeyInputsTo = pConsole;
 	
 	CoClearScreen(pConsole);
 	pConsole->curX = 0;
 	pConsole->curY = 0;
 	
-	
 	if (providedShellCmd)
 	{
 		char* pText = shellcmd;
-		while (*pText)
-			CoAddToInputQueue(g_currentConsole, *pText++);
+		
+		// Write the shellcmd as an argument, and then a return.
+		FiWrite(FD_STDIN, pText, strlen(pText));
+		FiWrite(FD_STDIN, "\n", 1);
+		
 		MmFree(shellcmd);
-	}
-	else if (!hookDebugConsole)
-	{
-		KePrintSystemVersion();
 	}
 	else
 	{
-		LogMsg("NanoShell debug console.  Do not close, or else any E9-prints will fail and crash the system");
+		KePrintSystemVersion();
 	}
 	
-	if (!hookDebugConsole)
+	// reset the g_cwd for the current task
+	ShellInit();
+	
+	int confusion = 0;
+	Task* pTask = KeStartTask(ShellRun, (int)(&basic_console),  &confusion);
+	
+	if (!pTask)
 	{
-		int confusion = 0;
-		Task* pTask = KeStartTask(ShellRun, (int)(&basic_console),  &confusion);
+		ILogMsg("ERROR: Could not spawn task for nsterm (returned error code %x)", confusion);
 		
-		if (!pTask)
-		{
-			DebugLogMsg("ERROR: Could not spawn task for nsterm (returned error code %x)", confusion);
-			//DestroyWindow(pWindow);
-			//ReadyToDestroyWindow(pWindow);
-			return;
-		}
+		DestroyWindow(pWindow);
+		while (HandleMessages(pWindow));
 		
-		pWindow->m_pSubThread = pTask;
+		MmFree(basic_console.textBuffer);
 		
-		KeUnsuspendTask(pTask);
+		FiClose(FD_STDOUT);
+		FiClose(FD_STDIN);
 		
-		ShellInit();
+		return;
 	}
 	
-	//LogMsg("Select this window and type something.");
+	ExAddTaskToProcess(ExGetRunningProc(), pTask);
+	
+	KeUnsuspendTask(pTask);
 	
 	int timeout = GetTickCount();
 	while (HandleMessages (pWindow))
 	{
 		if (GetTickCount() > timeout)
 		{
+			// Update slower if the window isn't selected.
 			timeout += pWindow->m_isSelected ? 10 : 20;
 			
 			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
 		}
 	}
 	
-	//KeKillTask(pTask);
+	// Kill ourselves.
+	ExKillProcess(ExGetRunningProc());
 }
 
 int TerminalHostStart(int arg)

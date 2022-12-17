@@ -340,7 +340,7 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 }
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
 {
-	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
+	return KeStartTaskExD(function, argument, pErrorCodeOut, ExGetRunningProc(), authorFile, authorFunc, authorLine);
 }
 
 // TODO: A lot of the code is the same. Maybe we should not repeat ourselves.

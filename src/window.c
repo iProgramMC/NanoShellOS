@@ -1481,7 +1481,7 @@ void SelectWindowUnsafe(Window* pWindow)
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
 		pWindow->m_vbeData.m_drs.m_bIgnoreAndDrawAll = true;
-		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
+		//SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 		g_focusedOnWindow = pWindow;
 	}
 	
