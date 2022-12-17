@@ -180,6 +180,37 @@ bool ExAddTaskToProcess(Process* pProc, Task* pTask)
 	return true;
 }
 
+//ugh..
+void ExKillProcessesByFileHandle(uint32_t handle, bool bDirTable)
+{
+	bool bTryingToKillSelf = false;
+	for (size_t i = 0; i < ARRAY_COUNT(gProcesses); i++)
+	{
+		Process* pProc = &gProcesses[i];
+		if (!pProc->bActive) continue;
+		
+		uint32_t* table = bDirTable ? pProc->pDdTable : pProc->pFdTable;
+		
+		if (!pProc->pFdTable) continue;
+		for (int j = 0; j < C_MAX_FDS_PER_TABLE; j++)
+		{
+			if (table[j] == handle)
+			{
+				if (pProc == ExGetRunningProc())
+					bTryingToKillSelf = false;
+				else
+					ExKillProcess(pProc);
+			}
+		}
+	}
+	
+	//make sure to kill ourself last
+	if (bTryingToKillSelf)
+	{
+		ExKillProcess(ExGetRunningProc());
+	}
+}
+
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail)
 {
 	LockAcquire (&gProcessLock);

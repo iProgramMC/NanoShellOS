@@ -13,6 +13,8 @@
 #include <process.h>
 #include <config.h>
 
+uint32_t* FsGetFdTable();
+
 //#define ELF_DEBUG
 //#define ELFSYM_DEBUG
 
@@ -450,6 +452,9 @@ extern Console* g_currentConsole, g_debugSerialConsole;
 
 static void ElfExecThread(int pnLoaderBlock)
 {
+	// hack to wait until we have the proper fds setup
+	while (FsGetFdTable()[1] == ~0U) KeTaskDone();
+	
 	// Load the pLoaderBlock
 	ElfLoaderBlock *pBlock = (ElfLoaderBlock*)pnLoaderBlock;
 	
@@ -595,6 +600,10 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 		return ELF_PROCESS_ERROR;
 	}
 	pProc->OnDeath = ElfOnDeath;
+	
+	// inherit the FDs from the parent.
+	pProc->pFdTable[0] = ExGetRunningProc()->pFdTable[0];
+	pProc->pFdTable[1] = ExGetRunningProc()->pFdTable[1];
 	
 	// If this is an async execution, our job is done, and the KeExecThread will continue.
 	if (bAsync) return ELF_ERROR_NONE;
