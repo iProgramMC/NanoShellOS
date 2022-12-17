@@ -112,6 +112,8 @@ const char* ErrNoStr(int errno);
 
 // C Standard I/O
 
+extern FILE *stdin, *stdout, *stderr;
+
 FILE*  fopen (const char* file, const char* mode);
 int    fclose(FILE* file);
 size_t fread (      void* ptr, size_t size, size_t nmemb, FILE* stream);

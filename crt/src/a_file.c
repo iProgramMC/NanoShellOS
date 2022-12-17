@@ -12,10 +12,24 @@
 #include "crtinternal.h"
 
 // Max files open at once -- increase if necessary
-#define FIMAX 64
+#define FD_STDIO 65535
+#define FIMAX    64
+#define EOT      4      // end of transmission, aka Ctrl-D
 
 static int g_OpenedFileDes[FIMAX];
-static int g_OpenedDirDes[FIMAX];
+static int g_OpenedDirDes [FIMAX];
+
+static int FileSpotToFileHandle(int spot)
+{
+	if (spot < 0 || spot >= FIMAX) return -1;
+	return g_OpenedFileDes[spot];
+}
+
+static int DirSpotToFileHandle(int spot)
+{
+	if (spot < 0 || spot >= FIMAX) return -1;
+	return g_OpenedFileDes[spot];
+}
 
 // Check if a file is opened here in this process
 bool _I_IsFileOpenedHere(int fd)
@@ -67,11 +81,15 @@ int open(const char* path, int oflag)
 	}
 	
 	g_OpenedFileDes[spot] = fd;
-	return fd;
+	return spot;
 }
 
-int close(int fd)
+int close(int spot)
 {
+	int fd = FileSpotToFileHandle(spot);
+	if (fd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsFileOpenedHere(fd))
 		return SetErrorNumber(-EBADF);
 	
@@ -80,20 +98,55 @@ int close(int fd)
 	// if closing was successful:
 	if (rv >= 0)
 	{
-		for (int i = 0; i < FIMAX; i++)
-		{
-			if (g_OpenedFileDes[i] == fd)
-				g_OpenedFileDes[i]  = -1;
-		}
+		g_OpenedFileDes[spot] = -1;
 	}
 	
 	return rv;
 }
 
-size_t read(int filedes, void* buf, unsigned int nbyte)
+size_t read_stdio(void* buf, unsigned int nbyte)
 {
+	char* bufchar = buf;
+	for (unsigned i = 0; i < nbyte; i++)
+	{
+		char c = _I_ReadChar();
+		*(bufchar++) = c;
+		
+		// If we got an 'end of transmission', instantly return
+		if (c == EOT)
+			return i;
+	}
+	
+	return nbyte;
+}
+
+size_t write_stdio(const void* buf, unsigned int nbyte)
+{
+	const char* bufchar = buf;
+	char b[2];
+	b[1] = 0;
+	for (unsigned i = 0; i < nbyte; i++)
+	{
+		b[0] = *(bufchar++);
+		_I_PutString(b);
+	}
+	
+	return nbyte;
+}
+
+size_t read(int spot, void* buf, unsigned int nbyte)
+{
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsFileOpenedHere(filedes))
 		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO)
+	{
+		return read_stdio(buf, nbyte);
+	}
 	
 	size_t result = _I_FiRead(filedes, buf, nbyte);
 	
@@ -105,10 +158,19 @@ size_t read(int filedes, void* buf, unsigned int nbyte)
 	return result;
 }
 
-size_t write(int filedes, const void* buf, unsigned int nbyte)
+size_t write(int spot, const void* buf, unsigned int nbyte)
 {
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsFileOpenedHere(filedes))
 		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO)
+	{
+		return write_stdio(buf, nbyte);
+	}
 	
 	size_t result = _I_FiWrite(filedes, (void*)buf, nbyte);
 	
@@ -120,8 +182,14 @@ size_t write(int filedes, const void* buf, unsigned int nbyte)
 	return result;
 }
 
-int lseek(int filedes, int offset, int whence)
+int lseek(int spot, int offset, int whence)
 {
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO) return SetErrorNumber(-ESPIPE);
+	
 	if (!_I_IsFileOpenedHere(filedes))
 		return SetErrorNumber(-EBADF);
 	
@@ -135,8 +203,14 @@ int lseek(int filedes, int offset, int whence)
 	return result;
 }
 
-int tellf(int filedes)
+int tellf(int spot)
 {
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO) return SetErrorNumber(-ESPIPE);
+	
 	if (!_I_IsFileOpenedHere(filedes))
 		return SetErrorNumber(-EBADF);
 	
@@ -150,8 +224,14 @@ int tellf(int filedes)
 	return result;
 }
 
-int tellsz(int filedes)
+int tellsz(int spot)
 {
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO) return SetErrorNumber(-ESPIPE);
+	
 	if (!_I_IsFileOpenedHere(filedes))
 		return SetErrorNumber(-EBADF);
 	
@@ -186,19 +266,19 @@ int FiOpenDir(const char* pFileName)
 	int fd = _I_FiOpenDirD(pFileName, "[Process]", 1);
 	
 	if (fd < 0)
-	{
-		SetErrorNumber(fd);
-	}
-	else
-	{
-		g_OpenedDirDes[spot] = fd;
-	}
+		return SetErrorNumber(fd);
 	
-	return fd;
+	g_OpenedDirDes[spot] = fd;
+	
+	return spot;
 }
 
-int FiCloseDir(int dd)
+int FiCloseDir(int spot)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
@@ -215,8 +295,15 @@ int FiCloseDir(int dd)
 	return closeRes;
 }
 
-DirEnt* FiReadDir(int dd)
+DirEnt* FiReadDir(int spot)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+	{
+		SetErrorNumber(-EBADF);
+		return NULL;
+	}
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 	{
 		SetErrorNumber(-EBADF);
@@ -231,8 +318,12 @@ DirEnt* FiReadDir(int dd)
 	return pResult;
 }
 
-int FiSeekDir(int dd, int loc)
+int FiSeekDir(int spot, int loc)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
@@ -243,8 +334,12 @@ int FiSeekDir(int dd, int loc)
 	return result;
 }
 
-int FiRewindDir(int dd)
+int FiRewindDir(int spot)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
@@ -255,8 +350,12 @@ int FiRewindDir(int dd)
 	return result;
 }
 
-int FiTellDir(int dd)
+int FiTellDir(int spot)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
@@ -267,8 +366,12 @@ int FiTellDir(int dd)
 	return result;
 }
 
-int FiStatAt(int dd, const char *pfn, StatResult* pres)
+int FiStatAt(int spot, const char *pfn, StatResult* pres)
 {
+	int dd = DirSpotToFileHandle(spot);
+	if (dd < 0)
+		return SetErrorNumber(-EBADF);
+	
 	if (!_I_IsDirectoryOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
@@ -332,8 +435,7 @@ FILE* fopen (const char* file, const char* mode)
 
 int fclose(FILE* file)
 {
-	if (file <= stderr)
-		return 0;
+	if (file->fd == FD_STDIO) return SetErrorNumber(-ESPIPE);
 	
 	if (file)
 	{
@@ -355,9 +457,6 @@ int fclose(FILE* file)
 
 size_t fread (void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
-	if (stream <= stderr)
-		return 0;
-	
 	return read(stream->fd, ptr, size * nmemb);
 }
 
@@ -365,28 +464,16 @@ size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
 	size_t ultimate_size = size*nmemb;
 	
-	if (stream <= stderr)
-	{
-		for (size_t i = 0; i < ultimate_size; i++)
-			LogMsgNoCr("%c", ((const char*)ptr)[i]);
-	}
-	
 	return write(stream->fd, ptr, ultimate_size);
 }
 
 int fseek(FILE* file, int offset, int whence)
 {
-	if (file <= stderr)
-		return 0;
-	
 	return lseek(file->fd, offset, whence);
 }
 
 int ftell(FILE* file)
 {
-	if (file <= stderr)
-		return 0;
-	
 	return tellf(file->fd);
 }
 
@@ -403,11 +490,23 @@ void _I_CloseOpenFiles()
 	}
 }
 
+FILE *stdin, *stdout, *stderr;
+
 // called on start
 void _I_Setup()
 {
 	for (int i = 0; i < FIMAX; i++)
 		g_OpenedFileDes[i] = -1;
+	
+	g_OpenedDirDes[0] = FD_STDIO;
+	g_OpenedDirDes[1] = FD_STDIO;
+	g_OpenedDirDes[2] = FD_STDIO;
+	
+	//well, they're going to be the same file, which is fine.
+	//Points to file description 0, which is handle FD_STDIO, should be ok.
+	stdin = stdout = stderr = malloc(sizeof(FILE));
+	memset(stdin, 0, sizeof(FILE));
+	stdin->fd = 0;
 }
 
 int remove (const char* filename)

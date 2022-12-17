@@ -990,8 +990,4 @@ typedef struct
 }
 FILE;
 
-#define stdout ((FILE*)1)
-#define stdin  ((FILE*)2)
-#define stderr ((FILE*)3)
-
 #endif//_NSSTRUCTS_H
