@@ -8,10 +8,15 @@ NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed
 
 #### Be advised that this is beta-level software and you should not expect any stability from it.
 
-This software is licensed under the GNU General Public License version 3 or later, except in:
-* [CorruptedByCPU/doomgeneric](https://github.com/CorruptedByCPU/doomgeneric) is licensed under the GNU GPL v2.
-* [klange/NyanCat](https://github.com/klange/nyancat) is licensed under the [NCSA license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License).
-* [mintsuki/freestanding-headers](https://github.com/mintsuki/freestanding-headers) is licensed under the [BSD Zero-clause License](https://en.wikipedia.org/wiki/BSD_licenses#0-clause_license_(%22BSD_Zero_Clause_License%22)).
+## Third-party attributions
+
+This software is licensed under the GNU General Public License version 3 or later, except in the following components:
+* [apps/Doom](apps/Doom) - [CorruptedByCPU/doomgeneric](https://github.com/CorruptedByCPU/doomgeneric) is licensed under the GNU GPL v2.
+* [apps/NyanCat](apps/NyanCat) - [klange/NyanCat](https://github.com/klange/nyancat) is licensed under the [NCSA license](https://en.wikipedia.org/wiki/University_of_Illinois/NCSA_Open_Source_License).
+* [crt/include](crt/include) - [mintsuki/freestanding-headers](https://github.com/mintsuki/freestanding-headers) is licensed under the [BSD Zero-clause License](https://en.wikipedia.org/wiki/BSD_licenses#0-clause_license_(%22BSD_Zero_Clause_License%22)).
+
+The following third party code is also licensed under the GNU GPL version 3.
+* [apps/NesEmu](apps/NesEmu) - [franzflasch/nes_emu](https://github.com/franzflasch/nes_emu)
 
 ## Want to contribute?
 
