@@ -11,8 +11,10 @@
 #include <nsstructs.h>
 
 // Formatting
-size_t vsprintf(char* OutBuffer, const char* FormatType, va_list list);
-size_t sprintf(char* buf, const char* fmt, ...);
+size_t vsnprintf(char* OutBuffer, size_t BufferSize, const char* FormatType, va_list list);
+size_t vsprintf (char* OutBuffer, const char* FormatType, va_list list);
+size_t snprintf (char* OutBuffer, size_t BufferSize, const char* fmt, ...);
+size_t sprintf  (char* OutBuffer, const char* FormatType, ...);
 
 // Threading
 void sleep(int ms);      //not actually standard I don't think
@@ -25,11 +27,14 @@ __attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
 // Miscellanea
 int GetRandom();
 int abs(int i);
+double fabs(double x);
 
 // Logging
 void LogMsg    (const char* Format, ...);
 void LogMsgNoCr(const char* Format, ...);
-void printf    (const char* Format, ...);
+int  printf    (const char* Format, ...);
+int  puts      (const char* String);
+int  putchar   (int chr);
 
 // Assertion
 void OnAssertionFail(const char *cond_msg, const char *file, int line);
@@ -38,6 +43,7 @@ void OnAssertionFail(const char *cond_msg, const char *file, int line);
 
 // Memory management
 void* malloc (size_t size);
+void* calloc (size_t nmemb, size_t size);
 void  free   (void*  ptr);
 void* realloc(void*  ptr, size_t sz);
 
@@ -50,7 +56,7 @@ size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
 int    strcmp     (const char* as, const char* bs);
 int    strncmp    (const char* s1, const char* s2, size_t n);
-void   strcat     (char* dest, char* after);
+void   strcat     (char* dest, const char* after);
 void   strtolower (char* as);
 void   strtoupper (char* as);
 void   memtolower (char* as, int w);
@@ -76,6 +82,7 @@ int    isupper    (int c);
 int    isxdigit   (int c);
 int    toupper    (int c);
 int    tolower    (int c);
+size_t strnlen    (const char* str, size_t szmax);
 char*  itoa       (int value, char* buffer, int radix);
 char*  ltoa       (long value, char* buffer, int radix);
 char*  strchr     (const char* s, int c);
@@ -120,6 +127,12 @@ size_t fread (      void* ptr, size_t size, size_t nmemb, FILE* stream);
 size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream);
 int    fseek (FILE* file, int offset, int whence);
 int    ftell (FILE* file);
+int    fflush(FILE* file);
+int    fputs (const char* s, FILE* stream);
+int    fputc (int c, FILE* stream);
+int    putc  (int c, FILE* stream);
+int    vfprintf (FILE* file, const char* fmt, va_list list);
+int    fprintf  (FILE* file, const char* fmt, ...);
 
 // File manip. API
 int remove (const char* filename);

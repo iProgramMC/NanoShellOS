@@ -89,7 +89,7 @@ void MemMgrRemoveReferenceToPage(uintptr_t page)
 	{
 		gMemoryPageReference[page] = 0;
 		LogMsg("Tried to free the same page twice? (%p)", page);
-		exit(-1);
+		abort();
 	}
 }
 
@@ -119,7 +119,7 @@ void MemMgrPerformSanityChecks(MemAreaHeader* pHeader)
 	if (gMemory + gMemorySize <= pHeaderBytes || pHeaderBytes < gMemory)
 	{
 		LogMsg("Heap corruption detected! Block %p isn't within the memory area reserved to the program.", pHeader);
-		exit(1);
+		abort();
 	}
 
 	// Perform a magic number check
@@ -128,7 +128,7 @@ void MemMgrPerformSanityChecks(MemAreaHeader* pHeader)
 	{
 		// Uh oh! We have a heap corruption. Report to the user!
 		LogMsg("Heap corruption detected! Block %p's magic numbers aren't correctly set.", pHeader);
-		exit(1);
+		abort();
 	}
 
 	// Yep, all good
@@ -367,7 +367,7 @@ void* MemMgrAllocateMemory(size_t sz)
 	else
 	{
 		LogMsg("ERROR: No pLastHeader? (line %d)", __LINE__);
-		exit(-1);
+		abort();
 	}
 
 	if (pMem + sz >= gMemory + gMemorySize)
@@ -414,7 +414,7 @@ void MemMgrFreeMemory(void *pMem)
 	if (pHeader->m_magicNo1 == MAGIC_NUMBER_1_FREE && pHeader->m_magicNo2 == MAGIC_NUMBER_2_FREE)
 	{
 		LogMsg("ERROR: double free attempt at %p", pMem);
-		exit(-1);
+		abort();
 	}
 
 	// mark it as free
@@ -500,7 +500,7 @@ void MemOnOOM(int errCode, bool bUnmappingMemory)
 {
 	LogMsg("ERROR: ran out of memory (?). Was%s unmapping, error code: %d. Will now quit.", bUnmappingMemory ? "" : "n't", errCode);
 	
-	exit(-1);
+	abort();
 }
 
 void _I_FreeEverything()
@@ -510,11 +510,21 @@ void _I_FreeEverything()
 
 void *malloc (size_t sz)
 {
-	return MemMgrAllocateMemory(sz);
+	return MemMgrAllocateMemory(sz + 1024);
+}
+
+void *calloc (size_t nmemb, size_t size)
+{
+	void *ptr = malloc(nmemb * size);
+	if (ptr == NULL) return ptr;
+	
+	memset(ptr, 0, nmemb * size);
+	return ptr;
 }
 
 void free (void* pMem)
 {
+	if (!pMem) return;
 	return MemMgrFreeMemory(pMem);
 }
 

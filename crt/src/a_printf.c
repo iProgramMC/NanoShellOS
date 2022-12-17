@@ -11,6 +11,9 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+int fwrite(const void* ptr, size_t sz, size_t nmemb, FILE* stream);
+extern FILE* stdout;
+
 #if SIZE_MAX == 0xFFFFFFFFFFFFFFFFull
 #define IS_64_BIT 1
 #else
@@ -21,17 +24,9 @@
 
 void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 {
-	//handle zero
-	if (num == 0)
-	{
-		str[0] = '0';
-		str[1] = '\0';
-		return;
-	}
-
 	// print the actual digits themselves
 	int i = 0;
-	while (num)
+	while (num || i == 0)
 	{
 		str[i++] = '0' + (num % 10);
 		str[i]   = '\0';
@@ -39,7 +34,7 @@ void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 	}
 
 	// append padding too
-	for (; i < paddingInfo; i++)
+	for (; i < paddingInfo; )
 	{
 		str[i++] = paddingChar;
 		str[i]   = '\0';
@@ -103,7 +98,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 			if (m == '0' || m == '.')
 			{
 				// this by default handles %0<anything> too, though it does nothing
-				paddingInfo = m - '0';
+				paddingInfo = 0;
 				m = *(fmt++);
 
 				// if hit end, return
@@ -113,7 +108,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 				if (m >= '0' && m <= '9')
 				{
 					paddingInfo = m - '0';
-					paddingChar = 0;
+					paddingChar = '0';
 					m = *(fmt++);
 				}
 			}
@@ -394,7 +389,7 @@ size_t sprintf(char* buf, const char* fmt, ...)
 	return val;
 }
 
-void LogMsg(UNUSED const char* fmt, ...)
+void LogMsg(const char* fmt, ...)
 {
 	char cr[8192];
 	va_list list;
@@ -407,7 +402,7 @@ void LogMsg(UNUSED const char* fmt, ...)
 	va_end(list);
 }
 
-void LogMsgNoCr(UNUSED const char* fmt, ...)
+void LogMsgNoCr(const char* fmt, ...)
 {
 	char cr[8192];
 	va_list list;
@@ -419,7 +414,7 @@ void LogMsgNoCr(UNUSED const char* fmt, ...)
 	va_end(list);
 }
 
-void printf(UNUSED const char* fmt, ...)
+int printf(const char* fmt, ...)
 {
 	char cr[8192];
 	va_list list;
@@ -429,5 +424,57 @@ void printf(UNUSED const char* fmt, ...)
 	_I_PutString(cr);
 	
 	va_end(list);
+	return strlen(cr);
 }
 
+int vfprintf(FILE* file, const char* fmt, va_list list)
+{
+	char cr[8192];
+	vsnprintf(cr, sizeof(cr), fmt, list);
+	
+	int slen = strlen(cr);
+	int result = fwrite(cr, 1, slen, file);
+	
+	return result;
+}
+
+int fprintf(FILE* file, const char* fmt, ...)
+{
+	va_list list;
+	va_start(list, fmt);
+	
+	int res = vfprintf(file, fmt, list);
+	
+	va_end(list);
+	
+	return res;
+}
+
+int fputs(const char* s, FILE * stream)
+{
+	size_t sz = strlen(s);
+	return fwrite(s, 1, sz, stream);
+}
+
+int fputc(int c, FILE * stream)
+{
+	char chr = (char)c;
+	return fwrite(&chr, 1, 1, stream);
+}
+
+int puts(const char * s)
+{
+	_I_PutString(s);
+	_I_PutString("\n");
+	return strlen(s) + 1;
+}
+
+int putc(int c, FILE* stream)
+{
+	return fputc(c, stream);
+}
+
+int putchar(int c)
+{
+	return fputc(c, stdout);
+}

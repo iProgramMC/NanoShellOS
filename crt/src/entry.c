@@ -11,15 +11,26 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+__attribute__((noreturn))
+void abort()
+{
+	*((uint32_t*)0xFFFFFFF4) = 0xFFFFFFFF;
+	while (true);
+}
+
 __attribute__((noreturn)) void exit (int number);
 
 int NsMain (int argc, char** argv);
 void MemMgrInitializeMemory();
 
+void _I_Setup();
+
 __attribute__((noreturn))
 void _CEntry(const char* arg)
 {
 	MemMgrInitializeMemory();
+	
+	_I_Setup();
 	
 	char* argv[128]; 
 	argv[0] = NULL;

@@ -496,11 +496,11 @@ FILE *stdin, *stdout, *stderr;
 void _I_Setup()
 {
 	for (int i = 0; i < FIMAX; i++)
-		g_OpenedFileDes[i] = -1;
+		g_OpenedFileDes[i] = g_OpenedDirDes[i] = -1;
 	
-	g_OpenedDirDes[0] = FD_STDIO;
-	g_OpenedDirDes[1] = FD_STDIO;
-	g_OpenedDirDes[2] = FD_STDIO;
+	g_OpenedFileDes[0] = FD_STDIO;
+	g_OpenedFileDes[1] = FD_STDIO;
+	g_OpenedFileDes[2] = FD_STDIO;
 	
 	//well, they're going to be the same file, which is fine.
 	//Points to file description 0, which is handle FD_STDIO, should be ok.
@@ -527,12 +527,20 @@ int getc (FILE* pFile)
 int feof(FILE* f)
 {
 	//TODO: kernel side implementation
-	int chr = getc(f);
-	if (chr == EOF)
+	int chr = EOF;
+	
+	if (read(f->fd, &chr, 1) == 0)
 		return EOF;
 	
 	//seek back
 	fseek(f, ftell(f) - 1, SEEK_SET);
 	
+	return 0;
+}
+
+// empty for now. There's no actual flushing to be done.
+int fflush(FILE* file)
+{
+	(void)file;
 	return 0;
 }

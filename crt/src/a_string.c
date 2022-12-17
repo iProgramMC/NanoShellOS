@@ -398,19 +398,6 @@ char* strrchr(const char* s, int c)
 	return NULL;
 }
 
-void puts (const char* s)
-{
-	_I_PutString(s);
-}
-
-void putchar (int c)
-{
-	char str[2];
-	str[0] = c;
-	str[1] = 0;
-	_I_PutString(str);
-}
-
 int atox(const char* str) 
 {
 	int f = 0;

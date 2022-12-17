@@ -46,8 +46,6 @@ _NsStart:
 	push ebp
 	mov  ebp, esp
 	
-	call _I_Setup
-	
 	mov  eax, [ebp + 8]
 	
 	push eax
