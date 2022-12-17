@@ -211,7 +211,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		timeout--;
 		if (timeout <= 0)
 		{
-			LogMsg("Trying to find drive %d, timeout reached, assuming not found", driveID);
+			SLogMsg("Trying to find drive %d, timeout reached, assuming not found", driveID);
 			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_NOTFOUND;
 		}
@@ -226,7 +226,7 @@ static DriveStatus StIdeSendIDCommand(uint8_t driveID, AtaIdentifyData* pData)
 		timeout --;
 		if (timeout <= 0)
 		{
-			LogMsg("Trying to find drive %d, timeout reached, assuming not found");
+			SLogMsg("Trying to find drive %d, timeout reached, assuming not found", driveID);
 			LockFree(&g_ideDriveLocks[driveID]);
 			return DEVERR_NOTFOUND;
 		}

@@ -23,6 +23,7 @@ typedef struct PciDevice {
 		uint32_t vendev;
 	};
 	uint32_t bus, slot, func;
+	uint16_t mclass, sclass;
 } PciDevice;
 
 void PciInit(void);

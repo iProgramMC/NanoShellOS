@@ -9,6 +9,13 @@
 #include <storabs.h>
 #include <misc.h>
 
+#define AHCI_DEBUG
+#ifdef AHCI_DEBUG
+#	define AhciLogMsg(...) SLogMsg(__VA_ARGS__)
+#else
+#	define AhciLogMsg(...)
+#endif
+
 //! TODO: Use interrupts instead of polling for this driver.
 #define ATA_READ_DMA_EXT  0x25
 #define ATA_WRITE_DMA_EXT 0x35
@@ -180,24 +187,25 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 
 static void AhciPortCommandStop (AhciDevice *pDev)
 {
-	SLogMsg("STOPPING command engine...");
+	AhciLogMsg("STOPPING command engine...");
 	if (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR | PXCMD_FRE | PXCMD_ST))
 	{
-		SLogMsg("Setting flags.");
+		AhciLogMsg("Setting flags.");
 		pDev->m_pPort->m_cmdState &= ~PXCMD_ST;
 		pDev->m_pPort->m_cmdState &= ~PXCMD_FRE;
 		
-		SLogMsg("Waiting 500 ms.");
-		WaitMS(500); //TODO: is a wait actually needed here? the spec says we need it
+		AhciLogMsg("Waiting 500 ms.");
+		//TODO: is a wait actually needed here? the spec says we should delay, but this makes things too slow
+		//WaitMS(500);
 		
-		SLogMsg("Waiting for PXCMD_CR and FR to go out. Intial flags: %x.", pDev->m_pPort->m_cmdState);
+		AhciLogMsg("Waiting for PXCMD_CR and FR to go out. Intial flags: %x.", pDev->m_pPort->m_cmdState);
 		while (pDev->m_pPort->m_cmdState & (PXCMD_CR | PXCMD_FR))
 		{
 			asm ("pause":::"memory");
 		}
-		SLogMsg("Done!");
+		AhciLogMsg("Done!");
 	}
-	SLogMsg("Stop Done");
+	AhciLogMsg("Stop Done");
 }
 
 static void AhciStopCommandEngine (AhciController *pController)
@@ -247,7 +255,7 @@ static void AhciPortReset(AhciDevice *pDev)
 	
 	if (!AhciPortWait (pDev))
 	{
-		SLogMsg("Intrusive reset");
+		AhciLogMsg("Intrusive reset");
 		// Perform more 'intrusive' HBA<->Port comm reset (sec. 10.4.2 of spec).
 		pDev->m_pPort->m_sCtl = PXSCTL_DET_INIT;
 		
@@ -267,19 +275,19 @@ static void AhciPortReset(AhciDevice *pDev)
 
 static void AhciPerformBiosHandoff(volatile HbaMem *pHBA)
 {
-	SLogMsg("Performing BIOS/OS handoff...");
+	AhciLogMsg("Performing BIOS/OS handoff...");
 	if (pHBA->m_capabilitiesExt & CAPSEXT_BOH)
 	{
-		SLogMsg("Initting.");
+		AhciLogMsg("Initting.");
 		pHBA->m_BOHC |= BOHC_OOS;
 		
-		SLogMsg("Waiting for BIOS to finish cleaning up.");
+		AhciLogMsg("Waiting for BIOS to finish cleaning up.");
 		while (pHBA->m_BOHC & BOHC_BOS)
 		{
 			asm ("pause":::"memory");
 		}
 		
-		SLogMsg("More Waiting...");
+		AhciLogMsg("More Waiting...");
 		
 		WaitMS(25);
 		
@@ -287,7 +295,7 @@ static void AhciPerformBiosHandoff(volatile HbaMem *pHBA)
 		if (pHBA->m_BOHC & BOHC_BB)
 			WaitMS(2000);
 	}
-	SLogMsg("Done.");
+	AhciLogMsg("Done.");
 }
 
 void AhciControllerInit(AhciController* pDev)
@@ -439,17 +447,18 @@ static void AhciPortIdentify (AhciDevice *pDev)
 	AhciPortWaitFull (pDev);
 	
 	// Issue the command.
-	SLogMsg("Issuing command ...");
+	AhciLogMsg("Issuing command ...");
 	pDev->m_pPort->m_cmdIssue |= (1 << cmdSlot);
 	
 	// Wait for it.
-	SLogMsg("Waiting for command ...");
+	AhciLogMsg("Waiting for command ...");
 	AhciPortCommandWait (pDev, cmdSlot);
 	
 	// And there we go! We have an ID record now.
 	// Dump it all.
 	
-	SLogMsg("Dumping identify data obtained: ");
+	AhciLogMsg("Dumping identify data obtained: ");
+#ifdef AHCI_DEBUG
 	for (int i = 0; i < 512; i += 16)
 	{
 		for (int j = 0; j <  16; j++)
@@ -466,6 +475,7 @@ static void AhciPortIdentify (AhciDevice *pDev)
 		}
 		SLogMsg("");
 	}
+#endif
 	
 	memcpy (pDev->m_pDevIDRecord, devIdRecord, sizeof (pDev->m_pDevIDRecord));
 	MmFree (devIdRecord);
@@ -499,7 +509,7 @@ static bool AhciPortAtaReadWrite(AhciDevice *pDev, void *pBuf, uint64_t nLBA, ui
 	
 	if (pDev->m_pPort->m_signature != SATA_SIG_ATA)
 	{
-		SLogMsg("This ain't an ATA drive!");
+		AhciLogMsg("This ain't an ATA drive!");
 		return false;
 	}
 	
@@ -589,12 +599,12 @@ void AhciPortInit(AhciDevice *pDev)
 	
 	// Spin up, power on device. If the capability isn't supported the bits
 	// will be read-only and this won't do anything.
-	SLogMsg("SpinUp, PowerOn device");
+	AhciLogMsg("SpinUp, PowerOn device");
 	pDev->m_pPort->m_cmdState |= PXCMD_POD | PXCMD_SUD;
 	
 	WaitMS(100); // Why?
 	
-	SLogMsg("Commands Stop");
+	AhciLogMsg("Commands Stop");
 	AhciPortCommandStop (pDev);
 	
 	// 1kbyte align as per spec. Pages always allocate in 4096-byte alignment :)
@@ -644,6 +654,7 @@ void AhciPortInit(AhciDevice *pDev)
 	bool b = AhciPortAtaReadWrite (pDev, mbr, 0, 1, false);
 	if (b)
 	{
+	#ifdef AHCI_DEBUG
 		SLogMsg("Dumping MBR data obtained: ");
 		for (int i = 0; i < 512; i += 16)
 		{
@@ -661,15 +672,19 @@ void AhciPortInit(AhciDevice *pDev)
 			}
 			SLogMsg("");
 		}
+	#endif
 	}
 	else
 	{
-		ILogMsg("Reading Failed!");
+		ILogMsg("AHCI ERROR: Could not read MBR from port!");
 	}
 }
 
+void PciCheckAhciDevices();
+
 void StAhciInit()
 {
+	PciCheckAhciDevices();
 	if (!g_ahciControllerNum)
 	{
 		SLogMsg("No AHCI controllers found.");

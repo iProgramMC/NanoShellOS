@@ -133,12 +133,21 @@ void PciProbe ()
 				pDevice->func = func;
 				pDevice->vendor = VendorID;
 				pDevice->device = DeviceID;
-				
-				if (ClassID == CLASSID_MASSSTORAGE && SClassID == SCLASSID_SATA)
-				{
-					AhciOnDeviceFound(pDevice);
-				}
+				pDevice->mclass = ClassID;
+				pDevice->sclass = SClassID;
 			}
+}
+
+void PciCheckAhciDevices()
+{
+	for (int i = 0; i < g_nRegisteredDevices; i++)
+	{
+		PciDevice* pDevice = &g_RegisteredDevices[i];
+		if (pDevice->mclass == CLASSID_MASSSTORAGE && pDevice->sclass == SCLASSID_SATA)
+		{
+			AhciOnDeviceFound(pDevice);
+		}
+	}
 }
 
 static char text[100];

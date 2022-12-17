@@ -24,6 +24,7 @@ qemu-system-i386.exe                            ^
 : -kernel %nspath%/kernel.bin 
 : -debugcon stdio
 : -monitor telnet:127.0.0.1:55555,server,nowait -- to use the QEMU console
+: -M q35
 :
 :qemu-system-i386 -m 16M -drive file=\\.\PHYSICALDRIVE1,format=raw
 rem -s -S 
