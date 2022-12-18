@@ -27,3 +27,8 @@ int GetErrorNumber()
 {
 	return errno;
 }
+
+const char* strerror(int errnum)
+{
+	return ErrNoStr(errnum);
+}

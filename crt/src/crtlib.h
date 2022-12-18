@@ -225,10 +225,12 @@ int* GetErrorNumberPointer();
 
 #define errno (*GetErrorNumberPointer())
 
-size_t sprintf(char* buf, const char* fmt, ...);
+int sprintf(char* buf, const char* fmt, ...);
 
 void OnAssertionFail(const char *cond_msg, const char *file, int line);
 #define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__); } while (0)
 #define ASSERT assert
+
+#define STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 
 #endif//_CRTLIB_H

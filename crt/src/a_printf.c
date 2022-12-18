@@ -76,7 +76,7 @@ void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar)
 // %w, %W = prints a uint8  in hex in lowercase or uppercase respectively
 // %p, %P = prints a pointer address (fully platform dependent)
 
-size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
+int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 {
 	int  paddingInfo = -1;
 	char paddingChar = ' ';
@@ -357,32 +357,32 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 	}
 finished:
 	buf[currentIndex] = '\0';
-	return currentIndex;
+	return (int)currentIndex;
 }
 
-size_t vsprintf(char* buf, const char* fmt, va_list args)
+int vsprintf(char* buf, const char* fmt, va_list args)
 {
 	return vsnprintf(buf, SIZE_MAX, fmt, args);
 }
 
-size_t snprintf(char* buf, size_t sz, const char* fmt, ...)
+int snprintf(char* buf, size_t sz, const char* fmt, ...)
 {
 	va_list lst;
 	va_start(lst, fmt);
 
-	size_t val = vsnprintf(buf, sz, fmt, lst);
+	int val = vsnprintf(buf, sz, fmt, lst);
 
 	va_end(lst);
 
 	return val;
 }
 
-size_t sprintf(char* buf, const char* fmt, ...)
+int sprintf(char* buf, const char* fmt, ...)
 {
 	va_list lst;
 	va_start(lst, fmt);
 
-	size_t val = vsprintf(buf, fmt, lst);
+	int val = vsprintf(buf, fmt, lst);
 
 	va_end(lst);
 

@@ -68,6 +68,19 @@ uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer,
 	else return 0;
 }
 
+int FsIoControl(FileNode* pNode, unsigned long request, void * argp)
+{
+	if (pNode)
+	{
+		if (pNode->IoControl)
+		{
+			return pNode->IoControl(pNode, request, argp);
+		}
+		else return -ENOTTY;
+	}
+	else return -ENOTTY;
+}
+
 bool FsOpen(FileNode* pNode, bool read, bool write)
 {
 	if (pNode)
@@ -772,6 +785,21 @@ size_t FiWrite (int fd, void *pBuf, int nBytes)
 	return rv;
 }
 
+int FiIoControl(int fd, unsigned long request, void * argp)
+{
+	LockAcquire (&g_FileSystemLock);
+	if (!FiIsValidDescriptor(fd))
+	{
+		LockFree (&g_FileSystemLock);
+		return -EBADF;
+	}
+	
+	int rv = FsIoControl(g_FileNodeToDescriptor[fd].m_pNode, request, argp);
+	
+	LockFree (&g_FileSystemLock);
+	return rv;
+}
+
 int FiSeek (int fd, int offset, int whence)
 {
 	LockAcquire (&g_FileSystemLock);
@@ -1228,6 +1256,7 @@ static const char* ErrorStrings[] = {
 	"Cross device operation not supported",
 	"Resource is busy",
 	"Directory is not empty",
+	"Invalid input/output control request",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

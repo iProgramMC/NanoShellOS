@@ -477,6 +477,11 @@ int ftell(FILE* file)
 	return tellf(file->fd);
 }
 
+void rewind(FILE* stream)
+{
+	fseek(stream, 0, SEEK_SET);
+}
+
 // called on exit
 void _I_CloseOpenFiles()
 {
@@ -544,3 +549,19 @@ int fflush(FILE* file)
 	(void)file;
 	return 0;
 }
+
+int rename(const char* old, const char* new)
+{
+	//TODO
+	(void) old; (void) new;
+	return -ENOTSUP;
+}
+
+int renameat(int olddirspot, const char* old, int newdirspot, const char* new)
+{
+	//TODO
+	(void) old; (void) new;
+	(void) olddirspot; (void) newdirspot;
+	return -ENOTSUP;
+}
+
