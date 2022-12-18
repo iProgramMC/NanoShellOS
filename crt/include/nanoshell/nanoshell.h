@@ -14,6 +14,7 @@
 #include <string.h>
 #include <setjmp.h>
 #include <alloca.h>
+#include <unistd.h>
 #include <time.h>
 
 // NanoShell specifics

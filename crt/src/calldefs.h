@@ -248,7 +248,7 @@ CALL_END
 CALLI(CcRunCCode, CC_RUN_C_CODE, int, const char* pData, int length)
 	RARGS(pData, length)
 CALL_END
-CALLI(FiRemoveFile, FI_REMOVE_FILE, int, const char* pName)
+CALLI(FiUnlinkFile, FI_REMOVE_FILE, int, const char* pName)
 	RARGS(pName)
 CALL_END
 CALL (AddControlEx, WIN_ADD_CONTROL_EX, int, Window* pWindow, int type, int amode, Rectangle rect, const char* text, int comboID, int p1, int p2)
@@ -391,3 +391,21 @@ CALL_END
 CALL (MemoryUnmap, MM_UNMAP_MEMORY_USER, int, void* pMem, size_t nSize)
 	RARGS(pMem, nSize)
 CALL_END
+
+// Calls V1.8
+CALLI(FiRename, FI_RENAME, int, const char * pfnOld, const char * pfnNew)
+	RARGS(pfnOld, pfnNew)
+CALL_END
+CALLI(FiMakeDir, FI_MAKE_DIR, int, const char * path)
+	RARGS(path)
+CALL_END
+CALLI(FiRemoveDir, FI_REMOVE_DIR, int, const char * path)
+	RARGS(path)
+CALL_END
+CALLI(FiCreatePipe, FI_CREATE_PIPE, int, const char * friendlyName, int fds[2], int oflags)
+	RARGS(friendlyName, fds, oflags)
+CALL_END
+CALLI(FiIoControl, FI_CREATE_PIPE, int, int fd, unsigned long request, void * argp)
+	RARGS(fd, request, argp)
+CALL_END
+

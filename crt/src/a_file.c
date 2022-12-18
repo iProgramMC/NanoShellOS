@@ -514,9 +514,9 @@ void _I_Setup()
 	stdin->fd = 0;
 }
 
-int remove (const char* filename)
+int unlink (const char* filename)
 {
-	return _I_FiRemoveFile(filename);
+	return _I_FiUnlinkFile(filename);
 }
 
 int getc (FILE* pFile)
@@ -552,9 +552,7 @@ int fflush(FILE* file)
 
 int rename(const char* old, const char* new)
 {
-	//TODO
-	(void) old; (void) new;
-	return -ENOTSUP;
+	return _I_FiRename(old, new);
 }
 
 int renameat(int olddirspot, const char* old, int newdirspot, const char* new)
@@ -565,3 +563,67 @@ int renameat(int olddirspot, const char* old, int newdirspot, const char* new)
 	return -ENOTSUP;
 }
 
+int mkdir(const char * path, UNUSED int mode)
+{
+	return _I_FiMakeDir(path);
+}
+
+int rmdir(const char * path)
+{
+	return _I_FiRemoveDir(path);
+}
+
+int FiCreatePipe(const char * friendlyName, int pipefd[2], int flags)
+{
+	// look for two free spots.
+	int j = 0;
+	for (int i = 0; i < FIMAX && j < 2; i++)
+	{
+		if (g_OpenedFileDes[i] == -1)
+			pipefd[j++] = i;
+	}
+	
+	// if j didn't reach 2..
+	if (j < 2)
+	{
+		//we have too many files open
+		return -EMFILE;
+	}
+	
+	int kshandles[2];
+	int result = _I_FiCreatePipe(friendlyName, kshandles, flags);
+	
+	if (result < 0) return result; // actually don't do anything
+	
+	// assign the two pipefd's to the kernel handles
+	g_OpenedFileDes[pipefd[0]] = kshandles[0];
+	g_OpenedFileDes[pipefd[1]] = kshandles[1];
+	
+	return 0;
+}
+
+int pipe2(int pipefd[2], int flags)
+{
+	return FiCreatePipe("pipe", pipefd, flags);
+}
+
+int pipe(int pipefd[2])
+{
+	return pipe2(pipefd, 0);
+}
+
+int remove (const char* filename)
+{
+	StatResult res;
+	int stat = FiStat(filename, &res);
+	if (stat < 0) return stat;
+	
+	if (res.m_type == FILE_TYPE_DIRECTORY)
+	{
+		return _I_FiRemoveDir(filename);
+	}
+	else
+	{
+		return _I_FiUnlinkFile(filename);
+	}
+}

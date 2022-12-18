@@ -459,6 +459,13 @@ const void *WindowCall[] = {
 	// System Calls V1.7 - 31/08/2022
 		MmMapMemoryUser,
 		MmUnMapMemoryUser,
+		
+	// System Calls V1.8 - 18/12/2022
+		FiRename,
+		FiMakeDir,
+		FiRemoveDir,
+		FiCreatePipe,
+		FiIoControl,
 };
 
 

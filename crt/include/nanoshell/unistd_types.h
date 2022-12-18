@@ -65,4 +65,30 @@ typedef struct
 }
 StatResult;
 
+enum
+{
+	FILE_TYPE_NONE = 0,
+	FILE_TYPE_FILE,
+	FILE_TYPE_CHAR_DEVICE,
+	FILE_TYPE_BLOCK_DEVICE,
+	FILE_TYPE_PIPE,
+	FILE_TYPE_DIRECTORY  = 8,
+	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
+};
+
+enum
+{
+	IOCTL_NO_OP,                     // This can be used to test if the device actually supports I/O control. Does nothing.
+	
+	// Define the starting places of I/O controls for each device.
+	IOCTL_TERMINAL_START = 10000,
+	IOCTL_SOUNDDEV_START = 20000,
+	//...
+	
+	IOCTL_TERMINAL_GET_SIZE = IOCTL_TERMINAL_START, // argp points to a Point structure, which will get filled in.
+	IOCTL_TERMINAL_SET_ECHO_INPUT,                  // enable or disable echoing input in CoGetString()
+	
+	IOCTL_SOUNDDEV_SET_SAMPLE_RATE = IOCTL_SOUNDDEV_START,  // Set the sample rate of an audio playback device.
+};
+
 #endif//_NANOSHELL_UNISTD_TYPES__H

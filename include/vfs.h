@@ -355,6 +355,10 @@ void FsInit ();
 	// Create a pipe set.
 	int FiCreatePipe(const char* pFriendlyName, int fds[2], int oflags);
 	
+	// Send an I/O control request to a device on a file descriptor.
+	// If the file description does not point to a device file, this returns -ENOTTY.
+	int FiIoControl(int fd, unsigned long request, void * argp);
+	
 #endif
 
 #endif//_VFS_H

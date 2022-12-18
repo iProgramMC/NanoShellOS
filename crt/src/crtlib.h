@@ -13,7 +13,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 17
+#define WCALL_VERSION 18
 enum
 {
 	// System Calls V1.0
@@ -189,6 +189,15 @@ enum
 	#if WCALL_VERSION >= 17
 		MM_MAP_MEMORY_USER,
 		MM_UNMAP_MEMORY_USER,
+	#endif
+	
+	// System Calls V1.8
+	#if WCALL_VERSION >= 18
+		FI_RENAME,
+		FI_MAKE_DIR,
+		FI_REMOVE_DIR,
+		FI_CREATE_PIPE,
+		FI_IO_CONTROL,
 	#endif
 };
 

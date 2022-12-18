@@ -467,6 +467,60 @@ void MemMgrFreeMemory(void *pMem)
 	}
 }
 
+void* MemMgrReAllocateMemory(void* pMem, size_t size)
+{
+	// get the header right before the memory with some cool syntax tricks
+	MemAreaHeader* pHeader = & (-1)[(MemAreaHeader*)pMem];
+
+	// Ensure the sanity of this header
+	MemMgrPerformSanityChecks(pHeader);
+	
+	// Are we trying to shrink this memory region? This case is trivial.
+	if (size < pHeader->m_size)
+	{
+		// Temporarily add a separate reference to the memory of this header.
+		// This will ensure that no memory gets removed when we remove the
+		// other references later.
+		MemMgrUseMemoryRegion(pHeader, size + sizeof(MemAreaHeader));
+		
+		// Get rid of the references from the old header.
+		MemMgrFreeMemoryRegion(pHeader, pHeader->m_size + sizeof(MemAreaHeader));
+		
+		// Update the size of this header.
+		pHeader->m_size = size;
+		
+		return pMem;
+	}
+	
+	// How much space do we have between this and the next header?
+	MemAreaHeader* pNext = pHeader->m_pNext;
+	
+	// note: that we're casting to 'int' like that is merely a hack
+	if ((long)(pNext - pHeader - sizeof(MemAreaHeader)) >= (long)size)
+	{
+		// Yes. Expand this area using the same method as above for shrinking.
+		MemMgrUseMemoryRegion(pHeader, size + sizeof(MemAreaHeader));
+		
+		// Get rid of the references from the old header.
+		MemMgrFreeMemoryRegion(pHeader, pHeader->m_size + sizeof(MemAreaHeader));
+		
+		// Update the size of this header.
+		pHeader->m_size = size;
+		
+		return pMem;
+	}
+	
+	// We can't! Means we need to relocate.
+	void * pNewMem = MemMgrAllocateMemory(size);
+	if (!pNewMem) return NULL;
+	
+	memcpy(pNewMem, pMem, pHeader->m_size);
+	
+	MemMgrFreeMemory(pMem);
+	
+	return pNewMem;
+}
+
 void MemMgrDebugDump()
 {
 	MemAreaHeader* pHeader = MemMgrGetInitialHeader();
@@ -508,9 +562,14 @@ void _I_FreeEverything()
 	MemMgrCleanup();
 }
 
+void* realloc (void * ptr, size_t size)
+{
+	return MemMgrReAllocateMemory(ptr, size);
+}
+
 void *malloc (size_t sz)
 {
-	return MemMgrAllocateMemory(sz + 1024);
+	return MemMgrAllocateMemory(sz);
 }
 
 void *calloc (size_t nmemb, size_t size)
