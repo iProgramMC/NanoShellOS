@@ -61,8 +61,11 @@ _NsExitPoint:
 ; Well, this is basically the same thing, but a bit more diverse
 ; https://github.com/jezze/subc
 global SetJump
+global setjmp
 global LongJump
+global longjmp
 SetJump:
+setjmp:
 	mov  edx, [esp + 4]
 	mov  [edx], esp
 	add  dword [edx], 4
@@ -73,6 +76,7 @@ SetJump:
 	retn
 	
 LongJump:
+longjmp:
 	mov  eax, [esp + 8]
 	or   eax, eax
 	; the spec says to return 1 if there's no 'val' passed into longjmp().

@@ -6,15 +6,6 @@
 
 #include <nanoshell/stdio_types.h>
 
-// POSIX file access functions
-int     open  (const char* path, int oflag);
-int     close (int fd);
-size_t  read  (int fd,       void* buf,    unsigned int nbyte);
-size_t  write (int fd, const void* buf,    unsigned int nbyte);
-int     lseek (int fd,       int   offset,          int whence);
-int     tellf (int fd);
-int     tellsz(int fd);
-
 // Standard C file access functions
 
 FILE*  fopen (const char* file, const char* mode);
@@ -40,19 +31,6 @@ int renameat(int olddirdd, const char* oldname, int newdirdd, const char* newnam
 
 // External definitions to stdin, stdout and stderr
 extern FILE *stdin, *stdout, *stderr;
-
-// NanoShell specifics that have yet to have POSIX names assigned to them. (TODO)
-int     FiOpenDir  (const char* pFileName);
-int     FiCloseDir (int dd);
-DirEnt* FiReadDir  (int dd);
-int     FiSeekDir  (int dd,          int loc);
-int     FiRewindDir(int dd);
-int     FiTellDir  (int dd);
-int     FiStatAt   (int dd,         const char*pfn,  StatResult* pres);
-int     FiStat     (const char*pfn, StatResult* pres);
-int     FiChDir    (const char*pfn);
-const char* FiGetCwd();
-const char* ErrNoStr(int errno);
 
 // Formatted input/output
 int vfprintf(FILE* file, const char* fmt, va_list list);

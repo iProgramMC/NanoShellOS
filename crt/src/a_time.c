@@ -11,7 +11,104 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
-void sleep(int time)
+void sleep(int ms)
 {
-	TmSleep(time);
+	TmSleep(ms);
 }
+
+// This function tries to approximate unix time the best that it can.
+// This does not take into account leap seconds. Despite that, it matches the time
+// functions on my system (used gmtime, matches exactly with a call to time(NULL))
+static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+int GetEpochTimeFromTimeStruct(TimeStruct* ts)
+{
+	int year = ts->year - 1970;
+	int days = 365 * year + 1;
+	
+	// (almost) every 4 years since 1972 are leap years. Count them in
+	// This should work again. (year - 2 + 4) / 4 = (year - 2) / 4 + 1.
+	int leapYears = (year + 2) / 4;
+	days += leapYears;
+	
+	// based on the month, determine the day
+	for (int month = 1; month < ts->month; month++)
+	{
+		days += s_daysPerMonth[month];
+		if (month == 2 && ts->year % 4 == 0) // February -- leap year
+			days++;
+	}
+	
+	return days * 86400 + ts->hours * 3600 + ts->minutes * 60 + ts->seconds;
+}
+
+int GetEpochTime()
+{
+	return GetEpochTimeFromTimeStruct(GetTime());
+}
+
+void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
+{
+	// Separate the amount of days from the rest of the time.
+	int days = utime / 86400, secs = utime % 86400;
+
+	// Turn the secs into hours, minutes and seconds. This is trivial.
+	pOut->hours = secs / 3600;
+	pOut->minutes = secs / 60 % 60;
+	pOut->seconds = secs % 60;
+
+	// Get the year number.
+	int year = 1970;
+	while (days >= 365 + (year % 4 == 0))
+	{
+		days -= 365 + (year % 4 == 0);
+		year++;
+	}
+
+	// Get the month number.
+	int month = 1;
+	while (days >= s_daysPerMonth[month])
+	{
+		days -= s_daysPerMonth[month];
+		month++;
+	}
+
+	pOut->day   = days + 1;
+	pOut->month = month;
+	pOut->year  = year;
+}
+
+/*
+TODO
+
+void StructTmToTimeStruct(TimeStruct* out, struct tm* in)
+{
+	out->seconds  = in->tm_sec;
+	out->minutes  = in->tm_min;
+	out->hours    = in->tm_hour;
+	out->weekday  = in->tm_wday;
+}
+
+double difftime(time_t a, time_t b)
+{
+	return a - b;
+}
+
+time_t time(time_t* timer)
+{
+	time_t t = GetEpochTime(GetTime());
+	
+	if (timer)
+		*timer = t;
+	
+	return t;
+}
+
+time_t mktime (struct tm * ptr);
+{
+	TimeStruct ts;
+	StructTmToTimeStruct(&ts, ptr);
+	return GetHumanTimeFromEpoch()
+}
+
+*/

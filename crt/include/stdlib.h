@@ -24,9 +24,16 @@ int abs(int k);
 double fabs(double x);
 
 // Random number generator
-int GetRandom(); // use the kernel RNG
-int rand();
+int GetRandom(void); // use the kernel RNG
+int rand(void);
 int rand_r(unsigned int * seed);
 void srand(unsigned int seed);
+
+// Communication with the environment
+__attribute__((noreturn)) void exit(int status);
+__attribute__((noreturn)) void abort(void);
+//TODO: atexit
+//TODO: getenv
+//TODO: system
 
 #endif//_STDLIB__H

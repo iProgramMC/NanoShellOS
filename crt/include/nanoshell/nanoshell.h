@@ -1,6 +1,9 @@
 // nanoshell/nanoshell.h
 // Copyright (C) 2022 iProgramInCpp
 // The NanoShell Standard C Library
+
+// This non-portable include file includes everything from NanoShell.
+
 #ifndef _NANOSHELL___H
 #define _NANOSHELL___H
 
@@ -9,23 +12,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
+#include <alloca.h>
+#include <time.h>
+
+// NanoShell specifics
+#include <nanoshell/graphics.h>
 
 // Threading
 void sleep(int ms);      //not actually standard I don't think
 void exit (int errcode);
 
-// Execution control
-__attribute__((returns_twice)) int  SetJump (JumpBuffer env);
-__attribute__((noreturn))      void LongJump(JumpBuffer env, int value);
-
-// Logging
-int  puts      (const char* String);
-int  putchar   (int chr);
-
 // Assertion
-void OnAssertionFail(const char *cond_msg, const char *file, int line);
-#define assert(cond) do { if (!(cond)) OnAssertionFail(#cond, __FILE__, __LINE__); } while (0)
-#define ASSERT assert
 
 
 // Optimized memory operations to word width
@@ -38,36 +36,6 @@ void* fast_memset(void* bufptr, BYTE val, size_t size);
 // File management
 
 // Graphics Interface
-
-int  GetScreenSizeX();
-int  GetScreenSizeY();
-int  GetWidth(Rectangle* rect);
-int  GetHeight(Rectangle* rect);
-void VidPlotPixel(unsigned x, unsigned y, unsigned color);
-void VidFillScreen(unsigned color);
-void VidDrawVLine(unsigned color, int top, int bottom, int x);
-void VidDrawHLine(unsigned color, int left, int right, int y);
-void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2);
-void VidSetFont(unsigned fontType);
-void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
-void VidBlitImage(Image* pImage, int x, int y);
-void VidBlitImageResize(Image* pImage, int x, int y, int w, int h);
-void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
-void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx);
-void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg);
-void VidShiftScreen (int amount);
-void VidFillRect(unsigned color, int left, int top, int right, int bottom);
-void VidDrawRect(unsigned color, int left, int top, int right, int bottom);
-void VidFillRectangle(unsigned color, Rectangle rect);
-void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom);
-void VidFillRectVGradient(unsigned colorU, unsigned colorD, int left, int top, int right, int bottom);
-void VidDrawRectangle(unsigned color, Rectangle rect);
-void SetMousePos (unsigned pX, unsigned pY);
-void VidSetVbeData (VBEData* pData);
-void RenderIcon(int type, int x, int y);
-void RenderIconOutline(int type, int x, int y, uint32_t color);
-void RenderIconForceSize(int type, int x, int y, int size);
-void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color);
 
 // Window API
 Window*     CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags);
@@ -117,10 +85,6 @@ int CcRunCCode(const char* pCode, int length);
 // NanoShell Versioning
 int NsGetVersion ();
 const char* GetVersionString();
-
-// Timing
-TimeStruct *GetTime ();
-int GetTickCount();// Time since OS has started
 
 // Shell
 int ShellExecute        (const char *pCommand);    //for instance, "e <your favorite executable>"
