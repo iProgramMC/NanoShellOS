@@ -40,12 +40,6 @@ int strncasecmp (const char *s1, const char *s2, size_t n)
 	return result;
 }
 
-int rename(const char* old, const char* new)
-{
-	LogMsg("NS: Rename attempt ('%s'->'%s')", old, new);
-	return -1;
-}
-
 int mkdir(const char* path, int mode)
 {
 	LogMsg("NS: MKDIR attempt ('%s' mode %d)", path, mode);
