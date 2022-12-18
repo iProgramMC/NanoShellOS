@@ -12,24 +12,20 @@ void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 {
 	// print the actual digits themselves
 	int i = 0;
-	if (num == 0)
-	{
-		str[i++] = '0';
-	}
-	while (num)
+	while (num || i == 0)
 	{
 		str[i++] = '0' + (num % 10);
+		str[i]   = '\0';
 		num /= 10;
 	}
-	
-	str[i]   = '\0';
+
 	// append padding too
 	for (; i < paddingInfo; )
 	{
 		str[i++] = paddingChar;
+		str[i]   = '\0';
 	}
-	
-	str[i]   = '\0';
+
 	// reverse the string
 	int start = 0, end = i - 1;
 	while (start < end)
@@ -40,8 +36,8 @@ void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 		str[end]   = temp;
 		start++;
 		end--;
-	}
 }
+	}
 void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar)
 {
 	if (num < 0)
@@ -88,7 +84,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 			if (m == '0' || m == '.')
 			{
 				// this by default handles %0<anything> too, though it does nothing
-				paddingInfo = m - '0';
+				paddingInfo = 0;
 				m = *(fmt++);
 
 				// if hit end, return
