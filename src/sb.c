@@ -10,47 +10,7 @@
 #include <misc.h>
 #include <memory.h>
 #include <fpu.h>
-
-#define NUM_NOTES 1
-
-#define NUM_OCTAVES 7
-#define OCTAVE_SIZE 12
-
-#define OCTAVE_1 0
-#define OCTAVE_2 1
-#define OCTAVE_3 2
-#define OCTAVE_4 3
-#define OCTAVE_5 4
-#define OCTAVE_6 5
-#define OCTAVE_7 6
-
-#define NOTE_C      0
-#define NOTE_CS     1
-#define NOTE_DF     NOTE_CS
-#define NOTE_D      2
-#define NOTE_DS     3
-#define NOTE_EF     NOTE_DS
-#define NOTE_E      4
-#define NOTE_F      5
-#define NOTE_FS     6
-#define NOTE_GF     NOTE_FS
-#define NOTE_G      7
-#define NOTE_GS     8
-#define NOTE_AF     NOTE_GS
-#define NOTE_A      9
-#define NOTE_AS     10
-#define NOTE_BF     NOTE_AS
-#define NOTE_B      11
-
-#define NOTE_NONE   12
-
-#define WAVE_SIN        0
-#define WAVE_SQUARE     1
-#define WAVE_NOISE      2
-#define WAVE_TRIANGLE   3
-
-#define E 2.71828
-#define PI 3.14159265358979323846264338327950
+#include <vfs.h>
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -126,18 +86,20 @@ static UNUSED u8 gMasterVolume;
 static u8  gSoundQueuedData[BUFFER_SIZE * 10 * 2];
 static int gSoundQueueTail, gSoundQueueHead;
 
-void SbWriteSingleByte (uint8_t data)
+bool SbWriteSingleByte (uint8_t data, bool bBlock)
 {
 	// About to overflow?
 	while (((gSoundQueueHead + 1) % sizeof(gSoundQueuedData)) == gSoundQueueTail)
 	{
 		// Wait.  We can wait here, since we're not handling an IRQ.
+		if (!bBlock) return false;
 		KeTaskDone();
 	}
 	
 	gSoundQueuedData[gSoundQueueHead++] = data;
 	
 	gSoundQueueHead = gSoundQueueHead % sizeof(gSoundQueuedData);
+	return true;
 }
 
 SAI bool SbReadSingleByte(uint8_t* out)
@@ -179,7 +141,7 @@ void* SbTestGenerateSound(size_t* size)
 	return data;
 }
 
-void SbWriteData (const void *pData, size_t sizeBytes)
+int SbWriteData (const void *pData, size_t sizeBytes, bool bBlock)
 {
 	const uint8_t* pBuffer = (const uint8_t*)pData;
 	// Is the tail ahead of the head?
@@ -192,15 +154,18 @@ void SbWriteData (const void *pData, size_t sizeBytes)
 			memcpy(&gSoundQueuedData[gSoundQueueHead], pBuffer, sizeBytes);
 			gSoundQueueHead += sizeBytes;
 			
-			return;
+			return (int) sizeBytes;
 		}
 		// No. Write each byte one at a time, if we're about to overflow,
 		// wait until the tail advances.
 		for (size_t i = 0; i < sizeBytes; i++)
 		{
 			//TODO We could optimize this by memcpying up until the tail
-			SbWriteSingleByte(pBuffer[i]);
+			if (!SbWriteSingleByte(pBuffer[i], bBlock))
+				return (int) i;
 		}
+		
+		return (int) sizeBytes;
 	}
 	else
 	{
@@ -211,15 +176,18 @@ void SbWriteData (const void *pData, size_t sizeBytes)
 			memcpy(&gSoundQueuedData[gSoundQueueHead], pBuffer, sizeBytes);
 			gSoundQueueHead += sizeBytes;
 			
-			return;
+			return (int) sizeBytes;
 		}
 		// No. Write each byte one at a time, if we're about to overflow,
 		// wait until the tail advances.
 		for (size_t i = 0; i < sizeBytes; i++)
 		{
 			//TODO We could optimize this by memcpying up until the tail
-			SbWriteSingleByte(pBuffer[i]);
+			if (!SbWriteSingleByte(pBuffer[i], bBlock))
+				return (int) i;
 		}
+		
+		return (int) sizeBytes;
 	}
 }
 
@@ -251,7 +219,7 @@ static bool SbReset()
 
     // TODO: maybe not necessary
     // ~3 microseconds?
-    for (size_t i = 0; i < 1000000; i++);
+    for (volatile size_t i = 0; i < 1000000; i++);
 
     WritePort(DSP_RESET, 0);
 
@@ -345,7 +313,10 @@ static void SbSetupIrq() {
     }
 }
 
-void SbInit() {
+void SbSetUpFile();
+
+void SbInit()
+{
     //irq_install(MIXER_IRQ, sb16_irq_handler);
     if (!SbReset()) return;
     SbSetupIrq();
@@ -361,5 +332,52 @@ void SbInit() {
 
     DspWrite(DSP_ON);
     DspWrite(DSP_ON_16);
+	
+	SbSetUpFile();
 }
 
+// File system interface
+static uint32_t FsSoundBlasterRead (UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer, UNUSED bool bBlock)
+{
+	return 0;//This is a write only file
+}
+
+static uint32_t FsSoundBlasterWrite(UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer, UNUSED bool bBlock)
+{
+	//Offset will be ignored.
+	SbWriteData (pBuffer, size, bBlock);
+	return size;
+}
+
+int FsSoundBlasterIoControl(UNUSED FileNode* pNode, unsigned long request, void * argp)
+{
+	if (request != IOCTL_SOUNDDEV_SET_SAMPLE_RATE)  return -ENOTTY;
+	
+	// Set the sample rate as passed in to argp.
+	int * argp_int = (int *) argp;
+	
+	SbSetSampleRate(*argp_int);
+	
+	return -ENOTHING;
+}
+
+void FsRootCreateFileAt(const char* path, void* pContents, size_t sz);
+
+void SbSetUpFile()
+{
+	const char * name = "/Device/Sb16";
+	FsRootCreateFileAt(name, NULL, 0);
+	FileNode *pNode = FsResolvePath(name);
+	
+	ASSERT(pNode && "Couldn't add that file to the root?");
+	
+	pNode->m_refCount = NODE_IS_PERMANENT;
+	
+	pNode->m_perms   = PERM_READ | PERM_WRITE;
+	pNode->m_type    = FILE_TYPE_CHAR_DEVICE;
+	pNode->m_inode   = 0;
+	pNode->m_length  = 0;
+	pNode->Read      = FsSoundBlasterRead;
+	pNode->Write     = FsSoundBlasterWrite;
+	pNode->IoControl = FsSoundBlasterIoControl;
+}

@@ -72,7 +72,6 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	BgaInitIfApplicable();
 	MbCheckCmdLine();
 	KiPermitTaskSwitching();
-	SbInit();
 	KbInit();
 	KiIrqEnable();  // After this, interrupts are enabled.
 	KePrintSystemVersion();
@@ -86,6 +85,7 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	FsExt2Init();
 	FsInitRdInit();
 	UartInit(0);
+	SbInit();
 	CfgLoadFromMainFile();
 	#ifdef EXPERIMENTAL_RSDPTR
 	AcpiInitIfApplicable();

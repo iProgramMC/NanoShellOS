@@ -30,6 +30,7 @@ enum
 	EXDEV,         // Cross device operation not supported
 	EBUSY,         // Resource is busy
 	ENOTEMPTY,     // Directory is not empty
+	ENOTTY,        // Invalid input/output control request
 	ECOUNT,
 };
 	

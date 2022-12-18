@@ -55,6 +55,7 @@ typedef int             (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const 
 typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef int             (*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
 typedef int             (*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
+typedef int             (*FileIoControlFunc)  (struct FSNodeS* pFileNode, unsigned long request, void * argp);
 typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
@@ -126,6 +127,8 @@ typedef struct FSNodeS
 	FileRemoveDirFunc  RemoveDir;
 	// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
 	FileRenameOpFunc   RenameOp;
+	// Sends a request to the underlying device.
+	FileIoControlFunc  IoControl;
 	// This function is called everytime the reference count of a file reaches zero.
 	FileOnUnreferencedFunc OnUnreferenced;
 }
@@ -263,6 +266,9 @@ void FsInit ();
 		uint32_t m_createTime;
 	}
 	StatResult;
+	
+	// I/O control requests
+	#include <ioctl.h>
 	
 	#define O_RDONLY (1)
 	#define O_WRONLY (2)
