@@ -98,6 +98,7 @@ typedef struct ConsoleStruct {
 	bool m_usingAnsiEscCode;
 	uint32_t m_ansiAttributes;
 	uint8_t  m_ansiBgColorBackup, m_ansiFgColorBackup;
+	int  lastX, lastY; // for wterm
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

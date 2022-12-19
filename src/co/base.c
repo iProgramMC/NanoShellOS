@@ -402,8 +402,8 @@ void CoVisComOnAnsiEscCode(Console *this)
 					{
 						case 'A': cy--; break;
 						case 'B': cy++; break;
-						case 'C': cx--; break;
-						case 'D': cy++; break;
+						case 'D': cx--; break;
+						case 'C': cx++; break;
 					}
 					
 					if (cx < 0) cx = 0;

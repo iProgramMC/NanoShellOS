@@ -434,9 +434,9 @@ char KbMapAtCodeToChar(char kc)
 {
 	if (CtrlPressed())
 	{
-		if (kc >= KEY_A && kc <= KEY_Z)
+		if (KeyboardMap[(int)kc] >= 'a' && KeyboardMap[(int)kc] <= 'z')
 		{
-			return kc - KEY_A + 1; // ^A == 0x01, ^Z == 0x1A
+			return KeyboardMap[(int)kc] - 'a' + 1; // ^A == 0x01, ^Z == 0x1A
 		}
 		else switch (kc)
 		{
@@ -486,7 +486,27 @@ void IrqKeyboard()
 			int kc = keycode & SCANCODE_NOTREL;
 			
 			keyboardState[kc] = KEY_PRESSED;
-			KbAddKeyToBuffer(KbMapAtCodeToChar(kc));
+			
+			// If we have some arrow keys, 
+			char final = 0;
+			switch (kc)
+			{
+				case KEY_ARROW_UP:    final = 'A'; break;
+				case KEY_ARROW_DOWN:  final = 'B'; break;
+				case KEY_ARROW_LEFT:  final = 'D'; break;
+				case KEY_ARROW_RIGHT: final = 'C'; break;
+			}
+			
+			if (final)
+			{
+				KbAddKeyToBuffer(27);
+				KbAddKeyToBuffer('[');
+				KbAddKeyToBuffer(final);
+			}
+			else
+			{
+				KbAddKeyToBuffer(KbMapAtCodeToChar(kc));
+			}
 		}
 		
 		if (keycode == (SCANCODE_RELEASE | KEY_F12))

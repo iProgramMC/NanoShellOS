@@ -117,9 +117,15 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 					//TODO: fix this properly by locking the entire console
 					cli;
 					int cursorX = pConsole->curX, cursorY = pConsole->curY;
+					int lastX   = pConsole->lastX, lastY = pConsole->lastY;
 					sti;
 					
-					if (pConsole->m_cursorFlashTimer > GetTickCount() && cursorX > 0 && cursorY > 0 && cursorX <= pConsole->width && cursorY <= pConsole->height)
+					CoRefreshChar(pConsole, lastX, lastY);
+					
+					pConsole->lastX = pConsole->curX;
+					pConsole->lastY = pConsole->curY;
+					
+					if (pConsole->m_cursorFlashTimer > GetTickCount() && cursorX >= 0 && cursorY >= 0 && cursorX < pConsole->width && cursorY < pConsole->height)
 					{
 						if (pConsole->m_cursorFlashState)
 						{
