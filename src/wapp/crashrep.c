@@ -9,6 +9,8 @@
 #include <process.h>
 #include <debug.h>
 #include <idt.h>
+#include <elf.h>
+
 bool KeDidATaskCrash();
 void KeAcknowledgeTaskCrash();//sigh.
 CrashInfo* KeGetCrashedTaskInfo();
@@ -39,11 +41,11 @@ void CrashReportWindow( int argument )
 	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
 	
-	UNUSED Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
+	Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
 	
 	char otherString[512], 
 	     //anotherString[4096], 
-	     smallerString[16];
+	     smallerString[512];
 	sprintf(
 		otherString,
 		"This task has performed an illegal operation and will be shut down.\n\n"
@@ -55,7 +57,11 @@ void CrashReportWindow( int argument )
 	int index = 0;
 	while (pCrashInfo->m_stackTrace[index] != 0)
 	{
-		sprintf(smallerString, "\n- 0x%x", pCrashInfo->m_stackTrace[index]);
+		ElfSymbol * pSym = ExLookUpSymbol (p, pCrashInfo->m_stackTrace[index]);
+		if (pSym)
+			snprintf(smallerString, sizeof smallerString, "\n- 0x%x\t%s", pCrashInfo->m_stackTrace[index], pSym->m_pName);
+		else
+			snprintf(smallerString, sizeof smallerString, "\n- 0x%x", pCrashInfo->m_stackTrace[index]);
 		strcat (string, smallerString);
 		index++;
 	}

@@ -150,6 +150,8 @@ ElfSymbol* ElfGetSymbolAtAddress(ElfLoaderBlock* pLBlock, uintptr_t address)
 
 ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address)
 {
+	if (!pProc) return NULL;
+	
 	// make up a fake loader block
 	ElfLoaderBlock lb;
 	memset(&lb, 0, sizeof lb);

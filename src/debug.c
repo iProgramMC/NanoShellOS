@@ -148,13 +148,11 @@ void PrintBackTrace (StackFrame* stk, uintptr_t eip, const char* pTag, void* pPr
 		logMsg = ILogMsg;
 	
 	const char* pFunctionCrashedInside = "";
-	if (pProc)
+	
+	ElfSymbol* pSym = ExLookUpSymbol(pProc, eip);
+	if (pSym)
 	{
-		ElfSymbol* pSym = ExLookUpSymbol(pProc, eip);
-		if (pSym)
-		{
-			pFunctionCrashedInside = pSym->m_pName;
-		}
+		pFunctionCrashedInside = pSym->m_pName;
 	}
 	
 	logMsg("Stack trace:");
