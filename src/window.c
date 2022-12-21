@@ -44,6 +44,7 @@ extern bool     g_GlowOnHover;
 static WindowAction s_internal_action_queue[4096];
 static int          s_internal_action_queue_head,
                     s_internal_action_queue_tail;
+static SafeLock     s_internal_action_queue_lock;
 //
 
 Task *g_pWindowMgrTask;
@@ -64,10 +65,14 @@ WindowAction* ActionQueueAdd(WindowAction action)
 	while (ActionQueueWouldOverflow())
 		KeTaskDone();
 	
+	LockAcquire(&s_internal_action_queue_lock);
+	
 	WindowAction *pAct = &s_internal_action_queue[s_internal_action_queue_head];
 	*pAct = action;
 	
 	s_internal_action_queue_head = (s_internal_action_queue_head + 1) % 4096;
+	
+	LockFree(&s_internal_action_queue_lock);
 	
 	return pAct;
 }
@@ -2320,6 +2325,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		KeUnsuspendTasksWaitingForWM();
 		
+		LockAcquire(&s_internal_action_queue_lock);
+		
 		while (!ActionQueueEmpty())
 		{
 			WindowAction *pFront = ActionQueueGetFront();
@@ -2348,6 +2355,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			pFront->bInProgress = false;
 			ActionQueuePop();
 		}
+		
+		LockFree(&s_internal_action_queue_lock);
 		
 		for (int p = 0; p < WINDOWS_MAX; p++)
 		{
@@ -3295,7 +3304,7 @@ char WinReadFromInputQueue (Window* this)
 	else return 0;
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLock)
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLock, bool bLockEvents)
 {
 	if (!bLock)
 		LockAcquire (&pWindow->m_screenLock);
@@ -3376,7 +3385,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		VidSetVBEData (&pWindow->m_vbeData);
 		PaintWindowBackgroundAndBorder(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -3534,7 +3543,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	if (eventType == EVENT_SIZE)
 	{
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -3550,7 +3559,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		pWindow->m_eventQueueSize = 0;
 		
-		LockFree (&pWindow->m_EventQueueLock);
+		if (bLockEvents) LockFree (&pWindow->m_EventQueueLock);
 		KeTaskDone();
 		
 		NukeWindow(pWindow);
@@ -3593,7 +3602,7 @@ bool HandleMessages(Window* pWindow)
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, et, p1, p2, false))
+		if (!OnProcessOneEvent(pWindow, et, p1, p2, false, false))
 			return false;
 	}
 	
@@ -3604,7 +3613,7 @@ bool HandleMessages(Window* pWindow)
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], false))
+		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], false, true))
 			return false;
 	}
 	pWindow->m_eventQueueSize = 0;
@@ -3619,7 +3628,7 @@ bool HandleMessages(Window* pWindow)
 		
 		unsigned char out = WinReadFromInputQueue(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false);
+		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false, false);
 		
 		// if the key was just pressed:
 		if ((out & 0x80) == 0)
@@ -3628,7 +3637,7 @@ bool HandleMessages(Window* pWindow)
 			char sensible = KbMapAtCodeToChar (out & 0x7F);
 			
 			if (sensible)
-				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false);
+				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false, false);
 		}
 	}
 	
