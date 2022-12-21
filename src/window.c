@@ -1021,9 +1021,10 @@ void WindowRegisterEvent2 (Window* pWindow, short eventType, int parm1, int parm
 	int queue_timeout = GetTickCount() + 5000;
 	while (pWindow->m_EventQueueLock.m_held)
 	{
+		KeUnsuspendTasksWaitingForWM();
 		KeTaskDone();
 		
-		if (queue_timeout > GetTickCount())
+		if (queue_timeout < GetTickCount())
 		{
 			//SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!  Marking it as hung...", pWindow, pWindow->m_title);
 			return;
@@ -1220,10 +1221,11 @@ void ShowWindow (Window* pWindow)
 	action.pWindow     = pWindow;
 	action.nActionType = WACT_SHOW;
 	
-	WindowAction* ptr = ActionQueueAdd(action);
+	//WindowAction* ptr = 
+	ActionQueueAdd(action);
 	
-	while (ptr->bInProgress)
-		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+	//while (ptr->bInProgress)
+	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
 static void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
@@ -1501,10 +1503,11 @@ void SelectWindow(Window* pWindow)
 	action.pWindow     = pWindow;
 	action.nActionType = WACT_SELECT;
 	
-	WindowAction* ptr = ActionQueueAdd(action);
+	//WindowAction* ptr = 
+	ActionQueueAdd(action);
 	
-	while (ptr->bInProgress)
-		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+	//while (ptr->bInProgress)
+	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 #endif
 
@@ -3577,9 +3580,6 @@ bool HandleMessages(Window* pWindow)
 	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	
-	// grab the lock
-	LockAcquire (&pWindow->m_EventQueueLock);
-	
 	bool have_handled_events = false;
 	
 	// If the window manager was being asked to redraw the window, but it did not
@@ -3597,6 +3597,9 @@ bool HandleMessages(Window* pWindow)
 			return false;
 	}
 	
+	// grab the lock
+	LockAcquire (&pWindow->m_EventQueueLock);
+	
 	// While we have events in our own queue...
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
@@ -3605,6 +3608,8 @@ bool HandleMessages(Window* pWindow)
 			return false;
 	}
 	pWindow->m_eventQueueSize = 0;
+	
+	LockFree (&pWindow->m_EventQueueLock);
 	
 	// Keyboard events are handled separately, in games you may miss input otherwise...
 
@@ -3626,8 +3631,6 @@ bool HandleMessages(Window* pWindow)
 				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false);
 		}
 	}
-	
-	LockFree (&pWindow->m_EventQueueLock);
 	
 	bool bIsNotWM = KeGetRunningTask() != g_pWindowMgrTask;
 	if (!have_handled_events)
