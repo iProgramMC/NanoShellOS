@@ -466,6 +466,7 @@ const void *WindowCall[] = {
 		FiRemoveDir,
 		FiCreatePipe,
 		FiIoControl,
+		CallControlCallback,
 };
 
 

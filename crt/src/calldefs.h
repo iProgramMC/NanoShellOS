@@ -405,7 +405,10 @@ CALL_END
 CALLI(FiCreatePipe, FI_CREATE_PIPE, int, const char * friendlyName, int fds[2], int oflags)
 	RARGS(friendlyName, fds, oflags)
 CALL_END
-CALLI(FiIoControl, FI_CREATE_PIPE, int, int fd, unsigned long request, void * argp)
+CALLI(FiIoControl, FI_IO_CONTROL, int, int fd, unsigned long request, void * argp)
 	RARGS(fd, request, argp)
+CALL_END
+CALL (CallControlCallback, WIN_CALL_CTL_CALLBACK, void, Window * window, int comboid, int event, int parm1, int parm2)
+	SARGS(window, comboid, event, parm1, parm2)
 CALL_END
 

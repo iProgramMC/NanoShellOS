@@ -198,6 +198,7 @@ enum
 		FI_REMOVE_DIR,
 		FI_CREATE_PIPE,
 		FI_IO_CONTROL,
+		WIN_CALL_CTL_CALLBACK,
 	#endif
 };
 

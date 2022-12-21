@@ -172,6 +172,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 						Window* pWindow = &g_windows[i];
 						if (pWindow->m_hidden && pWindow->m_minimized) //TODO
 						{
+							SLogMsg("Unminimize from task bar");
 							//Unhide and unminimize
 							WindowRegisterEvent (pWindow, EVENT_UNMINIMIZE, 0, 0);
 							//TODO: wait for the animation to finish :)

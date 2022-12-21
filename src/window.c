@@ -2362,7 +2362,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				//Also send an EVENT_MOVECURSOR
 				int posX = g_mouseX - pWindow->m_rect.left;
 				int posY = g_mouseY - pWindow->m_rect.top;
-				if (g_oldMouseX != posX || g_oldMouseY != posY)
+				if (g_oldMouseX - pWindow->m_rect.left != posX || g_oldMouseY - pWindow->m_rect.top != posY)
 				{
 					if (posX < 0) posX = 0;
 					if (posY < 0) posY = 0;
@@ -2378,8 +2378,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
 					}
 				}
-				g_oldMouseX = g_mouseX;
-				g_oldMouseY = g_mouseY;
 			}
 			
 			if (pWindow->m_bWindowManagerUpdated)
@@ -2424,6 +2422,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				DestroyWindow (pWindow);
 			}
 		}
+		
+		g_oldMouseX = g_mouseX;
+		g_oldMouseY = g_mouseY;
+		
 		UpdateTimeout--;
 		
 		RunOneEffectFrame ();

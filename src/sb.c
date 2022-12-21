@@ -72,10 +72,8 @@ typedef double f64;
 //#define SAMPLE_RATE     48000
 #define SAMPLE_RATE     44100
 #define BUFFER_MS       100
-#define SQUEUE_MS       100000
 
 #define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 1000.0)))
-#define SQUEUE_SIZE ((size_t) (SAMPLE_RATE * (SQUEUE_MS / 1000.0)))
 
 static i16 gSoundBuffer[BUFFER_SIZE];
 static bool gBufferFlip = false;
@@ -83,7 +81,7 @@ static bool gBufferFlip = false;
 static UNUSED u8 gMasterVolume;
 
 // Buffered data that the file write function writes to.
-static u8  gSoundQueuedData[BUFFER_SIZE * 10 * 2];
+static u8  gSoundQueuedData[BUFFER_SIZE * 2];
 static int gSoundQueueTail, gSoundQueueHead;
 
 bool SbWriteSingleByte (uint8_t data, bool bBlock)
@@ -356,6 +354,7 @@ int FsSoundBlasterIoControl(UNUSED FileNode* pNode, unsigned long request, void 
 	// Set the sample rate as passed in to argp.
 	int * argp_int = (int *) argp;
 	
+	SLogMsg("Set sample rate to %d", *argp_int);
 	SbSetSampleRate(*argp_int);
 	
 	return -ENOTHING;

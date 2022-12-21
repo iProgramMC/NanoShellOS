@@ -103,7 +103,7 @@ go_back:;
 	if (thing <= 0)
 		thing = 1;
 	
-	posoff = offset * final_height / thing;
+	posoff = (int)((int64_t)offset * final_height / thing);
 	
 	Rectangle scroller = basic_rectangle;
 	scroller.left  = clickable_rect.left + posoff;
@@ -141,7 +141,7 @@ go_back:;
 					int posoff2 = p.x - clickable_rect.left - SCROLL_BAR_WIDTH/2;
 					if (final_height > 0)
 					{
-						posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
+						posoff2 = (int)((int64_t)posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height);
 						posoff2 = posoff2 +  this->m_scrollBarData.m_min;
 						if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
 						if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
@@ -238,7 +238,7 @@ go_back:;
 	int offset = this->m_scrollBarData.m_pos - this->m_scrollBarData.m_min;
 	int test = (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min);
 	if (test <= 0) test = 1;
-	int posoff = offset * final_height / test;
+	int posoff = (int)((int64_t)offset * final_height / test);
 	
 	Rectangle scroller = basic_rectangle;
 	scroller.top    = clickable_rect.top + posoff;
@@ -308,8 +308,8 @@ go_back:;
 					int posoff2 = p.y - clickable_rect.top - SCROLL_BAR_WIDTH/2;
 					if (final_height > 0)
 					{
-						posoff2 = posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height;
-						posoff2 = posoff2 +  this->m_scrollBarData.m_min;
+						posoff2 = (int)((int64_t)posoff2 * (this->m_scrollBarData.m_max-1 - this->m_scrollBarData.m_min) / final_height);
+						posoff2 += this->m_scrollBarData.m_min;
 						if (posoff2 <  this->m_scrollBarData.m_min) posoff2 = this->m_scrollBarData.m_min;
 						if (posoff2 >= this->m_scrollBarData.m_max) posoff2 = this->m_scrollBarData.m_max - 1;
 						this->m_scrollBarData.m_pos = posoff2;

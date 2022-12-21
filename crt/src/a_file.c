@@ -245,6 +245,31 @@ int tellsz(int spot)
 	return result;
 }
 
+int ioctl(int spot, unsigned long request, void * argp)
+{
+	int filedes = FileSpotToFileHandle(spot);
+	if (filedes < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (filedes == FD_STDIO)
+	{
+		// process the IO request directly TODO
+		return -ENOTTY;
+	}
+	
+	if (!_I_IsFileOpenedHere(filedes))
+		return SetErrorNumber(-EBADF);
+	
+	int result = _I_FiIoControl(filedes, request, argp);
+	
+	if ((int)result < 0)
+	{
+		SetErrorNumber((int)result);
+	}
+	
+	return result;
+}
+
 int FiOpenDir(const char* pFileName)
 {
 	int spot = -1;

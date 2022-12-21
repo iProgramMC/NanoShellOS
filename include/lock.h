@@ -12,8 +12,8 @@
 
 typedef struct
 {
-	bool  m_held;
-	void* m_task_owning_it;
+	volatile bool  m_held;
+	volatile void* m_task_owning_it;
 }
 SafeLock;
 void LockAcquire (SafeLock *pLock);
