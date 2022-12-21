@@ -230,7 +230,6 @@ void SetPos(int pos)
 
 void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
 {
-	LogMsg("WndProc(%d)", msg);
 	switch (msg)
 	{
 		case EVENT_UPDATE:
