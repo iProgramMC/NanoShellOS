@@ -527,7 +527,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			
 			r.top -= 14;
 			r.bottom = r.top + GetLineHeight();
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "", MAIN_PATH_TEXT, 0, TEXTSTYLE_FORCEBGCOL);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "", MAIN_PATH_TEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			
 			// Initialize the menu-bar
 			AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$, MENU$FILE, "File");

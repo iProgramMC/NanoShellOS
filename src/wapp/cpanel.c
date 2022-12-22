@@ -54,9 +54,9 @@ void RedrawEverything();
 					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
 					
 					RECT(r, 16,  24 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, MOUSE_POPUP_WIDTH - 40, 24 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 50,  22 + TITLE_BAR_HEIGHT, MOUSE_POPUP_WIDTH - 100, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, MOUSEP_SPEED_SCROLL, (0)<<16|(4), (1)<<16|(GetMouseSpeedMultiplier()));
 				}
@@ -249,11 +249,11 @@ void RedrawEverything();
 					RECT(r, 16,  34 + TITLE_BAR_HEIGHT, 32, 32);
 					AddControl(pWindow, CONTROL_ICON, r, NULL, 12, ICON_KEYB_REP_SPEED, 0);
 					RECT(r, 66,  34 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Repeat rate:", 2, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Repeat rate:", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 66,  54 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, KEYBD_POPUP_WIDTH - 40, 54 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 100, 52 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_CPS,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)),
@@ -263,11 +263,11 @@ void RedrawEverything();
 					RECT(r, 16,  15+80 + TITLE_BAR_HEIGHT, 32, 32);
 					AddControl(pWindow, CONTROL_ICON, r, NULL, 22, ICON_KEYB_REP_DELAY, 0);
 					RECT(r, 66,  15+80 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Repeat delay:", 2, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Repeat delay:", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 66,  35+80 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, KEYBD_POPUP_WIDTH - 40, 35+80 + TITLE_BAR_HEIGHT, 32, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 100, 33+80 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_DELAY,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)),
@@ -275,7 +275,7 @@ void RedrawEverything();
 					);
 					
 					RECT(r, 16, 145 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 20);
-					AddControl(pWindow, CONTROL_TEXT, r, "Click here and hold down a key to test repeat rate:", 10000, 0, WINDOW_BACKGD_COLOR);
+					AddControl(pWindow, CONTROL_TEXT, r, "Click here and hold down a key to test repeat rate:", 10000, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 					RECT(r, 16, 155 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 50, 20);
 					AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, 10000, 0, 0);
 				}

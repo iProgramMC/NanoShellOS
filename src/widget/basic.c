@@ -88,7 +88,7 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 			
 			// Draw the text
 			VidTextOut(this->m_text, this->m_rect.left + 10, this->m_rect.top, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut(this->m_text, this->m_rect.left + 12, this->m_rect.top, 0x00000,             WINDOW_BACKGD_COLOR);
+			VidTextOut(this->m_text, this->m_rect.left + 12, this->m_rect.top, WINDOW_TEXT_COLOR,   WINDOW_BACKGD_COLOR);
 			
 			break;
 		}

@@ -164,23 +164,23 @@ uint32_t ColorInputBox(Window* pWindow, const char* pPrompt, const char* pCaptio
 	Rectangle r;
 	
 	RECT(r, 10, y, COLOR_POPUP_WIDTH-10, 25);
-	AddControl(pBox, CONTROL_TEXT, r, pPrompt, 203, 0, WINDOW_BACKGD_COLOR);
+	AddControl(pBox, CONTROL_TEXT, r, pPrompt, 203, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	y += 20;
 	
 	RECT(r, 10, y, COLOR_POPUP_WIDTH-96-10, 15);
-	AddControl (pBox, CONTROL_TEXT, r, "Red", 200, 0, WINDOW_BACKGD_COLOR);
+	AddControl (pBox, CONTROL_TEXT, r, "Red", 200, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	RECT(r, 96, y, COLOR_POPUP_WIDTH-96-10, 1);
 	AddControl (pBox, CONTROL_HSCROLLBAR, r, NULL, 100, 0<<16|256, 1<<16|0);
 	y += 32;
 	
 	RECT(r, 10, y, COLOR_POPUP_WIDTH-96-10, 15);
-	AddControl (pBox, CONTROL_TEXT, r, "Green", 201, 0, WINDOW_BACKGD_COLOR);
+	AddControl (pBox, CONTROL_TEXT, r, "Green", 201, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	RECT(r, 96, y, COLOR_POPUP_WIDTH-96-10, 1);
 	AddControl (pBox, CONTROL_HSCROLLBAR, r, NULL, 101, 0<<16|256, 1<<16|0);
 	y += 32;
 	
 	RECT(r, 10, y, COLOR_POPUP_WIDTH-96-10, 15);
-	AddControl (pBox, CONTROL_TEXT, r, "Blue", 202, 0, WINDOW_BACKGD_COLOR);
+	AddControl (pBox, CONTROL_TEXT, r, "Blue", 202, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	RECT(r, 96, y, COLOR_POPUP_WIDTH-96-10, 1);
 	AddControl (pBox, CONTROL_HSCROLLBAR, r, NULL, 102, 0<<16|256, 1<<16|0);
 	

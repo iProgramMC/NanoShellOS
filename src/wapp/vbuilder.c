@@ -483,19 +483,19 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 			
 			#define E(a) (1000 + (a))
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 0 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(CONTROL_NONE),       0, WINDOW_TITLE_INACTIVE_COLOR_B);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(CONTROL_NONE),       WINDOW_TEXT_COLOR, WINDOW_TITLE_INACTIVE_COLOR_B);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 1 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text",         E(CONTROL_TEXT),       0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text",         E(CONTROL_TEXT),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 2 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text Cen",     E(CONTROL_TEXTCENTER), 0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text Cen",     E(CONTROL_TEXTCENTER), WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 3 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Button",       E(CONTROL_BUTTON),     0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Button",       E(CONTROL_BUTTON),     WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 4 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input 1-Ln",   E(CONTROL_TEXTINPUT),  0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input 1-Ln",   E(CONTROL_TEXTINPUT),  WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 5 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input M-Ln",   E(CONTROL_COUNT),      0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input M-Ln",   E(CONTROL_COUNT),      WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 6 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Checkbox",     E(CONTROL_CHECKBOX),   0, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Checkbox",     E(CONTROL_CHECKBOX),   WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			#undef E
 			
 			break;

@@ -313,7 +313,7 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	rect.top    = 12 + TITLE_BAR_HEIGHT;
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 50;
-	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, 0, WINDOW_BACKGD_COLOR);
+	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	
 	rect.left   = 10;
 	rect.top    = 12 + TITLE_BAR_HEIGHT + 20;

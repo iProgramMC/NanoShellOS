@@ -99,7 +99,7 @@ void CrashReportWindow( int argument )
 	AddControl (pWindow, CONTROL_ICON, r, NULL, 1, ICON_AMBULANCE, 0);
 	
 	RECT(r, 50, 10 + TITLE_BAR_HEIGHT, winwidth - 50, 100);
-	AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, 0, TEXTSTYLE_WORDWRAPPED);
+	AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
 	SetHugeLabelText(pWindow, 2, otherString);
 	
 	int ylol = (winheight - TITLE_BAR_HEIGHT) / 4 + TITLE_BAR_HEIGHT;
