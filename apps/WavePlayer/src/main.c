@@ -29,6 +29,27 @@ enum
 	C_HELP_BUTTON,
 };
 
+typedef struct
+{
+	uint16_t nFormat;
+	uint16_t nChannels;
+	uint32_t nSampleRate;
+	uint32_t nBytesPerSec;
+	uint16_t nSomething;
+	uint16_t nBitsPerSample;
+}
+__attribute__((packed))
+WaveFormatData;
+
+WaveFormatData g_wave_data = {
+	.nFormat = 1,
+	.nChannels = 1,
+	.nSampleRate = SAMPLE_RATE,
+	.nBytesPerSec = SAMPLE_RATE * 2,
+	.nSomething = 0,
+	.nBitsPerSample = 16,
+};
+
 Window * g_pWindow;
 
 bool g_bPlaying;
@@ -37,7 +58,12 @@ int g_fileFD = -1, g_fileCurrentPlace;
 int g_soundFD = -1;
 int g_tickLastTicked = 0;
 
-bool g_bDontUpdateScrollBar = false;
+int g_offsetFromStart = SAMPLE_RATE * 60, g_FileSize; // a full minute for testing
+
+uint8_t * g_SampleBuffer = NULL;
+uint32_t  g_SampleBufferSize = 0;
+
+bool g_bDontUpdateScrollBar = false; // in bytes
 
 const char * GetPreferredSoundDevice()
 {
@@ -84,10 +110,6 @@ void InitSound()
 		g_soundFD = -1;
 		return;
 	}
-	
-	int newSampleRate = SAMPLE_RATE / 2;
-	
-	ioctl(g_soundFD, IOCTL_SOUNDDEV_SET_SAMPLE_RATE, &newSampleRate);
 }
 
 void TeardownSound()
@@ -112,6 +134,8 @@ void Pause()
 	CallControlCallback(g_pWindow, C_PLAY_BUTTON, EVENT_PAINT, 0, 0);
 }
 
+void CloseFile();
+
 void TickOnce()
 {
 	if (!g_bPlaying) return;
@@ -124,15 +148,43 @@ void TickOnce()
 		return; // don't actually tick now
 	}
 	
-	// push 8192 samples to the sound device
+	uint32_t inread = read(g_fileFD, g_SampleBuffer, g_SampleBufferSize);
+	bool bAtEnd = (inread < g_SampleBufferSize);
+	uint32_t readSamples = g_SampleBufferSize / g_wave_data.nChannels / ((g_wave_data.nBitsPerSample + 7) / 8);
+	
 	int16_t samples[SAMPLES_PER_TICK];
 	
-	uint32_t inread = read(g_fileFD, samples, sizeof samples);
-	bool bAtEnd = (inread < sizeof samples);
+	if (g_wave_data.nChannels == 1 && g_wave_data.nBitsPerSample == 16)
+	{
+		// A memcpy will do.
+		memcpy(samples, g_SampleBuffer, g_SampleBufferSize);
+	}
+	else
+	{
+		// We have to copy each sample manually.
+		// TODO: allow resampling
+		if (g_wave_data.nBitsPerSample == 16)
+		{
+			int16_t* sampleData = (int16_t*)g_SampleBuffer;
+			for (int i = 0; i < SAMPLES_PER_TICK; i++)
+			{
+				samples[i] = sampleData[i * g_wave_data.nChannels];
+			}
+		}
+		else
+		{
+			CloseFile();
+			g_bPlaying = false;
+			char buffer[1024];
+			sprintf(buffer, "A bit-per-sample rate of %d is not supported, only 16-bit PCM data is supported right now.", g_wave_data.nBitsPerSample);
+			MessageBox(g_pWindow, buffer, "Wave Player", MB_OK | ICON_ERROR << 16);
+			return;
+		}
+	}
 	
-	uint32_t outwrote = write(g_soundFD, samples, inread);
+	uint32_t outwrote = write(g_soundFD, samples, readSamples * sizeof(int16_t));
 	
-	g_fileCurrentPlace = tellf(g_fileFD);
+	g_fileCurrentPlace = tellf(g_fileFD) - g_offsetFromStart;
 	
 	// update the scroll bar
 	if (!g_bDontUpdateScrollBar)
@@ -142,7 +194,7 @@ void TickOnce()
 	}
 	
 	char buffer[32];
-	int posSec = g_fileCurrentPlace / BYTES_PER_SAMPLE / SAMPLE_RATE;
+	int posSec = g_fileCurrentPlace / ((g_wave_data.nBitsPerSample + 7) / 8) / g_wave_data.nChannels / g_wave_data.nSampleRate;
 	sprintf(buffer, "%02d:%02d", posSec / 60, posSec % 60);
 	SetLabelText(g_pWindow, C_START_LABEL, buffer);
 	CallControlCallback(g_pWindow, C_START_LABEL, EVENT_PAINT, 0, 0);
@@ -155,15 +207,69 @@ void TickOnce()
 
 int GetFileSize()
 {
-	g_fileCurrentPlace = tellf(g_fileFD);
+	return g_FileSize;
+}
+
+void WaveFileProcessing()
+{
+	LogMsg("Loading wave file.");
 	
-	lseek(g_fileFD, 0, SEEK_END);
+	lseek(g_fileFD, 4, SEEK_END);
 	
-	int size = tellf(g_fileFD);
+	uint32_t dataSize = 0, waveMarker = 0;
+	read(g_fileFD, &dataSize, sizeof dataSize);
+	LogMsg("Data size: %d bytes.", dataSize);
 	
-	lseek(g_fileFD, g_fileCurrentPlace, SEEK_SET);
+	read(g_fileFD, &waveMarker, sizeof waveMarker);
+	if (waveMarker != *(uint32_t*)"WAVE") goto fail;
 	
-	return size;
+	// okay, now read each section until we've reached the 'data' section.
+	
+	bool bFoundDataSection = false;
+	
+	while (!bFoundDataSection)
+	{
+		int where = tellf(g_fileFD);
+		uint32_t sectionData[2] = { 0, 0 };
+		read(g_fileFD, &sectionData, sizeof sectionData);
+		switch (sectionData[0])
+		{
+			case 0x20746D66: // 'fmt '
+			{
+				// This is formatting data.
+				WaveFormatData fdata;
+				
+				read(g_fileFD, &fdata, sizeof fdata);
+				
+				g_wave_data = fdata;
+				
+				break;
+			}
+			case 0x61746164: // 'data'
+			{
+				// Found the data section! We should break.
+				bFoundDataSection = true;
+				g_offsetFromStart = where + sizeof sectionData;
+				g_FileSize = sectionData[1];
+				break;
+			}
+			default:
+			{
+				char s[5];
+				s[4] = 0;
+				*((uint32_t*)s) = sectionData[0];
+				LogMsg("Unrecognised section name: %s", s);
+				break;
+			}
+		}
+		lseek(g_fileFD, where + sectionData[1] + sizeof sectionData, SEEK_SET);
+	}
+	
+	lseek(g_fileFD, g_offsetFromStart, SEEK_SET);
+	
+	return;
+fail:
+	lseek(g_fileFD, 0, SEEK_SET);
 }
 
 void LoadFile(const char * filename)
@@ -190,11 +296,42 @@ void LoadFile(const char * filename)
 	SetLabelText(g_pWindow, C_FILE_LABEL, filename);
 	CallControlCallback(g_pWindow, C_FILE_LABEL, EVENT_PAINT, 0, 0);
 	
-	// Get the size of the raw file
-	int size = GetFileSize();
+	// Check if this is a wave file
+	uint32_t firstInt = 0;
+	read(g_fileFD, &firstInt, sizeof firstInt);
+	
+	if (firstInt == *(uint32_t*)"RIFF")
+	{
+		WaveFileProcessing();
+	}
+	else
+	{
+		// Get the size of the raw file
+		int size;
+		lseek(g_fileFD, 0, SEEK_END);
+		size = tellf(g_fileFD);
+		size -= g_offsetFromStart;
+		g_FileSize = size;
+		
+		WaveFormatData fd = {
+			.nFormat = 1,
+			.nChannels = 1,
+			.nSampleRate = SAMPLE_RATE,
+			.nBytesPerSec = SAMPLE_RATE * 2,
+			.nSomething = 0,
+			.nBitsPerSample = 16,
+		};
+		g_wave_data = fd;
+	}
+	
+	g_SampleBufferSize = SAMPLES_PER_TICK * g_wave_data.nChannels * ((g_wave_data.nBitsPerSample + 7) / 8);
+	g_SampleBuffer = malloc(g_SampleBufferSize);
+	memset(g_SampleBuffer, 0, g_SampleBufferSize);
 	
 	// Calculate its length in seconds.
-	int lenSec = size / BYTES_PER_SAMPLE / SAMPLE_RATE;
+	int lenSec = g_FileSize / ((g_wave_data.nBitsPerSample + 7) / 8) / g_wave_data.nChannels / g_wave_data.nSampleRate;
+	
+	lseek(g_fileFD, g_offsetFromStart, SEEK_SET);
 	
 	char buffer[32];
 	sprintf(buffer, "%02d:%02d", lenSec / 60, lenSec % 60);
@@ -202,7 +339,7 @@ void LoadFile(const char * filename)
 	SetLabelText(g_pWindow, C_END_LABEL, buffer);
 	CallControlCallback(g_pWindow, C_END_LABEL, EVENT_PAINT, 0, 0);
 	
-	SetScrollBarMax(g_pWindow, C_SEEK_BAR, size < 1 ? 1 : size);
+	SetScrollBarMax(g_pWindow, C_SEEK_BAR, g_FileSize < 1 ? 1 : g_FileSize);
 	CallControlCallback(g_pWindow, C_SEEK_BAR, EVENT_PAINT, 0, 0);
 }
 
@@ -221,11 +358,19 @@ void CloseFile()
 	
 	SetScrollBarMax(g_pWindow, C_SEEK_BAR, 1);
 	CallControlCallback(g_pWindow, C_SEEK_BAR, EVENT_PAINT, 0, 0);
+	
+	free(g_SampleBuffer);
+	g_SampleBuffer = NULL;
+	g_SampleBufferSize = 0;
 }
 
 void SetPos(int pos)
 {
-	lseek(g_fileFD, pos & ~(BYTES_PER_SAMPLE - 1), SEEK_SET);
+	int filePos = pos;
+	int filePosRem = filePos % (g_wave_data.nChannels * (g_wave_data.nBitsPerSample / 8));
+	filePos -= filePosRem;
+	
+	lseek(g_fileFD, g_offsetFromStart + filePos, SEEK_SET);
 }
 
 void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
