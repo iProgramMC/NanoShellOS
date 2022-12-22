@@ -50,6 +50,9 @@ void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 	SetScrollBarMax (pWindow, 0x70000000 - this->m_comboID, nLengthMax * cw);
 	
 	VidSetFont(SYSTEM_FONT);
+	
+	CallControlCallback(pWindow,            - this->m_comboID, EVENT_PAINT, 0, 0);
+	CallControlCallback(pWindow, 0x70000000 - this->m_comboID, EVENT_PAINT, 0, 0);
 }
 
 void CtlTextEditRecalcCurXY(Control *this);
@@ -83,6 +86,8 @@ void CtlSetTextInputText (Control* this, Window* pWindow, const char* pText)
 	
 	SetScrollBarPos(pWindow,            - this->m_comboID, 0);
 	SetScrollBarPos(pWindow, 0x70000000 - this->m_comboID, 0);
+	CallControlCallback(pWindow,            - this->m_comboID, EVENT_PAINT, 0, 0);
+	CallControlCallback(pWindow, 0x70000000 - this->m_comboID, EVENT_PAINT, 0, 0);
 }
 
 void SetTextInputText(Window* pWindow, int comboID, const char* pText)
@@ -809,7 +814,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				CtlTextEditUpdateScrollXY(this);
 			}
 			
-			RequestRepaint (pWindow);
+			WidgetTextEditView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CREATE:
