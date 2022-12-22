@@ -50,6 +50,7 @@ typedef uint8_t BYTE;
 #define TEXTEDIT_LINENUMS  (2)
 #define TEXTEDIT_READONLY  (4)
 #define TEXTEDIT_STYLING   (8)
+#define TEXTEDIT_SYNTHILT  (16)
 
 #define IMAGECTL_PAN  (1)
 #define IMAGECTL_ZOOM (2)
@@ -218,10 +219,16 @@ enum
 	//When creating the control, the image gets duplicated, so the caller may free/dispose of
 	//the old image.  The system will get rid of its own copy when the control gets destroyed.
 	CONTROL_IMAGE,
+	//Task list control
+	CONTROL_TASKLIST,
+	//Same as CONTROL_ICONVIEW but with draggable icons.
+	CONTROL_ICONVIEWDRAG,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
-	CONTROL_COUNT
+	CONTROL_COUNT,
+	
+	CONTROL_SIMPLE_VLINE = -CONTROL_SIMPLE_HLINE, // macro for CONTROL_SIMPLE_HLINE with parm1 = 1
 };
 
 enum

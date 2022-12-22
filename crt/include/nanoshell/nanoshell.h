@@ -77,9 +77,11 @@ uint32_t    ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCa
 uint32_t    GetThemingParameter (int type);
 void        SetThemingParameter (int type, uint32_t parm);
 void        SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler);
-// Returns a kernel memory region. Use MmKernelFree() instead of free() to free it.
+// The input boxes that return stings return a kernel memory region. Use MmKernelFree() instead of free() to free it.
 char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
+char*       FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 void        CallControlCallback(Window * pWindow, int comboID, int event, int parm1, int parm2);
+void        TextInputSetMode (Window *pWindow, int comboID, int mode);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

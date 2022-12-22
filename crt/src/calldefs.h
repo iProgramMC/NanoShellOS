@@ -269,6 +269,9 @@ CALL_END
 CALL (PopupWindow, WIN_POPUP_WINDOW, void, Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)
 	SARGS(pWindow, newWindowTitle, newWindowX, newWindowY, newWindowW, newWindowH, newWindowProc, newFlags)
 CALL_END
+CALL (FilePickerBox, WIN_FILE_CHOOSE_BOX, char *, Window * pWindow, const char * prompt, const char * caption, const char * default_text)
+	RARGS(pWindow, prompt, caption, default_text)
+CALL_END
 
 // Calls V1.4
 CALL (VidSetVbeData, VID_SET_VBE_DATA, void, VBEData* pData)
@@ -410,5 +413,8 @@ CALLI(FiIoControl, FI_IO_CONTROL, int, int fd, unsigned long request, void * arg
 CALL_END
 CALL (CallControlCallback, WIN_CALL_CTL_CALLBACK, void, Window * window, int comboid, int event, int parm1, int parm2)
 	SARGS(window, comboid, event, parm1, parm2)
+CALL_END
+CALL (TextInputSetMode, WIN_TEXT_INPUT_SET_MODE, void, Window* pWindow, int comboID, int mode)
+	SARGS(pWindow, comboID, mode)
 CALL_END
 
