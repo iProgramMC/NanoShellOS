@@ -305,6 +305,15 @@ enum
 	// System Calls V1.7
 		MM_MAP_MEMORY_USER,
 		MM_UNMAP_MEMORY_USER,
+		
+	// System Calls V1.8
+		FI_RENAME,
+		FI_MAKE_DIR,
+		FI_REMOVE_DIR,
+		FI_CREATE_PIPE,
+		FI_IO_CONTROL,
+		WIN_CALL_CTL_CALLBACK,
+		WIN_TEXT_INPUT_SET_MODE,
 };
 
 const void *WindowCall[] = {
@@ -467,6 +476,7 @@ const void *WindowCall[] = {
 		FiCreatePipe,
 		FiIoControl,
 		CallControlCallback,
+		TextInputSetMode,
 };
 
 

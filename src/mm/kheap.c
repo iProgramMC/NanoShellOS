@@ -178,6 +178,8 @@ void MhFreePage(void* pPage)
 	
 	uint32_t index = (pAddr - KERNEL_HEAP_BASE) >> 12;
 	
+	if (index >= ARRAY_COUNT(g_KernelPageEntries)) return;
+	
 	// don't free a page if it was marked as demand-paged but was never actually demanded
 	if (g_KernelPageEntries[index] & PAGE_BIT_PRESENT)
 	{
