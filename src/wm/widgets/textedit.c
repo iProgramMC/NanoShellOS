@@ -635,7 +635,11 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			
 			if (!RectangleContains (&this->m_rect, &mouseClickPos))
+			{
+				if (this->m_bFocused)
+					SetFocusedControl(pWindow, -1);
 				break;
+			}
 			
 			SetFocusedControl(pWindow, this->m_comboID);
 			

@@ -207,6 +207,40 @@ void SetFocusedControl(Window *pWindow, int comboId);
  */
 void SetDisabledControl(Window *pWindow, int comboId, bool bDisabled);
 
+/**
+ * Add an element into the table.
+ * The 'pText' array is an array of const char pointers that's <column count> columns wide.
+ * An icon can be specified, or ICON_NONE for none.
+ */
+void AddTableRow (Window* pWindow, int comboID, const char* pText[], int optionalIcon);
+
+/**
+ * Add a column into the table.
+ */
+void AddTableColumn(Window* pWindow, int comboID, const char* pText, int width);
+
+/**
+ * Gets the row strings from the table.
+ * The 'output' array must be at least 'Column Count' in length.
+ * Each of the elements, up until the number of columns minus one, will be filled with a const char pointer to the contents of a single row element.
+ */
+bool GetRowStringsFromTable(Window* pWindow, int comboID, int index, const char * output[]);
+
+/**
+ * Removes a single row from a table.
+ */
+void RemoveRowFromTable(Window* pWindow, int comboID, int elementIndex);
+
+/**
+ * Gets the selected element of a table.
+ */
+int GetSelectedIndexTable(Window* pWindow, int comboID);
+
+/**
+ * Clears a table view widget's data.
+ */
+void ResetTable(Window* pWindow, int comboID);
+
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 

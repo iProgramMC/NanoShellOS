@@ -157,6 +157,7 @@ go_back:
 				pData->m_scrollY  = pos;
 			}
 			else break;
+			// fallthrough intended
 		}
 	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
