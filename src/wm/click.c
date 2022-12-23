@@ -216,15 +216,16 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			pWindow->m_rect = newWndRect;
 		}
 		
-		if (GetCurrentCursor() == &g_windowDragCursor)
-		{
-			SetCursor(NULL);
-		}
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = false;
 		pWindow->m_isBeingDragged = false;
 		ShowWindow(pWindow);
+		
+		if (GetCurrentCursor() == &g_windowDragCursor)
+		{
+			SetCursorInternal(NULL, false);
+		}
 	}
 	
 	if (pWindow->m_minimized) return;

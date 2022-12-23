@@ -245,7 +245,7 @@ Cursor* GetCurrentCursor()
 	return g_currentCursor;
 }
 void RenderCursor(void);
-void SetCursor(Cursor* pCursor)
+void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor)
 {
 	if (!pCursor) pCursor = g_pDefaultCursor;
 	if (g_currentCursor == pCursor) return;
@@ -257,7 +257,7 @@ void SetCursor(Cursor* pCursor)
 	g_vbeData = &g_mainScreenVBEData;
 	
 	//undraw the old cursor:
-	if (g_currentCursor)
+	if (g_currentCursor && bUndrawOldCursor)
 	{
 		if (g_currentCursor->m_resizeMode)
 		{
@@ -281,6 +281,10 @@ void SetCursor(Cursor* pCursor)
 	
 	KeVerifyInterruptsDisabled;
 	sti;
+}
+void SetCursor(Cursor* pCursor)
+{
+	SetCursorInternal(pCursor, true);
 }
 
 void SetMouseVisible (bool b)

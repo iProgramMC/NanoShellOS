@@ -110,5 +110,6 @@ void WindowManagerOnShutdown(void);
 void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight);
 void SetFocusedConsole(Console* console);
 void RequestTaskbarUpdate();
+void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor);
 
 #endif//INT_WI_H
