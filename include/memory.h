@@ -210,6 +210,11 @@ void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callL
 void MmFree (void* pAddr);
 void MmFreeK(void* pAddr);
 
+/**
+ * Allocates a copy of the passed in string on the kernel heap.
+ */
+char * MmStringDuplicate(const char * str);
+
 // TODO: Add helpful comments here too.
 UserHeap* MuGetCurrentHeap();
 UserHeap* MuCreateHeap();

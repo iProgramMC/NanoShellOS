@@ -6,6 +6,10 @@
 ******************************************/
 
 #include <wbuiltin.h>
+
+#define LISTTEST_WIDTH  600
+#define LISTTEST_HEIGHT 400
+
 void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -17,9 +21,9 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			Rectangle r;
 			// Add a list view control.
 			
-			RECT(r, 40, 40, 400-80, 300-80);
+			RECT(r, 8, 8 + TITLE_BAR_HEIGHT, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16 - TITLE_BAR_HEIGHT);
 			
-			AddControl (pWindow, CONTROL_LISTVIEW, r, NULL, 1, 0, 0);
+			AddControlEx(pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1, 0, 0);
 			
 			/*RECT (r, 20, 20, 1, 240-40);
 			//goes from 0-99
@@ -47,7 +51,7 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 void ListTestTask (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("List Test", 300, 200, 400, 300, ListTestProc, 0);
+	Window* pWindow = CreateWindow ("List Test", 300, 200, LISTTEST_WIDTH, LISTTEST_HEIGHT, ListTestProc, WF_ALWRESIZ);
 	pWindow->m_iconID = ICON_TEXT_FILE;
 	
 	if (!pWindow)

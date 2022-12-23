@@ -198,6 +198,7 @@ bool WidgetClickLabel_OnEvent   (C_PARMS);
 bool WidgetImage_OnEvent        (C_PARMS);
 bool WidgetCheckbox_OnEvent     (C_PARMS);
 bool WidgetTaskList_OnEvent     (C_PARMS);
+bool WidgetTableView_OnEvent    (C_PARMS);
 
 WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetNone_OnEvent,
@@ -224,6 +225,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetImage_OnEvent,
 	WidgetTaskList_OnEvent,
 	WidgetIconViewDrag_OnEvent,
+	WidgetTableView_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

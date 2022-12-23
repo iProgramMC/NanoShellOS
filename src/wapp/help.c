@@ -349,7 +349,7 @@ void HelpEntry (int arg)
 
 RESOURCE_STATUS HelpOpenResource(const char* pResourceID)
 {
-	char* text = strdup (pResourceID);
+	char* text = MmStringDuplicate (pResourceID);
 	if (!text)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	

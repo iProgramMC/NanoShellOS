@@ -490,7 +490,9 @@ void KillFont (int fontID)
 			DirtyRectLogger(ox, oy, width, height);
 		}
 	}
-	void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx)
+	
+	// Yes, we really have to do this, because VidTextOutInternal is exposed as a system call...
+	void VidTextOutInternalEx(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx, int limit)
 	{
 		int x = ox, y = oy;
 		int lineHeight = g_pCurrentFont[1];
@@ -498,6 +500,7 @@ void KillFont (int fontID)
 		int width = 0;
 		int cwidth = 0, height = lineHeight;
 		
+		bool bReachedLimit = limit == 0; // it counts as already having reached a limit if the limit is zero
 		bool bold = false;
 		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
 		{
@@ -526,6 +529,14 @@ void KillFont (int fontID)
 				
 				x += cw;
 				width += cw;
+				
+				if (!bReachedLimit && width + 10 >= limit)
+				{
+					// continue with just '...'
+					pText = "...";
+					bReachedLimit = true;
+					continue;
+				}
 			}
 			pText++;
 		}
@@ -535,10 +546,22 @@ void KillFont (int fontID)
 		*widthx  = cwidth;
 		*heightx = height;
 	}
+	
+	void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx)
+	{
+		VidTextOutInternalEx(pText, ox, oy, colorFg, colorBg, doNotActuallyDraw, widthx, heightx, 0);
+	}
+	
 	void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg)
 	{
 		UNUSED int a, b;
 		VidTextOutInternal (pText, ox, oy, colorFg, colorBg, false, &a, &b);
+	}
+	
+	void VidTextOutLimit(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, int limit)
+	{
+		UNUSED int a, b;
+		VidTextOutInternalEx (pText, ox, oy, colorFg, colorBg, false, &a, &b, limit);
 	}
 	
 	int CountLinesInText (const char* pText)

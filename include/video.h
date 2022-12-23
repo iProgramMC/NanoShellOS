@@ -298,11 +298,25 @@ void VidBlitImageResizeOutline(Image* pImage, int x, int y, int width, int heigh
  */
 void VidTextOut(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
 
+
+/**
+ * Prints a string in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).
+ * If the width of the string exceeds 'limit', then pad it with ellipses.
+ */
+void VidTextOutLimit(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, int limit);
+
 /**
  * Prints a string in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).
  * Requires widthx and widthy to be valid pointers to integers.  Use this to measure text.
  */
 void VidTextOutInternal(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx);
+
+/**
+ * Prints a string in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).
+ * Requires widthx and widthy to be valid pointers to integers.  Use this to measure text.
+ * An optional limit (or zero if there isn't one) will make the text cut off as '...' when the width limit is reached.
+ */
+void VidTextOutInternalEx(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx, int limit);
 
 /**
  * Makes the text fit in a rectangle of `xSize` width and `ySize` height,

@@ -271,7 +271,7 @@ char* strrchr (const char* stringToSearch1, const char characterToSearchFor)
 	return NULL;
 }
 
-char* strdup (const char* pText)
+char* MmStringDuplicate (const char* pText)
 {
 	int len1 = strlen(pText);
 	char* ret = MmAllocate(len1 + 1);

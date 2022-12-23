@@ -82,6 +82,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	
 	// add the control itself:
 	Control *pControl = &pWindow->m_pControlArray[index];
+	memset(pControl, 0, sizeof *pControl);
 	pControl->m_active  = true;
 	pControl->m_type    = type;
 	pControl->m_dataPtr = NULL;

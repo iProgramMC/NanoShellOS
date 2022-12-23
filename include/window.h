@@ -219,6 +219,8 @@ enum {
 	CONTROL_TASKLIST,
 	//Same as CONTROL_ICONVIEW but with draggable icons.
 	CONTROL_ICONVIEWDRAG,
+	//A table view. Even more complicated.
+	CONTROL_TABLEVIEW,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
@@ -267,6 +269,45 @@ ListItem;
 #define LIST_ITEM_HEIGHT (GetLineHeight() + 6)
 #define ICON_ITEM_WIDTH  90
 #define ICON_ITEM_HEIGHT 60
+
+#define MAX_COLUMN_LENGTH      (32)
+#define MAX_ROW_CONTENT_LENGTH (128)
+
+typedef struct
+{
+	char   m_text[MAX_COLUMN_LENGTH];
+	int    m_sort_order;
+	int    m_width;
+}
+TableViewColumn;
+
+typedef struct
+{
+	char m_text[MAX_ROW_CONTENT_LENGTH];
+}
+TableViewItem;
+
+typedef struct
+{
+	int m_icon;
+	TableViewItem* m_items;
+}
+TableViewRow;
+
+typedef struct
+{
+	int m_column_count;
+	int m_column_capacity;
+	TableViewColumn *m_pColumnData;
+	
+	int m_row_count;
+	int m_row_capacity;
+	TableViewRow    *m_pRowData;
+	
+	int m_row_scroll;
+	int m_selected_row;
+}
+TableViewData;
 
 typedef struct
 {
@@ -415,6 +456,7 @@ typedef struct ControlStruct
 		CheckBoxData  m_checkBoxData;
 		ImageCtlData  m_imageCtlData;
 		TaskListData  m_taskListData;
+		TableViewData m_tableViewData;
 	};
 	
 	int m_anchorMode;

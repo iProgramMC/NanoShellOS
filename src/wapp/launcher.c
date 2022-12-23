@@ -76,6 +76,18 @@ RESOURCE_STATUS LaunchIconTest()
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
+RESOURCE_STATUS LaunchListTest()
+{
+	UNUSED int errorCode = 0;
+	Task* pTask = KeStartTask(ListTestTask, 0, &errorCode);
+	
+	if (!pTask)
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	KeUnsuspendTask(pTask);
+	
+	return RESOURCE_LAUNCH_SUCCESS;
+}
 RESOURCE_STATUS LaunchTextShell()
 {
 	UNUSED int errorCode = 0;
@@ -185,6 +197,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	/**/ if (STREQ(pResourceID, "about"))    return LaunchVersionApplet(NULL, ICON_NANOSHELL);
 	else if (STREQ(pResourceID, "sysmon"))   return LaunchSystem();
 	else if (STREQ(pResourceID, "icontest")) return LaunchIconTest();
+	else if (STREQ(pResourceID, "listtest")) return LaunchListTest();
 	else if (STREQ(pResourceID, "cmdshell")) return LaunchTextShell();
 	else if (STREQ(pResourceID, "scribble")) return LaunchPaint();
 	else if (STREQ(pResourceID, "cpanel"))   return LaunchControlPanel();

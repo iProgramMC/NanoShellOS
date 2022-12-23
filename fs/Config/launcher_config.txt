@@ -6,6 +6,7 @@
 version|2
 
 // Essentials
+add_item|24|1|List test|shell:listtest
 add_item|46|1|Command prompt|shell:cmdshell
 add_item|1|1|File cabinet|shell:cabinet
 add_item|96|1|Text editor|shell:notepad
