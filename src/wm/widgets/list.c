@@ -255,6 +255,8 @@ go_back:
 				pData->m_pItems = NULL;
 			}
 			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			
+			RemoveControl(pWindow, -this->m_comboID);
 			break;
 		}
 	}
@@ -509,6 +511,8 @@ go_back:
 				pData->m_pItems = NULL;
 			}
 			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			RemoveControl(pWindow, -this->m_comboID);
+			
 			break;
 		}
 	}
@@ -954,7 +958,10 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				MmFreeK (pData->m_pItems);
 				pData->m_pItems = NULL;
 			}
-			//BUGFIX 23.1.2022 - Do NOT free the listviewdata as it's just a part of the control now!!
+			
+			RemoveControl(pWindow, 0x70000000 - this->m_comboID);
+			RemoveControl(pWindow,            - this->m_comboID);
+			
 			break;
 		}
 	}

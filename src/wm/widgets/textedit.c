@@ -877,6 +877,10 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 				MmFreeK(this->m_textInputData.m_pText);
 				this->m_textInputData.m_pText = NULL;
 			}
+			
+			RemoveControl(pWindow, 0x70000000 - this->m_comboID);
+			RemoveControl(pWindow,            - this->m_comboID);
+			
 			break;
 		}
 		case EVENT_PAINT:

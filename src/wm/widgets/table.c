@@ -35,6 +35,8 @@ static void TableAddColumn(TableViewData* this, const char * text, int width)
 	
 	TableViewColumn* newColumn = &this->m_pColumnData[this->m_column_count++];
 	
+	SLogMsg("NewC:%p  CC:%d Cap:%d", newColumn, this->m_column_count, this->m_column_capacity);
+	
 	memset(newColumn, 0, sizeof *newColumn);
 	
 	strncpy(newColumn->m_text, text, MAX_COLUMN_LENGTH);
@@ -143,6 +145,8 @@ static void TableClearRows(TableViewData* this)
 		TableDeleteRow(this, this->m_row_count - 1);
 	}
 	
+	this->m_row_capacity = 0;
+	
 	MmFree(this->m_pRowData);
 	this->m_pRowData = NULL;
 }
@@ -158,6 +162,8 @@ static void TableClearEverything(TableViewData* this)
 	{
 		TableDeleteColumn(this, this->m_column_count - 1);
 	}
+	
+	this->m_column_capacity = 0;
 	
 	MmFree(this->m_pColumnData);
 	this->m_pColumnData = NULL;

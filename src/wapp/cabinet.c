@@ -14,6 +14,8 @@
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
+#define TABLE_COLUMNS (2)
+
 #define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
 
 //TODO: Move this to its own space.
@@ -21,11 +23,13 @@ typedef struct
 {
 char m_cabinetCWD[PATH_MAX+2];
 char m_cbntOldCWD[PATH_MAX+2];
+bool m_bUsingTableView;
 }
 CabData;
 
 #define g_cabinetCWD (((CabData*)pWindow->m_data)->m_cabinetCWD)
 #define g_cbntOldCWD (((CabData*)pWindow->m_data)->m_cbntOldCWD)
+#define g_bUsingTableView (((CabData*)pWindow->m_data)->m_bUsingTableView)
 
 enum
 {
@@ -143,37 +147,80 @@ bool WidgetListView_OnEvent(Control* this, int eventType, int parm1, int parm2, 
 bool WidgetIconViewDrag_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow);
 void WidgetIconViewDrag_ArrangeIcons (Control *this);
 
-void ChangeListViewMode(Window* pWindow)
+static void CreateListView(Window* pWindow);
+
+static void ClearFileListing(Window * pWindow)
 {
-	Control* ctl = GetControlByComboID(pWindow, MAIN_LISTVIEW);
-	if (!ctl)
+	if (g_bUsingTableView)
 	{
-		SLogMsg("Ack!");
-		return;
-	}
-	
-	if (ctl->m_type  == CONTROL_ICONVIEWDRAG)
-	{
-		ctl->OnEvent  = WidgetListView_OnEvent;
-		ctl->m_type   = CONTROL_LISTVIEW;
+		ResetTable(pWindow, MAIN_LISTVIEW);
+		
+		AddTableColumn(pWindow, MAIN_LISTVIEW, "Name", 200);
+		AddTableColumn(pWindow, MAIN_LISTVIEW, "Size", 100);
 	}
 	else
 	{
-		ctl->OnEvent  = WidgetIconViewDrag_OnEvent;
-		ctl->m_type   = CONTROL_ICONVIEWDRAG;
-		WidgetIconViewDrag_ArrangeIcons(ctl);
+		ResetList (pWindow, MAIN_LISTVIEW);
 	}
-	
-	CallControlCallback(pWindow, ctl->m_comboID, EVENT_PAINT, 0, 0);
 }
 
-void UpdateDirectoryListing (Window* pWindow)
+static void ChangeListViewMode(Window* pWindow)
+{
+	g_bUsingTableView ^= 1;
+	RemoveControl(pWindow, MAIN_LISTVIEW);
+	CreateListView(pWindow);
+	ClearFileListing(pWindow);
+}
+
+static void FormatSize(uint32_t size, char* size_buf)
+{
+	uint32_t kb = size / 1024;
+	if (size == ~0u)
+		size_buf[0] = 0;
+	else if (size < 1000)
+		sprintf(size_buf, "%d B", size);
+	else if (size < 1024)
+		sprintf(size_buf, "%d,%03d B", size / 1000, size % 1000);
+	else if (kb < 1000)
+		sprintf(size_buf, "%d KB", kb);
+	else if (size < 1000000)
+		sprintf(size_buf, "%d,%03d KB", kb / 1000, kb % 1000);
+	else if (size < 1000000000)
+		sprintf(size_buf, "%d,%03d,%03d KB", kb / 1000000, kb / 1000 % 1000, kb % 1000);
+	else
+		sprintf(size_buf, "%d,%03d,%03d,%03d KB", kb / 1000000000, kb / 1000000 % 1000, kb / 1000 % 1000, kb % 1000);
+}
+
+// size = -1, means don't show anything to the file
+static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size)
+{
+	// note: this is real crap
+	if (g_bUsingTableView)
+	{
+		char size_buf[16];
+		FormatSize(file_size, size_buf);
+		
+		const char* table[TABLE_COLUMNS] = { 0 };
+		table[0] = text;
+		table[1] = size_buf;
+		
+		AddTableRow(pWindow, MAIN_LISTVIEW, table, icon);
+	}
+	else
+	{
+		AddElementToList(pWindow, MAIN_LISTVIEW, text, icon);
+	}
+}
+
+static void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
-	ResetList (pWindow, MAIN_LISTVIEW);
+	ClearFileListing(pWindow);
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
-		AddElementToList (pWindow, MAIN_LISTVIEW, "..", ICON_FOLDER_PARENT);
+	{
+		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1);
+	}
 	
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 	
@@ -194,11 +241,11 @@ reset:
 		
 		if (!pNode)
 		{
-			AddElementToList (pWindow, MAIN_LISTVIEW, "<a NULL directory entry>", ICON_ERROR);
+			AddFileElementToList(pWindow, "<a NULL directory entry>", ICON_ERROR, -1);
 		}
 		else
 		{
-			AddElementToList (pWindow, MAIN_LISTVIEW, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
+			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_length);
 			
 			FsReleaseReference(pNode);
 		}
@@ -312,6 +359,22 @@ void CabinetDetermineResourceLaunchFailure(Window* pWindow, RESOURCE_STATUS stat
 	MessageBox(pWindow, buffer, "Cabinet - Error Opening File", ICON_ERROR << 16 | MB_OK);
 }
 
+static const char * GetFileNameFromList(Window* pWindow, int index)
+{
+	if (g_bUsingTableView)
+	{
+		const char * table[TABLE_COLUMNS];
+		
+		if (!GetRowStringsFromTable(pWindow, MAIN_LISTVIEW, index, table)) return NULL;
+		
+		return table[0];
+	}
+	else
+	{
+		return GetElementStringFromList(pWindow, MAIN_LISTVIEW, index);
+	}
+}
+
 void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -330,7 +393,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			if (parm1 == MAIN_LISTVIEW)
 			{
 				FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
-				const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
+				const char* pFileName = GetFileNameFromList(pWindow, parm2);//GetElementStringFromList (pWindow, parm1, parm2);
 				//LogMsg("Double clicked element: %s", pFileName);
 				
 				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
@@ -551,7 +614,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
 			
-			AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
+			CreateListView(pWindow);
+			
 			AddControlEx (pWindow, CONTROL_MENUBAR, ANCHOR_RIGHT_TO_RIGHT, r, NULL, MAIN_MENU_BAR, 0, 0);
 			
 			r.top -= 14;
@@ -648,6 +712,33 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 	}
 }
 
+static void CreateListView(Window* pWindow)
+{
+	Rectangle r;
+	if (g_bUsingTableView)
+	{
+		RECT(r, 
+			/*X Coord*/ PADDING_AROUND_LISTVIEW, 
+			/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+			/*X Size */ CABINET_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
+			/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+		);
+		
+		AddControlEx (pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
+	}
+	else
+	{
+		RECT(r, 
+			/*X Coord*/ PADDING_AROUND_LISTVIEW, 
+			/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+			/*X Size */ CABINET_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
+			/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+		);
+		
+		AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
+	}
+}
+
 void CabinetEntry (__attribute__((unused)) int argument)
 {
 	// create ourself a window:
@@ -664,6 +755,8 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	}
 	
 	pWindow->m_data = MmAllocate(sizeof(CabData));
+	
+	g_bUsingTableView = true;
 	
 	// setup:
 	//ShowWindow(pWindow);
