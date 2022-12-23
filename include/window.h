@@ -599,10 +599,8 @@ bool RectangleOverlap(Rectangle *r1, Rectangle *r2);
 /**
  * Register an event to a certain window.
  */
-void WindowRegisterEvent2 (Window* pWindow, short eventType, int parm1, int parm2, const char *a, int b);
-void WindowRegisterEventUnsafe2 (Window* pWindow, short eventType, int parm1, int parm2, const char *a, int b);
-#define WindowRegisterEvent(pWindow, eventType, parm1, parm2)       WindowRegisterEvent2 (pWindow, eventType, parm1, parm2, __FILE__, __LINE__)
-#define WindowRegisterEventUnsafe(pWindow, eventType, parm1, parm2) WindowRegisterEventUnsafe2 (pWindow, eventType, parm1, parm2, __FILE__, __LINE__)
+void WindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2);
+void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2);
 
 /**
  * Entry point of the window manager.
@@ -644,10 +642,8 @@ void DestroyWindow (Window* pWindow);
 /**
  * Requests a safe re-paint of the window from the window manager.
  */
-void RequestRepaint2 (Window* pWindow, const char *a, int b);
-void RequestRepaintNew2 (Window* pWindow, const char *a, int b);
-#define RequestRepaint(pWindow) RequestRepaint2 (pWindow, __FILE__, __LINE__)
-#define RequestRepaintNew(pWindow) RequestRepaintNew2 (pWindow, __FILE__, __LINE__)
+void RequestRepaint(Window* pWindow);
+void RequestRepaintNew(Window* pWindow);
 
 /**
  * Displays a modal dialog box that contains a system icon, a set of buttons, and 
@@ -725,8 +721,7 @@ void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1,
 /**
  * Requests an event for that window in the master queue.  The window will still get it at some point.
  */
-void WindowAddEventToMasterQueue2(PWINDOW pWindow, int eventType, int parm1, int parm2, const char *a, int b);
-#define WindowAddEventToMasterQueue(pWindow, eventType, parm1, parm2) WindowAddEventToMasterQueue2 (pWindow, eventType, parm1, parm2, __FILE__, __LINE__)
+void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2);
 
 /**
  * Changes the cursor of a window.

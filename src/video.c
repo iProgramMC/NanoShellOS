@@ -125,6 +125,16 @@ bool RefreshMouse()
 	return false;
 }
 
+bool RectangleContains(Rectangle*r, Point*p) 
+{
+	return (r->left <= p->x && r->right >= p->x && r->top <= p->y && r->bottom >= p->y);
+}
+
+bool RectangleOverlap(Rectangle *r1, Rectangle *r2)
+{
+	return (r1->left <= r2->right && r1->right >= r2->left && r1->top <= r2->bottom && r1->bottom >= r2->top);
+}
+
 void AddClickInfoToQueue(const ClickInfo* info)
 {
 	if (g_clickQueueSize >= CLICK_INFO_MAX)

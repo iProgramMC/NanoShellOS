@@ -4,8 +4,10 @@
 
            Window Themes module
 ******************************************/
-
 #include <wtheme.h>
+#include <config.h>
+#include <print.h>
+#include <vfs.h>
 
 typedef struct
 {
@@ -103,4 +105,127 @@ void SetDefaultTheme()
 void SetDarkTheme()
 {
 	ApplyTheme(TH_DARK);
+}
+
+uint32_t g_ThemingParms[P_THEME_PARM_COUNT];
+
+uint32_t GetThemingParameter(int type)
+{
+	if (type < 0 || type >= P_THEME_PARM_COUNT) return 0;
+	return g_ThemingParms[type];
+}
+void SetThemingParameter(int type, uint32_t parm)
+{
+	if (type < 0 || type >= P_THEME_PARM_COUNT) return;
+	g_ThemingParms[type] = parm;
+}
+
+uint8_t* ThmLoadEntireFile (const char *pPath, int *pSizeOut)
+{
+	int fd = FiOpen (pPath, O_RDONLY);
+	if (fd < 0) return NULL;
+	
+	int size = FiTellSize (fd);
+	
+	uint8_t* pMem = MmAllocate (size + 1);
+	int read_size = FiRead (fd, pMem, size);
+	pMem[read_size] = 0;//for text parsers
+	
+	*pSizeOut = read_size;
+	return pMem;
+}
+
+void ThmLoadFont(ConfigEntry *pEntry)
+{
+	//load some properties
+	ConfigEntry
+	* pBmpPath, * pFntPath, * pSysFont, * pTibFont, * pBmpSize, * pChrHeit;
+	
+	char buffer1[128], buffer2[128], buffer3[128], buffer4[128], buffer5[128], buffer6[128];
+	//TODO: Ensure safety
+	sprintf(buffer1, "%s::Bitmap",       pEntry->value);
+	sprintf(buffer2, "%s::FontData",     pEntry->value);
+	sprintf(buffer3, "%s::SystemFont",   pEntry->value);
+	sprintf(buffer4, "%s::TitleBarFont", pEntry->value);
+	sprintf(buffer5, "%s::BmpSize",      pEntry->value);
+	sprintf(buffer6, "%s::ChrHeight",    pEntry->value);
+	
+	pBmpPath = CfgGetEntry (buffer1),
+	pFntPath = CfgGetEntry (buffer2),
+	pSysFont = CfgGetEntry (buffer3),
+	pTibFont = CfgGetEntry (buffer4);
+	pBmpSize = CfgGetEntry (buffer5);
+	pChrHeit = CfgGetEntry (buffer6);
+	
+	if (!pBmpPath || !pFntPath) return;
+	
+	bool bSysFont = false, bTibFont = false;
+	if (pSysFont)
+		bSysFont = strcmp (pSysFont->value, "yes") == 0;
+	if (pTibFont)
+		bTibFont = strcmp (pTibFont->value, "yes") == 0;
+	
+	// Load Data
+	int nBmpSize = 128;
+	if (pBmpSize)
+		nBmpSize = atoi (pBmpSize->value);
+	int nChrHeit = 16;
+	if (pChrHeit)
+		nChrHeit = atoi (pChrHeit->value);
+	
+	int sizeof_bmp = 0, sizeof_fnt = 0;
+	uint8_t
+	*pBmp = ThmLoadEntireFile (pBmpPath->value, &sizeof_bmp),
+	*pFnt = ThmLoadEntireFile (pFntPath->value, &sizeof_fnt);
+	
+	int font_id = CreateFont ((char*)pFnt, pBmp, nBmpSize, nBmpSize, nChrHeit);
+	if (bSysFont)
+		SetThemingParameter (P_SYSTEM_FONT, font_id);
+	if (bTibFont)
+		SetThemingParameter (P_TITLE_BAR_FONT, font_id);
+}
+
+void ThmLoadExtraFonts()
+{
+	ConfigEntry *pFontsToLoadEntry = CfgGetEntry ("Theming::FontsToLoad");
+	
+	if (!pFontsToLoadEntry) return;
+	
+	//we only support one font for now
+	ThmLoadFont(pFontsToLoadEntry);
+}
+
+//make sure pOut is initialized first - if the config entry is missing this won't work!
+void ThmLoadFromConfig(uint32_t *pOut, const char *pString)
+{
+	ConfigEntry *pEntry = CfgGetEntry (pString);
+	if (!pEntry) return;
+	
+	uint32_t number = (uint32_t) atoi (pEntry->value);
+	
+	*pOut = number;
+}
+
+void LoadDefaultThemingParms()
+{
+	SetThemingParameter(P_BLACK, 0x000000);
+	
+	// Dark mode:
+	SetDefaultTheme();
+	
+	// Load config stuff
+	ThmLoadFromConfig(&g_ThemingParms[P_TITLE_BAR_HEIGHT], "Theming::TitleBarHeight");
+	ThmLoadExtraFonts();
+}
+
+void LoadThemingParmsFromFile(const char* pString)
+{
+	//TODO
+	SLogMsg("TODO: LoadThemingParmsFromFile (\"%s\")", pString);
+}
+
+void SaveThemingParmsToFile(const char* pString)
+{
+	//TODO
+	SLogMsg("TODO: SaveThemingParmsToFile (\"%s\")", pString);
 }
