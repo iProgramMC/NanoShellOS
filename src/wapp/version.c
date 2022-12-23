@@ -74,7 +74,7 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 void VersionProgramTask (int argument)
 {
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("NanoShell", 100, 100, 320, 125 + TITLE_BAR_HEIGHT, VersionProgramProc, WF_NOMINIMZ);
+	Window* pWindow = CreateWindow ("NanoShell", 50, 50, 320, 125 + TITLE_BAR_HEIGHT, VersionProgramProc, WF_NOMINIMZ);
 	
 	if (!pWindow)
 	{

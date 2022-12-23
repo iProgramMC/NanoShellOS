@@ -136,7 +136,37 @@ IconType CabGetIconBasedOnName(const char *pName, int pType)
 	}
 	return icon;
 }
+
 void RequestTaskbarUpdate();
+
+bool WidgetListView_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow);
+bool WidgetIconViewDrag_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow);
+void WidgetIconViewDrag_ArrangeIcons (Control *this);
+
+void ChangeListViewMode(Window* pWindow)
+{
+	Control* ctl = GetControlByComboID(pWindow, MAIN_LISTVIEW);
+	if (!ctl)
+	{
+		SLogMsg("Ack!");
+		return;
+	}
+	
+	if (ctl->m_type  == CONTROL_ICONVIEWDRAG)
+	{
+		ctl->OnEvent  = WidgetListView_OnEvent;
+		ctl->m_type   = CONTROL_LISTVIEW;
+	}
+	else
+	{
+		ctl->OnEvent  = WidgetIconViewDrag_OnEvent;
+		ctl->m_type   = CONTROL_ICONVIEWDRAG;
+		WidgetIconViewDrag_ArrangeIcons(ctl);
+	}
+	
+	CallControlCallback(pWindow, ctl->m_comboID, EVENT_PAINT, 0, 0);
+}
+
 void UpdateDirectoryListing (Window* pWindow)
 {
 reset:
@@ -491,12 +521,11 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					case MENU$VIEW$REFRESH:
 						UpdateDirectoryListing(pWindow);
 						break;
+					case MENU$VIEW$CHVWMOD:
+						ChangeListViewMode(pWindow);
+						break;
 					case MENU$FILE$MRD:
 						PopupUserMountWindow(pWindow);
-						break;
-					case MENU$VIEW$CHVWMOD:
-						//TODO
-						//MessageBox(pWindow, "Not Implemented!", "File Cabinet", MB_OK|ICON_HELP<<16);
 						break;
 					case MENU$HELP$ABOUT:
 						LaunchVersion();
@@ -523,7 +552,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			);
 			
 			AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
-			AddControl (pWindow, CONTROL_MENUBAR,  r, NULL, MAIN_MENU_BAR, 0, 0);
+			AddControlEx (pWindow, CONTROL_MENUBAR, ANCHOR_RIGHT_TO_RIGHT, r, NULL, MAIN_MENU_BAR, 0, 0);
 			
 			r.top -= 14;
 			r.bottom = r.top + GetLineHeight();

@@ -161,6 +161,7 @@ go_back:
 	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
 		{
+			VidSetClipRect(&this->m_rect);
 			//draw a green rectangle:
 			Rectangle rk = this->m_rect;
 			rk.left   += 2;
@@ -171,7 +172,7 @@ go_back:
 			ListViewData* pData = &this->m_listViewData;
 			
 			int elementStart =   pData->m_scrollY;
-			int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top) / LIST_ITEM_HEIGHT - 1;
+			int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top + LIST_ITEM_HEIGHT - 1) / LIST_ITEM_HEIGHT - 1;
 			
 			if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
 			if (elementStart < 0) elementStart = 0;
@@ -201,6 +202,7 @@ go_back:
 			}
 			
 			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			VidSetClipRect(NULL);
 			
 			break;
 		}
@@ -344,7 +346,7 @@ go_back:
 			{
 				// Highlight some element.
 				int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
-				int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+				int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top + ICON_ITEM_HEIGHT - 1) / ICON_ITEM_HEIGHT;
 				
 				int elementStart =   pData->m_scrollY * elementColsPerScreen;
 				int elementEnd   =   pData->m_scrollY * elementColsPerScreen + elementRowsPerScreen * elementColsPerScreen-1;
@@ -388,6 +390,8 @@ go_back:
 	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
 		{
+			VidSetClipRect(&this->m_rect);
+			
 			//draw a green rectangle:
 			Rectangle rk = this->m_rect;
 			rk.left   += 2;
@@ -398,7 +402,7 @@ go_back:
 			ListViewData* pData = &this->m_listViewData;
 			
 			int elementColsPerScreen = (this->m_rect.right  - this->m_rect.left + ICON_ITEM_WIDTH/2) / ICON_ITEM_WIDTH;
-			int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top)  / ICON_ITEM_HEIGHT;
+			int elementRowsPerScreen = (this->m_rect.bottom - this->m_rect.top + ICON_ITEM_HEIGHT - 1)  / ICON_ITEM_HEIGHT;
 			
 			int elementStart =   pData->m_scrollY * elementColsPerScreen;
 			int elementEnd   =   pData->m_scrollY * elementColsPerScreen + elementRowsPerScreen * elementColsPerScreen-1;
@@ -449,6 +453,8 @@ go_back:
 			}
 			
 			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			
+			VidSetClipRect(NULL);
 			
 			break;
 		}
