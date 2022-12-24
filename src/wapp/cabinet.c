@@ -172,6 +172,7 @@ static void ChangeListViewMode(Window* pWindow)
 	CreateListView(pWindow);
 	ClearFileListing(pWindow);
 	UpdateDirectoryListing(pWindow);
+	RequestRepaintNew(pWindow);
 }
 
 static void FormatSize(uint32_t size, char* size_buf)
@@ -595,8 +596,19 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						break;
 				}
 			}
-			else
-				MessageBox(pWindow, "Not implemented!  Check back later or something", "Cabinet", MB_OK | ICON_INFO << 16);
+			else switch (parm1)
+			{
+				case CB$VIEWICON:
+					if (!g_bUsingTableView) break;
+					ChangeListViewMode(pWindow);
+					break;
+				case CB$VIEWTABLE:
+					if (g_bUsingTableView) break;
+					ChangeListViewMode(pWindow);
+					break;
+				default:
+					MessageBox(pWindow, "Not implemented!  Check back later or something", "Cabinet", MB_OK | ICON_INFO << 16);
+			}
 			break;
 		}
 		case EVENT_CREATE:
@@ -662,12 +674,14 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				ICON_WHATS_THIS, ICON_PACKAGER,
 			};
 			// TODO
-			UNUSED int button_actions[] = {
+			int button_actions[] = {
 				CB$BACK, CB$FWD,
 				-1,
 				CB$COPY, CB$PASTE,
 				-1,
 				CB$UNDO, CB$REDO, 
+				-1,
+				CB$VIEWICON, CB$VIEWTABLE,
 				-1,
 				CB$PROPERTIES, CB$SEARCH,
 				CB$WHATSTHIS, CB$PACKAGER,
@@ -687,7 +701,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				else
 				{
 					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
-					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CB$BACK + i, button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
+					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
 					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);
 				}
@@ -714,14 +728,17 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 
 static void CreateListView(Window* pWindow)
 {
+	int CabinetWidth  = pWindow->m_rect.right - pWindow->m_rect.left;
+	int CabinetHeight = pWindow->m_rect.bottom- pWindow->m_rect.top;
+	
 	Rectangle r;
 	if (g_bUsingTableView)
 	{
 		RECT(r, 
 			/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 			/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
-			/*X Size */ CABINET_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
-			/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+			/*X Size */ CabinetWidth - PADDING_AROUND_LISTVIEW * 2, 
+			/*Y Size */ CabinetHeight- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 		);
 		
 		AddControlEx (pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
@@ -731,8 +748,8 @@ static void CreateListView(Window* pWindow)
 		RECT(r, 
 			/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 			/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
-			/*X Size */ CABINET_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
-			/*Y Size */ CABINET_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+			/*X Size */ CabinetWidth - PADDING_AROUND_LISTVIEW * 2, 
+			/*Y Size */ CabinetHeight- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 		);
 		
 		AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
