@@ -269,7 +269,7 @@ void SetDefaultBackground()
 	FiClose(fd);
 	
 	int errorCode = 0;
-	Image* pImage = LoadBitmap(pData, &errorCode);
+	Image* pImage = LoadImageFile(pData, &errorCode);
 	MmFree(pData);
 	
 	if (pImage)

@@ -396,26 +396,26 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 3;
-			pControl->m_triedRect.top    -= 3;
-			pControl->m_triedRect.right  += 3;
-			pControl->m_triedRect.bottom -= 3;
+			pControl->m_triedRect.left   += 4;
+			pControl->m_triedRect.top    -= 4;
+			pControl->m_triedRect.right  += 4;
+			pControl->m_triedRect.bottom -= 4;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 3;
-			pControl->m_triedRect.top    -= 3;
-			pControl->m_triedRect.right  += 3;
-			pControl->m_triedRect.bottom -= 3;
+			pControl->m_triedRect.left   += 4;
+			pControl->m_triedRect.top    -= 4;
+			pControl->m_triedRect.right  += 4;
+			pControl->m_triedRect.bottom -= 4;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   += 3;
-			pControl->m_triedRect.top    -= 3;
-			pControl->m_triedRect.right  += 3;
-			pControl->m_triedRect.bottom -= 3;
+			pControl->m_triedRect.left   += 4;
+			pControl->m_triedRect.top    -= 4;
+			pControl->m_triedRect.right  += 4;
+			pControl->m_triedRect.bottom -= 4;
 		}
 		
 		int e = g_TaskbarHeight - 1;
@@ -451,26 +451,26 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 3;
-			pControl->m_triedRect.top    += 3;
-			pControl->m_triedRect.right  -= 3;
-			pControl->m_triedRect.bottom += 3;
+			pControl->m_triedRect.left   -= 4;
+			pControl->m_triedRect.top    += 4;
+			pControl->m_triedRect.right  -= 4;
+			pControl->m_triedRect.bottom += 4;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 3;
-			pControl->m_triedRect.top    += 3;
-			pControl->m_triedRect.right  -= 3;
-			pControl->m_triedRect.bottom += 3;
+			pControl->m_triedRect.left   -= 4;
+			pControl->m_triedRect.top    += 4;
+			pControl->m_triedRect.right  -= 4;
+			pControl->m_triedRect.bottom += 4;
 		}
 		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
 		if (pControl)
 		{
-			pControl->m_triedRect.left   -= 3;
-			pControl->m_triedRect.top    += 3;
-			pControl->m_triedRect.right  -= 3;
-			pControl->m_triedRect.bottom += 3;
+			pControl->m_triedRect.left   -= 4;
+			pControl->m_triedRect.top    += 4;
+			pControl->m_triedRect.right  -= 4;
+			pControl->m_triedRect.bottom += 4;
 		}
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x08");
