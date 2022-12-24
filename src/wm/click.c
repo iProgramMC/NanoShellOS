@@ -136,6 +136,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.m_resizeMode   = false;
 					g_windowDragCursor.boundsWidth  = p->width;
 					g_windowDragCursor.boundsHeight = p->height;
+					g_windowDragCursor.mouseLockX = -1;
+					g_windowDragCursor.mouseLockY = -1;
 				}
 				else if (g_heldAlt && (window->m_flags & WF_ALWRESIZ))
 				{
@@ -148,6 +150,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.m_resizeMode   = true;
 					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
 					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.mouseLockX = mouseX;
+					g_windowDragCursor.mouseLockY = mouseY;
 				}
 				else
 				{
@@ -160,6 +164,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					g_windowDragCursor.m_resizeMode   = false;
 					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
 					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.mouseLockX = -1;
+					g_windowDragCursor.mouseLockY = -1;
 				}
 				
 				SetCursor (&g_windowDragCursor);

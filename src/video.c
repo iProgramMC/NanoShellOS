@@ -80,9 +80,19 @@ void RedrawOldPixelsFull(int oldX, int oldY);
 
 bool RefreshMouse()
 {
-	if (g_queueMouseUpdateTo.updated)
+	cli;
+	MouseMoveQueue QueueMouseUpdateTo = g_queueMouseUpdateTo;
+	g_queueMouseUpdateTo.updated = false;
+	g_queueMouseUpdateTo.newX = g_queueMouseUpdateTo.newY = 0;
+	
+	int lockX, lockY;
+	lockX = (int)(short)g_currentCursor->mouseLockX;
+	lockY = (int)(short)g_currentCursor->mouseLockY;
+	sti;
+	
+	if (QueueMouseUpdateTo.updated)
 	{
-		g_queueMouseUpdateTo.updated = false;
+		QueueMouseUpdateTo.updated = false;
 		
 		if (g_currentCursor->m_resizeMode)
 		{
@@ -91,8 +101,8 @@ bool RefreshMouse()
 			
 			RedrawOldPixels(g_mouseX, g_mouseY);
 			
-			g_currentCursor->boundsWidth  += g_queueMouseUpdateTo.newX;
-			g_currentCursor->boundsHeight += g_queueMouseUpdateTo.newY;
+			g_currentCursor->boundsWidth  += QueueMouseUpdateTo.newX;
+			g_currentCursor->boundsHeight += QueueMouseUpdateTo.newY;
 			
 			if (g_currentCursor->boundsWidth  < 200)
 				g_currentCursor->boundsWidth  = 200;
@@ -109,16 +119,21 @@ bool RefreshMouse()
 		}
 		else
 		{
-			int newMouseX = g_mouseX + g_queueMouseUpdateTo.newX;
-			int newMouseY = g_mouseY + g_queueMouseUpdateTo.newY;
+			int newMouseX = g_mouseX;
+			int newMouseY = g_mouseY;
+			if (lockX == -1)
+			{
+				newMouseX += QueueMouseUpdateTo.newX;
+				newMouseY += QueueMouseUpdateTo.newY;
+			}
 			if (newMouseX < 0) newMouseX = 0;
 			if (newMouseY < 0) newMouseY = 0;
 			
 			SetMousePos(newMouseX, newMouseY);
 		}
 		
-		g_queueMouseUpdateTo.newX = 0;
-		g_queueMouseUpdateTo.newY = 0;
+		QueueMouseUpdateTo.newX = 0;
+		QueueMouseUpdateTo.newY = 0;
 		return true;
 	}
 	
@@ -144,6 +159,7 @@ void AddClickInfoToQueue(const ClickInfo* info)
 	}
 	g_clickQueue[g_clickQueueSize++] = *info;
 }
+
 void OnLeftClick()
 {
 	ClickInfo info;
@@ -152,6 +168,7 @@ void OnLeftClick()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+
 void OnLeftClickRelease()
 {
 	ClickInfo info;
@@ -160,6 +177,7 @@ void OnLeftClickRelease()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+
 void OnLeftClickDrag()
 {
 	ClickInfo info;
@@ -168,6 +186,7 @@ void OnLeftClickDrag()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+
 void OnRightClick()
 {
 	ClickInfo info;
@@ -176,6 +195,7 @@ void OnRightClick()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+
 void OnRightClickDrag()
 {
 	ClickInfo info;
@@ -184,6 +204,7 @@ void OnRightClickDrag()
 	info.clickedAtY = g_mouseY;
 	AddClickInfoToQueue (&info);
 }
+
 void OnRightClickRelease()
 {
 	ClickInfo info;
@@ -196,6 +217,7 @@ void OnRightClickRelease()
 uint8_t g_previousFlags = 0;
 void ForceKernelTaskToRunNext();
 bool IsWindowManagerRunning();
+
 void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)) uint8_t Dz)
 {
 	int dx, dy;
@@ -208,6 +230,7 @@ void OnUpdateMouse(uint8_t flags, uint8_t Dx, uint8_t Dy, __attribute__((unused)
 	//move the cursor:
 	g_queueMouseUpdateTo.newX += dx;
 	g_queueMouseUpdateTo.newY += -dy;
+	
 	if (dx || dy)
 		g_queueMouseUpdateTo.updated = true;
 	
@@ -274,6 +297,12 @@ void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor)
 	
 	//draw the new cursor:
 	g_currentCursor = pCursor;
+	
+	if ((int)(short)pCursor->mouseLockX != -1)
+	{
+		g_mouseX = pCursor->mouseLockX;
+		g_mouseY = pCursor->mouseLockY;
+	}
 	
 	RenderCursor();
 	

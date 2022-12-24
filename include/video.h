@@ -87,6 +87,7 @@ typedef struct
 	
 	bool m_resizeMode;
 	uint16_t boundsWidth, boundsHeight;
+	uint16_t mouseLockX, mouseLockY;
 }
 Cursor;
 

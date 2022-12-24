@@ -427,13 +427,15 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		pWindow->m_renderFinished = true;
 		
-		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		Rectangle new_title_rect = { 0, g_TaskbarHeight, GetScreenWidth() - 1, g_TaskbarHeight - 1 + TITLE_BAR_HEIGHT };
 		
 		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
 	else if (eventType == EVENT_UNMAXIMIZE)
 	{
 		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		
+		Rectangle new_title_rect = { pWindow->m_rectBackup.left + 3, pWindow->m_rectBackup.top + 3, pWindow->m_rectBackup.right - 3, pWindow->m_rectBackup.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (pWindow->m_maximized)
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
@@ -470,7 +472,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			pControl->m_triedRect.right  -= 3;
 			pControl->m_triedRect.bottom += 3;
 		}
-		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x08");
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_MAXIMIZE);

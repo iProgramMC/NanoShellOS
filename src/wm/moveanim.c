@@ -7,7 +7,7 @@
 #include "wi.h"
 
 // Window effects when you maximize/minimize a window
-#define EFFECT_PRECISION 1024
+#define EFFECT_PRECISION 1000
 
 bool g_EffectRunning;
 int  g_NextEffectUpdateIn = 0;
@@ -124,6 +124,10 @@ void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text
 	g_EffectStep.bottom = (dest.bottom - src.bottom) * EFFECT_PRECISION / 16;
 	
 	g_NextEffectUpdateIn = GetTickCount();
+	
+	
+	SLogMsg("Start Effect Dest: %d %d %d %d", g_EffectDest.left, g_EffectDest.top, g_EffectDest.right, g_EffectDest.bottom);
+	SLogMsg("Start Effect Src:  %d %d %d %d", g_EffectSrc .left, g_EffectSrc .top, g_EffectSrc .right, g_EffectSrc .bottom);
 	
 	int sl = strlen (text);
 	if (sl > 999) sl = 999;

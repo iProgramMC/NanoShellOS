@@ -37,7 +37,7 @@ Cursor g_defaultCursor = {
 	12, 18, 0, 0, 
 	ImageDefaultCursor,
 	true,
-	false, 12, 18
+	false, 12, 18, -1, -1
 };
 
 uint32_t ImageWaitingCursor[] = 
@@ -75,7 +75,7 @@ Cursor g_waitCursor = {
 	15, 27, 7, 14, 
 	ImageWaitingCursor,
 	true,
-	false, 15, 27
+	false, 15, 27, -1, -1
 };
 
 uint32_t ImageCrossCursor[] = {
@@ -106,7 +106,7 @@ Cursor g_crossCursor = {
 	21, 21, 10, 10, 
 	ImageCrossCursor,
 	true,
-	false, 21, 21
+	false, 21, 21, -1, -1
 };
 
 uint32_t ImageIBeamCursor[] = {
@@ -132,7 +132,7 @@ Cursor g_iBeamCursor = {
 	7, 16, 10, 10, 
 	ImageIBeamCursor,
 	true,
-	false, 7, 16
+	false, 7, 16, -1, -1
 };
 
 
@@ -174,6 +174,6 @@ Cursor g_pencilCursor = {
 	21, 21, 0, 21, 
 	ImagePencilCursor,
 	true,
-	false, 21, 21
+	false, 21, 21, -1, -1
 };
 

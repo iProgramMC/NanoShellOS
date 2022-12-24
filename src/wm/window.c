@@ -32,7 +32,7 @@ void UndrawWindow (Window* pWnd)
 	RefreshRectangle(pWnd->m_rect, pWnd);
 }
 
-static void HideWindowUnsafe (Window* pWindow)
+void HideWindowUnsafe (Window* pWindow)
 {
 	pWindow->m_hidden = true;
 	UndrawWindow(pWindow);
