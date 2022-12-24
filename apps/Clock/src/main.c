@@ -92,7 +92,7 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 		CLOCK_WIDTH,
 		CLOCK_HEIGHT,
 		WndProc,
-		WF_NOMAXIMZ
+		WF_NOMAXIMZ | WF_ALWRESIZ
 	);
 	SetWindowIcon(pWindow, ICON_CLOCK_EMPTY);
 	
