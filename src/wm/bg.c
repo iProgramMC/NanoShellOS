@@ -107,12 +107,13 @@ void RedrawBackground (Rectangle rect)
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenWidth ()) rect.right  = GetScreenWidth ();
 	if (rect.bottom >= GetScreenHeight()) rect.bottom = GetScreenHeight();
+	
 	// if the rectangle is FULLY inside the 0,0 tile:
 	// (TODO: Make this work on any tile)
 	// (Another TODO: If there's one horz seam or one vert seam, split the main rect into 2 rects across the seam
 	//  and call RedrawBackground on them)
-	int rlc =  rect.left    / g_background->width,  rrc =  rect.right     / g_background->width;
-	int rtc = (rect.top-1)  / g_background->height, rbc = (rect.bottom-1) / g_background->height;
+	int rlc = rect.left / g_background->width,  rrc = (rect.right  - 1) / g_background->width;
+	int rtc = rect.top  / g_background->height, rbc = (rect.bottom - 1) / g_background->height;
 	if (rlc == rrc && rtc == rbc && rlc == 0 && rtc == 0)
 	{
 		//just draw the clipped portion
