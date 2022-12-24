@@ -35,8 +35,6 @@ static void TableAddColumn(TableViewData* this, const char * text, int width)
 	
 	TableViewColumn* newColumn = &this->m_pColumnData[this->m_column_count++];
 	
-	SLogMsg("NewC:%p  CC:%d Cap:%d", newColumn, this->m_column_count, this->m_column_capacity);
-	
 	memset(newColumn, 0, sizeof *newColumn);
 	
 	strncpy(newColumn->m_text, text, MAX_COLUMN_LENGTH);
@@ -491,9 +489,16 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			
 			SetFocusedControl(pWindow, this->m_comboID);
 			
+			Rectangle inRect = this->m_rect;
+			
+			inRect.left += 2;
+			inRect.top  += 2;
+			inRect.right  -= 2;
+			inRect.bottom -= 2;
+			
 			// Draw the top bar.
 			Rectangle topBar, bottomBar;
-			topBar = bottomBar = this->m_rect;
+			topBar = bottomBar = inRect;
 			topBar.bottom = topBar.top + TITLE_BAR_HEIGHT - 2;
 			
 			Rectangle columnBar = topBar;
@@ -548,11 +553,21 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			VidSetClipRect(&this->m_rect);
 			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, this->m_rect);
 			
+			Rectangle inRect = this->m_rect;
+			inRect.right--;
+			RenderButtonShapeSmallInsideOut (inRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			inRect.right++;
+			
+			inRect.left += 2;
+			inRect.top  += 2;
+			inRect.right  -= 2;
+			inRect.bottom -= 2;
+			
 			TableViewData* table = &this->m_tableViewData;
 			
 			// Draw the top bar.
 			Rectangle topBar, bottomBar;
-			topBar = bottomBar = this->m_rect;
+			topBar = bottomBar = inRect;
 			topBar.bottom = topBar.top + TITLE_BAR_HEIGHT - 2;
 			
 			Rectangle columnBar = topBar;
@@ -575,7 +590,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 					}
 					else
 					{
-						colWidth = this->m_rect.right - columnBar.right - 1;
+						colWidth = inRect.right - columnBar.right - 1;
 					}
 				}
 				
@@ -583,8 +598,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				columnBar.right = columnBar.left + colWidth;
 				
 				Rectangle columnBarClip = columnBar;
-				if (columnBarClip.left  >= this->m_rect.right) break;
-				if (columnBarClip.right >= this->m_rect.right) columnBarClip.right = this->m_rect.right;
+				if (columnBarClip.left  >= inRect.right) break;
+				if (columnBarClip.right >= inRect.right) columnBarClip.right = inRect.right;
 				
 				VidSetClipRect(&columnBarClip);
 				
@@ -617,7 +632,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				{
 					VidFillRectangle(0x7F, rect);
 				}
-				else if (index % 2 == 0)
+				else if (index % 2 == 1)
 				{
 					VidFillRectangle(BUTTON_MIDDLE_COLOR, rect);
 				}

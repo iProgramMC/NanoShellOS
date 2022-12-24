@@ -889,7 +889,9 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				VidDrawText (pData->m_pItems[i].m_contentsShown, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
 			}
 			
-			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			Rectangle ir = this->m_rect;
+			ir.right--;
+			RenderButtonShapeSmallInsideOut (ir, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			VidSetClipRect(NULL);
 			
 			break;

@@ -148,6 +148,7 @@ bool WidgetIconViewDrag_OnEvent(Control* this, int eventType, int parm1, int par
 void WidgetIconViewDrag_ArrangeIcons (Control *this);
 
 static void CreateListView(Window* pWindow);
+static void UpdateDirectoryListing (Window* pWindow);
 
 static void ClearFileListing(Window * pWindow)
 {
@@ -170,6 +171,7 @@ static void ChangeListViewMode(Window* pWindow)
 	RemoveControl(pWindow, MAIN_LISTVIEW);
 	CreateListView(pWindow);
 	ClearFileListing(pWindow);
+	UpdateDirectoryListing(pWindow);
 }
 
 static void FormatSize(uint32_t size, char* size_buf)
@@ -183,12 +185,10 @@ static void FormatSize(uint32_t size, char* size_buf)
 		sprintf(size_buf, "%d,%03d B", size / 1000, size % 1000);
 	else if (kb < 1000)
 		sprintf(size_buf, "%d KB", kb);
-	else if (size < 1000000)
+	else if (kb < 1000000)
 		sprintf(size_buf, "%d,%03d KB", kb / 1000, kb % 1000);
-	else if (size < 1000000000)
-		sprintf(size_buf, "%d,%03d,%03d KB", kb / 1000000, kb / 1000 % 1000, kb % 1000);
 	else
-		sprintf(size_buf, "%d,%03d,%03d,%03d KB", kb / 1000000000, kb / 1000000 % 1000, kb / 1000 % 1000, kb % 1000);
+		sprintf(size_buf, "%d,%03d,%03d KB", kb / 1000000, kb / 1000 % 1000, kb % 1000);
 }
 
 // size = -1, means don't show anything to the file
@@ -245,7 +245,7 @@ reset:
 		}
 		else
 		{
-			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_length);
+			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_type != FILE_TYPE_FILE ? (-1) : pNode->m_length);
 			
 			FsReleaseReference(pNode);
 		}
