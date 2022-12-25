@@ -12,8 +12,8 @@
 #include <image.h>
 #include <task.h>
 
-#define SYSMON_WIDTH  400
-#define SYSMON_HEIGHT 400
+#define SYSMON_WIDTH  486
+#define SYSMON_HEIGHT 500
 
 typedef struct
 {
@@ -54,7 +54,8 @@ const char *GetTaskSuspendStateStr (int susp_type)
 	return "Unknown";
 }
 
-extern Task g_runningTasks[];
+extern Task     g_runningTasks[];
+extern Process  gProcesses[];
 extern uint64_t g_kernelCpuTimeTotal;
 
 static uint64_t s_cpu_time[C_MAX_TASKS], s_cpu_time_total = 0, s_idle_time_total;
@@ -76,11 +77,96 @@ void MonitorSystem()
 	}
 }
 
+#define SUSPENSION_IDLE (-1)
+#define TABLE_COLS      (6)
+
+enum Column
+{
+	COL_TID,
+	COL_PID,
+	COL_IMAGE_NAME,
+	COL_CPU_PERC,
+	COL_STATUS,
+	COL_PAGE_FAULTS,
+};
+
+static void AddColumns(Window * pWindow)
+{
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "TID",         50);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "PID",         50);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Image Name",  200);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "CPU %",       50);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Status",      75);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Page Faults", 75);
+}
+
+static void AddProcessToList(Window* pWindow, int tid, int pid, const char * name, int susp_type, int cpu_percent, int icon, ThreadStats* stats)
+{
+	const char* buf[TABLE_COLS] = { 0 };
+	
+	char pid_buf[16];
+	sprintf(pid_buf, "%d", pid);
+	char tid_buf[16];
+	sprintf(tid_buf, "%d", tid);
+	char cpu_percent_buf[16];
+	sprintf(cpu_percent_buf, "%d%%", cpu_percent);
+	
+	buf[COL_TID] = tid_buf;
+	buf[COL_PID] = pid_buf;
+	buf[COL_IMAGE_NAME] = name;
+	buf[COL_CPU_PERC] = cpu_percent_buf;
+	
+	switch (susp_type)
+	{
+		case SUSPENSION_IDLE:  buf[COL_STATUS] = "Idle"; break;
+		case SUSPENSION_NONE:  buf[COL_STATUS] = "Running"; break;
+		case SUSPENSION_TOTAL: buf[COL_STATUS] = "Suspended"; break;
+		case SUSPENSION_UNTIL_WM_UPDATE: buf[COL_STATUS] = "WM Sync"; break;
+		case SUSPENSION_UNTIL_TIMER_EXPIRY: buf[COL_STATUS] = "Sleeping"; break;
+		case SUSPENSION_UNTIL_PIPE_WRITE:
+		case SUSPENSION_UNTIL_PIPE_READ:
+		case SUSPENSION_UNTIL_PROCESS_EXPIRY:
+		case SUSPENSION_UNTIL_TASK_EXPIRY: buf[COL_STATUS] = "Blocked"; break;
+		default: buf[COL_STATUS] = "Unknown"; break;
+	}
+	
+	char pf_buf[16];
+	pf_buf[0] = 0;
+	
+	if (stats)
+	{
+		sprintf(pf_buf, "%d", stats->m_pageFaults);
+	}
+	
+	buf[COL_PAGE_FAULTS] = pf_buf;
+	
+	AddTableRow(pWindow, PROCESS_LISTVIEW, buf, icon);
+}
+
+static int ResolveTidFromTable(Window* pWindow, int selIndex)
+{
+	const char * things[TABLE_COLS] = { 0 };
+	
+	if (!GetRowStringsFromTable(pWindow, PROCESS_LISTVIEW, selIndex, things)) return -1;
+	
+	if (!things[COL_TID]) return -1;
+	
+	return atoi(things[COL_TID]);
+}
+
 //returns the amount of time the CPU spent idling
 int UpdateSystemMonitorLists(Window* pWindow)
 {
+	int scroll = GetScrollTable(pWindow, PROCESS_LISTVIEW);
+	int selind = GetSelectedIndexTable(pWindow, PROCESS_LISTVIEW);
+	
+	// Get the TID that should be selected.
+	int tid = ResolveTidFromTable(pWindow, selind);
+	selind = -1;
+	
 	// Update process list view.
-	ResetList(pWindow, PROCESS_LISTVIEW);
+	ResetTable(pWindow, PROCESS_LISTVIEW);
+	AddColumns(pWindow);
 	
 	char buffer [1024];
 	int cpu_usage_idle_percent = 0;
@@ -88,9 +174,11 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	{
 		uint64_t cpu_usage_percent_64 = s_idle_time_total * 100 / s_cpu_time_total;
 		cpu_usage_idle_percent = (int)cpu_usage_percent_64;
-		sprintf (buffer, "[Idle]  [%d%%] System idle", cpu_usage_idle_percent);
-		AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
+		
+		AddProcessToList(pWindow, 0, 0, "System idle", SUSPENSION_IDLE, cpu_usage_idle_percent, ICON_APPLICATION, NULL);
 	}
+	
+	int index = 1;
 	
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
@@ -102,14 +190,25 @@ int UpdateSystemMonitorLists(Window* pWindow)
 			uint64_t cpu_usage_percent_64 = time1 * 100 / s_cpu_time_total;
 			int cpu_usage_percent = (int)cpu_usage_percent_64;
 			
-			if (strlen(pTask->m_tag) == 0)
-				sprintf (buffer, "[%s]  [%d%%] %s [%s:%d]", GetTaskSuspendStateStr (pTask->m_suspensionType), cpu_usage_percent, pTask->m_authorFunc, pTask->m_authorFile, pTask->m_authorLine);
+			const char * name;
+			if (*pTask->m_tag == 0)
+				name = pTask->m_authorFunc;
 			else
-				sprintf (buffer, "[%s]  [%d%%] %s",         GetTaskSuspendStateStr (pTask->m_suspensionType), cpu_usage_percent, pTask->m_tag);
-			AddElementToList(pWindow, PROCESS_LISTVIEW, buffer, ICON_APPLICATION);
+				name = pTask->m_tag;
+			
+			int pid = 0;
+			if (pTask->m_pProcess)
+			{
+				pid = (Process*)pTask->m_pProcess - gProcesses;
+			}
+			
+			AddProcessToList(pWindow, i, pid, name, pTask->m_suspensionType, cpu_usage_percent, ICON_APPLICATION, KeGetTaskStats(pTask));
+			
+			if (i == tid) selind = index;
+			
+			index++;
 		}
 	}
-	
 	
 	int npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
 	sprintf(buffer, "Memory: %d / %d KB (%d / %d pages)     ", (npp-nfpp)*4, npp*4, npp-nfpp, npp);
@@ -125,6 +224,9 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	
 	sprintf(buffer, "Page Faults: %d        ", MmGetNumPageFaults());
 	SetLabelText(pWindow, PFCOUNT_LABEL, buffer);
+	
+	SetScrollTable(pWindow, PROCESS_LISTVIEW, scroll);
+	SetSelectedIndexTable(pWindow, PROCESS_LISTVIEW, selind);
 	
 	return cpu_usage_idle_percent;
 }
@@ -212,7 +314,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
 			//int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = (SYSMON_HEIGHT) / 2  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = SYSMON_HEIGHT * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
 			int x = (pWindow->m_vbeData.m_width - (SYSMON_WIDTH - 20)) / 2;
 			int y = (pWindow->m_vbeData.m_height - SYSMON_HEIGHT) + listview_y + listview_height + 10;
@@ -249,7 +351,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
 			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = (SYSMON_HEIGHT) / 2  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = SYSMON_HEIGHT * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
@@ -258,7 +360,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 				/*Y Size */ listview_height
 			);
 			
-			AddControlEx (pWindow, CONTROL_LISTVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
+			AddControlEx (pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 124, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);

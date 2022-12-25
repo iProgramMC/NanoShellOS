@@ -48,6 +48,8 @@ extern bool           g_interruptsAvailable;
 
 uint64_t g_onePitIntAgo, g_twoPitIntsAgo;
 
+static ThreadStats s_kernelThreadStats;
+
 void MuiUseHeap(UserHeap* pHeap);
 void MuiResetHeap(void);
 
@@ -153,9 +155,6 @@ void KeTaskAssignTag(Task* pTask, const char* pTag)
 	if (e >= 30)
 		e = 30;
 	memcpy (pTask->m_tag, pTag, e + 1);
-	char tempbuf[33];
-	sprintf(tempbuf, "[%s]", pTask->m_tag);
-	strcpy (pTask->m_tag, tempbuf);
 }
 const char* KeTaskGetTag(Task* pTask)
 {
@@ -929,3 +928,15 @@ void KeTaskTest()
 	}
 }
 
+ThreadStats* KeGetTaskStats(Task* task)
+{
+	if (!task)
+		return &s_kernelThreadStats;
+	
+	return &task->m_threadStats;
+}
+
+ThreadStats* KeGetThreadStats()
+{
+	return KeGetTaskStats(KeGetRunningTask());
+}

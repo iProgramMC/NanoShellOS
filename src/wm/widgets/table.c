@@ -212,12 +212,45 @@ static void CtlRemoveRowFromTable(Control * this, int index, Window* pWindow)
 static void CtlResetTable(Control * this, Window* pWindow)
 {
 	TableClearEverything(&this->m_tableViewData);
+	this->m_tableViewData.m_row_scroll   = 0;
+	this->m_tableViewData.m_selected_row = 0;
 	CtlUpdateScrollBarSize(this, pWindow);
 }
 
 static int CtlGetSelectedIndexTable(Control * this)
 {
 	return this->m_tableViewData.m_selected_row;
+}
+
+static void CtlSetSelectedIndexTable(Control * this, Window * pWindow, int selectedIndex)
+{
+	if (selectedIndex < 0 || selectedIndex >= this->m_tableViewData.m_row_count)
+		selectedIndex = -1;
+	
+	this->m_tableViewData.m_selected_row = selectedIndex;
+	
+	CallControlCallback(pWindow,  this->m_comboID, EVENT_PAINT, 0, 0);
+}
+
+static int CtlGetScrollTable(Control * this)
+{
+	return this->m_tableViewData.m_row_scroll;
+}
+
+static void CtlSetScrollTable(Control * this, Window * pWindow, int scroll)
+{
+	if (scroll < 0) scroll = 0;
+	
+	int max = GetScrollBarMax(pWindow, -this->m_comboID);
+	if (scroll >= max)
+		scroll = max;
+	
+	this->m_tableViewData.m_row_scroll = scroll;
+	
+	SetScrollBarPos(pWindow, -this->m_comboID, scroll);
+	
+	CallControlCallback(pWindow,  this->m_comboID, EVENT_PAINT, 0, 0);
+	CallControlCallback(pWindow, -this->m_comboID, EVENT_PAINT, 0, 0);
 }
 
 void AddTableRow (Window* pWindow, int comboID, const char* pText[], int optionalIcon)
@@ -284,11 +317,37 @@ int GetSelectedIndexTable(Window* pWindow, int comboID)
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-		{
 			return CtlGetSelectedIndexTable(&pWindow->m_pControlArray[i]);
-		}
 	}
 	return -1;
+}
+
+void SetSelectedIndexTable(Window* pWindow, int comboID, int selind)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+			CtlSetSelectedIndexTable(&pWindow->m_pControlArray[i], pWindow, selind);
+	}
+}
+
+int GetScrollTable(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+			return CtlGetScrollTable(&pWindow->m_pControlArray[i]);
+	}
+	return -1;
+}
+
+void SetScrollTable(Window* pWindow, int comboID, int scroll)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+			CtlSetScrollTable(&pWindow->m_pControlArray[i], pWindow, scroll);
+	}
 }
 
 bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)

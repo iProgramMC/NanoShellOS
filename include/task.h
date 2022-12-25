@@ -84,6 +84,19 @@ enum
 	SUSPENSION_UNTIL_PIPE_READ,      // Suspension until a certain pipe is read from
 };
 
+typedef struct
+{
+	int m_pageFaults;
+	int m_kernelMemUsage; // just a hint. May be wrong at times.
+	int m_userMemUsage;
+	int m_ioReads;
+	int m_ioWrites;
+	int m_wmObjects;
+	int64_t m_ioReadBytes;
+	int64_t m_ioWriteBytes;
+}
+ThreadStats;
+
 // Task structure definition:
 typedef struct
 {
@@ -133,6 +146,8 @@ typedef struct
 	
 	void*          m_pPipeWaitingToWrite;
 	void*          m_pPipeWaitingToRead;
+	
+	ThreadStats    m_threadStats;
 }
 Task;
 
@@ -286,6 +301,17 @@ void KeUnsuspendTasksWaitingForPipeRead(void* pPipe);
 	for a pipe to be written to
 ***********************************************************/
 void KeUnsuspendTasksWaitingForPipeWrite(void* pPipe);
+
+/***********************************************************
+	Gets the ThreadStats object from a task.
+***********************************************************/
+ThreadStats* KeGetTaskStats(Task* task);
+
+/***********************************************************
+	Gets the ThreadStats object from the currently running
+	task.
+***********************************************************/
+ThreadStats* KeGetThreadStats();
 
 #include <lock.h>
 

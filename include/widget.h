@@ -237,6 +237,23 @@ void RemoveRowFromTable(Window* pWindow, int comboID, int elementIndex);
 int GetSelectedIndexTable(Window* pWindow, int comboID);
 
 /**
+ * Sets the selected element of a table.
+ */
+void SetSelectedIndexTable(Window* pWindow, int comboID, int selectedIndex);
+
+/**
+ * Gets the scroll position of a table. This is to be treated as an
+ * opaque-ish value.
+ */
+int GetScrollTable(Window* pWindow, int comboID);
+
+/**
+ * Sets the scroll position of a table. This is to be treated as an
+ * opaque-ish value.
+ */
+void SetScrollTable(Window* pWindow, int comboID, int scroll);
+
+/**
  * Clears a table view widget's data.
  */
 void ResetTable(Window* pWindow, int comboID);

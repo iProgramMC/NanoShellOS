@@ -8,6 +8,8 @@
 #include <misc.h>
 #include "mm/memoryi.h"
 
+// note: Process ID 0 is no longer used.
+
 SafeLock gProcessLock;
 
 Process gProcesses[64];
@@ -21,7 +23,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 
 Process* ExMakeUpAProcess()
 {
-	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
+	for (size_t i = 1; i != ARRAY_COUNT (gProcesses); i++)
 	{
 		if (!gProcesses[i].bActive)
 			return &gProcesses[i];
@@ -65,7 +67,7 @@ void ExDisposeProcess(Process *pProc)
 
 void ExCheckDyingProcesses(Process *pProcToAvoid)
 {
-	for (size_t i = 0; i != ARRAY_COUNT (gProcesses); i++)
+	for (size_t i = 1; i != ARRAY_COUNT (gProcesses); i++)
 	{
 		if (&gProcesses[i] == pProcToAvoid) continue;
 		if (!gProcesses[i].bActive) continue;
@@ -215,6 +217,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->pDetail   = pDetail;
 	pProc->pSymTab   = pProc->pStrTab = NULL;
 	pProc->nSymTabEntries = 0;
+	
+	KeTaskAssignTag(pTask, pProc->sIdentifier);
 	
 	KeUnsuspendTaskUnsafe(pTask);
 	

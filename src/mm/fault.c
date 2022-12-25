@@ -44,6 +44,8 @@ void MmOnPageFault(Registers *pRegs)
 	
 	UserHeap *pHeap = MuGetCurrentHeap();
 	
+	KeGetThreadStats()->m_pageFaults++;
+	
 	//SLogMsg("Page fault happened at %x (error code: %x) on Heap %p", pRegs->cr2, pRegs->error_code, pHeap);
 	
 	union
