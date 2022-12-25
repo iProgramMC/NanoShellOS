@@ -590,19 +590,35 @@ void KePrintSystemInfo()
 	char timingInfo[128];
 	timingInfo[0] = 0;
 	FormatTime(timingInfo, FORMAT_TYPE_VAR, GetTickCount() / 1000);
-	LogMsg("\e[93m N    N       "    "\e[91m OS:       \e[97mNanoShell Operating System");
-	LogMsg("\e[93m NN   N       "    "\e[91m Kernel:   \e[97m%s (%d)", VersionString, VersionNumber);
-	LogMsg("\e[93m N N  N       "    "\e[91m Uptime:   \e[97m%s", timingInfo);
-	LogMsg("\e[93m N  N N       "    "\e[91m CPU:      \e[97m%s", GetCPUName());
-	LogMsg("\e[93m N   NN       "    "\e[91m CPU type: \e[97m%s", GetCPUType());
-	LogMsg("\e[93m N    N\e[95m SSSS  \e[91m Memory:   \e[97m%d KB / %d KB", (npp-nfpp)*4, npp*4);
-	LogMsg("\e[95m       S    S "    "\e[91m ");
-	LogMsg("\e[95m       S      "    "\e[91m ");
-	LogMsg("\e[95m        SSSS  "    "\e[91m ");
-	LogMsg("\e[95m            S "    "\e[91m ");
-	LogMsg("\e[95m       S    S "    "\e[91m ");
-	LogMsg("\e[95m        SSSS  "    "\e[91m ");
-	LogMsg("\e[97m");
+	LogMsg("\e[93m N    N");
+	LogMsg("\e[93m NN   N");
+	LogMsg("\e[93m N N  N");
+	LogMsg("\e[93m N  N N");
+	LogMsg("\e[93m N   NN");
+	LogMsg("\e[93m N    N\e[95m SSSS");
+	LogMsg("\e[95m       S    S");
+	LogMsg("\e[95m       S     ");
+	LogMsg("\e[95m        SSSS ");
+	LogMsg("\e[95m            S");
+	LogMsg("\e[95m       S    S");
+	LogMsg("\e[95m        SSSS ");
+	
+	//go up a bunch
+	LogMsgNoCr("\e[A\e[A\e[A\e[A\e[A\e[A\e[A\e[A\e[A\e[A\e[A\e[A");
+	
+	LogMsg("\e[14G\e[91m OS:       \e[97mNanoShell Operating System");
+	LogMsg("\e[14G\e[91m Kernel:   \e[97m%s (%d)", VersionString, VersionNumber);
+	LogMsg("\e[14G\e[91m Uptime:   \e[97m%s", timingInfo);
+	LogMsg("\e[14G\e[91m CPU:      \e[97m%s", GetCPUName());
+	LogMsg("\e[14G\e[91m CPU type: \e[97m%s", GetCPUType());
+	LogMsg("\e[14G\e[91m Memory:   \e[97m%d KB / %d KB", (npp-nfpp)*4, npp*4);
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[14G\e[91m ");
+	LogMsg("\e[0m");
 }
 #endif
 

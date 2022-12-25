@@ -14,7 +14,7 @@
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
-#define TABLE_COLUMNS (2)
+#define TABLE_COLUMNS (3)
 
 #define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
 
@@ -158,6 +158,7 @@ static void ClearFileListing(Window * pWindow)
 		
 		AddTableColumn(pWindow, MAIN_LISTVIEW, "Name", 200);
 		AddTableColumn(pWindow, MAIN_LISTVIEW, "Size", 100);
+		AddTableColumn(pWindow, MAIN_LISTVIEW, "Last modified date", 150);
 	}
 	else
 	{
@@ -193,7 +194,7 @@ static void FormatSize(uint32_t size, char* size_buf)
 }
 
 // size = -1, means don't show anything to the file
-static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size)
+static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size, int last_modified_date)
 {
 	// note: this is real crap
 	if (g_bUsingTableView)
@@ -201,9 +202,20 @@ static void AddFileElementToList(Window* pWindow, const char * text, int icon, u
 		char size_buf[16];
 		FormatSize(file_size, size_buf);
 		
+		char date_buf[64];
+		date_buf[0] = 0;
+		
+		if (last_modified_date != -1)
+		{
+			TimeStruct str;
+			GetHumanTimeFromEpoch(last_modified_date, &str);
+			sprintf(date_buf, "%02d/%02d/%04d %02d:%02d:%02d", str.day, str.month, str.year, str.hours, str.minutes, str.seconds);
+		}
+		
 		const char* table[TABLE_COLUMNS] = { 0 };
 		table[0] = text;
 		table[1] = size_buf;
+		table[2] = date_buf;
 		
 		AddTableRow(pWindow, MAIN_LISTVIEW, table, icon);
 	}
@@ -220,7 +232,7 @@ reset:
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 	{
-		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1);
+		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1);
 	}
 	
 	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
@@ -242,11 +254,11 @@ reset:
 		
 		if (!pNode)
 		{
-			AddFileElementToList(pWindow, "<a NULL directory entry>", ICON_ERROR, -1);
+			AddFileElementToList(pWindow, "<a NULL directory entry>", ICON_ERROR, -1, -1);
 		}
 		else
 		{
-			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_type != FILE_TYPE_FILE ? (-1) : pNode->m_length);
+			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_type != FILE_TYPE_FILE ? (-1) : pNode->m_length, pNode->m_modifyTime);
 			
 			FsReleaseReference(pNode);
 		}
