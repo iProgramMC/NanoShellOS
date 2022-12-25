@@ -93,23 +93,36 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 	
 		int textwidth, height;
 		VidSetFont(TITLE_BAR_FONT);
-		uint32_t flags = TEXT_RENDER_BOLD;
+		uint32_t uflags = TEXT_RENDER_BOLD;
 		if (TITLE_BAR_FONT != SYSTEM_FONT)
-			flags = 0;
-
-		VidTextOutInternal(pTitle, 0, 0, FLAGS_TOO(flags,0), 0, true, &textwidth, &height);
+			uflags = 0;
+		
+		int left = rectb.left, top = rectb.top;
+		
+		// Offset the rectangle based on the present buttons.
+		if (iconID != ICON_NULL)
+			rectb.left += 18;
+		
+		if (!(flags & WF_NOCLOSE))
+		{
+			rectb.right -= TITLE_BAR_HEIGHT;
+			if (!(flags & WF_NOMINIMZ)) rectb.right -= TITLE_BAR_HEIGHT;
+			if (!(flags & WF_NOMAXIMZ)) rectb.right -= TITLE_BAR_HEIGHT;
+		}
+		
+		VidTextOutInternal(pTitle, 0, 0, FLAGS_TOO(uflags,0), 0, true, &textwidth, &height);
 		
 		int offset = (rectb.right - rectb.left - textwidth) / 2;
 		
 		int textOffset = (TITLE_BAR_HEIGHT - height) / 2;
 		int iconOffset = (TITLE_BAR_HEIGHT - 16)     / 2 - 1;
 		
-		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top - 0 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
-		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top - 1 + textOffset, FLAGS_TOO(flags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 1, rectb.top - 0 + textOffset, FLAGS_TOO(uflags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
+		VidTextOut(pTitle, rectb.left + offset + 0, rectb.top - 1 + textOffset, FLAGS_TOO(uflags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);
 		VidSetFont(SYSTEM_FONT);
 		
 		if (iconID != ICON_NULL)
-			RenderIconForceSize(iconID, rectb.left+1, rectb.top + iconOffset, 16);
+			RenderIconForceSize(iconID, left+1, top + iconOffset, 16);
 	}
 	
 #undef X
