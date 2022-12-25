@@ -384,7 +384,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		case EVENT_KILLFOCUS:
 			this->m_buttonData.m_hovered = false;
 			if (g_GlowOnHover)
-				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
+				WidgetButtonList_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		case EVENT_MOVECURSOR:
 		{
