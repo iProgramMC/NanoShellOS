@@ -14,6 +14,10 @@
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
+// The maximum amount of stat() calls before we quit. This is to speed up loading large folders.
+// This is still a work in progress.
+#define C_MAX_STATS_BEFORE_QUIT (256)
+
 #define TABLE_COLUMNS (3)
 
 #define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
@@ -235,46 +239,60 @@ reset:
 		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1);
 	}
 	
-	FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
-	
 	DirEnt* pEnt = NULL;
-	uint32_t i = 0;
 	
-	if (!FsOpenDir(pFolderNode))
+	int dd = FiOpenDir (g_cabinetCWD);
+	if (dd < 0)
 	{
 		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
 		strcpy (g_cabinetCWD, "/");
 		goto reset;
 	}
 	
-	DirEnt ent;
-	while ((pEnt = FsReadDir (pFolderNode, &i, &ent)) != 0)
+	int filesDone = 0;
+	
+	while ((pEnt = FiReadDir (dd)) != 0)
 	{
-		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
+		StatResult statResult;
+		int res = 0;
 		
-		if (!pNode)
+		if (filesDone < C_MAX_STATS_BEFORE_QUIT)
 		{
-			AddFileElementToList(pWindow, "<a NULL directory entry>", ICON_ERROR, -1, -1);
+			FiStatAt (dd, pEnt->m_name, &statResult);
 		}
 		else
 		{
-			AddFileElementToList(pWindow, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type), pNode->m_type != FILE_TYPE_FILE ? (-1) : pNode->m_length, pNode->m_modifyTime);
-			
-			FsReleaseReference(pNode);
+			// TODO: Allow user to choose.
+			statResult.m_size       = -1;
+			statResult.m_modifyTime = -1;
+			statResult.m_type       = pEnt->m_type;
+		}
+		filesDone++;
+		
+		if (res < 0)
+		{
+			char buf[512];
+			sprintf(buf, "%s (can't stat -- %s)", pEnt->m_name, GetErrNoString(res));
+			AddFileElementToList(pWindow, buf, ICON_ERROR, -1, -1);
+		}
+		else
+		{
+			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, statResult.m_type), (statResult.m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime);
 		}
 	}
 	
-	int icon = CabGetIconBasedOnName(pFolderNode->m_name, pFolderNode->m_type);
+	FiCloseDir(dd);
+	dd = 0;
+	
+	int icon = CabGetIconBasedOnName(g_cabinetCWD, FILE_TYPE_DIRECTORY);
 	//SetWindowIcon (pWindow, icon);
 	//SetWindowTitle(pWindow, pFolderNode->m_name);
 	pWindow->m_iconID = icon;
 	strcpy (pWindow->m_title, "Cabinet - ");
-	strcat (pWindow->m_title, pFolderNode->m_name); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	strcat (pWindow->m_title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	RequestTaskbarUpdate();
 	
 	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);
-	
-	FsReleaseReference(pFolderNode);
 	
 	//RequestRepaint(pWindow);
 	CallControlCallback(pWindow, MAIN_LISTVIEW,  EVENT_PAINT, 0, 0);

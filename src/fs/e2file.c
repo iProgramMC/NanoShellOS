@@ -457,7 +457,7 @@ try_again:;
 		case E2_DETI_REG_FILE:  pOutputDent->m_type = FILE_TYPE_FILE;
 		case E2_DETI_CHAR_DEV:  pOutputDent->m_type = FILE_TYPE_CHAR_DEVICE;
 		case E2_DETI_BLOCK_DEV: pOutputDent->m_type = FILE_TYPE_BLOCK_DEVICE;
-		case E2_DETI_DIRECTORY: pOutputDent->m_type = FILE_TYPE_DIRECTORY;
+		case E2_DETI_DIRECTORY: pOutputDent->m_type = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;
 		default:                pOutputDent->m_type = FILE_TYPE_NONE;
 	}
 	

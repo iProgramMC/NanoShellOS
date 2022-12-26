@@ -24,7 +24,7 @@ static void TableAddColumn(TableViewData* this, const char * text, int width)
 		// expand
 		if (this->m_column_capacity == 0)
 			this->m_column_capacity  = 4;
-		TableViewColumn * newData = MmReAllocate(this->m_pColumnData, this->m_column_capacity * 2);
+		TableViewColumn * newData = MmReAllocate(this->m_pColumnData, this->m_column_capacity * 2 * sizeof(TableViewColumn));
 		if (!newData)
 		{
 			SLogMsg("Could not add column '%s' to table.", text);
@@ -50,7 +50,7 @@ static void TableAddColumn(TableViewData* this, const char * text, int width)
 	{
 		// TODO we're doing leaps of faith right now, maybe we shouldn't!
 		// Ideally you'd set up the columns first, though.
-		this->m_pRowData[i].m_items = MmReAllocate(this->m_pRowData[i].m_items, sizeof(char*) * this->m_column_count);
+		this->m_pRowData[i].m_items = MmReAllocate(this->m_pRowData[i].m_items, sizeof(TableViewItem) * this->m_column_count);
 		this->m_pRowData[i].m_items[this->m_column_count - 1].m_text[0] = 0; // reset the text! Don't leave it uninitialised like that
 	}
 }
@@ -62,7 +62,7 @@ static TableViewRow* TableAddRow(TableViewData* this, int icon, const char * dat
 		// expand
 		if (this->m_row_capacity == 0)
 			this->m_row_capacity  = 4;
-		TableViewRow * newData = MmReAllocate(this->m_pRowData, this->m_row_capacity * 2);
+		TableViewRow * newData = MmReAllocate(this->m_pRowData, this->m_row_capacity * 2 * sizeof(TableViewRow));
 		if (!newData)
 		{
 			SLogMsg("Could not add a row to a table.");
