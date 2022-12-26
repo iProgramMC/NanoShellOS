@@ -202,7 +202,9 @@ go_back:
 				VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
 			}
 			
-			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			Rectangle inRect = this->m_rect;
+			inRect.right--;
+			RenderButtonShapeSmallInsideOut (inRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			VidSetClipRect(NULL);
 			
 			break;

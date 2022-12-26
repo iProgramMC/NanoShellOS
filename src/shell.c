@@ -871,7 +871,7 @@ void ShellExecuteCommand(char* p)
 		const char * colorunkf = "\x1b[98m";
 		const char * normal    = "\x1b[97m";
 		
-		bool bareMode = false;
+		bool bareMode = switches & SW_BARE;
 		
 		int dd = FiOpenDir (pPathToList);
 		if (dd < 0)

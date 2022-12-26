@@ -73,6 +73,16 @@ void SetScrollBarPos (Window *pWindow, int comboID, int pos);
 int GetScrollBarPos (Window *pWindow, int comboID);
 
 /**
+ * Gets the current minimum progress value for a SCROLLBAR control with a certain comboID.
+ */
+int GetScrollBarMin (Window *pWindow, int comboID);
+
+/**
+ * Gets the current maximum progress value for a SCROLLBAR control with a certain comboID.
+ */
+int GetScrollBarMax (Window *pWindow, int comboID);
+
+/**
  * Adds an element to a ListView component with a certain comboID.
  */
 void AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon);

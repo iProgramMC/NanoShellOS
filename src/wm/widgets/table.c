@@ -8,6 +8,8 @@
 #include <keyboard.h>
 #include <icon.h>
 
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+
 // NOTE: Damn, this is a pretty heavy control. 144 KB for 34 entries.
 // This is probably a sign we need to optimize the memory allocator for sub-page-size allocations!
 

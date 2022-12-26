@@ -31,7 +31,7 @@ void CoFilPlotChar(Console *this, int x, int y, char c)
 	
 }
 
-bool CoFilPrintCharInt(Console *this, char c, char cNext, bool bDontUpdateCursor)
+bool CoFilPrintCharInt(Console *this, char c, bool bDontUpdateCursor)
 {
 	return false;
 }

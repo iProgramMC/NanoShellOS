@@ -26,7 +26,7 @@ void CoE9xScrollUpByOne(UNUSED Console *this)
 {
 	
 }
-bool CoE9xPrintCharInt (UNUSED Console* this, char c, UNUSED char next, UNUSED bool bDontUpdateCursor)
+bool CoE9xPrintCharInt (UNUSED Console* this, char c, UNUSED bool bDontUpdateCursor)
 {
 	// Skip all nanoshell specific color codes:
 	if (c == 0x01 || c == 0x02)

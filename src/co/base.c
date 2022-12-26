@@ -86,10 +86,10 @@ void CoColorFlip (Console *this);
 		void CoVbePlotChar     (Console *this, int,  int,  char);
 		void CoVgaPlotChar     (Console *this, int,  int,  char);
 		void CoWndPlotChar     (Console *this, int,  int,  char);
-		bool CoE9xPrintCharInt (Console *this, char, char, bool);
-		bool CoFilPrintCharInt (Console *this, char, char, bool);
-		bool CoSerPrintCharInt (Console *this, char, char, bool);
-		bool CoVisComPrnChrInt (Console *this, char, char, bool);//common for visual consoles
+		bool CoE9xPrintCharInt (Console *this, char, bool);
+		bool CoFilPrintCharInt (Console *this, char, bool);
+		bool CoSerPrintCharInt (Console *this, char, bool);
+		bool CoVisComPrnChrInt (Console *this, char, bool);//common for visual consoles
 		void CoE9xRefreshChar  (Console *this, int,  int);
 		void CoFilRefreshChar  (Console *this, int,  int);
 		void CoSerRefreshChar  (Console *this, int,  int);
@@ -116,7 +116,7 @@ void CoColorFlip (Console *this);
 		typedef void (*tCoInit)         (Console *this);
 		typedef void (*tCoKill)         (Console *this);
 		typedef void (*tCoPlotChar)     (Console *this, int,  int,  char);
-		typedef bool (*tCoPrintCharInt) (Console *this, char, char, bool);
+		typedef bool (*tCoPrintCharInt) (Console *this, char, bool);
 		typedef void (*tCoRefreshChar)  (Console *this, int,  int);
 		typedef void (*tCoUpdateCursor) (Console *this);
 		typedef void (*tCoScrollUpByOne)(Console *this);
@@ -246,9 +246,9 @@ void CoColorFlip (Console *this);
 	{
 		g_scroll_up_by_one[this->type](this);
 	}
-	bool CoPrintCharInternal (Console* this, char c, char next, bool bDontUpdateCursor)
+	bool CoPrintCharInternal (Console* this, char c, bool bDontUpdateCursor)
 	{
-		return g_print_char_int[this->type](this,c,next,bDontUpdateCursor);
+		return g_print_char_int[this->type](this,c,bDontUpdateCursor);
 	}
 #endif
 
@@ -550,7 +550,7 @@ void CoVisComOnAnsiEscCode(Console *this)
 	}
 }
 //returns a bool, if it's a true, we need to skip the next character.
-bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor)
+bool CoVisComPrnChrInt (Console* this, char c, bool bDontUpdateCursor)
 {
 	if (!this->m_usingAnsiEscCode)
 	{
@@ -638,7 +638,7 @@ bool CoVisComPrnChrInt (Console* this, char c, char next, bool bDontUpdateCursor
 
 void CoPrintChar (Console* this, char c)
 {
-	CoPrintCharInternal(this, c, '\0', true);
+	CoPrintCharInternal(this, c, true);
 }
 
 void CoPrintString (Console* this, const char *c)
@@ -647,7 +647,7 @@ void CoPrintString (Console* this, const char *c)
 	while (*c)
 	{
 		// if we need to advance 2 characters instead of 1:
-		if (CoPrintCharInternal(this, *c, *(c + 1), false))
+		if (CoPrintCharInternal(this, *c, false))
 			c++;
 		// advance the one we would've anyways
 		c++;
