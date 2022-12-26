@@ -214,6 +214,17 @@ void ShellExecuteCommand(char* p)
 	{
 		FsPipeTest();
 	}
+	else if (strcmp (token, "time") == 0)
+	{
+		int e = GetEpochTime();
+		TimeStruct str = *TmReadTime();//, stt;
+		//GetHumanTimeFromEpoch(e, &stt);
+		
+		LogMsg("Current date/time:   %02d/%02d/%04d %02d:%02d:%02d", str.day,str.month,str.year,str.hours,str.minutes,str.seconds);
+		//only here for debugging. Let me know if something is wrong
+		//LogMsg("Epoch to human time: %02d/%02d/%04d %02d:%02d:%02d", stt.day,stt.month,stt.year,stt.hours,stt.minutes,stt.seconds);
+		LogMsg("Epoch time: %d", e);
+	}
 	else if (strcmp (token, "sjt") == 0)
 	{
 		SetJumpTest();

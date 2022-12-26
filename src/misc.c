@@ -187,13 +187,13 @@ static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 3
 int GetEpochTime()
 {
 	TimeStruct ts = *TmReadTime();
-	
 	int year = ts.year - 1970;
-	int days = 365 * year + 1;
+	int days = 365 * year + (ts.day - 1);
 	
 	// (almost) every 4 years since 1972 are leap years. Count them in
 	// This should work again. (year - 2 + 4) / 4 = (year - 2) / 4 + 1.
-	int leapYears = (year + 2) / 4;
+	int leapYears = ((year - 1) + 2) / 4;
+	
 	days += leapYears;
 	
 	// based on the month, determine the day
@@ -230,6 +230,7 @@ void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
 	while (days >= s_daysPerMonth[month])
 	{
 		days -= s_daysPerMonth[month];
+		if (month == 2 && year % 4 == 0) days--;
 		month++;
 	}
 

@@ -232,9 +232,9 @@ RootFileNode* FsRootAddDirectory(RootFileNode* pNode, const char* pFileName)
 	return pNewNode;
 }
 
-void FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz)
+RootFileNode* FsRootCreateFileAtRoot(const char* pFileName, void* pContents, size_t sz)
 {
-	FsRootAddFile(&g_rootNode, pFileName, pContents, sz);
+	return FsRootAddFile(&g_rootNode, pFileName, pContents, sz);
 }
 
 //NOTE: This makes a copy!!
@@ -250,18 +250,18 @@ void FsRootCreateDirAtRoot(const char* pFileName)
 	FsRootAddDirectory(&g_rootNode, pFileName);
 }
 
-void FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
+RootFileNode* FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 {
 	char buffer[PATH_MAX+1];
 	
-	if (strlen(path) >= PATH_MAX) return;
+	if (strlen(path) >= PATH_MAX) return NULL;
 	strcpy(buffer, path);
 	
 	char* name = strrchr(buffer, '/');
 	if (name == NULL)
 	{
 		SLogMsg("FsRootCreateFileAt(\"%s\"): strrchr(buffer, '/') returned NULL!", path);
-		return;
+		return NULL;
 	}
 	*name = 0;
 	name++;
@@ -271,28 +271,28 @@ void FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 	if (!pFNode)
 	{
 		LogMsg("FsRootCreateFileAt(\"%s\") failed!", path);
-		return;
+		return NULL;
 	}
 	
 	RootFileNode* pRFN = (RootFileNode*)pFNode->m_implData;
-	FsRootAddFile(pRFN, name, pContents, sz);
+	return FsRootAddFile(pRFN, name, pContents, sz);
 }
 
-void FsRootCreateDirAt(const char* path)
+RootFileNode* FsRootCreateDirAt(const char* path)
 {
 	if (FsResolvePath(path))
-		return;
+		return NULL;
 	
 	char buffer[PATH_MAX+1];
 	
-	if (strlen(path) >= PATH_MAX) return;
+	if (strlen(path) >= PATH_MAX) return NULL;
 	strcpy(buffer, path);
 	
 	char* name = strrchr(buffer, '/');
 	if (name == NULL)
 	{
 		SLogMsg("FsRootCreateDirAt(\"%s\"): strrchr(buffer, '/') returned NULL!", path);
-		return;
+		return NULL;
 	}
 	*name = 0;
 	name++;
@@ -302,11 +302,11 @@ void FsRootCreateDirAt(const char* path)
 	if (!pFNode)
 	{
 		LogMsg("FsRootCreateFileAt(\"%s\") failed!", path);
-		return;
+		return NULL;
 	}
 	
 	RootFileNode* pRFN = (RootFileNode*)pFNode->m_implData;
-	FsRootAddDirectory(pRFN, name);
+	return FsRootAddDirectory(pRFN, name);
 }
 
 void FsRootInit()
@@ -330,12 +330,14 @@ static uint32_t OctToBin(char *data, uint32_t size)
 }
 
 void FsInitializeInitRd(void* pRamDisk)
-{	
+{
+	uint32_t epochTime = GetEpochTime();
 	// Add files to the root FS.
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
 		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
 		uint32_t pathLength = strlen(ramDiskTar->name);
+		uint32_t mtime = OctToBin(ramDiskTar->mtime, 11);
 		bool hasDotSlash = false;
 
 		if (ramDiskTar->name[0] == '.')
@@ -367,7 +369,13 @@ void FsInitializeInitRd(void* pRamDisk)
 					// add the directory, if there is one
 					if (buffer[0] != 0)
 					{
-						FsRootCreateDirAt(buffer);
+						RootFileNode* fn = FsRootCreateDirAt(buffer);
+						if (fn)
+						{
+							if (fn->node.m_modifyTime == 0)
+								fn->node.m_modifyTime = mtime;
+							fn->node.m_createTime = epochTime;
+						}
 					}
 					
 					// restore it
@@ -381,7 +389,11 @@ void FsInitializeInitRd(void* pRamDisk)
 				//just gets neutralized to zero.
 				if (buffer[lastRemovedSlashIndex + 1] != 0)
 				{
-					FsRootCreateFileAt(buffer, &ramDiskTar->buffer, fileSize);
+					RootFileNode* node = FsRootCreateFileAt(buffer, &ramDiskTar->buffer, fileSize);
+					if (!node) continue;
+					
+					node->node.m_modifyTime = mtime;
+					node->node.m_createTime = epochTime;
 				}
 			}
 		}
