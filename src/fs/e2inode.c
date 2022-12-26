@@ -321,8 +321,6 @@ void Ext2FlushInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
 // When done, return the specific cache unit.
 Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead)
 {
-	SLogMsg("Reading inode %x", inodeNo);
-	
 	// If the inode was already cached, and we aren't forced to re-read it, just return.
 	if (!bForceReRead)
 	{
