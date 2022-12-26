@@ -332,6 +332,7 @@ typedef struct Ext2FileSystem
 	m_inodeHashTable [C_EXT2_HASH_TABLE_BUCKET_COUNT];
 	
 	uint8_t *m_pBlockBuffer;
+	uint8_t *m_pBlockBuffer2; // Ext2GetInodeBlock uses this
 }
 Ext2FileSystem;
 

@@ -557,6 +557,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	uint32_t blocksToReadInodeBitmap = CEIL_DIV_PO2(pFS->m_inodesPerGroup, 3 + pFS->m_log2BlockSize);
 	
 	pFS->m_pBlockBuffer    = MmAllocate(pFS->m_blockSize);
+	pFS->m_pBlockBuffer2   = MmAllocate(pFS->m_blockSize);
 	
 	Ext2LoadBlockGroupDescriptorTable(pFS);
 	
@@ -598,6 +599,7 @@ void FsExt2Cleanup(Ext2FileSystem* pFS)
 {
 	SAFE_DELETE(pFS->m_pBlockGroups);
 	SAFE_DELETE(pFS->m_pBlockBuffer);
+	SAFE_DELETE(pFS->m_pBlockBuffer2);
 	SAFE_DELETE(pFS->m_pBlockBitmapPtr);
 	SAFE_DELETE(pFS->m_pInodeBitmapPtr);
 	

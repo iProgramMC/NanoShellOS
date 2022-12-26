@@ -384,6 +384,7 @@ int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, c
 	
 	return Ext2RenameDirectoryEntry(pFS, pSrcIcu, pDstIcu, pSrcName, pDstName);
 }
+void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 
 DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
@@ -391,7 +392,11 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	
+	//note: I don't think we want to allocate something in the heap right now.
+	uint8_t buffer[pFS->m_blockSize];
 	uint32_t tempBuffer[2] = { 0 };
+	
+try_again:;
 	
 	if (!Ext2FileRead(pNode, *index, sizeof(uint32_t) + sizeof(uint16_t), tempBuffer, true)) return NULL;
 	
@@ -406,7 +411,7 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 		Ext2DirEnt* dirEnt;
 	} d;
 	
-	d.EntryData = pFS->m_pBlockBuffer;
+	d.EntryData = buffer;
 	
 	// if it's bigger, chances are it's a Padding entry.
 	if (tempBuffer[1] < pFS->m_blockSize)
@@ -415,6 +420,13 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	}
 	
 	(*index) += d.dirEnt->m_entrySize;
+	
+	// if the inode is zero
+	if (d.dirEnt->m_inode == 0)
+	{
+		// try again?!
+		goto try_again;
+	}
 	
 	if (tempBuffer[1] >= pFS->m_blockSize)
 	{
