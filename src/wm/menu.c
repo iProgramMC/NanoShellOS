@@ -4,9 +4,7 @@
 
          Window Popup Menu module
 ******************************************/
-#include <window.h>
-#include <wbuiltin.h>
-#include <wmenu.h>
+#include "wi.h"
 
 bool MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
 {
@@ -19,6 +17,8 @@ bool MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
 	pNewMenu->nLineSeparators = 0;
 	
 	pNewMenu->bHasIcons = false;
+	pNewMenu->bDisabled       = pMenu->bDisabled;
+	pNewMenu->bPrivate        = pMenu->bPrivate;
 	
 	pNewMenu->pMenuEntries = MmAllocateK(sizeof(WindowMenu) * pMenu->nMenuEntries);
 	memcpy(pNewMenu->pMenuEntries, pMenu->pMenuEntries, sizeof(WindowMenu) * pMenu->nMenuEntries);
@@ -53,7 +53,8 @@ void MenuCopyRoot(WindowMenu**pOutMenu, WindowMenu* pMenu, Window* pWindow)
 	pNewMenu->pWindow         = pWindow;
 	pNewMenu->nMenuComboID    = pMenu->nMenuComboID;
 	pNewMenu->nOrigCtlComboID = pMenu->nOrigCtlComboID;
-	
+	pNewMenu->bDisabled       = pMenu->bDisabled;
+	pNewMenu->bPrivate        = pMenu->bPrivate;
 	pNewMenu->bOpen           = false;
 	pNewMenu->pOpenWindow     = NULL;
 	
@@ -137,6 +138,9 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 						
 						AddControl (pWindow, CONTROL_BUTTON_LIST, r, buffer, MENU_ITEM_COMBOID+i, pData->pMenuEntries[i].nIconID, pData->pMenuEntries[i].nMenuEntries);
 						
+						if (pData->pMenuEntries[i].bDisabled)
+							SetDisabledControl(pWindow, MENU_ITEM_COMBOID + i, true);
+						
 						y += height;
 					}
 				}
@@ -184,12 +188,17 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			break;
 		}
 		case EVENT_COMMAND:
+		case EVENT_COMMAND_PRIVATE:
 		{
 			Control* p = GetControlByComboID(pWindow, parm1);
 			
 			if (!pWindow->m_data) break;
 			
 			WindowMenu* pData = (WindowMenu*)pWindow->m_data;
+			
+			int destEvent = EVENT_COMMAND;
+			if (pData->bPrivate)
+				destEvent = EVENT_COMMAND_PRIVATE;
 			
 			int index = parm1 - MENU_ITEM_COMBOID;
 				
@@ -228,14 +237,14 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				else
 				{
 					//Send a command to parent window
-					WindowAddEventToMasterQueue(pData->pWindow, EVENT_COMMAND, pData->pMenuEntries[index].nOrigCtlComboID, pData->pMenuEntries[index].nMenuComboID);
+					WindowAddEventToMasterQueue(pData->pWindow, destEvent, pData->pMenuEntries[index].nOrigCtlComboID, pData->pMenuEntries[index].nMenuComboID);
 					DestroyWindow(pWindow);
 				}
 			}
 			else
 			{
 				//Send a command to parent window
-				WindowAddEventToMasterQueue(pData->pWindow, EVENT_COMMAND, parm1, parm2);
+				WindowAddEventToMasterQueue(pData->pWindow, destEvent, parm1, parm2);
 				DestroyWindow(pWindow);
 			}
 			break;
@@ -285,6 +294,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 
 void ConvertMenuBarToWindowMenu(WindowMenu* pMenuOut, MenuBarTreeItem* pTreeItem, int controlComboID)
 {
+	memset(pMenuOut, 0, sizeof *pMenuOut);
 	//Fill in the root
 	pMenuOut->pWindow      = NULL;
 	pMenuOut->nMenuEntries = pTreeItem->m_childrenCount;
@@ -339,4 +349,70 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 	pMenuWnd->m_data = pRoot;
 	sti;
 	return pMenuWnd;
+}
+
+void OnRightClickShowMenu(Window* pWindow, int parm1)
+{
+	Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+	p.x += pWindow->m_rect.left;
+	p.y += pWindow->m_rect.top;
+	
+	int MenuWidth = 100;
+	
+	// This kinda sucks.. but it should be okay
+	WindowMenu *restoreEnt, *minimizeEnt, *maximizeEnt, *closeEnt, *spacerEnt;
+	WindowMenu rootEnt;
+	WindowMenu table[5];
+	restoreEnt  = &table[0];
+	minimizeEnt = &table[1];
+	maximizeEnt = &table[2];
+	spacerEnt   = &table[3];
+	closeEnt    = &table[4];
+	rootEnt.pMenuEntries = table;
+	rootEnt.nMenuEntries = (int)ARRAY_COUNT(table);
+	rootEnt.bPrivate     = true;
+	rootEnt.nLineSeparators = 1; // there's one
+	rootEnt.nWidth       = MenuWidth;
+	
+	// fill in one of the entries, then memcpy it to the others
+	memset(restoreEnt, 0, sizeof *restoreEnt);
+	restoreEnt->pWindow = pWindow;
+	restoreEnt->pMenuEntries = NULL;
+	restoreEnt->nMenuEntries = 0;
+	restoreEnt->nMenuComboID = 1;
+	restoreEnt->nOrigCtlComboID = WINDOW_ACTION_MENU_ORIG_CID;
+	restoreEnt->bOpen     = false;
+	restoreEnt->bHasIcons = true;
+	restoreEnt->nLineSeparators = 0;
+	restoreEnt->pOpenWindow = NULL;
+	restoreEnt->nIconID     = 0;
+	restoreEnt->nWidth      = MenuWidth;
+	restoreEnt->bDisabled   = false;
+	restoreEnt->bPrivate    = true;
+	
+	memcpy(minimizeEnt, restoreEnt, sizeof *restoreEnt);
+	memcpy(maximizeEnt, restoreEnt, sizeof *restoreEnt);
+	memcpy(closeEnt,    restoreEnt, sizeof *restoreEnt);
+	memcpy(spacerEnt,   restoreEnt, sizeof *restoreEnt);
+	
+	// copy the text
+	strcpy(restoreEnt ->sText, "Restore");
+	strcpy(minimizeEnt->sText, "Minimize");
+	strcpy(maximizeEnt->sText, "Maximize");
+	strcpy(closeEnt   ->sText, "Close");
+	
+	restoreEnt ->nMenuComboID = 1;
+	minimizeEnt->nMenuComboID = 2;
+	maximizeEnt->nMenuComboID = 3;
+	spacerEnt  ->nMenuComboID = 4;
+	closeEnt   ->nMenuComboID = 5;
+	
+	// Disable the buttons on a case-by-case basis
+	restoreEnt->bDisabled  = !pWindow->m_maximized || !!(pWindow->m_flags & WF_NOMAXIMZ);
+	minimizeEnt->bDisabled = pWindow->m_minimized || !!(pWindow->m_flags & WF_NOMINIMZ);
+	maximizeEnt->bDisabled = pWindow->m_maximized || !!(pWindow->m_flags & WF_NOMAXIMZ);
+	closeEnt->bDisabled = !!(pWindow->m_flags & WF_NOCLOSE);
+	
+	// then, I guess just spawn the menu!
+	SpawnMenu(pWindow, &rootEnt, p.x, p.y);
 }

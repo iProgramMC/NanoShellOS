@@ -13,7 +13,7 @@
 bool RefreshMouse(void);
 void RenderCursor(void);
 
-int  g_FPS, g_FPSThisSecond, g_FPSLastCounted;
+int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
 int g_TaskbarHeight = 0;
 
 void UpdateFPSCounter()

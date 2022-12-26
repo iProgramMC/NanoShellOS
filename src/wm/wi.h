@@ -8,6 +8,8 @@
 #define INT_WI_H
 
 #include <window.h>
+#include <widget.h>
+#include <wmenu.h>
 #include <misc.h>
 #include <icon.h>
 #include <print.h>
@@ -19,6 +21,17 @@
 #include <vfs.h>
 #include <image.h>
 #include <config.h>
+
+#define WINDOW_ACTION_MENU_ORIG_CID (0x12345678)
+
+enum
+{
+	CID_RESTORE = 1,
+	CID_MINIMIZE,
+	CID_MAXIMIZE,
+	CID_SPACER,
+	CID_CLOSE,
+};
 
 typedef struct Tooltip
 {
@@ -111,5 +124,6 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 void SetFocusedConsole(Console* console);
 void RequestTaskbarUpdate();
 void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor);
+void OnRightClickShowMenu(Window * pWindow, int parm1);
 
 #endif//INT_WI_H

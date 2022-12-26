@@ -24,6 +24,8 @@ typedef struct MenuEntry
 	Window*           pOpenWindow;
 	int               nIconID;
 	int               nWidth;
+	bool              bDisabled;
+	bool              bPrivate; // uses a private event rather than a public one.
 }
 WindowMenu;
 

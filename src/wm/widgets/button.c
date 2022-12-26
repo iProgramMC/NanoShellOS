@@ -347,6 +347,7 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	}
 	return false;
 }
+
 bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -425,7 +426,25 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			Rectangle r1 = this->m_rect;
 			r1.right = r1.left + offs1;
 			
-			if (this->m_buttonData.m_clicked)
+			if (this->m_bDisabled)
+			{
+				Rectangle r2 = r;
+				r2.left = r1.right;
+				if (parm2)
+				{
+					VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, r);
+					VidFillRectangle(WINDOW_BACKGD_COLOR, r1);
+				}
+				r.left += offs;
+				r.top += 1;
+				r.bottom += 1;
+				VidDrawText(this->m_text, r, TEXTSTYLE_VCENTERED, BUTTON_MIDDLE_COLOR, TRANSPARENT);
+				
+				r.left -= offs;
+				if (this->m_parm1)
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+			}
+			else if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
 				VidFillRectangle(SELECTED_ITEM_COLOR_B, r);

@@ -6,6 +6,11 @@
 ******************************************/
 #include "wi.h"
 
+static bool IsEventPrivate(int eventType)
+{
+	return eventType >= EVENT_PRIVATE_START && eventType < EVENT_USER;
+}
+
 void OnWindowHung(Window *pWindow)
 {
 	//don't hang twice
@@ -420,6 +425,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
+		
 		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
@@ -482,8 +488,13 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_CREATE)
 	{
+		VidSetVBEData (&pWindow->m_vbeData);
 		PaintWindowBackgroundAndBorder(pWindow);
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
+	}
+	else if (eventType == EVENT_RIGHTCLICKRELEASE)
+	{
+		DefaultWindowProc (pWindow, EVENT_RIGHTCLICKRELEASE_PRIVATE, parm1, parm2);
 	}
 	else if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
 	{
@@ -493,7 +504,14 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	// Perform the actual call to the user application here.
 	VidSetVBEData (&pWindow->m_vbeData);
 	
-	someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
+	if (IsEventPrivate(eventType))
+	{
+		DefaultWindowProc(pWindow, eventType, parm1, parm2);
+	}
+	else
+	{
+		someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
+	}
 	
 	// Reset to main screen data.
 	VidSetVBEData (NULL);
@@ -702,6 +720,50 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		case EVENT_DESTROY:
 			//NukeWindow(pWindow);//exits
 			break;
+		case EVENT_RIGHTCLICKRELEASE_PRIVATE:
+		{
+			Rectangle recta = pWindow->m_rect;
+			if (!pWindow->m_minimized)
+			{
+				recta.right  -= recta.left; recta.left = 0;
+				recta.bottom -= recta.top;  recta.top  = 0;
+				recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS;
+				recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
+				recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
+			}
+			else
+			{
+				recta.right  -= recta.left; recta.left = 0;
+				recta.bottom -= recta.top;  recta.top  = 0;
+			}
+			
+			Point mousePoint = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			
+			if (!(pWindow->m_flags & WF_NOTITLE) && RectangleContains(&recta, &mousePoint))
+			{
+				OnRightClickShowMenu(pWindow, parm1);
+			}
+			
+			break;
+		}
+		case EVENT_COMMAND_PRIVATE:
+		{
+			if (parm1 == WINDOW_ACTION_MENU_ORIG_CID  &&  !pWindow->m_bWindowManagerUpdated)
+			{
+				int eventType = EVENT_NULL;
+				switch (parm2)
+				{
+					case CID_RESTORE:  eventType = EVENT_UNMAXIMIZE; break;
+					case CID_MINIMIZE: eventType = EVENT_MINIMIZE;   break;
+					case CID_MAXIMIZE: eventType = EVENT_MAXIMIZE;   break;
+					case CID_CLOSE:    eventType = EVENT_CLOSE;      break;
+				}
+				
+				if (eventType != EVENT_NULL)
+					WindowAddEventToMasterQueue(pWindow, eventType, 0, 0);
+			}
+			break;
+		}
 		default:
 			break;
 	}
