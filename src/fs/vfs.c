@@ -313,14 +313,14 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	return -ENFILE;
 }
 
-static int FiFindFreeDirDescriptor(const char* reqPath)
+static int FiFindFreeDirDescriptor(UNUSED const char* reqPath)
 {
-	for (int i = 0; i < FD_MAX; i++)
+	/*for (int i = 0; i < FD_MAX; i++)
 	{
 		if (g_DirNodeToDescriptor[i].m_bOpen)
 			if (strcmp (g_DirNodeToDescriptor[i].m_sPath, reqPath) == 0)
 				return -EAGAIN;
-	}
+	}*/
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (!g_DirNodeToDescriptor[i].m_bOpen)

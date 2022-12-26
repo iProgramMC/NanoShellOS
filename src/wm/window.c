@@ -21,6 +21,11 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock; 
 
+bool IsLowResolutionMode()
+{
+	return GetScreenWidth() < 800 || GetScreenHeight() < 600;
+}
+
 Window* GetWindowFromIndex(int i)
 {
 	if (i >= 0x1000) i -= 0x1000;

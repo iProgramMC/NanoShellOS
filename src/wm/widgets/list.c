@@ -15,6 +15,10 @@
 #include <wmenu.h>
 #include <string.h>
 
+#define LIST_ITEM_HEIGHT (GetLineHeight() + 6)
+#define ICON_ITEM_WIDTH  (IsLowResolutionMode() ? 80 : 90)
+#define ICON_ITEM_HEIGHT (IsLowResolutionMode() ? 50 : 60)
+
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 
@@ -425,7 +429,7 @@ go_back:
 			
 			for (int i = elementStart, j = 0, k = 0; i <= elementEnd; i++)
 			{
-				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
+				int x = this->m_rect.left + 4 + elementX, y = this->m_rect.top + 5 + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32;
 				uint32_t color = WINDOW_TEXT_COLOR;
 				Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 				if (pData->m_highlightedElementIdx == i)
@@ -442,7 +446,7 @@ go_back:
 				if (pData->m_hasIcons)
 				{
 					if (pData->m_pItems[i].m_icon)
-						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, this->m_rect.top + 2 + j * ICON_ITEM_HEIGHT, 32);
+						RenderIconForceSize (pData->m_pItems[i].m_icon, x + (ICON_ITEM_WIDTH - 32) / 2, this->m_rect.top + 5 + j * ICON_ITEM_HEIGHT, 32);
 				}
 				//VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + elementX, this->m_rect.top + 4 + 2 + j * ICON_ITEM_HEIGHT + pData->m_hasIcons * 32, color, colorT);
 				VidDrawText (pData->m_pItems[i].m_contentsShown, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);

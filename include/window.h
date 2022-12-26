@@ -270,10 +270,6 @@ typedef struct
 }
 ListItem;
 
-#define LIST_ITEM_HEIGHT (GetLineHeight() + 6)
-#define ICON_ITEM_WIDTH  90
-#define ICON_ITEM_HEIGHT 60
-
 #define MAX_COLUMN_LENGTH      (32)
 #define MAX_ROW_CONTENT_LENGTH (128)
 
@@ -810,5 +806,10 @@ void TooltipDraw();
  * Get the tooltip's rectangle.
  */
 Rectangle* TooltipGetRect();
+
+/**
+ * Check if we're below a certain resolution that iProgramInCpp decided (right now) should be 800x600.
+ */
+bool IsLowResolutionMode();
 
 #endif//_WINDOW_H

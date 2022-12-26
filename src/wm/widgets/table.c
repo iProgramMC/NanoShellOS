@@ -359,6 +359,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 		case EVENT_DESTROY:
 		{
 			TableDestroy(&this->m_tableViewData);
+			RemoveControl(pWindow, -this->m_comboID);
 			break;
 		}
 		case EVENT_CREATE:

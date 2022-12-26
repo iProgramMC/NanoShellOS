@@ -92,12 +92,24 @@ enum Column
 
 static void AddColumns(Window * pWindow)
 {
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "TID",         50);
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "PID",         50);
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Image Name",  200);
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "CPU %",       50);
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Status",      75);
-	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Page Faults", 75);
+	int tid_width = 30, pid_width = 30, image_name_width = 200, cpu_perc_width = 50, status_width = 75, page_faults_width = 75;
+	
+	if (IsLowResolutionMode())
+	{
+		tid_width = 30;
+		pid_width = 30;
+		image_name_width = 100;
+		cpu_perc_width   = 30;
+		status_width = 60;
+		page_faults_width = 40;
+	}
+	
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "TID",         tid_width);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "PID",         pid_width);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Image Name",  image_name_width);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "CPU %",       cpu_perc_width);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Status",      status_width);
+	AddTableColumn(pWindow, PROCESS_LISTVIEW, "Page Faults", page_faults_width);
 }
 
 static void AddProcessToList(Window* pWindow, int tid, int pid, const char * name, int susp_type, int cpu_percent, int icon, ThreadStats* stats)
@@ -305,6 +317,13 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 
 void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
+	int wnheight = SYSMON_HEIGHT, wnwidth = SYSMON_WIDTH;
+	if (IsLowResolutionMode())
+	{
+		wnheight -= 180;
+		wnwidth = 312;
+	}
+	
 	switch (messageType)
 	{
 		#define PADDING_AROUND_LISTVIEW 8
@@ -313,11 +332,11 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			//paint the image
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
-			//int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = SYSMON_HEIGHT * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			//int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
+			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
 			
-			int x = (pWindow->m_vbeData.m_width - (SYSMON_WIDTH - 20)) / 2;
-			int y = (pWindow->m_vbeData.m_height - SYSMON_HEIGHT) + listview_y + listview_height + 10;
+			int x = (pWindow->m_vbeData.m_width - (wnwidth - 20)) / 2;
+			int y = (pWindow->m_vbeData.m_height - wnheight) + listview_y + listview_height + 10;
 			
 			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
 			Image *pImg = pInst->pImg;
@@ -350,8 +369,13 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			
 			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
-			int listview_width  = SYSMON_WIDTH   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = SYSMON_HEIGHT * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
+			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			
+			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
+			Image *pImg = pInst->pImg;
+			
+			int image_height = pImg->height;
 			
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
@@ -362,13 +386,13 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			AddControlEx (pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, PROCESS_LISTVIEW, 0, 0);
 			
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 124, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 24, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", MEMORY_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 144, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 44, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", FPS_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			RECT (r, PADDING_AROUND_LISTVIEW + 150, listview_y + listview_height + 144, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW + 150, listview_y + listview_height + image_height + 44, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", UPTIME_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + 164, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 64, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXT, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", PFCOUNT_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
@@ -381,8 +405,16 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 
 void SystemMonitorEntry (__attribute__((unused)) int argument)
 {
+	int imheight = 100, wnheight = SYSMON_HEIGHT, wnwidth = SYSMON_WIDTH;
+	if (IsLowResolutionMode())
+	{
+		imheight = 50;
+		wnheight -= 180;
+		wnwidth = 312;
+	}
+	
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, SYSMON_WIDTH, SYSMON_HEIGHT, SystemMonitorProc, WF_ALWRESIZ);
+	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, wnwidth, wnheight, SystemMonitorProc, WF_ALWRESIZ);
 	
 	if (!pWindow)
 	{
@@ -401,7 +433,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	}
 	memset (pInstance, 0, sizeof *pInstance);
 	
-	Image* pSystemImage = BitmapAllocate (SYSMON_WIDTH - 20, 100, 0x0000FF);
+	Image* pSystemImage = BitmapAllocate (wnwidth - 20, imheight, 0x0000FF);
 	if (!pInstance)
 	{
 		MmFree (pInstance);

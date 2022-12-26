@@ -173,11 +173,13 @@ static void ClearFileListing(Window * pWindow)
 static void ChangeListViewMode(Window* pWindow)
 {
 	g_bUsingTableView ^= 1;
+	OnBusy(pWindow);
 	RemoveControl(pWindow, MAIN_LISTVIEW);
 	CreateListView(pWindow);
 	ClearFileListing(pWindow);
 	UpdateDirectoryListing(pWindow);
 	RequestRepaintNew(pWindow);
+	OnNotBusy(pWindow);
 }
 
 static void FormatSize(uint32_t size, char* size_buf)
@@ -256,7 +258,7 @@ reset:
 		StatResult statResult;
 		int res = 0;
 		
-		if (filesDone < C_MAX_STATS_BEFORE_QUIT)
+		if (filesDone < C_MAX_STATS_BEFORE_QUIT && g_bUsingTableView)
 		{
 			FiStatAt (dd, pEnt->m_name, &statResult);
 		}
@@ -277,7 +279,7 @@ reset:
 		}
 		else
 		{
-			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, statResult.m_type), (statResult.m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime);
+			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type), (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime);
 		}
 	}
 	
@@ -782,7 +784,7 @@ static void CreateListView(Window* pWindow)
 			/*Y Size */ CabinetHeight- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 		);
 		
-		AddControlEx (pWindow, CONTROL_ICONVIEWDRAG, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
+		AddControlEx (pWindow, CONTROL_ICONVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, MAIN_LISTVIEW, 0, 0);
 	}
 }
 
