@@ -426,7 +426,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
 		
-		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight);
+		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
