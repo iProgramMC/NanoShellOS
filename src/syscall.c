@@ -314,6 +314,21 @@ enum
 		FI_IO_CONTROL,
 		WIN_CALL_CTL_CALLBACK,
 		WIN_TEXT_INPUT_SET_MODE,
+		
+	// System Calls V1.9
+		WIN_GET_SCROLL_BAR_MIN,
+		WIN_GET_SCROLL_BAR_MAX,
+		WIN_GET_SEL_INDEX_LIST,
+		WIN_SET_SEL_INDEX_LIST,
+		WIN_GET_SEL_INDEX_TABLE,
+		WIN_SET_SEL_INDEX_TABLE,
+		WIN_GET_SCROLL_TABLE,
+		WIN_SET_SCROLL_TABLE,
+		WIN_ADD_TABLE_ROW,
+		WIN_ADD_TABLE_COLUMN,
+		WIN_GET_ROW_STRINGS_FROM_TABLE,
+		WIN_REMOVE_ROW_FROM_TABLE,
+		WIN_RESET_TABLE,
 };
 
 const void *WindowCall[] = {
@@ -477,6 +492,21 @@ const void *WindowCall[] = {
 		FiIoControl,
 		CallControlCallback,
 		TextInputSetMode,
+		
+	// System Calls V1.9 - 28/12/2022
+		GetScrollBarMin,
+		GetScrollBarMax,
+		GetSelectedIndexList,
+		SetSelectedIndexList,
+		GetSelectedIndexTable,
+		SetSelectedIndexTable,
+		GetScrollTable,
+		SetScrollTable,
+		AddTableRow,
+		AddTableColumn,
+		GetRowStringsFromTable,
+		RemoveRowFromTable,
+		ResetTable,
 };
 
 

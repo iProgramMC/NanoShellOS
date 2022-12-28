@@ -82,6 +82,19 @@ char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption
 char*       FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 void        CallControlCallback(Window * pWindow, int comboID, int event, int parm1, int parm2);
 void        TextInputSetMode (Window *pWindow, int comboID, int mode);
+int         GetScrollBarMin (Window *pWindow, int comboID);
+int         GetScrollBarMax (Window *pWindow, int comboID);
+int         GetSelectedIndexList (Window* pWindow, int comboID);
+void        SetSelectedIndexList (Window* pWindow, int comboID, int index);
+int         GetSelectedIndexTable(Window* pWindow, int comboID);
+void        SetSelectedIndexTable(Window* pWindow, int comboID, int selectedIndex);
+int         GetScrollTable(Window* pWindow, int comboID);
+void        SetScrollTable(Window* pWindow, int comboID, int scroll);
+void        AddTableRow(Window* pWindow, int comboID, const char* pText[], int optionalIcon);
+void        AddTableColumn(Window* pWindow, int comboID, const char* pText, int width);
+bool        GetRowStringsFromTable(Window* pWindow, int comboID, int index, const char * output[]);
+void        RemoveRowFromTable(Window* pWindow, int comboID, int elementIndex);
+void        ResetTable(Window* pWindow, int comboID);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

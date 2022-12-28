@@ -418,3 +418,43 @@ CALL (TextInputSetMode, WIN_TEXT_INPUT_SET_MODE, void, Window* pWindow, int comb
 	SARGS(pWindow, comboID, mode)
 CALL_END
 
+// Calls V1.9
+CALL(GetScrollBarMin, WIN_GET_SCROLL_BAR_MIN, int, Window *pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(GetScrollBarMax, WIN_GET_SCROLL_BAR_MAX, int, Window *pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(GetSelectedIndexList, WIN_GET_SEL_INDEX_LIST, int, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(SetSelectedIndexList, WIN_SET_SEL_INDEX_LIST, void, Window* pWindow, int comboID, int index)
+	SARGS(pWindow, comboID, index)
+CALL_END
+CALL(GetSelectedIndexTable, WIN_GET_SEL_INDEX_TABLE, int, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(SetSelectedIndexTable, WIN_SET_SEL_INDEX_TABLE, void, Window* pWindow, int comboID, int selectedIndex)
+	SARGS(pWindow, comboID, selectedIndex)
+CALL_END
+CALL(GetScrollTable, WIN_GET_SCROLL_TABLE, int, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(SetScrollTable, WIN_SET_SCROLL_TABLE, void, Window* pWindow, int comboID, int scroll)
+	SARGS(pWindow, comboID, scroll)
+CALL_END
+CALL(AddTableRow, WIN_ADD_TABLE_ROW, void, Window* pWindow, int comboID, const char* pText[], int optionalIcon)
+	SARGS(pWindow, comboID, pText, optionalIcon)
+CALL_END
+CALL(AddTableColumn, WIN_ADD_TABLE_COLUMN, void, Window* pWindow, int comboID, const char* pText, int width)
+	SARGS(pWindow, comboID, pText, width)
+CALL_END
+CALL(GetRowStringsFromTable, WIN_GET_ROW_STRINGS_FROM_TABLE, bool, Window* pWindow, int comboID, int index, const char * output[])
+	RARGS(pWindow, comboID, index, output)
+CALL_END
+CALL(RemoveRowFromTable, WIN_REMOVE_ROW_FROM_TABLE, void, Window* pWindow, int comboID, int elementIndex)
+	SARGS(pWindow, comboID, elementIndex)
+CALL_END
+CALL(ResetTable, WIN_RESET_TABLE, void, Window* pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
