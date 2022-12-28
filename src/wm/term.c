@@ -20,6 +20,17 @@ void CoRefreshChar (Console *this, int x, int y);
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void KeKillThreadsByConsole(Console *pConsole);
 
+int g_ConsoleDefaultWidth = 80, g_ConsoleDefaultHeight = 25;
+bool g_bConsoleInitted = false;
+
+void TermLoadDefaultParms()
+{
+	if (g_bConsoleInitted) return;
+	CfgGetIntValue(&g_ConsoleDefaultWidth,  "Console::Width",  80);
+	CfgGetIntValue(&g_ConsoleDefaultHeight, "Console::Height", 25);
+	g_bConsoleInitted = true;
+}
+
 void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	Console* pConsole = (Console*)pWindow->m_data;
@@ -162,10 +173,11 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 	}
 }
 extern void ShellInit(void);
-//! NOTE: arg is a pointer to an array of 4 ints.
+
 void TerminalHostTask(int arg)
 {
-	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, 80, 25 };
+	TermLoadDefaultParms();
+	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, g_ConsoleDefaultWidth, g_ConsoleDefaultHeight };
 	
 	bool providedShellCmd = false, hookDebugConsole = false;
 	char* shellcmd = (char*)arg;

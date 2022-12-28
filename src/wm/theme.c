@@ -195,15 +195,10 @@ void ThmLoadExtraFonts()
 	ThmLoadFont(pFontsToLoadEntry);
 }
 
-//make sure pOut is initialized first - if the config entry is missing this won't work!
+//make sure pOut is initialized first - if the config entry is missing this won't work
 void ThmLoadFromConfig(uint32_t *pOut, const char *pString)
 {
-	ConfigEntry *pEntry = CfgGetEntry (pString);
-	if (!pEntry) return;
-	
-	uint32_t number = (uint32_t) atoi (pEntry->value);
-	
-	*pOut = number;
+	CfgGetIntValue((int*)pOut, pString, *pOut);
 }
 
 void LoadDefaultThemingParms()

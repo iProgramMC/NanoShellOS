@@ -167,38 +167,48 @@ void ShellExecuteCommand(char* p)
 		LogMsg("cfg          - list all the kernel configuration parameters");
 		LogMsg("crash        - attempt to crash the kernel");
 		LogMsg("color <hex>  - change the screen color");
-		LogMsg("fd           - attempts to resolve a path, prints non-zero if found");
-		LogMsg("ft           - attempts to write 'Hello, world\\n' to a file");
+		LogMsg("ft           - attempts to write 'Hello World from FiWrite!\\n' to a file");
 		LogMsg("e <elf>      - executes an ELF from the initrd");
+		LogMsg("ec <script>  - executes an NSScript file");
 		LogMsg("el           - prints the last returned value from an executed ELF");
+		LogMsg("export       - loads some configuration data from the provided arguments");
+		LogMsg("hat          - performs a hex dump of a file");
 		LogMsg("help         - shows this list");
-		LogMsg("gt           - run a graphical test");
 		LogMsg("kill <pid>   - kill a thread with an id");
+		LogMsg("image        - displays an image in the top left of the current graphicss context");
+		LogMsg("lf           - list debugging information about the file system");
 		LogMsg("lc           - list clipboard contents");
 		LogMsg("lm           - list memory allocations");
+		LogMsg("lp           - list currently installed PCI devices");
 		LogMsg("lr           - list the memory ranges provided by the bootloader");
 		LogMsg("ls           - list the current working directory (right now just /)");
 		LogMsg("lt           - list currently running threads (pauses them during the print)");
-		LogMsg("mode X       - change the screen mode");
-		LogMsg("mpt          - memory read/write bit test");
 		
 		//wait for new key
 		LogMsg("Strike a key to print more.");
 		CoGetChar();
 		
+		LogMsg("movedata     - copies data from one file to another");
+		LogMsg("mkdir        - creates a new empty directory");
+		LogMsg("mpt          - memory read/write bit test");
 		LogMsg("mspy         - Memory Spy! (TM)");
 		LogMsg("mrd <file>   - mounts a RAM Disk from a file");
 		LogMsg("ph           - prints current heap's address in kernel address space (or NULL for the default heap)");
+		LogMsg("pipetest     - tests the pipe functionality");
+		LogMsg("pwd          - prints the current working directory");
 		LogMsg("rb <--force> - reboots the system");
+		LogMsg("rm           - removes a file or link");
+		LogMsg("rmdir        - removes an empty directory");
+		LogMsg("rename       - renames a file or link");
 		LogMsg("sysinfo      - dump system information");
 		LogMsg("sysinfoa     - dump advanced system information");
-		LogMsg("time         - get timing information");
+		LogMsg("ta           - test ANSI escape codes");
+		LogMsg("tc           - copy 'Hello, world!' to the clipboard");
+		LogMsg("th           - test heap code");
+		LogMsg("tsc          - get timing information");
+		LogMsg("tm           - print the current date and time");
+		LogMsg("time         - time a shell command");
 		LogMsg("sjt          - SetJump() and LongJump() test");
-		LogMsg("stt          - spawns a single thread that doesn't last forever");
-		LogMsg("st           - spawns a single thread that makes a random line forever");
-		LogMsg("tt           - spawns 64 threads that makes random lines forever");
-		LogMsg("tte          - spawns 1024 threads that makes random lines forever");
-		LogMsg("ttte         - spawns 1024 threads that prints stuff");
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
 	}
@@ -214,7 +224,7 @@ void ShellExecuteCommand(char* p)
 	{
 		FsPipeTest();
 	}
-	else if (strcmp (token, "time") == 0)
+	else if (strcmp (token, "tm") == 0)
 	{
 		int e = GetEpochTime();
 		TimeStruct str = *TmReadTime();//, stt;
@@ -1209,56 +1219,12 @@ void ShellExecuteCommand(char* p)
 	{
 		KeTaskDebugDump();
 	}
-	else if (strcmp (token, "stt") == 0)
-	{
-		int errorCode = 0;
-		Task* task = KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
-		KeUnsuspendTask(task);
-		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
-	}
-	else if (strcmp (token, "st") == 0)
-	{
-		int errorCode = 0;
-		Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-		KeUnsuspendTask(task);
-		LogMsg("Task %d (%x) spawned.  Error code: %x", g_nextTaskNum - 1, task, errorCode);
-	}
-	else if (strcmp (token, "tt") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 64; i++)
-		{
-			Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-			if (task) KeUnsuspendTask(task);
-		}
-		LogMsg("Tasks have been spawned.");
-	}
-	else if (strcmp (token, "tte") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 1024; i++)
-		{
-			Task* task = KeStartTask(ShellTaskTest2, g_nextTaskNum++, &errorCode);
-			if (task) KeUnsuspendTask(task);
-		}
-		LogMsg("Tasks have been spawned.");
-	}
-	else if (strcmp (token, "ttte") == 0)
-	{
-		int errorCode = 0;
-		for (int i = 0; i < 128; i++)
-		{
-			Task* task = KeStartTask(TemporaryTask, g_nextTaskNum++, &errorCode);
-			if (task) KeUnsuspendTask(task);
-		}
-		LogMsg("Tasks have been spawned.");
-	}
 	else if (strcmp (token, "crash") == 0)
 	{
 		LogMsg("OK");
 		*((uint32_t*)0xFFFFFFFF) = 0;
 	}
-	else if (strcmp (token, "time") == 0)
+	else if (strcmp (token, "tsc") == 0)
 	{
 		uint32_t  hi, lo;
 		GetTimeStampCounter(&hi, &lo);

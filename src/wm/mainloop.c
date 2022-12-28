@@ -7,8 +7,9 @@
 #include "wi.h"
 
 #define LOCK_FPS
-#define LOCK_MS 16 // roughly 60 hz
-#define LAG_DEBUG
+int g_WmLockMS = 16;
+#define LOCK_MS g_WmLockMS
+//#define LAG_DEBUG
 
 bool RefreshMouse(void);
 void RenderCursor(void);
@@ -79,6 +80,8 @@ void SetupWindowManager()
 	
 	//CreateTestWindows();
 	UpdateDepthBuffer();
+	
+	CfgGetIntValue(&g_WmLockMS, "Desktop::UpdateMS", 16);
 	
 	//VidSetFont(FONT_BASIC);
 	//VidSetFont(FONT_TAMSYN_BOLD);

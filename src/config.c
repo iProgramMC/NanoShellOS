@@ -311,3 +311,13 @@ void CfgLoadFromMainFile()
 	
 	FiClose (fd);
 }
+
+void CfgGetIntValue(int* out, const char* key, int _default)
+{
+	*out = _default;
+	
+	ConfigEntry *pEntry = CfgGetEntry (key);
+	if (!pEntry) return;
+	
+	*out = atoi(pEntry->value);
+}

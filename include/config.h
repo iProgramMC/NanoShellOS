@@ -39,4 +39,7 @@ ConfigEntry* CfgGetEntry(const char* key);
 const char *CfgGetEntryValue(const char *pKey);
 bool CfgEntryMatches(const char *pKey, const char *pValueCmp);
 
+// Gets an integer value from a config key, or 'default' if said key doesn't actually exist.
+void CfgGetIntValue(int* out, const char* key, int _default);
+
 #endif//_CONFIG_H
