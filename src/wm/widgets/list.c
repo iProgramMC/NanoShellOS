@@ -75,6 +75,21 @@ static void CtlRemoveElementFromList(Control* pCtl, int index, Window* pWindow)
 	//also update the scroll bar.
 	CtlUpdateScrollBarSize(pCtl, pWindow);
 }
+static int CtlGetSelectedIndexList(Control* pCtl)
+{
+	return pCtl->m_listViewData.m_highlightedElementIdx;
+}
+static void CtlSetSelectedIndexList(Control* pCtl, int index)
+{
+	if (index < -1) index = -1;
+	if (index > 0)
+	{
+		if (index > pCtl->m_listViewData.m_elementCount - 1)
+			index = pCtl->m_listViewData.m_elementCount - 1;
+	}
+	
+	pCtl->m_listViewData.m_highlightedElementIdx = index;
+}
 static void CtlResetList (Control* pCtl, Window* pWindow)
 {
 	ListViewData* pData = &pCtl->m_listViewData;
@@ -1030,6 +1045,28 @@ void ResetList (Window* pWindow, int comboID)
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
 			CtlResetList (&pWindow->m_pControlArray[i], pWindow);
+			return;
+		}
+	}
+}
+int GetSelectedIndexList (Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			return CtlGetSelectedIndexList (&pWindow->m_pControlArray[i]);
+		}
+	}
+	return -1;
+}
+void SetSelectedIndexList (Window* pWindow, int comboID, int index)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetSelectedIndexList(&pWindow->m_pControlArray[i], index);
 			return;
 		}
 	}

@@ -98,6 +98,16 @@ const char* GetElementStringFromList (Window* pWindow, int comboID, int index);
 void RemoveElementFromList (Window* pWindow, int comboID, int elemIndex);
 
 /**
+ * Gets the selected item index from a ListView component.
+ */
+int GetSelectedIndexList (Window* pWindow, int comboID);
+
+/**
+ * Sets the selected item index to a ListView component.
+ */
+void SetSelectedIndexList (Window* pWindow, int comboID, int index);
+
+/**
  * Clears the items from a ListView component with a certain comboID.
  */
 void ResetList (Window* pWindow, int comboID);

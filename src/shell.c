@@ -360,6 +360,7 @@ void ShellExecuteCommand(char* p)
 			
 			if (ec != ELF_ERROR_NONE)
 			{
+				LogMsgNoCr("e: %s: ", fileName);
 				LogMsg(ElfGetErrorMsg(ec), fileName);
 			}
 			

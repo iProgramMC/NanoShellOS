@@ -211,6 +211,11 @@ RootFileNode* FsRootAddFile(RootFileNode* pNode, const char* pFileName, void* pC
 	pFN->m_implData = (uint32_t)pNewNode;
 	pFN->Read     = FsRootRead;
 	
+	if (EndsWith(pFileName, ".nse"))
+	{
+		pFN->m_perms |= PERM_EXEC;
+	}
+	
 	return pNewNode;
 }
 

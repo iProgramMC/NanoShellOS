@@ -11,8 +11,202 @@
 #include <elf.h>
 #include <wterm.h>
 #include <resource.h>
+
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
+
+#define CABINET_PROPS_WIDTH  (250)
+#define CABINET_PROPS_HEIGHT (300 - 18 + TITLE_BAR_HEIGHT)
+
+enum
+{
+	PROPS_NOTHING,
+	PROPS_BUTTON_OK,
+	PROPS_LABEL,
+	PROPS_ICON,
+	PROPS_LABEL_LOCATION,
+	PROPS_LABEL_FILE_SIZE,
+	PROPS_LABEL_DISK_SIZE,
+	PROPS_LABEL_CREATE_TIME,
+	PROPS_LABEL_MODIFY_TIME,
+	PROPS_LABEL_ATTRIBUTES,
+	PROPS_LABEL_INODE,
+	PROPS_LOCATION,
+	PROPS_FILE_SIZE,
+	PROPS_DISK_SIZE,
+	PROPS_CREATE_TIME,
+	PROPS_MODIFY_TIME,
+	PROPS_ATTRIBUTES,
+	PROPS_INODE,
+};
+
+IconType CabGetIconBasedOnName(const char *pName, int pType);
+
+#define RECTA(r, x, y, w, h) RECT(r, x, y + TITLE_BAR_HEIGHT, w, h)
+
+static void FormatSize(uint32_t size, char* size_buf)
+{
+	uint32_t kb = (size + 1023) / 1024;
+	if (size == ~0u)
+		size_buf[0] = 0;
+	else if (size < 1024)
+		sprintf(size_buf, "%,d B", size);
+	else
+		sprintf(size_buf, "%,d KB", kb);
+}
+
+static void FormatSizeDetailed(uint32_t size, char* size_buf)
+{
+	char buffer2[64];
+	sprintf(buffer2, " (%,d bytes)", size);
+	FormatSize(size, size_buf);
+	strcat(size_buf, buffer2);
+}
+
+static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int parm1, int parm2)
+{
+	switch (eventType)
+	{
+		case EVENT_CREATE:
+		{
+			Rectangle r;
+			RECT(r, CABINET_PROPS_WIDTH - 70, CABINET_PROPS_HEIGHT - 30, 60, 20);
+			
+			AddControl(pWindow, CONTROL_BUTTON, r, "OK", PROPS_NOTHING, 0, 0);
+			
+			const char** ptrs = (const char**)pWindow->m_data;
+			const char* path     = ptrs[0];
+			const char* justName = ptrs[1];
+			
+			if (path == NULL || justName == NULL)
+			{
+				RECTA(r, 52, 10, CABINET_PROPS_WIDTH - 62, CABINET_PROPS_HEIGHT - 20);
+				AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
+				SetHugeLabelText(pWindow, PROPS_LABEL, "There is no file whose properties should be checked.");
+				
+				RECTA(r, 10, 10, 32, 32);
+				AddControl(pWindow, CONTROL_ICON, r, NULL, PROPS_ICON, ICON_ERROR, 0);
+				
+				break;
+			}
+			
+			StatResult res;
+			int stat = FiStat(path, &res);
+			
+			if (stat < 0)
+			{
+				char buffer[1024];
+				
+				snprintf(buffer, 1024, "The file '%s' could not have its properties checked.\n\n%s", path, GetErrNoString(stat));
+				
+				RECTA(r, 52, 10, CABINET_PROPS_WIDTH - 62, CABINET_PROPS_HEIGHT - 20);
+				AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
+				SetHugeLabelText(pWindow, PROPS_LABEL, buffer);
+				
+				RECTA(r, 10, 10, 32, 32);
+				AddControl(pWindow, CONTROL_ICON, r, NULL, PROPS_ICON, ICON_ERROR, 0);
+				
+				break;
+			}
+			
+			int icon = CabGetIconBasedOnName(justName, res.m_type);
+			
+			RECTA(r, 10, 10, 32, 32);
+			AddControl(pWindow, CONTROL_ICON, r, NULL, PROPS_ICON, icon, 0);
+			
+			// add the hint text
+			RECTA(r, 52, 10 + (32 - GetLineHeight()) / 2, CABINET_PROPS_WIDTH - 62, 32);
+			AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
+			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
+			
+			RECTA(r, 10, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Location:", PROPS_LABEL_LOCATION, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
+			
+			RECTA(r, 10, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Size:", PROPS_LABEL_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
+			
+			RECTA(r, 10, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Size on disk:", PROPS_LABEL_DISK_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
+			
+			RECTA(r, 10, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Created:", PROPS_LABEL_CREATE_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			RECTA(r, 10, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Modified:", PROPS_LABEL_MODIFY_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			RECTA(r, 10, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, "Attributes:", PROPS_LABEL_ATTRIBUTES, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			// Add the actual information itself
+			char buf[512];
+			RECTA(r, 80, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LOCATION, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
+			SetHugeLabelText(pWindow, PROPS_LOCATION, path);
+			
+			FormatSizeDetailed(res.m_size, buf);
+			RECTA(r, 80, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			FormatSizeDetailed(res.m_blocks * 512, buf);
+			RECTA(r, 80, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			TimeStruct str;
+			GetHumanTimeFromEpoch(res.m_createTime, &str);
+			sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d", str.day, str.month, str.year, str.hours, str.minutes, str.seconds);
+			
+			RECTA(r, 80, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_CREATE_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			GetHumanTimeFromEpoch(res.m_modifyTime, &str);
+			sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d", str.day, str.month, str.year, str.hours, str.minutes, str.seconds);
+			
+			RECTA(r, 80, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_MODIFY_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			sprintf(buf, "%s, %s, %s",
+				(res.m_perms & PERM_READ)    ? "Read"    : "No Read",
+				(res.m_perms & PERM_WRITE)   ? "Write"   : "No Write",
+				(res.m_perms & PERM_EXEC)    ? "Execute" : "No Execute");
+			
+			RECTA(r, 80, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_ATTRIBUTES, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			
+			break;
+		}
+		case EVENT_COMMAND:
+		{
+			if (parm1 == PROPS_NOTHING)
+			{
+				DestroyWindow(pWindow);
+			}
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			DefaultWindowProc(pWindow, eventType, parm1, parm2);
+			break;
+		}
+		default:
+			DefaultWindowProc(pWindow, eventType, parm1, parm2);
+	}
+}
+
+void CreatePropertiesWindow(Window * parent, const char* path, const char* justName)
+{
+	char thing[1024];
+	snprintf(thing, sizeof thing, "Properties of %s", justName);
+	
+	const char*  ptrs[2];
+	ptrs[0] = path;
+	ptrs[1] = justName;
+	
+	PopupWindowEx(parent, thing, parent->m_rect.left + 100, parent->m_rect.top + 100, CABINET_PROPS_WIDTH, CABINET_PROPS_HEIGHT, CabinetPropertiesProc, WF_NOCLOSE | WF_NOMINIMZ, ptrs);
+}
 
 // The maximum amount of stat() calls before we quit. This is to speed up loading large folders.
 // This is still a work in progress.
@@ -180,23 +374,6 @@ static void ChangeListViewMode(Window* pWindow)
 	UpdateDirectoryListing(pWindow);
 	RequestRepaintNew(pWindow);
 	OnNotBusy(pWindow);
-}
-
-static void FormatSize(uint32_t size, char* size_buf)
-{
-	uint32_t kb = size / 1024;
-	if (size == ~0u)
-		size_buf[0] = 0;
-	else if (size < 1000)
-		sprintf(size_buf, "%d B", size);
-	else if (size < 1024)
-		sprintf(size_buf, "%d,%03d B", size / 1000, size % 1000);
-	else if (kb < 1000)
-		sprintf(size_buf, "%d KB", kb);
-	else if (kb < 1000000)
-		sprintf(size_buf, "%d,%03d KB", kb / 1000, kb % 1000);
-	else
-		sprintf(size_buf, "%d,%03d,%03d KB", kb / 1000000, kb / 1000 % 1000, kb % 1000);
 }
 
 // size = -1, means don't show anything to the file
@@ -392,6 +569,14 @@ void CabinetDetermineResourceLaunchFailure(Window* pWindow, RESOURCE_STATUS stat
 	MessageBox(pWindow, buffer, "Cabinet - Error Opening File", ICON_ERROR << 16 | MB_OK);
 }
 
+static int GetSelectedFileIndex(Window* pWindow)
+{
+	if (g_bUsingTableView)
+		return GetSelectedIndexTable(pWindow, MAIN_LISTVIEW);
+	else
+		return GetSelectedIndexList(pWindow, MAIN_LISTVIEW);
+}
+
 static const char * GetFileNameFromList(Window* pWindow, int index)
 {
 	if (g_bUsingTableView)
@@ -428,6 +613,12 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 				const char* pFileName = GetFileNameFromList(pWindow, parm2);//GetElementStringFromList (pWindow, parm1, parm2);
 				//LogMsg("Double clicked element: %s", pFileName);
+				
+				if (!pFileName)
+				{
+					SLogMsg("pFileName is NULL!");
+					break;
+				}
 				
 				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
 				{
@@ -638,6 +829,24 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					if (g_bUsingTableView) break;
 					ChangeListViewMode(pWindow);
 					break;
+				case CB$PROPERTIES:
+				{
+					const char* pFileName = GetFileNameFromList(pWindow, GetSelectedFileIndex(pWindow));
+					
+					if (strcmp(pFileName, "..") == 0) break;
+					
+					char buffer[1024];
+					strcpy(buffer, g_cabinetCWD);
+					if (g_cabinetCWD[1] != 0) // not just /
+					{
+						strcat(buffer, "/");
+					}
+					strcat(buffer, pFileName);
+					
+					CreatePropertiesWindow(pWindow, buffer, pFileName);
+					
+					break;
+				}
 				default:
 					MessageBox(pWindow, "Not implemented!  Check back later or something", "Cabinet", MB_OK | ICON_INFO << 16);
 			}

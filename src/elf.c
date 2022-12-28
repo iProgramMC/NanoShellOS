@@ -442,6 +442,9 @@ const char *gElfErrorCodes[] =
 
 const char *ElfGetErrorMsg (int error_code)
 {
+	if (error_code < 0)
+		return GetErrNoString(error_code);
+	
 	if (error_code < ELF_ERROR_NONE || error_code >= ELF_ERR_COUNT)
 		return "Unknown Elf Execution Error";
 	
@@ -517,7 +520,6 @@ void ElfOnDeath(Process* pProc)
 		{
 			if (!pBlk->bExecDone)
 			{
-				SLogMsg("pBlk->bExecDone = false.");
 				pBlk->bExecDone = true;
 				pBlk->nElfErrorCode     = ELF_KILLED;
 				pBlk->nElfErrorCodeExec = 0;
@@ -526,7 +528,6 @@ void ElfOnDeath(Process* pProc)
 			//if the parent thread doesn't exist, there is no point in keeping the detail here
 			if (!KeGetThreadByRID(pBlk->nParentTaskRID))
 			{
-				SLogMsg("Freeing because parent thread isn't here anymore");
 				MmFreeK(pBlk);
 				pProc->pDetail = NULL;
 			}
@@ -538,12 +539,12 @@ void ElfOnDeath(Process* pProc)
 // pElfErrorCodeOut : The error code returned by the spawned elf executable itself.
 int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bGui, int nHeapSize, int *pElfErrorCodeOut)
 {
-	int fd = FiOpen(pFileName, O_RDONLY);
+	int fd = FiOpen(pFileName, O_RDONLY | O_EXEC);
 	if (fd < 0)
 	{
 		// Show an error code, depending on the bRunFromGui
 		SLogMsg("Couldn't open file: %d", fd);
-		return (fd == -EEXIST) ? ELF_FILE_NOT_FOUND : ELF_FILE_IO_ERROR;
+		return fd;
 	}
 	
 	// Get the file size

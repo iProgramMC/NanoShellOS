@@ -8,15 +8,21 @@
 #include <string.h>
 #include <vga.h>
 
-void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
+void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar, bool bAddCommas)
 {
 	// print the actual digits themselves
-	int i = 0;
+	int i = 0, digit = 0;
 	while (num || i == 0)
 	{
+		if (bAddCommas && (digit % 3 == 0) && digit)
+		{
+			str[i++] = ',';
+		}
+		
 		str[i++] = '0' + (num % 10);
 		str[i]   = '\0';
 		num /= 10;
+		digit++;
 	}
 
 	// append padding too
@@ -36,17 +42,18 @@ void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 		str[end]   = temp;
 		start++;
 		end--;
-}
 	}
-void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar)
+}
+
+void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar, bool bAddCommas)
 {
 	if (num < 0)
 	{
 		str[0] = '-';
-		uns_to_str((uint64_t)(-num), str + 1, paddingInfo, paddingChar);
+		uns_to_str((uint64_t)(-num), str + 1, paddingInfo, paddingChar, bAddCommas);
 	}
 	else
-		uns_to_str((uint64_t)  num,  str,     paddingInfo, paddingChar);
+		uns_to_str((uint64_t)  num,  str,     paddingInfo, paddingChar, bAddCommas);
 }
 
 // features:
@@ -67,6 +74,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 	int  paddingInfo = -1;
 	char paddingChar = ' ';
 	size_t currentIndex = 0;
+	bool bAddCommas = false;
 	while (*fmt)
 	{
 		char m = *fmt;
@@ -75,6 +83,10 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 
 		if (m == '%')
 		{
+			bAddCommas = false;
+			paddingInfo = -1;
+			paddingChar = ' ';
+			
 			m = *(fmt++);
 
 			// if hit end, return
@@ -98,14 +110,25 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					m = *(fmt++);
 				}
 			}
-			else if (m >= '1' && m <= '9')
+			else
 			{
-				paddingInfo = m - '0';
-				paddingChar = ' ';
-				m = *(fmt++);
-
-				// if hit end, return
-				if (!m) goto finished;
+				if (m == ',') // as far as I know, this is NanoShell specific
+				{
+					bAddCommas = true;
+					m = *(fmt++);
+					
+					// if hit end, return
+					if (!m) goto finished;
+				}
+				if (m >= '1' && m <= '9')
+				{
+					paddingInfo = m - '0';
+					paddingChar = ' ';
+					m = *(fmt++);
+					
+					// if hit end, return
+					if (!m) goto finished;
+				}
 			}
 
 			switch (m)
@@ -160,7 +183,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					int num = va_arg(args, int);
 					char buffer[20];
 					
-					int_to_str(num, buffer, paddingInfo, paddingChar);
+					int_to_str(num, buffer, paddingInfo, paddingChar, bAddCommas);
 
 					const char* pString = buffer;
 					while (*pString)
@@ -182,7 +205,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					uint32_t num = va_arg(args, uint32_t);
 					char buffer[20];
 					
-					uns_to_str(num, buffer, paddingInfo, paddingChar);
+					uns_to_str(num, buffer, paddingInfo, paddingChar, bAddCommas);
 
 					const char* pString = buffer;
 					while (*pString)
@@ -204,7 +227,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					uint64_t num = va_arg(args, uint64_t);
 					char buffer[30];
 					
-					uns_to_str(num, buffer, paddingInfo, paddingChar);
+					uns_to_str(num, buffer, paddingInfo, paddingChar, bAddCommas);
 
 					const char* pString = buffer;
 					while (*pString)
@@ -226,7 +249,7 @@ size_t vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					int64_t num = va_arg(args, int64_t);
 					char buffer[30];
 					
-					int_to_str(num, buffer, paddingInfo, paddingChar);
+					int_to_str(num, buffer, paddingInfo, paddingChar, bAddCommas);
 
 					const char* pString = buffer;
 					while (*pString)
