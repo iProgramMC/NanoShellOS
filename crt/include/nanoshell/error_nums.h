@@ -36,6 +36,8 @@ enum
 	EBUSY,         // Resource is busy
 	ENOTEMPTY,     // Directory is not empty
 	ENOTTY,        // Invalid input/output control request
+	ERANGE,        // Range error
+	EDOM,          // Domain error
 	ECOUNT,
 };
 

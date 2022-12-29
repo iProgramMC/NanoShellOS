@@ -451,8 +451,8 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 		return -EISDIR;
 	}
 	
-	//If we have O_CREAT and O_WRONLY:
-	if ((oflag & O_CREAT) && (oflag & O_WRONLY))
+	//If we have should truncate the file:
+	if ((oflag & O_WRONLY) && (oflag & O_TRUNC))
 	{
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
@@ -1257,6 +1257,8 @@ static const char* ErrorStrings[] = {
 	"Resource is busy",
 	"Directory is not empty",
 	"Invalid input/output control request",
+	"Range error",
+	"Domain error",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

@@ -270,13 +270,14 @@ void FsInit ();
 	// I/O control requests
 	#include <ioctl.h>
 	
-	#define O_RDONLY (1)
-	#define O_WRONLY (2)
-	#define O_RDWR   (O_RDONLY | O_WRONLY)
-	#define O_APPEND (4)
-	#define O_CREAT  (8)
+	#define O_RDONLY   (1)
+	#define O_WRONLY   (2)
+	#define O_RDWR     (O_RDONLY | O_WRONLY)
+	#define O_APPEND   (4)
+	#define O_CREAT    (8)
 	#define O_NONBLOCK (16)
-	#define O_EXEC   (1024)
+	#define O_TRUNC    (32)
+	#define O_EXEC     (1024)
 	
 	//lseek whences
 	#define SEEK_SET 0

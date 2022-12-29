@@ -10,6 +10,7 @@
 
 #include "crtlib.h"
 #include "crtinternal.h"
+#include <limits.h>
 
 // Character operations
 
@@ -38,7 +39,7 @@ int iscntrl(int c)
 	return (c >= 0 && c <= 0x1F);
 }
 
-bool isdigit(int c)
+int isdigit(int c)
 {
 	return (c >= '0' && c <= '9');
 }
@@ -122,12 +123,12 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size)
 	return memmove(dstptr, srcptr, size);
 }
 
-void* memset(void* bufptr, uint8_t val, size_t size)
+void* memset(void* bufptr, int val, size_t size)
 {
 	uint8_t* buf = (uint8_t*) bufptr;
 	for (size_t i = 0; i < size; i++)
 	{
-		buf[i] = val;
+		buf[i] = (uint8_t)val;
 	}
 	return bufptr;
 }
@@ -238,10 +239,11 @@ int strcmp(const char* as, const char* bs)
 	return 0;
 }
 
-void strcat(char* dest, const char* after)
+char* strcat(char* dest, const char* after)
 {
 	char* end = strlen(dest) + dest;
 	memcpy(end, after, strlen(after) + 1);
+	return dest;
 }
 
 char* strchr (const char* str, int c);
@@ -496,4 +498,246 @@ double atof(const char *arr)
 	if (negative) value = -value;
 	
 	return  value;
+}
+
+// String to Unsigned X.
+
+#include <errno.h>
+#include <string.h>
+#include <ctype.h>
+
+// String to Unsigned X.
+
+#include <errno.h>
+#include <string.h>
+#include <ctype.h>
+
+// String to Unsigned X.
+unsigned long long strtoux(const char* str, char ** endptr, int base, unsigned long long max)
+{
+	errno = 0;
+	const char * strbkp = str;
+	
+	unsigned long long val = 0;
+	
+	// skip white space
+	while (*str && isspace(*str)) str++;
+	if (*str == '\0')
+	{
+		//well, we haven't really found any numbers
+		if (endptr)
+			*endptr = (char*)str;
+		errno = EINVAL;
+		return 0;
+	}
+	
+	// *str isn't zero, so surely *(str+1) can be accessed. Check it
+	if (*str == '0' && (str[1] == 'x' || str[1] == 'X'))
+	{
+		if (base == 0 || base == 16)
+		{
+			base = 16;
+			str += 2;
+		}
+		else
+		{
+			// well, base wasn't either 16 or zero and we've still got the 0x prefix.
+			// Set endptr to point to 'x' and return
+			if (endptr)
+				*endptr = (char*)&str[1];
+			return 0;
+		}
+	}
+	// if we're starting with zero, we're handling octal
+	else if (*str == '0')
+	{
+		if (base == 0 || base == 8)
+			base = 8;
+		str++;
+	}
+	
+	// if base is STILL zero, then we're dealing with decimal.
+	if (base == 0) base = 10;
+	
+	// keep reading digits
+	while (*str)
+	{
+		int digit = 0;
+		if (*str >= '0' && *str <= '9')
+			digit = *str - '0';
+		else if (*str >= 'A' && *str <= 'Z')
+			digit = *str - 'A' + 10;
+		else if (*str >= 'a' && *str <= 'z')
+			digit = *str - 'a' + 10;
+		else
+			// we've reached the end.
+			break;
+
+		// check in what situation we are about to overflow.
+		
+		// max without the last digit.
+		unsigned long long maxwld = max / base;
+		// if the value exceeds the max without the last digit already, this means that any digit we add will make it fail.
+		if (val > maxwld)
+		{
+			val = max;
+			errno = ERANGE;
+			if (endptr) *endptr = (char*)str;
+			return val;
+		}
+		// if it's equal
+		if (val == maxwld)
+		{
+			int digthresh = max % base;
+			
+			// if we're trying to tack on a digit bigger than the max's last digit, then we're going to overflow, so don't
+			if (digit > digthresh)
+			{
+				val = max;
+				errno = ERANGE;
+				if (endptr) *endptr = (char*)str;
+				return val;
+			}
+		}
+		
+		// if it's none of these, whatever digit we add will be valid.
+		val = val * base + digit;
+		
+		str++;
+	}
+	
+	if (endptr)
+		*endptr = (char*)str;
+	
+	return val;
+}
+
+// String to Signed X.
+long long strtox(const char* str, char ** endptr, int base, long long max)
+{
+	errno = 0;
+	const char * strbkp = str;
+	
+	unsigned long long val = 0; long long sign = 1;
+    long long min = -max - 1;
+	
+	// skip white space
+	while (*str && isspace(*str)) str++;
+	if (*str == '\0')
+	{
+		//well, we haven't really found any numbers
+		if (endptr)
+			*endptr = (char*)str;
+		errno = EINVAL;
+		return 0;
+	}
+	
+    // if we have a sign, treat it
+    if (*str == '+' || *str == '-')
+    {
+        sign = (*str == '-') ? (-1) : (1);
+        str++;
+    }
+
+	// *str isn't zero, so surely *(str+1) can be accessed. Check it
+	if (*str == '0' && (str[1] == 'x' || str[1] == 'X'))
+	{
+		if (base == 0 || base == 16)
+		{
+			base = 16;
+			str += 2;
+		}
+		else
+		{
+			// well, base wasn't either 16 or zero and we've still got the 0x prefix.
+			// Set endptr to point to 'x' and return
+			if (endptr)
+				*endptr = (char*)&str[1];
+			return 0;
+		}
+	}
+	// if we're starting with zero, we're handling octal
+	else if (*str == '0')
+	{
+		if (base == 0 || base == 8)
+			base = 8;
+		str++;
+	}
+	
+	// if base is STILL zero, then we're dealing with decimal.
+	if (base == 0) base = 10;
+	
+	// keep reading digits
+	while (*str)
+	{
+		int digit = 0;
+		if (*str >= '0' && *str <= '9')
+			digit = *str - '0';
+		else if (*str >= 'A' && *str <= 'Z')
+			digit = *str - 'A' + 10;
+		else if (*str >= 'a' && *str <= 'z')
+			digit = *str - 'a' + 10;
+		else
+			// we've reached the end.
+			break;
+
+		// check in what situation we are about to overflow.
+		
+		// max without the last digit.
+		long long maxwld = max / base;
+		// if the value exceeds the max without the last digit already, this means that any digit we add will make it fail.
+		if (val > maxwld)
+		{
+			val = sign < 0 ? min : max;
+			errno = ERANGE;
+			if (endptr) *endptr = (char*)str;
+			return val;
+		}
+		// if it's equal
+		if (val == maxwld)
+		{
+			int digthresh = max % base;
+            // if we're in the negatives, bump it up
+            if (sign < 0) digthresh++;
+			
+			// if we're trying to tack on a digit bigger than the max's last digit, then we're going to overflow, so don't
+			if (digit > digthresh)
+			{
+				val = sign < 0 ? min : max;
+				errno = ERANGE;
+				if (endptr) *endptr = (char*)str;
+				return val;
+			}
+		}
+		
+		// if it's none of these, whatever digit we add will be valid.
+		val = val * base + digit;
+		
+		str++;
+	}
+	
+	if (endptr)
+		*endptr = (char*)str;
+	
+	return (long long) val * sign;
+}
+
+unsigned long long int strtoull(const char* str, char ** endptr, int base)
+{
+	return strtoux(str, endptr, base, ULLONG_MAX);
+}
+
+unsigned long int strtoul(const char* str, char ** endptr, int base)
+{
+	return (unsigned long int)strtoux(str, endptr, base, ULONG_MAX);
+}
+
+long long int strtoll(const char* str, char ** endptr, int base)
+{
+	return strtox(str, endptr, base, LLONG_MAX);
+}
+
+long int strtol(const char* str, char ** endptr, int base)
+{
+	return (long int)strtox(str, endptr, base, LONG_MAX);
 }

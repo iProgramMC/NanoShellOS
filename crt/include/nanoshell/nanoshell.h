@@ -15,6 +15,7 @@
 #include <setjmp.h>
 #include <alloca.h>
 #include <unistd.h>
+#include <errno.h>
 #include <time.h>
 
 // NanoShell specifics
@@ -108,10 +109,10 @@ int ShellExecute        (const char *pCommand);    //for instance, "e <your favo
 int ShellExecuteResource(const char *pResourceID); //for instance, shell:stuff
 
 // Errors
-int  SetErrorNumber(int errno);
+int  SetErrorNumber(int en);
 int  GetErrorNumber();
 int* GetErrorNumberPointer();
-#define errno (*GetErrorNumberPointer())
+#define ErrorNumber (*GetErrorNumberPointer())
 
 // Kernel memory resource management.
 // NOTE: Improper management of kernel memory resources will cause a leak that

@@ -4,6 +4,8 @@
 #ifndef _STDLIB__H
 #define _STDLIB__H
 
+#include <stdint.h>
+#include <stddef.h>
 #include <nanoshell/stdlib_types.h>
 
 // Numeric conversion functions

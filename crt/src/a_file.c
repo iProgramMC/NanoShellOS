@@ -652,3 +652,33 @@ int remove (const char* filename)
 		return _I_FiUnlinkFile(filename);
 	}
 }
+
+void* mmap(void * addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+	void* pMem = MAP_FAILED;
+	
+	int ec = MemoryMap(addr, length, prot, flags, fd, offset, &pMem);
+	
+	if (ec < 0)
+	{
+		SetErrorNumber(ec);
+		return MAP_FAILED;
+	}
+	
+	return pMem;
+}
+
+int munmap(void * addr, size_t sz)
+{
+	int ec = MemoryUnmap(addr, sz);
+	if (ec < 0)
+		SetErrorNumber(ec);
+	return ec;
+}
+
+char* getcwd(char* buf, size_t sz)
+{
+	strncpy(buf, FiGetCwd(), sz);
+	buf[sz - 1] = 0;
+	return buf;
+}

@@ -21,6 +21,7 @@ apps/Dink/*
 apps/LimnEmu/*
 apps/Nano/*
 apps/Nano/keep/*
+apps/Tcc/*
 
 #NES ROMs which I will not risk making public
 fs/Nes/*.nes

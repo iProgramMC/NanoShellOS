@@ -4,6 +4,8 @@
 #ifndef _SETJMP___H
 #define _SETJMP___H
 
+#include <nanoshell/setjmp_types.h>
+
 __attribute__((returns_twice)) int  setjmp (jmp_buf buffer);
 __attribute__((noreturn))      void longjmp(jmp_buf buffer, int value);
 

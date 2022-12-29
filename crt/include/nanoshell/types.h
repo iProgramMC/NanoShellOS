@@ -17,9 +17,10 @@
 #include <nanoshell/setjmp_types.h>
 #include <nanoshell/time_types.h>
 #include <nanoshell/unistd_types.h>
-
+#include <nanoshell/mman_types.h>
 #include <nanoshell/graphics_types.h>
 #include <nanoshell/keyboard.h>
+#include <sys/types.h>
 
 typedef uint8_t BYTE;
 

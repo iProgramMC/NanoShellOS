@@ -154,7 +154,7 @@ void NotepadOnSave(UNUSED Window* pWindow)
 	}
 	
 	// Write to the file
-	int fd = FiOpen(NOTEPDATA(pWindow)->m_filename, O_WRONLY | O_CREAT);
+	int fd = FiOpen(NOTEPDATA(pWindow)->m_filename, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd < 0)
 	{
 		char buffer[1024];
