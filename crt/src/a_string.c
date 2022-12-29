@@ -370,6 +370,11 @@ static char* strchr_i(const char* s, int c, bool bReturnNulPos)
 		sc++;
 	}
 	
+	if (c == 0)
+	{
+		return sc;
+	}
+	
 	// assert(*sc == 0);
 	
 	return bReturnNulPos ? sc : NULL;
@@ -516,8 +521,6 @@ double atof(const char *arr)
 unsigned long long strtoux(const char* str, char ** endptr, int base, unsigned long long max)
 {
 	errno = 0;
-	const char * strbkp = str;
-	
 	unsigned long long val = 0;
 	
 	// skip white space
@@ -616,9 +619,8 @@ unsigned long long strtoux(const char* str, char ** endptr, int base, unsigned l
 long long strtox(const char* str, char ** endptr, int base, long long max)
 {
 	errno = 0;
-	const char * strbkp = str;
 	
-	unsigned long long val = 0; long long sign = 1;
+	long long val = 0; long long sign = 1;
     long long min = -max - 1;
 	
 	// skip white space
@@ -740,4 +742,32 @@ long long int strtoll(const char* str, char ** endptr, int base)
 long int strtol(const char* str, char ** endptr, int base)
 {
 	return (long int)strtox(str, endptr, base, LONG_MAX);
+}
+
+double ldexp(UNUSED double val, UNUSED int exp)
+{
+	// TODO
+	ASSERT(!"ldexp used!");
+	return 0.0;
+}
+
+double strtod(UNUSED const char* str, UNUSED char** endptr)
+{
+	// TODO
+	ASSERT(!"strtod used!");
+	return 0.0;
+}
+
+long double strtold(UNUSED const char* str, UNUSED char** endptr)
+{
+	// TODO
+	ASSERT(!"strtold used!");
+	return 0.0;
+}
+
+float strtof(UNUSED const char* str, UNUSED char** endptr)
+{
+	// TODO
+	ASSERT(!"strtof used!");
+	return 0.0f;
 }

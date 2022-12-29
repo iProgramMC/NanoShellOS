@@ -55,11 +55,12 @@ int ElfIsSupported(ElfHeader* pHeader)
 void ElfCleanup (UNUSED ElfProcess* pProcess)
 {
 }
+
 void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
 {
-	size_t sizePages = (((size-1) >> 12) + 1);
+	uintptr_t virtHint = (uintptr_t)virt & ~(PAGE_SIZE - 1), virtOffset = (uintptr_t)virt & (PAGE_SIZE - 1);
 	
-	uintptr_t virtHint = (uintptr_t)virt & ~(PAGE_SIZE - 1);
+	size_t sizePages = (((size + virtOffset - 1) >> 12) + 1);
 	
 	MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, true, false);
 	

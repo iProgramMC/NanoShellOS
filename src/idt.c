@@ -193,7 +193,8 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 			
 			//Just kill the process
 			// Mark the process to be killed eventually
-			KeGetRunningTask()->m_bSuspended = false;
+			KeGetRunningTask()->m_bSuspended = true;
+			KeGetRunningTask()->m_suspensionType = SUSPENSION_TOTAL;
 			
 			if (ExGetRunningProc())
 				ExGetRunningProc()->bWaitingForCrashAck = true;

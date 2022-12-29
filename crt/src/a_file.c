@@ -28,7 +28,7 @@ static int FileSpotToFileHandle(int spot)
 static int DirSpotToFileHandle(int spot)
 {
 	if (spot < 0 || spot >= FIMAX) return -1;
-	return g_OpenedFileDes[spot];
+	return g_OpenedDirDes[spot];
 }
 
 // Check if a file is opened here in this process

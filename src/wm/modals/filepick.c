@@ -84,6 +84,9 @@ void FilePickerCdBack (Window *pWindow)
 	
 	*p = 0;//cut it off
 	
+	if (cwd_copy[0] == 0)
+		strcpy(cwd_copy, "/");
+	
 	SetTextInputText (pWindow, 100001, cwd_copy);
 	FilePickerUpdate (pWindow);
 	RequestRepaint   (pWindow);
@@ -138,7 +141,7 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 						if (!pCurrent)
 						{
 							char buffer [256];
-							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.", pFileName);
+							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.", cwd_copy);
 							MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 						}
 						else

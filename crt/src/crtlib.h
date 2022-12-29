@@ -229,6 +229,7 @@ void*  memmove    (void* restrict dstptr, const void* restrict srcptr, size_t si
 void*  memset     (void* bufptr, int val, size_t size);
 size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
+char*  strncpy    (char *dst, const char *src, size_t n);
 int    strcmp     (const char* as, const char* bs);
 char*  strcat     (char* dest, const char* after);
 void   strtolower (char* as);

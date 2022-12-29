@@ -17,7 +17,6 @@ SECTION .text
 ; C-main function
 EXTERN _CEntry
 ; Internal library cleanup functions
-EXTERN _I_CloseOpenWindows
 EXTERN _I_FreeEverything
 EXTERN _I_CloseOpenFiles
 EXTERN _I_Setup
@@ -34,7 +33,6 @@ exit:
 	; Call internal cleanup functions
 	call _I_CloseOpenFiles
 	call _I_FreeEverything
-	call _I_CloseOpenWindows
 	
 	mov  eax, [ebp + 8]
 	jmp _NsExitPoint ;Nothing to lose

@@ -50,7 +50,7 @@ int geterrno()
 	return g_errorNum;
 }
 
-int geterrnoptr()
+int* geterrnoptr()
 {
-	return g_errorNum;
+	return &g_errorNum;
 }
