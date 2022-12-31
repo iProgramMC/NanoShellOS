@@ -145,6 +145,31 @@ extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 uint64_t ReadTSC();
 
+void ShellExecuteFile(const char* fileName, const char* arguments)
+{
+	if (!fileName)
+	{
+		LogMsg("Expected filename");
+	}
+	else if (*fileName == 0)
+	{
+		LogMsg("Expected filename");
+	}
+	else
+	{
+		int er = 0;
+		int ec = ElfRunProgram(fileName, arguments, false, false, 0, &er);
+		
+		if (ec != ELF_ERROR_NONE)
+		{
+			LogMsgNoCr("e: %s: ", fileName);
+			LogMsg(ElfGetErrorMsg(ec), fileName);
+		}
+		
+		LogMsg("");
+	}
+}
+
 void ShellExecuteCommand(char* p)
 {
 	TokenState state;
@@ -345,27 +370,7 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "e") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
-		if (!fileName)
-		{
-			LogMsg("Expected filename");
-		}
-		else if (*fileName == 0)
-		{
-			LogMsg("Expected filename");
-		}
-		else
-		{
-			int er = 0;
-			int ec = ElfRunProgram(fileName, state.m_pContinuation, false, false, 0, &er);
-			
-			if (ec != ELF_ERROR_NONE)
-			{
-				LogMsgNoCr("e: %s: ", fileName);
-				LogMsg(ElfGetErrorMsg(ec), fileName);
-			}
-			
-			LogMsg("");
-		}
+		ShellExecuteFile(fileName, state.m_pContinuation);
 	}
 	else if (strcmp (token, "ec") == 0)
 	{
@@ -1301,7 +1306,50 @@ void ShellExecuteCommand(char* p)
 	}
 	else
 	{
-		LogMsg("Unknown command.  Please type 'help'.");
+		// This could be an executable
+		/*
+		
+	else if (strcmp (token, "e") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		ShellExecuteFile(fileName, state.m_pContinuation);
+	}
+		*/
+		
+		char buffer[PATH_MAX];
+		// does this start with a dot or a slash?
+		if (*token == '/' || *token == '.')
+		{
+			// we can just execute it as-is
+			if (EndsWith(token, ".nse"))
+				snprintf(buffer, sizeof buffer - 1, "%s", token);
+			else
+				snprintf(buffer, sizeof buffer - 1, "%s.nse", token);
+		}
+		else
+		{
+			// might be a thing in the 'Bin' folder
+			snprintf(buffer, sizeof buffer - 1, "/Bin/%s.nse", token);
+		}
+		
+		buffer[sizeof buffer-1] = 0;
+		
+		// does this file exist?
+		int fd = FiOpen(buffer, O_RDONLY);
+		if (fd == -ENOENT)
+		{
+			LogMsg("The name specified (%s) is not recognized as an internal or external\ncommand, operable program or batch file. Type 'help' for a list of commands.", buffer);
+		}
+		else if (fd < 0)
+		{
+			LogMsg("%s: %s", fd, GetErrNoString(fd));
+		}
+		else
+		{
+			// the file is there, try to run it
+			FiClose(fd);
+			ShellExecuteFile(buffer, state.m_pContinuation);
+		}
 	}
 	
 	//LogMsg("You typed: '%s'", p);
