@@ -22,7 +22,8 @@ The following third party code is also licensed under the GNU GPL version 3.
 
 [Just do it!](https://www.youtube.com/watch?v=ZXsQAXx_ao0) Kidding aside, feel free to make a pull request! (I'd like it even more if you could help me clean up the source!)
 
-[Coding style guidelines](coding_style.md)
+[Coding style guidelines](doc/coding_style.md)
+[NanoShell C Library info](crt/README.md)
 
 ## Demo Screenshots
 
