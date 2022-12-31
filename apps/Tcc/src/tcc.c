@@ -209,6 +209,8 @@ static const char version[] =
         " FreeBSD"
 #elif TARGETOS_OpenBSD
         " OpenBSD"
+#elif NANOSHELL
+		" NanoShell"
 #elif TARGETOS_NetBSD
         " NetBSD"
 #else
