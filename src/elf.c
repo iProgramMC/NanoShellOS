@@ -62,9 +62,9 @@ void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_
 	
 	size_t sizePages = (((size + virtOffset - 1) >> 12) + 1);
 	
-	MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, true, false);
+	MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, true, false, PAGE_BIT_SCRUB_ZERO);
 	
-	memset((void*)virtHint, 0, sizePages * PAGE_SIZE);
+	//memset((void*)virtHint, 0, sizePages * PAGE_SIZE);
 	memcpy(virt, data, fileSize);
 }
 
@@ -341,7 +341,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			if (pSectHeader->m_type == SHT_NOBITS)
 			{
 				//clear
-				ZeroMemory(addr, pSectHeader->m_shSize);
+				//ZeroMemory(addr, pSectHeader->m_shSize);
 			}
 			if (pSectHeader->m_type == SHT_SYMTAB)
 			{

@@ -16,6 +16,8 @@
 //#define COW_DEBUG
 //#define DAI_DEBUG
 
+#define DAI_SCRUB_BYTE (0xCE)
+
 #ifdef COW_DEBUG
 #define CowDebugLogMsg(...) SLogMsg(__VA_ARGS__)
 #else
@@ -106,12 +108,19 @@ void MmOnPageFault(Registers *pRegs)
 				
 				DaiDebugLogMsg("Got page %x", frame);
 				
+				// If the page entry had PAGE_BIT_SCRUB_ZERO set, scrub with zero instead of DAI_SCRUB_BYTE
+				uint8_t nScrubByte = DAI_SCRUB_BYTE;
+				if (*pPageEntry & PAGE_BIT_SCRUB_ZERO)
+					nScrubByte = 0;
+				
 				*pPageEntry = *pPageEntry & 0xFFF;
 				*pPageEntry |= frame;
 				*pPageEntry |= PAGE_BIT_PRESENT;
 				*pPageEntry &= ~PAGE_BIT_DAI;
 				
 				MmInvalidateSinglePage(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK);
+				
+				memset((void*)(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK), nScrubByte, PAGE_SIZE);
 				
 				// Let's go!
 				return;

@@ -36,6 +36,8 @@
 #define PAGE_BIT_COW          (0x400) // (1 << 10). Copy On Write. If a fault occurs here, copy the specified page.
 #define PAGE_BIT_DAI          (0x200) // (1 <<  9). Don't Allocate Instantly. If a fault occurs here, allocate a physical page.
 
+#define PAGE_BIT_SCRUB_ZERO   (0x80000000) // (1 << 31). This bit should only be treated as set if PAGE_BIT_DAI is set.
+
 #define PAGE_BIT_ADDRESS_MASK (0xFFFFF000)
 
 #include <main.h>

@@ -76,7 +76,7 @@ bool MuAreMappingParmsValid(uintptr_t start, size_t nPages);
 bool MuIsMappingFree(UserHeap *pHeap, uintptr_t start, size_t nPages);
 bool MuMapMemory(UserHeap *pHeap, size_t numPages, uint32_t* pPhysicalAddresses, void** pAddressOut, bool bReadWrite, bool bIsMMIO);
 bool MuMapMemoryNonFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, void** pAddressOut, bool bReadWrite, bool bIsMMIO);
-bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, bool bAllowClobbering, bool bIsMMIO);
+bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, bool bAllowClobbering, bool bIsMMIO, uint32_t nDaiFlags);
 void MuCreatePageTable(UserHeap *pHeap, int pageTable);
 void MuRemovePageTable(UserHeap *pHeap, int pageTable);
 bool MuRemoveMapping(UserHeap *pHeap, uintptr_t address);
