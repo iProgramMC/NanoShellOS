@@ -389,6 +389,22 @@ int sprintf(char* buf, const char* fmt, ...)
 	return val;
 }
 
+// This is a hack. I may remove it.
+
+void _I_WritePort(short port, char c)
+{
+	__asm__("outb %1, %0\n\t"::"d"(port),"a"(c));
+}
+
+void _I_SPutString(const char* s)
+{
+	while (*s)
+	{
+		_I_WritePort(0xE9, *s);
+		s++;
+	}
+}
+
 void LogMsg(const char* fmt, ...)
 {
 	char cr[8192];
@@ -398,6 +414,30 @@ void LogMsg(const char* fmt, ...)
 	
 	snprintf(cr + strlen(cr), 2, "\n");
 	_I_PutString(cr);
+	
+	va_end(list);
+}
+
+void SLogMsg(const char* fmt, ...)
+{
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsnprintf(cr, sizeof(cr) - 2, fmt, list);
+	
+	snprintf(cr + strlen(cr), 2, "\n");
+	_I_SPutString(cr);
+	
+	va_end(list);
+}
+
+void SLogMsgNoCr(const char* fmt, ...)
+{
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsnprintf(cr, sizeof(cr) - 1, fmt, list);
+	_I_SPutString(cr);
 	
 	va_end(list);
 }

@@ -393,6 +393,7 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 				FileNode* pDir = FsResolvePath(fileName);
 				if (!pDir)
 				{
+					SLogMsg("Couldn't even find parent dir '%s' ('%s')", fileName, pFileName);
 					//couldn't even find parent dir
 					LockFree (&g_FileSystemLock);
 					return -ENOENT;
@@ -451,8 +452,8 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 		return -EISDIR;
 	}
 	
-	//If we have O_CREAT and O_WRONLY:
-	if ((oflag & O_CREAT) && (oflag & O_WRONLY))
+	//If we have should truncate the file:
+	if ((oflag & O_WRONLY) && (oflag & O_TRUNC))
 	{
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
@@ -505,7 +506,20 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 
 int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
-	return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
+	// if the file path isn't absolute, make it
+	if (*pFileName == '/')
+	{
+		return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
+	}
+	else
+	{
+		char path[PATH_MAX * 2];
+		strcpy(path, g_cwd);
+		if (g_cwd[1] != 0) // not just '/'
+			strcat(path, "/");
+		strcat(path, pFileName);
+		return FiOpenInternal(path, NULL, oflag, srcFile, srcLine);
+	}
 }
 
 int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
@@ -614,6 +628,8 @@ int FiCloseDir (int dd)
 
 DirEnt* FiReadDir (int dd)
 {
+	SLogMsg("FiReadDir dd = %d", dd);
+	
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
@@ -631,6 +647,7 @@ DirEnt* FiReadDir (int dd)
 	}
 	
 	LockFree (&g_FileSystemLock);
+	
 	return &pDesc->m_sCurDirEnt;
 }
 
@@ -1257,6 +1274,8 @@ static const char* ErrorStrings[] = {
 	"Resource is busy",
 	"Directory is not empty",
 	"Invalid input/output control request",
+	"Range error",
+	"Domain error",
 };
 
 STATIC_ASSERT(ARRAY_COUNT(ErrorStrings) == ECOUNT, "Change this if adding error codes.");

@@ -11,6 +11,9 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+void SLogMsg(const char * c, ...);
+void SLogMsgNoCr(const char* fmt, ...);
+
 // If the free gap has between <size> and <size> + 32 bytes, don't split it. It's kind of a waste.
 // If the free gap's size is <size> + 32 bytes and over, proceed to perform a split.
 #define C_MEM_ALLOC_TOLERANCE (32)
@@ -36,6 +39,8 @@ typedef struct MemAreaHeader
 	uint32_t m_magicNo2;
 }
 MemAreaHeader;
+
+#define SIZE_AND_LOCATION_PADDING (1 << 2) // 4
 
 // The memory area. Prefer imitating old NanoShell's way of doing things.
 uint8_t*  gMemory = (uint8_t*)0x40000000;
@@ -68,6 +73,11 @@ void MemMgrRequestMemMap(uintptr_t place, size_t size)
 	{
 		MemOnOOM(errorCode, false);
 	}
+}
+
+void MemMgrAbort()
+{
+	abort();
 }
 
 void MemMgrRequestMemUnMap(uintptr_t place, size_t size)
@@ -119,7 +129,7 @@ void MemMgrPerformSanityChecks(MemAreaHeader* pHeader)
 	if (gMemory + gMemorySize <= pHeaderBytes || pHeaderBytes < gMemory)
 	{
 		LogMsg("Heap corruption detected! Block %p isn't within the memory area reserved to the program.", pHeader);
-		abort();
+		MemMgrAbort();
 	}
 
 	// Perform a magic number check
@@ -128,7 +138,7 @@ void MemMgrPerformSanityChecks(MemAreaHeader* pHeader)
 	{
 		// Uh oh! We have a heap corruption. Report to the user!
 		LogMsg("Heap corruption detected! Block %p's magic numbers aren't correctly set.", pHeader);
-		abort();
+		MemMgrAbort();
 	}
 
 	// Yep, all good
@@ -224,63 +234,10 @@ void MemMgrInitializeMemory()
 // First-fit allocation method. We could also use best-fit, however right now I'd rather not.
 void* MemMgrAllocateMemory(size_t sz)
 {
-	if (g_bAddedToLastHeaderHint)
-	{
-		// try adding to the last header first. If that doesn't work, resort to
-		// the method below. Switch this off if we're dangerously low on memory space
-		MemAreaHeader* pHeader = gLastHeader;
-
-		//if we don't have a last header, we've hit the boundary
-		if (gLastHeader)
-		{
-			if (pHeader->m_size >= sz)
-			{
-				//TODO figure out a way to not repeat myself
-
-				// This is good. Now, do we split this up?
-				if (pHeader->m_size >= sz + sizeof (MemAreaHeader) + C_MEM_ALLOC_TOLERANCE)
-				{
-					// Yes. Proceed to split.
-					uint8_t* pMem = (uint8_t*)&pHeader[1] + sz;
-
-					// This will be the location of the new memory header.
-					MemAreaHeader* pNewHdr = (MemAreaHeader*)pMem;
-
-					// Mark its position as used.
-					MemMgrUseMemoryRegion(pNewHdr, sizeof (MemAreaHeader));
-					
-					// Initialize its magic bits.
-					pNewHdr->m_magicNo1 = MAGIC_NUMBER_1_FREE;
-					pNewHdr->m_magicNo2 = MAGIC_NUMBER_2_FREE;
-					pNewHdr->m_size	 = pHeader->m_size - sizeof(MemAreaHeader) - sz;
-					pHeader->m_size	 = sz;
-					// Link it up with the nodes in between
-					pNewHdr->m_pNext	= pHeader->m_pNext;
-					if (pHeader->m_pNext) pHeader->m_pNext->m_pPrev = pNewHdr;
-					pNewHdr->m_pPrev	= pHeader;
-					pHeader->m_pNext	= pNewHdr;
-
-					gLastHeader = pNewHdr;
-				}
-				else
-				{
-					// Don't split it.
-					gLastHeader = NULL;
-				}
-
-				// Update this header's magic numbers, to mark this block used.
-				pHeader->m_magicNo1 = MAGIC_NUMBER_1_USED;
-				pHeader->m_magicNo2 = MAGIC_NUMBER_2_USED;
-
-				g_bAddedToLastHeaderHint = true;
-
-				MemMgrUseMemoryRegion(pHeader, sz + sizeof (MemAreaHeader));
-
-				// return the memory right after the header.
-				return &pHeader[1];
-			}
-		}
-	}
+	// Pad the size to four bytes, or one double word.
+	sz = (sz + SIZE_AND_LOCATION_PADDING - 1) & ~(SIZE_AND_LOCATION_PADDING - 1);
+	
+	// TODO OPTIMIZE - Store a pointer to the biggest block that's free right now, or something else like that.
 
 	// Okay, first off, navigate our linked list
 	MemAreaHeader* pHeader = MemMgrGetInitialHeader(), *pLastHeader = NULL;
@@ -367,7 +324,7 @@ void* MemMgrAllocateMemory(size_t sz)
 	else
 	{
 		LogMsg("ERROR: No pLastHeader? (line %d)", __LINE__);
-		abort();
+		MemMgrAbort();
 	}
 
 	if (pMem + sz >= gMemory + gMemorySize)
@@ -404,8 +361,21 @@ void* MemMgrAllocateMemory(size_t sz)
 
 void MemMgrFreeMemory(void *pMem)
 {
+	// check the padding first
+	if (((uintptr_t)pMem & (SIZE_AND_LOCATION_PADDING - 1)) != 0)
+	{
+		LogMsg("Error: Address passed in is NOT padded to %d!", SIZE_AND_LOCATION_PADDING);
+		abort();
+	}
+	
 	// get the header right before the memory with some cool syntax tricks
 	MemAreaHeader* pHeader = & (-1)[(MemAreaHeader*)pMem];
+	
+	if (gLastHeader == pHeader)
+	{
+		gLastHeader = NULL;
+		g_bAddedToLastHeaderHint = false;
+	}
 
 	// Ensure the sanity of this header
 	MemMgrPerformSanityChecks(pHeader);
@@ -414,7 +384,7 @@ void MemMgrFreeMemory(void *pMem)
 	if (pHeader->m_magicNo1 == MAGIC_NUMBER_1_FREE && pHeader->m_magicNo2 == MAGIC_NUMBER_2_FREE)
 	{
 		LogMsg("ERROR: double free attempt at %p", pMem);
-		abort();
+		MemMgrAbort();
 	}
 
 	// mark it as free
@@ -474,6 +444,12 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 
 	// Ensure the sanity of this header
 	MemMgrPerformSanityChecks(pHeader);
+		
+	if (gLastHeader == pHeader)
+	{
+		gLastHeader = NULL;
+		g_bAddedToLastHeaderHint = false;
+	}
 	
 	// Are we trying to shrink this memory region? This case is trivial.
 	if (size < pHeader->m_size)
@@ -495,8 +471,7 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 	// How much space do we have between this and the next header?
 	MemAreaHeader* pNext = pHeader->m_pNext;
 	
-	// note: that we're casting to 'int' like that is merely a hack
-	if ((long)(pNext - pHeader - sizeof(MemAreaHeader)) >= (long)size)
+	if ((uintptr_t)(pNext) >= (uintptr_t)pHeader + sizeof(MemAreaHeader) + size)
 	{
 		// Yes. Expand this area using the same method as above for shrinking.
 		MemMgrUseMemoryRegion(pHeader, size + sizeof(MemAreaHeader));
@@ -530,17 +505,17 @@ void MemMgrDebugDump()
 		// Perform a sanity check first, before doing *anything*. Has its reasons.
 		MemMgrPerformSanityChecks(pHeader);
 
-		LogMsg("Header: %p. Next: %p, Prev: %p. Size: %zu.", pHeader, pHeader->m_pNext, pHeader->m_pPrev, pHeader->m_size);
+		SLogMsg("Header: %p. Next: %p, Prev: %p. Size: %u.", pHeader, pHeader->m_pNext, pHeader->m_pPrev, pHeader->m_size);
 
 		pHeader = pHeader->m_pNext;
 	}
 
-	LogMsg("Memory page reference: ");
+	SLogMsg("Memory page reference: ");
 
 	for (int i = 0; i < 50; i++)
-		LogMsgNoCr("%x", gMemoryPageReference[i]);
+		SLogMsgNoCr("%x", gMemoryPageReference[i]);
 
-	LogMsgNoCr("\n");
+	SLogMsgNoCr("\n");
 }
 
 void MemMgrCleanup()
@@ -564,17 +539,25 @@ void _I_FreeEverything()
 
 void* realloc (void * ptr, size_t size)
 {
+	if (!ptr) return malloc(size);
+	
 	return MemMgrReAllocateMemory(ptr, size);
 }
 
 void *malloc (size_t sz)
 {
-	return MemMgrAllocateMemory(sz);
+	void* ptr = MemMgrAllocateMemory(sz);
+	
+	// if we have obtained some memory, scrub it
+	if (ptr) memset(ptr, 0x69, sz);
+	
+	return ptr;
 }
 
 void *calloc (size_t nmemb, size_t size)
 {
-	void *ptr = malloc(nmemb * size);
+	void *ptr = MemMgrAllocateMemory(nmemb * size);
+	
 	if (ptr == NULL) return ptr;
 	
 	memset(ptr, 0, nmemb * size);
@@ -584,6 +567,7 @@ void *calloc (size_t nmemb, size_t size)
 void free (void* pMem)
 {
 	if (!pMem) return;
+	
 	return MemMgrFreeMemory(pMem);
 }
 
@@ -596,4 +580,9 @@ void* MmKernelAllocate(size_t sz)
 void MmKernelFree(void *pData)
 {
 	_I_Free(pData);
+}
+
+void * MmKernelReAllocate(void* ptr, size_t sz)
+{
+	return _I_ReAllocateDebug(ptr, sz, __FILE__, __LINE__);
 }

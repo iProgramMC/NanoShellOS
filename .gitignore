@@ -22,6 +22,13 @@ apps/LimnEmu/*
 apps/Nano/*
 apps/Nano/keep/*
 
+crt/build_libnanoshell
+crt/build_crt1
+crt/crt1.o
+crt/crti.o
+crt/crtn.o
+crt/libnanoshell.a
+
 #NES ROMs which I will not risk making public
 fs/Nes/*.nes
 

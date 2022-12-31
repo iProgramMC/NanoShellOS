@@ -226,11 +226,12 @@ void   abort      ();
 int    memcmp     (const void* ap, const void* bp, size_t size);
 void*  memcpy     (void* restrict dstptr, const void* restrict srcptr, size_t size);
 void*  memmove    (void* restrict dstptr, const void* restrict srcptr, size_t size);
-void*  memset     (void* bufptr, BYTE val, size_t size);
+void*  memset     (void* bufptr, int val, size_t size);
 size_t strlen     (const char* str);
 void*  strcpy     (const char* ds, const char* ss);
+char*  strncpy    (char *dst, const char *src, size_t n);
 int    strcmp     (const char* as, const char* bs);
-void   strcat     (char* dest, const char* after);
+char*  strcat     (char* dest, const char* after);
 void   strtolower (char* as);
 void   strtoupper (char* as);
 void   memtolower (char* as, int w);
@@ -250,8 +251,6 @@ void LogMsgNoCr ( const char *pfmt, ... );
 int  SetErrorNumber(int errno);
 int  GetErrorNumber();
 int* GetErrorNumberPointer();
-
-#define errno (*GetErrorNumberPointer())
 
 int sprintf(char* buf, const char* fmt, ...);
 

@@ -35,6 +35,10 @@ int CtlGetScrollBarPos (Control *pControl)
 {
 	return pControl->m_scrollBarData.m_pos;
 }
+int CtlGetScrollBarMin(Control *pControl)
+{
+	return pControl->m_scrollBarData.m_min;
+}
 int CtlGetScrollBarMax(Control *pControl)
 {
 	return pControl->m_scrollBarData.m_max;
@@ -79,6 +83,15 @@ int GetScrollBarPos (Window *pWindow, int comboID)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 			return CtlGetScrollBarPos (&pWindow->m_pControlArray[i]);
+	}
+	return -1;
+}
+int GetScrollBarMin (Window *pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+			return CtlGetScrollBarMin(&pWindow->m_pControlArray[i]);
 	}
 	return -1;
 }

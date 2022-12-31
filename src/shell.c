@@ -640,7 +640,7 @@ void ShellExecuteCommand(char* p)
 			goto fail_movedata;
 		}
 		
-		int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT);
+		int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT | O_TRUNC);
 		if (fd_out < 0)
 		{
 			LogMsg("movedata: Could not open %s for writing: %s", fileNameOut, GetErrNoString(fd_out));
@@ -918,6 +918,13 @@ void ShellExecuteCommand(char* p)
 			StatResult statResult;
 			int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
 			
+			if (res < 0)
+			{
+				LogMsg("ls: cannot stat '%s': %s", pDirEnt->m_name, GetErrNoString(res));
+				continue;
+			}
+			
+			
 			const char* auxStr = "";
 			char buffer [256];
 			memset( buffer, 0, sizeof buffer );
@@ -955,12 +962,6 @@ void ShellExecuteCommand(char* p)
 				strcat( buffer, buf );
 				
 				auxStr = buffer;
-			}
-			
-			if (res < 0)
-			{
-				LogMsg("ls: cannot stat '%s': %s", pDirEnt->m_name, GetErrNoString(res));
-				continue;
 			}
 			
 			if (statResult.m_type & FILE_TYPE_MOUNTPOINT)

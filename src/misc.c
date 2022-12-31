@@ -28,21 +28,41 @@ TimeStruct* TmReadTime()
 	return &g_time;
 }
 
-int TmCmosReadRegister(int reg) {
+int TmCmosReadRegister(int reg)
+{
 	WritePort(0x70,reg);
 	return ReadPort(0x71);
 }
-void TmCmosWriteRegister(int reg, int data) {
+void TmCmosWriteRegister(int reg, int data)
+{
 	WritePort(0x70,reg);
 	WritePort(0x71,data);
 }
 
-void TmGetTime (TimeStruct* pStruct) {
+// I don't remember exactly where I copied this from
+int TmGetWeekDay(TimeStruct* pStruct)
+{
+	int day = pStruct->day, month = pStruct->month, year = pStruct->year;
+	
+    int wday = (day  + ((153 * (month + 12 * ((14 - month) / 12) - 3) + 2) / 5)
+				+ (365 * (year + 4800 - ((14 - month) / 12)))
+				+ ((year + 4800 - ((14 - month) / 12)) / 4)
+				- ((year + 4800 - ((14 - month) / 12)) / 100)
+				+ ((year + 4800 - ((14 - month) / 12)) / 400)
+				- 32045
+      ) % 7;
+	
+    return (wday + 1) % 7; // so that Sunday is day 0
+}
+
+void TmGetTime (TimeStruct* pStruct)
+{
 	do 
 	{
 		pStruct->statusA = TmCmosReadRegister(0x0A);
 	} 
 	while (pStruct->statusA & C_UPDATE_IN_PROGRESS_FLAG);
+	
 	pStruct->seconds = TmCmosReadRegister(0x00);
 	pStruct->minutes = TmCmosReadRegister(0x02);
 	pStruct->hours   = TmCmosReadRegister(0x04);
@@ -87,24 +107,30 @@ void TmGetTime (TimeStruct* pStruct) {
 	{
 		pStruct->seconds = BCD_TO_BIN(pStruct->seconds);
 		pStruct->minutes = BCD_TO_BIN(pStruct->minutes);
-		pStruct->day = BCD_TO_BIN(pStruct->day);
-		pStruct->month = BCD_TO_BIN(pStruct->month);
-		pStruct->year = BCD_TO_BIN(pStruct->year);
-		pStruct->hours= ( (pStruct->hours&0xF)+(((pStruct->hours&0x70)/16)*10))|(pStruct->hours&0x80);
+		pStruct->day     = BCD_TO_BIN(pStruct->day);
+		pStruct->month   = BCD_TO_BIN(pStruct->month);
+		pStruct->year    = BCD_TO_BIN(pStruct->year);
+		pStruct->hours   = ((pStruct->hours & 0xF) + (((pStruct->hours & 0x70) / 16) * 10)) | (pStruct->hours & 0x80);
 	}
 	
-	//convert 12h to 24h
+	// convert 12h to 24h
 	if (!(pStruct->statusB & 0x02) && (pStruct->hours & 0x80))
-		pStruct->hours = ((pStruct->hours & 0x7f)+12)%24;
-	//calculate full year
+		pStruct->hours = ((pStruct->hours & 0x7f) + 12) % 24;
+	
+	// calculate full year
 	pStruct->year += 2000;
-	if(pStruct->year<CURRENT_YEAR)pStruct->year+=100;
+	if (pStruct->year < CURRENT_YEAR)
+		pStruct->year += 100;
+	
+	// calculate the weekday parameter. The RTC's weekday may not be entirely reliable.
+	pStruct->weekday = TmGetWeekDay(pStruct);
 }
 
 const char* g_monthNamesShort = 
 	"Non\0Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec\0";
 
-void TmPrintTime(TimeStruct* pStruct) {
+void TmPrintTime(TimeStruct* pStruct)
+{
 	char hr[3],mn[3],sc[3];
 	hr[0] = '0' + pStruct->hours/10;
 	hr[1] = '0' + pStruct->hours%10;
@@ -121,7 +147,9 @@ void TmPrintTime(TimeStruct* pStruct) {
 		pStruct->year,
 		hr,mn,sc);
 }
-void TmPrintTimeFormatted(char* buffer, TimeStruct* pStruct) {
+
+void TmPrintTimeFormatted(char* buffer, TimeStruct* pStruct)
+{
 	char hr[3],mn[3],sc[3];
 	hr[0] = '0' + pStruct->hours/10;
 	hr[1] = '0' + pStruct->hours%10;
@@ -140,6 +168,7 @@ void TmPrintTimeFormatted(char* buffer, TimeStruct* pStruct) {
 		pStruct->year,
 		hr,mn,sc);
 }
+
 #endif
 
 // Run Time

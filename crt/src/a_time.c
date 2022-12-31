@@ -78,15 +78,29 @@ void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
 	pOut->year  = year;
 }
 
-/*
-TODO
-
 void StructTmToTimeStruct(TimeStruct* out, struct tm* in)
 {
 	out->seconds  = in->tm_sec;
 	out->minutes  = in->tm_min;
 	out->hours    = in->tm_hour;
 	out->weekday  = in->tm_wday;
+	out->day      = in->tm_mday;
+	out->month    = in->tm_mon;
+	out->year     = in->tm_year;
+	out->statusA = out->statusB = 0;
+}
+
+void TimeStructToStructTm(TimeStruct* in, struct tm* out)
+{
+	out->tm_sec  = in->seconds; 
+	out->tm_min  = in->minutes; 
+	out->tm_hour = in->hours; 
+	out->tm_wday = in->weekday; 
+	out->tm_mday = in->day; 
+	out->tm_mon  = in->month; 
+	out->tm_year = in->year;
+	out->tm_gmtoff = 0;
+	out->tm_zone = "GMT";
 }
 
 double difftime(time_t a, time_t b)
@@ -96,7 +110,7 @@ double difftime(time_t a, time_t b)
 
 time_t time(time_t* timer)
 {
-	time_t t = GetEpochTime(GetTime());
+	time_t t = GetEpochTimeFromTimeStruct(GetTime());
 	
 	if (timer)
 		*timer = t;
@@ -104,11 +118,23 @@ time_t time(time_t* timer)
 	return t;
 }
 
-time_t mktime (struct tm * ptr);
+time_t mktime (struct tm * ptr)
 {
 	TimeStruct ts;
 	StructTmToTimeStruct(&ts, ptr);
-	return GetHumanTimeFromEpoch()
+	return GetEpochTimeFromTimeStruct(&ts);
 }
 
-*/
+struct tm* localtime_r(const time_t* timep, struct tm * result)
+{
+	TimeStruct ts;
+	GetHumanTimeFromEpoch(*timep, &ts);
+	TimeStructToStructTm(&ts, result);
+	return result;
+}
+
+struct tm* localtime(const time_t* timep)
+{
+	static struct tm s_tm;
+	return localtime_r(timep, &s_tm);
+}
