@@ -628,8 +628,6 @@ int FiCloseDir (int dd)
 
 DirEnt* FiReadDir (int dd)
 {
-	SLogMsg("FiReadDir dd = %d", dd);
-	
 	LockAcquire (&g_FileSystemLock);
 	if (!FiIsValidDirDescriptor(dd))
 	{
