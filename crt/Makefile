@@ -57,6 +57,9 @@ update: all
 	cp $(CRT1_TARGET) $(ROOT_PATH)/User/Library/$(CRT1_TARGET)
 	cp $(CRTI_TARGET) $(ROOT_PATH)/User/Library/$(CRTI_TARGET)
 	cp $(CRTN_TARGET) $(ROOT_PATH)/User/Library/$(CRTN_TARGET)
+	
+updinc:
+	cp -r include/* $(ROOT_PATH)/User/Include
 
 clean:
 	rm -rf build_libnanoshell/*
