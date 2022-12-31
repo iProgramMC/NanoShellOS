@@ -5,6 +5,7 @@
             Mouse Driver module
 ******************************************/
 #include <mouse.h>
+#include <config.h>
 
 enum
 {
@@ -19,7 +20,7 @@ enum
 };
 
 uint8_t g_commandRunning, g_resetStages, g_mouseDeviceID = 0, g_mouseCycle;
-bool g_mouseAvailable = true, g_mouseInitted = false, g_ps2MouseAvail = false, g_ps2DisableMovement = false;
+bool g_mouseAvailable = false, g_mouseInitted = false, g_ps2MouseAvail = false, g_ps2DisableMovement = false;
 
 MousePacket g_currentPacket;
 bool g_discardPacket;
@@ -270,8 +271,26 @@ void IrqMouse()
 
 //mouse init//
 #if 1
+
+bool MouseShouldInit()
+{
+	ConfigEntry * pEntry = CfgGetEntry("Driver::PS2");
+	
+	// default: true
+	if (!pEntry) return true;
+	
+	return strcmp(pEntry->value, "off") != 0;
+}
+
 void MouseInit()
 {
+	if (!MouseShouldInit())
+	{
+		return;
+	}
+	
+	g_mouseAvailable = true;
+	
 	ILogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//return;//don't have it for now
 	uint8_t _status;

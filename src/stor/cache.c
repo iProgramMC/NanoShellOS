@@ -46,9 +46,7 @@ void StDebugDump(CacheRegister* pReg)
 void StEvictSeveralCacheUnits(CacheRegister* pReg, uint32_t unit, uint32_t count)
 {
 	if (pReg->m_nCacheUnitCount == 0)
-	{
 		return;
-	}
 	
 	ASSERT(unit < pReg->m_nCacheUnitCount);
 	ASSERT(unit + count <= pReg->m_nCacheUnitCount);
@@ -240,6 +238,7 @@ CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData)
 
 void StFlushAllCacheUnits(CacheRegister* pReg)
 {
+	if (!pReg->m_bUsed) return;
 	CLogMsg("Evicting ALL cache units!");
 	StEvictSeveralCacheUnits (pReg, 0, pReg->m_nCacheUnitCount);
 }

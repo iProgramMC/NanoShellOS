@@ -235,7 +235,7 @@ bool StIsDriveAvailable (DriveID driveId)
 	if (driveType == DEVICE_UNKNOWN)
 	{
 		LockFree(&s_driveLocks[driveId]);
-		return DEVERR_NOTFOUND;
+		return false;
 	}
 	
 	uint8_t driveSubId = g_GetSubIDCallbacks[driveType](driveId);

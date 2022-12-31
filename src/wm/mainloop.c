@@ -153,6 +153,12 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		return;
 	}
 	
+	if (!IsMouseAvailable())
+	{
+		LogMsg("No PS/2 mouse has been found. At this stage of development, the window system is not interactable without a mouse. Please restart the system with a PS/2 mouse by typing 'rb' in the prompt.");
+		return;
+	}
+	
 	SetupWindowManager();
 	
 	g_pWindowMgrTask = KeGetRunningTask ();
