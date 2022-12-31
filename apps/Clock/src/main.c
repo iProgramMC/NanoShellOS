@@ -17,7 +17,7 @@ int cosa[]={    0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 9
 int sina[]={-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105,   0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,    0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995 };
 
 int nextUpdateIn = 0;
-TimeStruct time;
+TimeStruct g_time;
 
 #define min(a,b) ((a)<(b)?(a):(b))
 
@@ -40,18 +40,18 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			int diameter = min (windowWidth, windowHeight);
 			int handMaxLength = (2 * diameter / 5);
 			
-			//undraw old time
-			DrawHand(time.hours % 12 * 5 + time.minutes / 12, 2 * handMaxLength / 3, centerX, centerY, WINDOW_BACKGD_COLOR);
-			DrawHand(time.minutes,                            6 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
-			DrawHand(time.seconds,                            8 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
+			//undraw old g_time
+			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 2 * handMaxLength / 3, centerX, centerY, WINDOW_BACKGD_COLOR);
+			DrawHand(g_time.minutes,                            6 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
+			DrawHand(g_time.seconds,                            8 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
 			
-			//read in new time
-			time = *GetTime();
+			//read in new g_time
+			g_time = *GetTime();
 			
-			//re-draw new time
-			DrawHand(time.hours % 12 * 5 + time.minutes / 12, 4 * handMaxLength / 9, centerX, centerY, 0xFF0000);
-			DrawHand(time.minutes,                            6 * handMaxLength / 9, centerX, centerY, 0x000000);
-			DrawHand(time.seconds,                            8 * handMaxLength / 9, centerX, centerY, 0x000000);
+			//re-draw new g_time
+			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 4 * handMaxLength / 9, centerX, centerY, 0xFF0000);
+			DrawHand(g_time.minutes,                            6 * handMaxLength / 9, centerX, centerY, 0x000000);
+			DrawHand(g_time.seconds,                            8 * handMaxLength / 9, centerX, centerY, 0x000000);
 			
 			//draw surrounding circle:
 			int len1 = handMaxLength, len2 = 10 * handMaxLength / 9;
@@ -99,7 +99,7 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 	if (!pWindow)
 		return 1;
 	
-	//memset (&time, 0, sizeof(time));
+	//memset (&g_time, 0, sizeof(g_time));
 	
 	while (HandleMessages (pWindow))
 	{
