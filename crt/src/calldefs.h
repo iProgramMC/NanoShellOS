@@ -458,3 +458,14 @@ CALL_END
 CALL(ResetTable, WIN_RESET_TABLE, void, Window* pWindow, int comboID)
 	SARGS(pWindow, comboID)
 CALL_END
+
+// Calls V2.0
+CALL(VidReadPixel, VID_READ_PIXEL, unsigned, unsigned x, unsigned y)
+	RARGS(x,y)
+CALL_END
+CALL(CfgGetString, CFG_GET_STRING, const char*, const char* parm)
+	RARGS(parm)
+CALL_END
+CALL(VidGetVbeData, VID_GET_VBE_DATA, VBEData*, void)
+	RARGS()
+CALL_END

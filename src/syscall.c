@@ -16,6 +16,7 @@
 #include <vfs.h>
 #include <clip.h>
 #include <misc.h>
+#include <config.h>
 #include <idt.h>
 
 /*****************************************************
@@ -329,6 +330,11 @@ enum
 		WIN_GET_ROW_STRINGS_FROM_TABLE,
 		WIN_REMOVE_ROW_FROM_TABLE,
 		WIN_RESET_TABLE,
+		
+	// System Calls V2.0
+		VID_READ_PIXEL,
+		CFG_GET_STRING,
+		VID_GET_VBE_DATA,
 };
 
 const void *WindowCall[] = {
@@ -507,6 +513,11 @@ const void *WindowCall[] = {
 		GetRowStringsFromTable,
 		RemoveRowFromTable,
 		ResetTable,
+		
+	// System Calls V2.0 - 31/12/2022
+		VidReadPixel,
+		CfgGetEntryValue,
+		VidGetVBEData,
 };
 
 

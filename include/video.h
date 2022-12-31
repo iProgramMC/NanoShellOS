@@ -181,13 +181,18 @@ void DirtyRectInvalidateAll();
 /**
  * Gets the current mouse position.
  */
-Point GetMousePos();
+Point GetMousePos(void);
 
 /**
  * Sets the current VBE data, or NULL for the mainscreen.
  * Also resets the clip rectangle.
  */
 void VidSetVBEData(VBEData* pData);
+
+/**
+ * Gets the current VBE data;
+ */
+VBEData* VidGetVBEData(void);
 
 /**
  * Sets the current clipping rectangle.  Useful if you want to have
@@ -237,6 +242,11 @@ void VidInit ();
  */
 bool VidChangeScreenResolution(int xSize, int ySize);
 bool BgaChangeScreenResolution(int xSize, int ySize);//<-- raw version, do not use
+
+/**
+ * Read a single pixel from the main screen.
+ */
+unsigned VidReadPixel (unsigned x, unsigned y);
 
 /**
  * Plots a single pixel on the screen.

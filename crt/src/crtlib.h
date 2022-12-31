@@ -13,7 +13,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 19
+#define WCALL_VERSION 20
 enum
 {
 	// System Calls V1.0
@@ -217,6 +217,13 @@ enum
 		WIN_GET_ROW_STRINGS_FROM_TABLE,
 		WIN_REMOVE_ROW_FROM_TABLE,
 		WIN_RESET_TABLE,
+	#endif
+		
+	// System Calls V2.0
+	#if WCALL_VERSION >= 20
+		VID_READ_PIXEL,
+		CFG_GET_STRING,
+		VID_GET_VBE_DATA,
 	#endif
 };
 

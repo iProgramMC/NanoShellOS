@@ -938,15 +938,19 @@ void VidSetVBEData(VBEData* pData)
 	VidSetClipRect(NULL);
 }
 
+VBEData* VidGetVBEData()
+{
+	return g_vbeData;
+}
 
 // Font rendering
 
 //! DO NOT use this on non-main-screen framebuffers!
 unsigned VidReadPixel (unsigned x, unsigned y)
 {
-	if (x >= (unsigned)GetScreenSizeX()) return 0;
-	if (y >= (unsigned)GetScreenSizeY()) return 0;
-	return g_framebufferCopy[x + y * GetScreenSizeX()];
+	if (x >= (unsigned)GetScreenWidth ()) return 0;
+	if (y >= (unsigned)GetScreenHeight()) return 0;
+	return g_framebufferCopy[x + y * GetScreenWidth()];
 }
 unsigned VidReadPixelU (unsigned x, unsigned y)
 {
