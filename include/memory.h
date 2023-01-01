@@ -10,6 +10,8 @@
 #ifndef _MEMORY_H
 #define _MEMORY_H
 
+#define ALLOCATE_BUT_DONT_WRITE_PHYS ((uint32_t*)-1)
+
 #define KERNEL_BASE_ADDRESS (0xC0000000)
 #define KERNEL_HEAP_BASE    (0x80000000)
 #define USER_HEAP_BASE      (0x40000000)
@@ -147,8 +149,7 @@ void MmUnmapPhysicalMemory(void *pMem);
  * pPhysOut may be NULL or not, in the case where it's not, the physical address 
  * of the page is returned.
  */
-void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int callLine);
-#define MmAllocateSinglePagePhy(physOut) MmAllocateSinglePagePhyD(physOut, __FILE__, __LINE__)
+void* MmAllocateSinglePagePhy(uint32_t* pPhysOut);
 
 /**
  * Allocates a single page (4096 bytes).
@@ -156,8 +157,7 @@ void* MmAllocateSinglePagePhyD(uint32_t* pPhysOut, const char* callFile, int cal
  * This returns the address of the new page, or NULL if we ran out of memory.
  * Use MmAllocateSinglePagePhy if you also want the physical address of the page.
  */
-void* MmAllocateSinglePageD(const char* callFile, int callLine);
-#define MmAllocateSinglePage() MmAllocateSinglePageD(__FILE__, __LINE__)
+void* MmAllocateSinglePage();
 
 /**
  * Frees a single memory page. A NULL pointer is carefully ignored.
@@ -180,10 +180,14 @@ void MmFreePage(void* pAddr);
  *
  * See: MmFree, MmReAllocate
  */
-void* MmAllocateD (size_t size, const char* callFile, int callLine);
-void* MmAllocateKD(size_t size, const char* callFile, int callLine);
-#define MmAllocate(size)  MmAllocateD (size, __FILE__, __LINE__)
-#define MmAllocateK(size) MmAllocateKD(size, __FILE__, __LINE__)
+void* MmAllocate (size_t size);
+void* MmAllocateK(size_t size);
+
+/**
+ * Does the same thing as MmAllocate, however, if pPhysAddrs is not NULL, or ALLOCATE_BUT_DONT_WRITE_PHYS,
+ * writes the physical addresses of the new pages as if pPhysAddrs was an array of size ((size + 4095) / 4096)
+ */
+void* MmAllocatePhy(size_t size, uint32_t* pPhysAddrs);
 
 /**
  * Resizes a MmAllocate'd memory range to the new `size`.
@@ -195,10 +199,8 @@ void* MmAllocateKD(size_t size, const char* callFile, int callLine);
  * It may be (and is quite optimistic about optimizing it to be as such), however,
  * if it sees no option, it will move the whole block.
  */
-void* MmReAllocateD (void* old_ptr, size_t size, const char* callFile, int callLine);
-void* MmReAllocateKD(void* old_ptr, size_t size, const char* callFile, int callLine);
-#define MmReAllocate(old_ptr, size)  MmReAllocateD (old_ptr, size, __FILE__, __LINE__)
-#define MmReAllocateK(old_ptr, size) MmReAllocateKD(old_ptr, size, __FILE__, __LINE__)
+void* MmReAllocate (void* old_ptr, size_t size);
+void* MmReAllocateK(void* old_ptr, size_t size);
 
 /**
  * Frees a memory range allocated with MmAllocate. A NULL pointer is carefully ignored.

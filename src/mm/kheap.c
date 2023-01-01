@@ -13,6 +13,28 @@
 #include <memory.h>
 #include "memoryi.h"
 
+// These are to be used in for loops where a loop between (offset, limit - 1) and (0, offset - 1) is needed.
+// Usage: for (int i = offset; IterCheck(i, &hit_offset_times, offset); IterIncrement(&i, limit)) { ... }
+// (where hit_offset_times is a zero initialized local integer)
+
+SAI void IterIncrement(int* i, int limit)
+{
+	(*i)++;
+	if (*i >= limit)
+		*i -= limit;
+}
+
+SAI bool IterCheck(int i, int * hit_offset, int offset)
+{
+	if (i == offset)
+		(*hit_offset)++;
+	
+	return *hit_offset < 2;
+}
+
+// This is an optimization help.
+int g_KernelPageAllocOffset = 0;
+
 SafeLock g_KernelHeapLock;//TODO
 
 // Can allocate up to 256 MB of RAM.  No need for more I think,
@@ -114,7 +136,11 @@ void* MhSetupPage(int index, uint32_t* pPhysOut)
 		
 		// Mark this page entry as present, and return its address.
 		g_KernelPageEntries[index] = frame | PAGE_BIT_PRESENT | PAGE_BIT_READWRITE | PAGE_BIT_USERSUPER;
-		*pPhysOut = frame;
+		
+		if (pPhysOut != ALLOCATE_BUT_DONT_WRITE_PHYS)
+		{
+			*pPhysOut = frame;
+		}
 	}
 	else
 	{
@@ -154,7 +180,8 @@ void* MhAllocateSinglePage(uint32_t* pPhysOut)
 	KeVerifyInterruptsDisabled;
 	
 	// Find a free page frame.
-	for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
+	int ho = 0;
+	for (int i = g_KernelPageAllocOffset; IterCheck(i, &ho, g_KernelPageAllocOffset); IterIncrement(&i, C_MAX_KERNEL_HEAP_PAGE_ENTRIES))
 	{
 		if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 		{
@@ -222,6 +249,7 @@ void MhFree(void* pPage)
 		pAddr += PAGE_SIZE;
 	}
 }
+
 void* MhAllocate(size_t size, uint32_t* pPhysOut)
 {
 	KeVerifyInterruptsDisabled;
@@ -240,7 +268,9 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 		//ex: if we wanted 6100 bytes, we'd take 6100-1=6099, then divide that by 4096 (we get 1) and add 1
 		//    if we wanted 8192 bytes, we'd take 8192-1=8191, then divide that by 4096 (we get 1) and add 1 to get 2 pages
 		
-		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
+		int ho = 0, limit = C_MAX_KERNEL_HEAP_PAGE_ENTRIES - numPagesNeeded;
+		
+		for (int i = g_KernelPageAllocOffset; IterCheck(i, &ho, g_KernelPageAllocOffset); IterIncrement(&i, limit))
 		{
 			// A non-allocated pageframe?
 			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
@@ -268,13 +298,20 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 				{
 					//LogMsg("Setting up page number %d", j);
 					uint32_t* pPhysOutNew = pPhysOut;
-					if (pPhysOutNew)
+					if (pPhysOutNew && pPhysOut != ALLOCATE_BUT_DONT_WRITE_PHYS)
 						pPhysOutNew += k;
 					MhSetupPage (j, pPhysOutNew);
 				}
 				
+				// this is mostly an optimization
+				g_KernelPageAllocOffset = i + numPagesNeeded;
+				
 				return pointer;
 			}
+			
+			// If there's a g_KernelHeapAllocSize, skip past that. Optimization
+			i += g_KernelHeapAllocSize[i] ;
+			
 		_label_continue:;
 		}
 		
@@ -282,6 +319,7 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 		return NULL;
 	}
 }
+
 void* MhReAllocate(void *oldPtr, size_t newSize)
 {
 	KeVerifyInterruptsDisabled;
@@ -387,7 +425,8 @@ void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite)
 	{
 		// Faster single page version
 		// Find a free page frame.
-		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
+		int ho = 0;
+		for (int i = g_KernelPageAllocOffset; IterCheck(i, &ho, g_KernelPageAllocOffset); IterIncrement(&i, C_MAX_KERNEL_HEAP_PAGE_ENTRIES))
 		{
 			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))
 			{
@@ -402,7 +441,8 @@ void * MhMapPhysicalMemory(uintptr_t physMem, size_t numPages, bool bReadWrite)
 	{
 		//more than one page, take matters into our own hands:
 		
-		for (int i = 0; i < C_MAX_KERNEL_HEAP_PAGE_ENTRIES; i++)
+		int ho = 0;
+		for (int i = g_KernelPageAllocOffset; IterCheck(i, &ho, g_KernelPageAllocOffset); IterIncrement(&i, C_MAX_KERNEL_HEAP_PAGE_ENTRIES))
 		{
 			// A non-allocated pageframe?
 			if (!(g_KernelPageEntries[i] & (PAGE_BIT_PRESENT | PAGE_BIT_DAI)))

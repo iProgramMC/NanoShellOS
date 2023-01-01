@@ -103,7 +103,7 @@ void MmUnmapPhysicalMemory(void *pMem)
 // MmAllocate*
 #if 1
 
-void* MmAllocateSinglePagePhyD (uint32_t* pOut, UNUSED const char* callFile, UNUSED int callLine)
+void* MmAllocateSinglePagePhy(uint32_t* pOut)
 {
 	// TODO: Make this go through the user heap too.
 	KeVerifyInterruptsEnabled;
@@ -112,11 +112,13 @@ void* MmAllocateSinglePagePhyD (uint32_t* pOut, UNUSED const char* callFile, UNU
 	sti;
 	return pMem;
 }
-void* MmAllocateSinglePageD(const char* callFile, int callLine)
+
+void* MmAllocateSinglePage()
 {
-	return MmAllocateSinglePagePhyD(NULL, callFile, callLine);
+	return MmAllocateSinglePagePhy(NULL);
 }
-void* MmAllocatePhyD (size_t size, UNUSED const char* callFile, UNUSED int callLine, uint32_t* physAddresses)
+
+void* MmAllocatePhy (size_t size, uint32_t* physAddresses)
 {
 	KeVerifyInterruptsEnabled;
 	
@@ -127,22 +129,25 @@ void* MmAllocatePhyD (size_t size, UNUSED const char* callFile, UNUSED int callL
 	void *pMem = MhAllocate(size, physAddresses);
 	
 	// I use this to find and track down leaks in the kernel heap
-	//SLogMsg("%x <== MmAllocatePhyD %s %d", pMem, callFile, callLine);
+	//SLogMsg("%x <== MmAllocatePhyD %s %d", pMem);
 	
 	// restore interrupts, all good
 	sti;
 	
 	return pMem;
 }
-void* MmAllocateD (size_t size, const char* callFile, int callLine)
+
+void* MmAllocate(size_t size)
 {
-	return MmAllocatePhyD(size, callFile, callLine, NULL);
+	return MmAllocatePhy(size, NULL);
 }
-void* MmAllocateKD (size_t size, const char* callFile, int callLine)
+
+void* MmAllocateK(size_t size)
 {
-	return MmAllocatePhyD(size, callFile, callLine, NULL);
+	return MmAllocatePhy(size, NULL);
 }
-void* MmReAllocateD(void *oldPtr, size_t newSize, UNUSED const char *callFile, UNUSED int callLine)
+
+void* MmReAllocate(void *oldPtr, size_t newSize)
 {
 	// TODO: Make this go through the user heap too.
 	KeVerifyInterruptsEnabled;
@@ -151,9 +156,10 @@ void* MmReAllocateD(void *oldPtr, size_t newSize, UNUSED const char *callFile, U
 	sti;
 	return pMem;
 }
-void* MmReAllocateKD (void *oldPtr, size_t newSize, const char *callFile, int callLine)
+
+void* MmReAllocateK (void *oldPtr, size_t newSize)
 {
-	return MmReAllocateD(oldPtr, newSize, callFile, callLine);
+	return MmReAllocate(oldPtr, newSize);
 }
 
 #endif

@@ -62,17 +62,30 @@ void UserRequestRepaint(Window* pWindow)
 {
 	RequestRepaint(pWindow);
 }
+
 void UserRequestRepaintNew(Window* pWindow)
 {
 	RequestRepaintNew(pWindow);
 }
+
 void UserWindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2)
 {
 	WindowRegisterEvent(pWindow, eventType, parm1, parm2);
 }
+
 void UserWindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
 {
 	WindowRegisterEventUnsafe(pWindow, eventType, parm1, parm2);
+}
+
+void * UserMmAllocateDebug(size_t sz, UNUSED const char* a, UNUSED int b)
+{
+	return MmAllocate(sz);
+}
+
+void * UserMmReAllocateDebug(void* ptr, size_t sz, UNUSED const char* a, UNUSED int b)
+{
+	return MmReAllocate(ptr, sz);
 }
 
 int GetVersionNumber()
@@ -385,7 +398,7 @@ const void *WindowCall[] = {
 		CoGetChar,
 		CoGetString,
 		
-		MmAllocateD,
+		UserMmAllocateDebug,
 		MmFree,
 		MmDebugDump,
 		
@@ -482,7 +495,7 @@ const void *WindowCall[] = {
 		GetRandom,
 		
 	// System Calls V1.6 - 14/07/2022
-		MmReAllocateD,
+		UserMmReAllocateDebug,
 		ShellExecute,
 		ShellExecuteResource,
 		
