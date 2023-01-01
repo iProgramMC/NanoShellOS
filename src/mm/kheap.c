@@ -310,7 +310,7 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 			}
 			
 			// If there's a g_KernelHeapAllocSize, skip past that. Optimization
-			i += g_KernelHeapAllocSize[i] ;
+			i += g_KernelHeapAllocSize[i];
 			
 		_label_continue:;
 		}

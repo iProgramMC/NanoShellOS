@@ -13,8 +13,6 @@ void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsig
 // NOTE: Damn, this is a pretty heavy control. 144 KB for 34 entries.
 // This is probably a sign we need to optimize the memory allocator for sub-page-size allocations!
 
-#define TABLE_WIDGET_TEST
-
 #define TABLE_ITEM_HEIGHT (TITLE_BAR_HEIGHT)
 
 static void TableAddColumn(TableViewData* this, const char * text, int width)
@@ -382,89 +380,9 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			//shrink our rectangle:
 			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
 			
-			// Add some elements for testing.
 			TableViewData* table = &this->m_tableViewData;
 			
-			#ifdef TABLE_WIDGET_TEST
-			
-			TableAddColumn(table, "Name",               120);
-			TableAddColumn(table, "Last modified date", 150);
-			TableAddColumn(table, "Size",                70);
-			
 			table->m_selected_row = -1;
-			
-			// yes.. this is dumb, but it's okay because I'm going to get rid of this soon
-			const char * row1[3] = { "limn2600",        "02/12/2022 20:44:46", ""};
-			const char * row2[3] = { "test.txt",        "17/12/2022 19:47:23", "11 B" };
-			const char * row3[3] = { "about_theme.raw", "21/12/2022 12:29:05", "5,306 KB" };
-			const char * row4[3] = { "lma.raw",         "21/12/2022 12:58:57", "57,339 KB" };
-			const char * row5[3] = { "Package",         "24/12/2022 20:00:00", "133,700,042 KB" };
-			const char * row6[3] = { "kernel.bin",      "23/12/2022 19:11:45", "1,006 KB" };
-			const char * row7[3] = { "cinterp.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * row8[3] = { "clip.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * row9[3] = { "config.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * row0[3] = { "console.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowa[3] = { "debug.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowb[3] = { "elf.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowc[3] = { "font.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowd[3] = { "fpu.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowe[3] = { "icon.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowf[3] = { "idt.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowg[3] = { "image.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowh[3] = { "keyboard.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowi[3] = { "main.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowj[3] = { "misc.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowk[3] = { "mouse.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowl[3] = { "mspy.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowm[3] = { "pci.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rown[3] = { "print.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowo[3] = { "process.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowp[3] = { "resource.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowq[3] = { "sb.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowr[3] = { "shell.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rows[3] = { "string.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowt[3] = { "syscall.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowu[3] = { "task.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowv[3] = { "uart.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * roww[3] = { "vga.c", "19/01/2022 20:25:26", "69 KB" };
-			const char * rowx[3] = { "video.c", "19/01/2022 20:25:26", "69 KB" };
-			
-			AddTableRow(pWindow, this->m_comboID, row1, ICON_FOLDER);
-			AddTableRow(pWindow, this->m_comboID, row2, ICON_TEXT_FILE);
-			AddTableRow(pWindow, this->m_comboID, row3, ICON_FILE_IMAGE);
-			AddTableRow(pWindow, this->m_comboID, row4, ICON_FLOPPY);
-			AddTableRow(pWindow, this->m_comboID, row5, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, row6, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, row7, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, row8, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, row9, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, row0, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowa, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowb, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowc, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowd, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowe, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowf, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowg, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowh, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowi, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowj, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowk, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowl, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowm, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rown, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowo, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowp, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowq, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowr, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rows, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowt, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowu, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowv, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, roww, ICON_PACKAGER);
-			AddTableRow(pWindow, this->m_comboID, rowx, ICON_PACKAGER);
-			
-			#endif
 			
 			break;
 		}

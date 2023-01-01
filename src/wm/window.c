@@ -133,7 +133,7 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	SLogMsg("Task who owns lock %p for now: %p", &pWindow->m_screenLock, pWindow->m_screenLock.m_task_owning_it);
 	LockAcquire(&pWindow->m_screenLock);
 	
-	uint32_t* pNewFb = (uint32_t*)MmAllocateK(newWidth * newHeight * sizeof(uint32_t));
+	uint32_t* pNewFb = (uint32_t*)MmAllocatePhy(newWidth * newHeight * sizeof(uint32_t), ALLOCATE_BUT_DONT_WRITE_PHYS);
 	if (!pNewFb)
 	{
 		SLogMsg("Cannot resize window to %dx%d, out of memory", newWidth, newHeight);
@@ -471,7 +471,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
 	pWnd->m_vbeData.m_version       = VBEDATA_VERSION_2;
-	pWnd->m_vbeData.m_framebuffer32 = MmAllocateK (sizeof (uint32_t) * xSize * ySize);
+	
+	pWnd->m_vbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
+	
 	if (!pWnd->m_vbeData.m_framebuffer32)
 	{
 		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
