@@ -162,8 +162,9 @@ void MpInitialize(multiboot_info_t* mbi)
 	
 	if (mbi->mods_count > 0)
 	{
-		//Usually the mods table is below 1m.
-		if (mbi->mods_addr >= 0x100000)
+		//Usually the mods table is below 1m. However we can still access it anyway
+		//within the first 8m, because the identity mapping goes all the way to 8m.
+		if (mbi->mods_addr >= 0x800000)
 		{
 			ILogMsg("Module table starts at %x.  OS state not supported", mbi->mods_addr);
 			KeStopSystem();

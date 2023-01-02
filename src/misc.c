@@ -717,7 +717,7 @@ void MbReadCmdLine ()
 	{
 		strcpy (g_cmdline, "None!");
 	}
-	else if (cmdlineaddr < 0x100000)
+	else if (cmdlineaddr < 0x800000)
 	{
 		strcpy (g_cmdline, ((char*)0xC0000000 + cmdlineaddr));
 	}
@@ -740,11 +740,11 @@ void MbCheckMem()
 }
 void MbCheckCmdLine()
 {
-	if (strcmp (g_cmdline, "No!") == 0 || g_cmdline[0] == 0)
+	if (strcmp (g_cmdline, "None!") == 0 || g_cmdline[0] == 0)
 	{
 		ILogMsg("NanoShell cannot boot, because either:");
 		ILogMsg("- no cmdline was passed");
-		ILogMsg("- cmdline's address was %x%s", g_pMultibootInfo->cmdline, g_pMultibootInfo->cmdline >= 0x100000 ? " (was bigger than 1 MB)" : "");
+		ILogMsg("- cmdline's address was %x%s", g_pMultibootInfo->cmdline, g_pMultibootInfo->cmdline >= 0x100000 ? " (was bigger than 8 MB)" : "");
 		KeStopSystem();
 	}
 }

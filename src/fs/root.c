@@ -417,8 +417,9 @@ void FsInitRdInit()
 	if (pInfo->mods_count != 1)
 		KeBugCheck(BC_EX_INITRD_MISSING, NULL);
 
-	//Usually the mods table is below 1m.
-	if (pInfo->mods_addr >= 0x100000)
+	//Usually the mods table is below 1m. However, if it's below 8M, we
+	//can still access it through the identity mapping at 0xC0000000
+	if (pInfo->mods_addr >= 0x800000)
 	{
 		LogMsg("Module table starts at %x.  OS state not supported", pInfo->mods_addr);
 		KeStopSystem();

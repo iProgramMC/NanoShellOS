@@ -34,6 +34,11 @@ rem -s -S
 :-device ahci,id=ahci                            ^
 :-device ide-hd,drive=disk,bus=ahci.0            ^
 
+: If running with -kernel is desired for some reason:
+:-kernel %nspath%/build/kernel.bin               ^
+:-initrd %nspath%/build/initrd.tar               ^
+:-append "root=/ emergency=yes"                  ^
+
 rem go back
 cd /d %NSPath%
 
