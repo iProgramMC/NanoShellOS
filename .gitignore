@@ -21,6 +21,7 @@ apps/Dink/*
 apps/LimnEmu/*
 apps/Nano/*
 apps/Nano/keep/*
+apps/nsshell/*
 
 crt/build_libnanoshell
 crt/build_crt1

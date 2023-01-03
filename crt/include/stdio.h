@@ -24,6 +24,7 @@ int    getc  (FILE* file);
 void   rewind(FILE* file);
 int    vfprintf (FILE* file, const char* fmt, va_list list);
 int    fprintf  (FILE* file, const char* fmt, ...);
+int    vprintf  (const char* fmt, va_list list);
 
 // Operations on files
 int remove(const char* filename);

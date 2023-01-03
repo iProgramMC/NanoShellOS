@@ -191,6 +191,14 @@ int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					break;
 				}
 				// Format an unsigned int
+				#if !IS_64_BIT
+				case 'z':
+				{
+					m = *(fmt++);
+					if (m == 0) goto finished;
+					//fallthrough intended
+				}
+				#endif
 				case 'u': case 'U':
 				{
 					uint32_t num = va_arg(args, uint32_t);
@@ -212,48 +220,61 @@ int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 
 					break;
 				}
-				// Format an unsigned 64-bit int
+				// Format a longer integer.
+				#if IS_64_BIT
+				case 'z':
+				#endif
 				case 'l':
 				{
-					uint64_t num = va_arg(args, uint64_t);
-					char buffer[30];
+					bool longlong = false;
+					#if IS_64_BIT
+					if (m == 'z')
+					{
+						longlong = true;
+						m = 'u';
+						goto __parse_the_thing;
+					}
+					#endif
+					m = *(fmt++);
+					if (m == 'l')
+					{
+						longlong = true;
+						m = *(fmt++);
+					}
+					if (m == 0) goto finished;
 					
-					uns_to_str(num, buffer, paddingInfo, paddingChar);
-
-					const char* pString = buffer;
+					#if IS_64_BIT
+				__parse_the_thing:
+					#endif
+					
+					const char* pString = NULL;
+					char buffer[30];
+					buffer[0] = 0;
+					pString = buffer;
+					
+					if (m == 'u')
+					{
+						unsigned long long num = longlong ? va_arg(args, unsigned long long) : va_arg(args, unsigned long);
+						uns_to_str(num, buffer, paddingInfo, paddingChar);
+					}
+					if (m == 'd')
+					{
+						long long num = longlong ? va_arg(args, long long) : va_arg(args, long);
+						int_to_str(num, buffer, paddingInfo, paddingChar);
+					}
+					
+					if (!pString) break;
+					
 					while (*pString)
 					{
 						if (currentIndex >= sz - 1)
 							goto finished;
-
+	
 						// place this character here
 						buf[currentIndex++] = *pString;
-
+	
 						pString++;
 					}
-
-					break;
-				}
-				// Format a signed 64-bit int
-				case 'L':
-				{
-					int64_t num = va_arg(args, int64_t);
-					char buffer[30];
-					
-					int_to_str(num, buffer, paddingInfo, paddingChar);
-
-					const char* pString = buffer;
-					while (*pString)
-					{
-						if (currentIndex >= sz - 1)
-							goto finished;
-
-						// place this character here
-						buf[currentIndex++] = *pString;
-
-						pString++;
-					}
-
 					break;
 				}
 				// Format a uint8_t as lowercase/uppercase hexadecimal
@@ -517,4 +538,9 @@ int putc(int c, FILE* stream)
 int putchar(int c)
 {
 	return fputc(c, stdout);
+}
+
+void vprintf(const char* fmt, va_list list)
+{
+	vfprintf(stdout, fmt, list);
 }

@@ -161,6 +161,38 @@ int atoi(const char* str)
 	return s * f;
 }
 
+long atol(const char* str)
+{
+	long f = 0;
+	long s = 1;
+	long i = 0;
+	if (str[0] == '-')
+	{
+		i++;
+		s = -1;
+	}
+	for (; str[i] != '\0'; i++)
+		f = f * 10 + str[i] - '0';
+	
+	return s * f;
+}
+
+long long atoll(const char* str)
+{
+	long long f = 0;
+	long long s = 1;
+	long long i = 0;
+	if (str[0] == '-')
+	{
+		i++;
+		s = -1;
+	}
+	for (; str[i] != '\0'; i++)
+		f = f * 10 + str[i] - '0';
+	
+	return s * f;
+}
+
 size_t strlen(const char* str) 
 {
 	size_t len = 0;
