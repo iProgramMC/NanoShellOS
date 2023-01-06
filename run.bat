@@ -16,7 +16,7 @@ qemu-system-i386.exe                            ^
 -debugcon stdio                                 ^
 -display sdl                                    ^
 -accel tcg                                      ^
--hda %nspath%\vdiske2.vdi                       ^
+-hda %nspath%\vdiskfat.vdi                      ^
 -monitor telnet:127.0.0.1:55555,server,nowait
 
 : -s -S                                         -- for debugging with GDB

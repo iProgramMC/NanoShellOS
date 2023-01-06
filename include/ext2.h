@@ -285,7 +285,7 @@ typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
 	struct Ext2InodeCacheUnit *pNext, *pPrev;
-	bool m_bPermanent; // if false, this can get deleted if its reference count (will add soon) is zero
+	bool m_bPermanent; // if false, this can get deleted if its reference count is zero
 	
 	FileNode  m_node;
 	Ext2Inode m_inode;

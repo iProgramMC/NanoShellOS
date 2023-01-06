@@ -477,7 +477,7 @@ FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFil
 
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
-	// Find a Fat32 structure in the list of Fat32 structures.
+	// Find an Ext2 structure in the list of Ext2 structures.
 	int FreeArea = -1;
 	for (size_t i = 0; i < ARRAY_COUNT(s_ext2FileSystems); i++)
 	{
