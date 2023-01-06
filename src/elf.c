@@ -260,6 +260,36 @@ void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pn
 	*pSymbolsPtr = pNewSymbols;
 }
 
+static const uint8_t s_nanoshell_import_stub[] = { 0xb8, 0x4e, 0x61, 0x53, 0x68, 0xff, 0xe0 };
+uint32_t ElfLookUpKernelCall(const char* pCall, uint32_t* pOut); // elflup.c
+
+static int ElfLoadImports(uintptr_t nAddrImports)
+{
+	uint8_t* pImportData = (uint8_t*)nAddrImports;
+	
+	// Deserialize each import.
+	while (*pImportData != 0xFF)
+	{
+		// Check if the structure matches the following:
+		if (memcmp(pImportData, s_nanoshell_import_stub, sizeof s_nanoshell_import_stub) != 0)
+		{
+			return ELF_CORRUPTED_IMPORTS_TABLE;
+		}
+		
+		uint32_t * pMagicValue = (uint32_t*)(pImportData + 1);
+		const char* pFnName = (const char*)(pImportData + sizeof s_nanoshell_import_stub);
+		
+		uint32_t errorCode = ElfLookUpKernelCall(pFnName, pMagicValue);
+		if (errorCode != ELF_ERROR_NONE)
+			return errorCode;
+		
+		pImportData += sizeof s_nanoshell_import_stub;
+		pImportData += strlen(pFnName) + 1;
+	}
+	
+	return ELF_ERROR_NONE;
+}
+
 static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut, ElfLoaderBlock* pLoaderBlock)
 {
 	EDLogMsg("Loading elf file");
@@ -332,6 +362,8 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			}
 		}
 		
+		ElfSectHeader* pShStrTab = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + pHeader->m_shStrNdx * pHeader->m_shEntSize);
+		
 		EDLogMsg("(looking for NOBITS sections to zero out...)");
 		
 		for (int i = 0; i < pHeader->m_shNum; i++)
@@ -340,10 +372,21 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			void *addr = (void*)pSectHeader->m_addr;
 			if (pSectHeader->m_type == SHT_NOBITS)
 			{
-				//clear
-				//ZeroMemory(addr, pSectHeader->m_shSize);
 			}
-			if (pSectHeader->m_type == SHT_SYMTAB)
+			else if (pSectHeader->m_type == SHT_PROGBITS)
+			{
+				// This section is marked as PROGBITS. Check if we have a .nanoshell_import section.
+				char* pData = (char*)(pElfData + pShStrTab->m_offset);
+				
+				const char* pStr = &pData[pSectHeader->m_name];
+				if (strcmp(pStr, ".nanoshell_imports") == 0)
+				{
+					uint32_t error_code = ElfLoadImports((uintptr_t)addr);
+					if (error_code != ELF_ERROR_NONE)
+						return error_code;
+				}
+			}
+			else if (pSectHeader->m_type == SHT_SYMTAB)
 			{
 				SLogMsg("Found SymTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
 				
@@ -367,7 +410,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 					pLoaderBlock->bSetUpSymTab = true;
 				}
 			}
-			if (pSectHeader->m_type == SHT_STRTAB && i == strTabShLink)
+			else if (pSectHeader->m_type == SHT_STRTAB && i == strTabShLink)
 			{
 				SLogMsg("Found StrTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
 				
@@ -439,6 +482,8 @@ const char *gElfErrorCodes[] =
 	"The execution of this program was terminated.",
 	"The execution of this file is not permitted at the moment.",
 	"The execution of program files is not permitted. Please contact your system administrator.",
+	"The image file %s is corrupted.\n\nThe .nanoshell_imports section is corrupted.",
+	"The image file %s could not be loaded because an imported function is missing.",
 };
 
 const char *ElfGetErrorMsg (int error_code)
