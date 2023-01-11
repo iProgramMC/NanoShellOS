@@ -6,6 +6,11 @@
 //  ***************************************************************
 //  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
 //  ***************************************************************
+//  Module description:
+//
+//      This module contains miscellaneous FAT32 file system code,
+//  such as file system initialization, cluster I/O etc.
+//  ***************************************************************
 #include <fat.h>
 #include <debug.h>
 
@@ -17,7 +22,7 @@ static const char s_fatLetters[] = "0123456789ABCDEF";
 
 Fat32FileSystem s_fat32FileSystems[C_MAX_FAT32_FILE_SYSTEMS];
 
-DriveStatus Fat32ReadClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, void* pMem)
+DriveStatus FatReadClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, void* pMem)
 {
 	uint32_t lbaStart = pFS->m_lbaStart + (clusNo - 2) * pFS->m_sectorsPerCluster, sectorCount = clusCount * pFS->m_sectorsPerCluster;
 	uint8_t* pMem1 = (uint8_t*)pMem;
@@ -37,7 +42,7 @@ DriveStatus Fat32ReadClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t cl
 	return DEVERR_SUCCESS;
 }
 
-DriveStatus Fat32WriteClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, const void* pMem)
+DriveStatus FatWriteClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, const void* pMem)
 {
 	uint32_t lbaStart = pFS->m_lbaStart + (clusNo - 2) * pFS->m_sectorsPerCluster, sectorCount = clusCount * pFS->m_sectorsPerCluster;
 	const uint8_t* pMem1 = (const uint8_t*)pMem;
@@ -81,6 +86,9 @@ bool FatValidateBpb(Fat32FileSystem* pFS)
 	return memcmp(pFS->m_bpb.m_sSystemID, "FAT32", 5) == 0;
 }
 
+//NOTE: This makes a copy!!
+FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
+
 void FsMountFat32Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
 	// Find a Fat32 structure in the list of Fat32 structures.
@@ -108,7 +116,40 @@ void FsMountFat32Partition(DriveID driveID, int partitionStart, int partitionSiz
 		return;
 	}
 	
-	LogMsg("Can mount  this partition");
+	// Set up and cache basic info about the file system.
+	pFS->m_sectorsPerCluster = pFS->m_bpb.m_nSectorsPerCluster;
+	
+	pFS->m_pBlockBuffer  = MmAllocate(pFS->m_sectorsPerCluster * BLOCK_SIZE);
+	pFS->m_pBlockBuffer2 = MmAllocate(pFS->m_sectorsPerCluster * BLOCK_SIZE);
+	pFS->m_bIsReadOnly = false;
+	
+	// Allocate space for the FAT.
+	size_t sz = sizeof(FaTableSectorGroup*) * pFS->m_bpb.m_nFAT * (BLOCK_SIZE / 4);
+	pFS->m_fat.m_pSecGrps = MmAllocate(sz);
+	memset(pFS->m_fat.m_pSecGrps, 0, sz);
+	
+	pFS->m_bMounted = true;
+	
+	char name[10];
+	strcpy(name, "FatX");
+	name[3] = s_fatLetters[FreeArea];
+	
+	Fat32DirEntry t = 
+	{
+		"FATX    ",
+		"   ",
+		FAT32_ATTR_SYSTEM,// | FAT32_ATTR_DIRECTORY,
+		0, 0, 0, 0, 0, 0, 0, 0, pFS->m_bpb.m_nRootDirStartCluster, 4096
+	};
+	
+	// Read the root directory's inode, and cache it.
+	Fat32InodeCacheUnit* pCacheUnit = FatReadInode(pFS, pFS->m_bpb.m_nRootDirStartCluster, &t, 0, 0, name, false);
+	pCacheUnit->m_bPermanent = true;
+	pCacheUnit->m_node.m_refCount  = NODE_IS_PERMANENT;
+	pCacheUnit->m_node.m_type     |= FILE_TYPE_MOUNTPOINT;
+	
+	// Get its file node, and copy it. This will add the file system to the root directory.
+	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
@@ -130,6 +171,8 @@ void FatFreeFaTable(FaTable* pFat)
 void FsFat32Cleanup(Fat32FileSystem* pFS)
 {
 	FatFreeFaTable(&pFS->m_fat);
+	SAFE_DELETE(pFS->m_pBlockBuffer);
+	SAFE_DELETE(pFS->m_pBlockBuffer2);
 }
 
 void FsFatInit()

@@ -53,19 +53,53 @@ BiosParameterBlock;
 
 typedef struct
 {
-	// FileNode has a 'name' entry, use that one instead.
-	uint8_t m_fatAttributes;
+	char filename[8];
+	char extension[3];
+	uint8_t attributes;
+	// read bits from here to determine capitalization of 8.3 file names that don't have LFN entries before
+	uint8_t extAttributes;
+	uint8_t unk0;
+	uint16_t createTime;
+	uint16_t createDate;
+	uint16_t accessDate;
+	uint16_t clusHigh;
+	uint16_t modifyTime;
+	uint16_t modifyDate;
+	uint16_t clusLow;
+	uint32_t fileSize;
+	
 }
+__attribute__((packed))
 Fat32DirEntry;
 
-// Hash table list unit.
-typedef struct Fat32ChainCacheUnit
+// Attributes
+enum
 {
-	uint32_t m_clusNumber; // The starting cluster number
-	struct Fat32ChainCacheUnit *pNext, *pPrev;
+	FAT32_ATTR_READONLY  = (1 << 0),
+	FAT32_ATTR_HIDDEN    = (1 << 1),
+	FAT32_ATTR_SYSTEM    = (1 << 2),
+	FAT32_ATTR_VOLLABEL  = (1 << 3),
+	FAT32_ATTR_DIRECTORY = (1 << 4),
+	FAT32_ATTR_ARCHIVE   = (1 << 5),
+};
+
+
+// OS specifics
+
+// Hash table list unit.
+typedef struct Fat32InodeCacheUnit
+{
+	uint32_t m_inodeNumber; // The starting cluster number
+	struct Fat32InodeCacheUnit *pNext, *pPrev;
 	bool m_bPermanent; // if false, this may be deleted if its reference count is zero
 	
+	// well, FAT has no concept of hard links. So we can and should do this.
+	// note: If the file is renamed in any way, you must take care to update
+	// these accordingly.
+	uint32_t m_parentDirInode, m_parentDirOffset;
+	
 	FileNode      m_node;
+	// FileNode has a 'name' entry, use that one instead. However we will store the on-disk SFN entry too.
 	Fat32DirEntry m_dirEntry;
 	
 	void*    m_pBlockBuffer;
@@ -75,7 +109,7 @@ typedef struct Fat32ChainCacheUnit
 	
 	bool     m_bAboutToBeDeleted;
 }
-Fat32ChainCacheUnit;
+Fat32InodeCacheUnit;
 
 // This stores 8 sectors' worth of FAT.
 typedef struct
@@ -106,9 +140,9 @@ typedef struct
 	
 	struct
 	{
-		Fat32ChainCacheUnit *pFirst, *pLast;
+		Fat32InodeCacheUnit *pFirst, *pLast;
 	}
-	m_clusterChainHashTable[C_FAT32_HASH_TABLE_BUCKET_COUNT];
+	m_inodeHashTable[C_FAT32_HASH_TABLE_BUCKET_COUNT];
 	
 	uint8_t* m_pBlockBuffer;
 	uint8_t* m_pBlockBuffer2;
@@ -135,5 +169,12 @@ typedef struct
 }
 __attribute__((packed))
 MasterBootRecord;
+
+// Raw cluster based I/O functions.
+DriveStatus FatReadClusters (Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, void* pMem);
+DriveStatus FatWriteClusters(Fat32FileSystem* pFS, uint32_t clusNo, uint32_t clusCount, const void* pMem);
+
+// Read an inode and add it to the inode cache (or if it's in the inode cache, retrieve it from there or refresh it.)
+Fat32InodeCacheUnit* FatReadInode(Fat32FileSystem* pFS, uint32_t inodeNum, Fat32DirEntry* pDirEntry, uint32_t parDirIno, uint32_t parDirOfs, const char* lfnName, bool bForceReload);
 
 #endif//_FAT_H
