@@ -897,6 +897,14 @@ void VidDrawRect(unsigned color, int left, int top, int right, int bottom)
 		VidPlotPixelInline(left,  y, color);
 		VidPlotPixelInline(right, y, color);
 	}
+	
+	// TODO ensure these don't merge into the full area of the rect
+	
+	DirtyRectLogger(left, top, right-left+1, 1);  // top edge
+	DirtyRectLogger(left, top, 1, bottom-top+1);  // left edge
+	
+	DirtyRectLogger(left,  bottom, right-left+1, 1);  // bottom edge
+	DirtyRectLogger(right, top,    1, bottom-top+1);  // right edge
 }
 void VidFillRectangle(unsigned color, Rectangle rect)
 {
@@ -1940,7 +1948,29 @@ void VidInit()
 
 bool RectangleOverlapTolerant(Rectangle* r1, Rectangle* r2)
 {
-	return (r1->left - 3 <= r2->right + 3 && r1->right + 3 >= r2->left - 3 && r1->top - 3 <= r2->bottom + 3 && r1->bottom + 3 >= r2->top - 3);
+	if (!(r1->left - 3 <= r2->right + 3 && r1->right + 3 >= r2->left - 3 && r1->top - 3 <= r2->bottom + 3 && r1->bottom + 3 >= r2->top - 3))
+		return false;
+	
+	// check if there's a significant overlap TODO
+	Rectangle overlap = *r1;
+	
+	#define MIN(a,b) (((a)<(b))?(a):(b))
+	#define MAX(a,b) (((a)>(b))?(a):(b))
+	overlap.left   = MAX(overlap.left,   r2->left);
+	overlap.top    = MAX(overlap.top,    r2->top);
+	overlap.right  = MIN(overlap.right,  r2->right);
+	overlap.bottom = MIN(overlap.bottom, r2->bottom);
+	
+	// if the overlap area isn't significant enough, just false
+	uint64_t area = MAX(0, overlap.right - overlap.left + 1);
+	area *= MAX(0, overlap.bottom - overlap.top + 1);
+	
+	if (area < 100) return false;
+	#undef MIN//I am a hoarder, yes
+	#undef MAX
+	
+	
+	return true;
 }
 
 // if r2 is FULLY inside r1
@@ -1967,11 +1997,19 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
 	if (rect.bottom >= GetScreenSizeY()) rect.bottom = GetScreenSizeY();
 	
-	for (int i = 0; i != pSet->m_rectCount; i++)
+	cli;
+	if (pSet->m_bIgnoreAndDrawAll)
+	{
+		sti;
+		return;
+	}
+	
+	for (int i = 0; i < pSet->m_rectCount; i++)
 	{
 		Rectangle* arect = &pSet->m_rects[i];
 		if (RectangleFullyInside(arect, &rect))
 		{
+			sti;
 			return; //nothing changed
 		}
 
@@ -1983,15 +2021,18 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 			int top    = arect->top;    if (top    > rect.top)    top    = rect.top;
 			int right  = arect->right;  if (right  < rect.right)  right  = rect.right;
 			int bottom = arect->bottom; if (bottom < rect.bottom) bottom = rect.bottom;
-
+			
 			arect->left   = left;
 			arect->top    = top;
 			arect->right  = right;
 			arect->bottom = bottom;
 			
+			sti;
+			
 			return;
 		}
 	}
+	
 	if (pSet->m_rectCount >= 100)
 	{
 		// All, hell naw!
@@ -2000,11 +2041,12 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 		// Bail and draw everything.
 		pSet->m_bIgnoreAndDrawAll = true;
 		DisjointRectSetClear(pSet);
-		
+		sti;
 		return;
 	}
 	//merging will be done by the window manager itself
 	pSet->m_rects[pSet->m_rectCount++] = rect;
+	sti;
 #endif
 }
 // The function a vbedata will use to let us know of changes

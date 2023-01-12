@@ -44,6 +44,8 @@ typedef struct
 	int  m_curPosX, m_curPosY;
 	bool m_drawing;
 	int  m_selCtlType;
+	
+	Rectangle m_lastDrawnSelArea;
 }
 VBuilderData;
 
@@ -299,6 +301,9 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			FixUpCoords(pWindow, &L, &T, &R, &B);
 			
+			Rectangle thing = { L, T, R, B };
+			V->m_lastDrawnSelArea = thing;
+			
 			VidDrawRect(0x000000, L, T, R, B);
 			
 			break;
@@ -342,10 +347,10 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			V->m_drawing = false;
 			
-			int L = V->m_anchorX, T = V->m_anchorY, R = V->m_curPosX, B = V->m_curPosY;
-			
-			FixUpCoords(pWindow, &L, &T, &R, &B);
-			
+			int L = V->m_lastDrawnSelArea.left,
+			    T = V->m_lastDrawnSelArea.top,
+			    R = V->m_lastDrawnSelArea.right,
+				B = V->m_lastDrawnSelArea.bottom;
 			
 			VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
 			
@@ -361,6 +366,8 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			{
 				VbSelect(pWindow, L, T, R, B);
 			}
+			
+			// TODO: more efficient re-draw.
 			
 			VbRedraw(pWindow);
 			
