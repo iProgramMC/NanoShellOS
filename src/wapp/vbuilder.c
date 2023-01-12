@@ -13,12 +13,18 @@
 #define DEF_FDESIGN_WID 500
 #define DEF_FDESIGN_HEI 400
 #define DEF_TOOLBOX_WID (96+6)
-#define DEF_TOOLBOX_HEI (24*7+6+TITLE_BAR_HEIGHT)
+#define DEF_TOOLBOX_HEI (24*8+6+TITLE_BAR_HEIGHT)
 
 #define BUTTONDARK 0x808080
 #define BUTTONMIDD BUTTON_MIDDLE_COLOR
 #define BUTTONLITE 0xFFFFFF
 #define BUTTONMIDC WINDOW_BACKGD_COLOR
+
+enum
+{
+	TOOL_CURSOR = -100,
+	TOOL_SELECT,
+};
 
 void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
@@ -52,7 +58,7 @@ VBuilderData;
 #define V ((VBuilderData*)pWindow->m_data)
 #define SWAPI(a,b)  do{int tmp; tmp=a; a=b; b=tmp; }while (0)
 
-void VbDrawGrid(Window* pWindow)
+void VbDrawGrid(Window* pWindow, Rectangle* pWithinRect /*= NULL*/)
 {
 	int ox = 3, oy = TITLE_BAR_HEIGHT + 3;
 	int windowWid = GetWidth (&pWindow->m_rect);
@@ -62,18 +68,27 @@ void VbDrawGrid(Window* pWindow)
 	{
 		for (oy = TITLE_BAR_HEIGHT + 2; oy <= windowHei; oy += 8)
 		{
+			if (pWithinRect)
+			{
+				Point p = { ox, oy };
+				if (!RectangleContains(pWithinRect, &p))
+					continue;
+			}
+			
 			VidPlotPixel (ox, oy, 0x000000);
 		}
 	}
 }
 bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow);
-void VbRenderCtls(Window* pWindow)
+void VbRenderCtls(Window* pWindow, Rectangle* pWithinRect /*= NULL*/)
 {
 	for (int i = 0; i < (int)ARRAY_COUNT(V->m_controls); i++)
 	{
 		if (!V->m_controls[i].m_used) continue;
 		
 		DesignerControl *C = &V->m_controls[i];
+		
+		if (pWithinRect && !RectangleOverlap(pWithinRect, &C->m_rect)) continue;
 		
 		Rectangle rect = C->m_rect;
 		rect.left += 5;
@@ -122,15 +137,22 @@ void VbRenderCtls(Window* pWindow)
 		
 		if (C->m_sele)
 		{
+			// Draw a red rectangle and some handles.
 			VidDrawRectangle(0xFF0000, srect);
+			
+			Rectangle sHandle = srect;
+			sHandle.left = sHandle.right  - 7;
+			sHandle.top  = sHandle.bottom - 7;
+			
+			VidFillRectangle(0x000000, sHandle);
 		}
 	}
 }
 
 void VbRedraw(Window *pWindow)
 {
-	VbDrawGrid  (pWindow);
-	VbRenderCtls(pWindow);
+	VbDrawGrid  (pWindow, NULL);
+	VbRenderCtls(pWindow, NULL);
 }
 
 void FixUpCoords (Window* pWindow, int *L, int *T, int *R, int *B)
@@ -272,39 +294,49 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			break;
 		case EVENT_CLICKCURSOR:
 		{
-			V->m_drawing = true;
-			
-			//Anchor
-			int posX = GET_X_PARM (parm1), posY = GET_Y_PARM (parm1);
-			if (V->m_anchorX == -1)
+			if (V->m_selCtlType == TOOL_CURSOR)
 			{
-				V->m_anchorX = posX;
-				V->m_anchorY = posY;
+				
 			}
-			
-			//Draw rectangle on old position
-			if (V->m_curPosX != -1)
+			else
 			{
+				V->m_drawing = true;
+				
+				//Anchor
+				int posX = GET_X_PARM (parm1), posY = GET_Y_PARM (parm1);
+				if (V->m_anchorX == -1)
+				{
+					V->m_anchorX = posX;
+					V->m_anchorY = posY;
+				}
+				
+				//Draw rectangle on old position
+				if (V->m_curPosX != -1)
+				{
+					int L = V->m_anchorX, T = V->m_anchorY, R = V->m_curPosX, B = V->m_curPosY;
+					
+					FixUpCoords(pWindow, &L, &T, &R, &B);
+					
+					VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
+				}
+				
+				//VbRedraw(pWindow);
+				
+				V->m_curPosX = posX;
+				V->m_curPosY = posY;
+				
 				int L = V->m_anchorX, T = V->m_anchorY, R = V->m_curPosX, B = V->m_curPosY;
 				
 				FixUpCoords(pWindow, &L, &T, &R, &B);
 				
-				VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
+				Rectangle thing = { L, T, R, B };
+				V->m_lastDrawnSelArea = thing;
+				
+				VbDrawGrid  (pWindow, &thing);
+				VbRenderCtls(pWindow, &thing);
+				
+				VidDrawRect(0x000000, L, T, R, B);
 			}
-			
-			VbRedraw(pWindow);
-			
-			V->m_curPosX = posX;
-			V->m_curPosY = posY;
-			
-			int L = V->m_anchorX, T = V->m_anchorY, R = V->m_curPosX, B = V->m_curPosY;
-			
-			FixUpCoords(pWindow, &L, &T, &R, &B);
-			
-			Rectangle thing = { L, T, R, B };
-			V->m_lastDrawnSelArea = thing;
-			
-			VidDrawRect(0x000000, L, T, R, B);
 			
 			break;
 		}
@@ -328,6 +360,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				
 				VbRedraw(pWindow);
 			}
+			/*
 			else if (parm1 == (0x80 | KEY_F1))
 			{
 				V->m_selCtlType = CONTROL_NONE;
@@ -336,6 +369,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			{
 				V->m_selCtlType = CONTROL_TEXT;
 			}
+			*/
 			break;
 		}
 		case EVENT_RELEASECURSOR:
@@ -354,7 +388,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
 			
-			if (V->m_selCtlType)
+			if (V->m_selCtlType > 0)
 			{
 				if (L != R && T != B) 
 				{
@@ -369,7 +403,10 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			// TODO: more efficient re-draw.
 			
-			VbRedraw(pWindow);
+			//VbRedraw(pWindow);
+			Rectangle thing = { L, T, R, B };
+			VbDrawGrid  (pWindow, &thing);
+			VbRenderCtls(pWindow, &thing);
 			
 			V->m_anchorX = V->m_anchorY = V->m_curPosX = V->m_curPosX = -1;
 			
@@ -488,20 +525,26 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 		{
 			Rectangle r;
 			
+			Window* pFormBldWindow = (Window*)pWindow->m_data;
+			VBuilderData* pData = (VBuilderData*)(pFormBldWindow->m_data);
+			pData->m_selCtlType = TOOL_CURSOR;
+			
 			#define E(a) (1000 + (a))
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 0 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(CONTROL_NONE),       WINDOW_TEXT_COLOR, WINDOW_TITLE_INACTIVE_COLOR_B);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Cursor",       E(TOOL_CURSOR),        WINDOW_TEXT_COLOR, WINDOW_TITLE_INACTIVE_COLOR_B);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 1 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text",         E(CONTROL_TEXT),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(CONTROL_NONE),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 2 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text Cen",     E(CONTROL_TEXTCENTER), WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text",         E(CONTROL_TEXT),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 3 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Button",       E(CONTROL_BUTTON),     WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text Cen",     E(CONTROL_TEXTCENTER), WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 4 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input 1-Ln",   E(CONTROL_TEXTINPUT),  WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Button",       E(CONTROL_BUTTON),     WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 5 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input M-Ln",   E(CONTROL_COUNT),      WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input 1-Ln",   E(CONTROL_TEXTINPUT),  WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 6 * 24, 96, 23);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Input M-Ln",   E(CONTROL_COUNT),      WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 7 * 24, 96, 23);
 			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Checkbox",     E(CONTROL_CHECKBOX),   WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			#undef E
 			
