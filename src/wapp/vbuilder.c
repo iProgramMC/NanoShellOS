@@ -20,6 +20,48 @@
 #define BUTTONLITE 0xFFFFFF
 #define BUTTONMIDC WINDOW_BACKGD_COLOR
 
+#define GRABBER_SIZE (8)
+#define GRID_WIDTH   (8)
+
+enum eResizeHandle
+{
+	HANDLE_NONE,
+	HANDLE_BR, // bottom right
+	HANDLE_BM, // bottom middle
+	HANDLE_CR, // center right
+	HANDLE_TL, // top left
+	HANDLE_COUNT,
+};
+
+static Rectangle VbMakeHandleRect(int handleType, Rectangle ctlRect)
+{
+	Rectangle rect = ctlRect;
+	switch (handleType)
+	{
+		case HANDLE_TL:
+			rect.right  = rect.left + GRABBER_SIZE - 1;
+			rect.bottom = rect.top  + GRABBER_SIZE - 1;
+			break;
+		case HANDLE_BR:
+			rect.left = rect.right  - GRABBER_SIZE + 1;
+			rect.top  = rect.bottom - GRABBER_SIZE + 1;
+			break;
+		case HANDLE_CR:
+			rect.left = rect.right  - GRABBER_SIZE + 1;
+			rect.top  = rect.bottom = (rect.bottom + rect.top) / 2;
+			rect.top    -= GRABBER_SIZE / 2;
+			rect.bottom += GRABBER_SIZE / 2 - 1;
+			break;
+		case HANDLE_BM:
+			rect.top  = rect.bottom - GRABBER_SIZE + 1;
+			rect.left = rect.right  = (rect.left + rect.right) / 2;
+			rect.left  -= GRABBER_SIZE / 2;
+			rect.right += GRABBER_SIZE / 2 - 1;
+			break;
+	}
+	return rect;
+}
+
 enum
 {
 	TOOL_CURSOR = -100,
@@ -50,8 +92,11 @@ typedef struct
 	int  m_curPosX, m_curPosY;
 	bool m_drawing;
 	int  m_selCtlType;
+	int  m_controlResized;
+	int  m_resizeKnob;
 	
 	Rectangle m_lastDrawnSelArea;
+	Rectangle m_resizeRect;
 }
 VBuilderData;
 
@@ -60,13 +105,13 @@ VBuilderData;
 
 void VbDrawGrid(Window* pWindow, Rectangle* pWithinRect /*= NULL*/)
 {
-	int ox = 3, oy = TITLE_BAR_HEIGHT + 3;
+	int ox = 3, oy = TITLE_BAR_HEIGHT + 4;
 	int windowWid = GetWidth (&pWindow->m_rect);
 	int windowHei = GetHeight(&pWindow->m_rect);
 	
-	for (; ox <= windowWid; ox += 8)
+	for (; ox <= windowWid; ox += GRID_WIDTH)
 	{
-		for (oy = TITLE_BAR_HEIGHT + 2; oy <= windowHei; oy += 8)
+		for (oy = TITLE_BAR_HEIGHT + 2; oy <= windowHei; oy += GRID_WIDTH)
 		{
 			if (pWithinRect)
 			{
@@ -140,11 +185,11 @@ void VbRenderCtls(Window* pWindow, Rectangle* pWithinRect /*= NULL*/)
 			// Draw a red rectangle and some handles.
 			VidDrawRectangle(0xFF0000, srect);
 			
-			Rectangle sHandle = srect;
-			sHandle.left = sHandle.right  - 7;
-			sHandle.top  = sHandle.bottom - 7;
-			
-			VidFillRectangle(0x000000, sHandle);
+			for (int i = HANDLE_BR; i < HANDLE_COUNT; i++)
+			{
+				Rectangle sHandle = VbMakeHandleRect(i, srect);
+				VidFillRectangle(0x000000, sHandle);
+			}
 		}
 	}
 }
@@ -163,28 +208,28 @@ void FixUpCoords (Window* pWindow, int *L, int *T, int *R, int *B)
 	//Ensure
 	if (*L < 3)
 		*L = 3;
-	if (*T < 3 + TITLE_BAR_HEIGHT)
-		*T = 3 + TITLE_BAR_HEIGHT;
+	if (*T < 2 + TITLE_BAR_HEIGHT)
+		*T = 2 + TITLE_BAR_HEIGHT;
 	if (*R >= GetWidth (&pWindow->m_rect) - 3)
 		*R  = GetWidth (&pWindow->m_rect) - 3;
 	if (*B >= GetHeight(&pWindow->m_rect) - 3)
 		*B  = GetHeight(&pWindow->m_rect) - 3;
 	
-	// Round to the nearest 8x8
+	// Round to the nearest GRID_WIDTH
 	*L -= 3;
 	*R -= 3;
-	*T -= TITLE_BAR_HEIGHT + 3;
-	*B -= 3;
+	*T -= TITLE_BAR_HEIGHT + 2;
+	*B -= 4;
 	
-	*L = (*L / 8) * 8;
-	*R = (*R / 8) * 8;
-	*T = (*T / 8) * 8;
-	*B = (*B / 8) * 8;
+	*L = (*L / GRID_WIDTH) * GRID_WIDTH;
+	*T = (*T / GRID_WIDTH) * GRID_WIDTH;
+	*R = ((*R + GRID_WIDTH - 1) / GRID_WIDTH) * GRID_WIDTH;
+	*B = ((*B + GRID_WIDTH - 1) / GRID_WIDTH) * GRID_WIDTH;
 	
 	*L += 3;
 	*R += 3;
-	*T += TITLE_BAR_HEIGHT + 3;
-	*B += 3;
+	*T += TITLE_BAR_HEIGHT + 2;
+	*B += 4;
 }
 
 void VbAddControl(Window *pWindow, int L, int T, int R, int B)
@@ -269,10 +314,8 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			memset(V, 0, sizeof *V);
 			
 			V->m_anchorX = V->m_anchorY = V->m_curPosX = V->m_curPosY = -1;
-			
-			V->m_selCtlType = CONTROL_NONE;
-			
-			ChangeCursor (pWindow, CURSOR_CROSS);
+			V->m_controlResized = -1;
+			V->m_selCtlType = TOOL_CURSOR;
 			
 			break;
 		}
@@ -290,13 +333,134 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			break;
 		}
 		case EVENT_COMMAND:
-			
+		{
 			break;
+		}
 		case EVENT_CLICKCURSOR:
 		{
 			if (V->m_selCtlType == TOOL_CURSOR)
 			{
+				int posX = GET_X_PARM (parm1), posY = GET_Y_PARM (parm1);
+				Point p = { posX, posY };
 				
+				// Are we dragging a handle ?
+				if (V->m_controlResized >= 0)
+				{
+					SLogMsg("Dragging a handle");
+					
+					int deltaX = posX - V->m_curPosX;
+					int deltaY = posY - V->m_curPosY;
+					
+					DesignerControl * C = &V->m_controls[V->m_controlResized];
+					
+					if (deltaX != 0 || deltaY != 0)
+					{
+						VidFillRectangle(WINDOW_BACKGD_COLOR, C->m_rect);
+					}
+					
+					switch (V->m_resizeKnob)
+					{
+						case HANDLE_TL:
+							V->m_resizeRect.left   += deltaX;
+							V->m_resizeRect.top    += deltaY;
+							V->m_resizeRect.right  += deltaX;
+							V->m_resizeRect.bottom += deltaY;
+							break;
+							
+						case HANDLE_BR:
+							V->m_resizeRect.right  += deltaX;
+							V->m_resizeRect.bottom += deltaY;
+							
+							if (V->m_resizeRect.right < V->m_resizeRect.left + GRID_WIDTH)
+								V->m_resizeRect.right = V->m_resizeRect.left + GRID_WIDTH;
+							
+							if (V->m_resizeRect.bottom < V->m_resizeRect.top + GRID_WIDTH)
+								V->m_resizeRect.bottom = V->m_resizeRect.top + GRID_WIDTH;
+							break;
+							
+						case HANDLE_CR:
+							V->m_resizeRect.right += deltaX;
+							
+							if (V->m_resizeRect.right < V->m_resizeRect.left + GRID_WIDTH)
+								V->m_resizeRect.right = V->m_resizeRect.left + GRID_WIDTH;
+							break;
+							
+						case HANDLE_BM:
+							V->m_resizeRect.bottom += deltaY;
+							
+							if (V->m_resizeRect.bottom < V->m_resizeRect.top + GRID_WIDTH)
+								V->m_resizeRect.bottom = V->m_resizeRect.top + GRID_WIDTH;
+							break;
+					}
+					
+					C->m_rect = V->m_resizeRect;
+					
+					if (V->m_resizeKnob == HANDLE_TL)
+					{
+						int width  = C->m_rect.right  - C->m_rect.left;
+						int height = C->m_rect.bottom - C->m_rect.top;
+						FixUpCoords(pWindow, &C->m_rect.left, &C->m_rect.top, &C->m_rect.right, &C->m_rect.bottom);
+						C->m_rect.right  = C->m_rect.left + width;
+						C->m_rect.bottom = C->m_rect.top  + height;
+					}
+					else
+					{
+						FixUpCoords(pWindow, &C->m_rect.left, &C->m_rect.top, &C->m_rect.right, &C->m_rect.bottom);
+					}
+					
+					if (deltaX != 0 || deltaY != 0)
+					{
+						VbRedraw(pWindow);
+					}
+				
+					V->m_curPosX = posX;
+					V->m_curPosY = posY;
+					
+					break;
+				}
+				
+				// de-select everything
+				int selected = -1;
+				
+				// go in reverse, because that's the order the controls are drawn in:
+				for (int i = (int)ARRAY_COUNT(V->m_controls) - 1; i >= 0; i--)
+				{
+					if (!V->m_controls[i].m_used) continue;
+					
+					if (selected < 0 && RectangleContains(&V->m_controls[i].m_rect, &p))
+					{
+						selected = i;
+						V->m_controls[i].m_sele = true;
+					}
+					else
+					{
+						V->m_controls[i].m_sele = false;
+					}
+				}
+				
+				// if we have selected something
+				if (selected >= 0)
+				{
+					// Check if the cursor is within any of the handles
+					
+					for (int i = HANDLE_BR; i < HANDLE_COUNT; i++)
+					{
+						Rectangle sHandle = VbMakeHandleRect(i, V->m_controls[selected].m_rect);
+						
+						if (RectangleContains(&sHandle, &p))
+						{
+							V->m_controlResized = selected;
+							V->m_resizeKnob     = i;
+							V->m_resizeRect     = V->m_controls[selected].m_rect;
+							break;
+						}
+					}
+				}
+				
+				V->m_curPosX = posX;
+				V->m_curPosY = posY;
+				
+				VbRedraw(pWindow);
 			}
 			else
 			{
@@ -318,6 +482,9 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 					FixUpCoords(pWindow, &L, &T, &R, &B);
 					
 					VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
+					Rectangle thing = { L - 2, T - 2, R + 2, B + 2 };
+					VbDrawGrid  (pWindow, &thing);
+					VbRenderCtls(pWindow, &thing);
 				}
 				
 				//VbRedraw(pWindow);
@@ -331,7 +498,6 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				
 				Rectangle thing = { L, T, R, B };
 				V->m_lastDrawnSelArea = thing;
-				
 				VbDrawGrid  (pWindow, &thing);
 				VbRenderCtls(pWindow, &thing);
 				
@@ -360,16 +526,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				
 				VbRedraw(pWindow);
 			}
-			/*
-			else if (parm1 == (0x80 | KEY_F1))
-			{
-				V->m_selCtlType = CONTROL_NONE;
-			}
-			else if (parm1 == (0x80 | KEY_F2))
-			{
-				V->m_selCtlType = CONTROL_TEXT;
-			}
-			*/
+			
 			break;
 		}
 		case EVENT_RELEASECURSOR:
@@ -379,6 +536,12 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			V->m_curPosX = posX;
 			V->m_curPosY = posY;
 			
+			if (V->m_controlResized >= 0)
+			{
+				V->m_lastDrawnSelArea.left = -1;
+				V->m_controlResized = -1;
+			}
+			
 			V->m_drawing = false;
 			
 			int L = V->m_lastDrawnSelArea.left,
@@ -386,7 +549,15 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			    R = V->m_lastDrawnSelArea.right,
 				B = V->m_lastDrawnSelArea.bottom;
 			
-			VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
+			if (L != -1)
+			{
+				VidDrawRect(WINDOW_BACKGD_COLOR, L, T, R, B);
+				Rectangle thing = { L - 2, T - 2, R + 2, B + 2 };
+				VbDrawGrid  (pWindow, &thing);
+				VbRenderCtls(pWindow, &thing);
+			}
+			
+			V->m_lastDrawnSelArea.left = -1;
 			
 			if (V->m_selCtlType > 0)
 			{
@@ -395,18 +566,16 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 					// Add the control
 					VbAddControl (pWindow, L, T, R, B);
 				}
+				
+				Rectangle thing = { L - 2, T - 2, R + 2, B + 2 };
+				VbDrawGrid  (pWindow, &thing);
+				VbRenderCtls(pWindow, &thing);
 			}
-			else
+			else if (V->m_selCtlType == TOOL_SELECT)
 			{
 				VbSelect(pWindow, L, T, R, B);
+				VbRedraw(pWindow);
 			}
-			
-			// TODO: more efficient re-draw.
-			
-			//VbRedraw(pWindow);
-			Rectangle thing = { L, T, R, B };
-			VbDrawGrid  (pWindow, &thing);
-			VbRenderCtls(pWindow, &thing);
 			
 			V->m_anchorX = V->m_anchorY = V->m_curPosX = V->m_curPosX = -1;
 			
@@ -483,7 +652,6 @@ void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int
 				DesignerControl *C = &pData->m_controls[i];
 				if (!C->m_used) continue;
 				
-				SLogMsg("Adding");
 				AddControl (pWindow, C->m_type, C->m_rect, C->m_text, 1000 + i, C->m_prm1, C->m_prm2);
 			}
 			
@@ -525,10 +693,6 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 		{
 			Rectangle r;
 			
-			Window* pFormBldWindow = (Window*)pWindow->m_data;
-			VBuilderData* pData = (VBuilderData*)(pFormBldWindow->m_data);
-			pData->m_selCtlType = TOOL_CURSOR;
-			
 			#define E(a) (1000 + (a))
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 0 * 24, 96, 23);
 			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Cursor",       E(TOOL_CURSOR),        WINDOW_TEXT_COLOR, WINDOW_TITLE_INACTIVE_COLOR_B);
@@ -566,6 +730,11 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 			SetImageCtlMode(pWindow, *pType + 1000, WINDOW_TITLE_INACTIVE_COLOR_B);
 			
 			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+			
+			if (parm1 - 1000 == TOOL_CURSOR)
+				ChangeCursor (pFormBldWindow, CURSOR_DEFAULT);
+			else
+				ChangeCursor (pFormBldWindow, CURSOR_CROSS);
 			
 			break;
 		}

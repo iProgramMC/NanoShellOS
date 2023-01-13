@@ -1948,29 +1948,7 @@ void VidInit()
 
 bool RectangleOverlapTolerant(Rectangle* r1, Rectangle* r2)
 {
-	if (!(r1->left - 3 <= r2->right + 3 && r1->right + 3 >= r2->left - 3 && r1->top - 3 <= r2->bottom + 3 && r1->bottom + 3 >= r2->top - 3))
-		return false;
-	
-	// check if there's a significant overlap TODO
-	Rectangle overlap = *r1;
-	
-	#define MIN(a,b) (((a)<(b))?(a):(b))
-	#define MAX(a,b) (((a)>(b))?(a):(b))
-	overlap.left   = MAX(overlap.left,   r2->left);
-	overlap.top    = MAX(overlap.top,    r2->top);
-	overlap.right  = MIN(overlap.right,  r2->right);
-	overlap.bottom = MIN(overlap.bottom, r2->bottom);
-	
-	// if the overlap area isn't significant enough, just false
-	uint64_t area = MAX(0, overlap.right - overlap.left + 1);
-	area *= MAX(0, overlap.bottom - overlap.top + 1);
-	
-	if (area < 100) return false;
-	#undef MIN//I am a hoarder, yes
-	#undef MAX
-	
-	
-	return true;
+	return (r1->left - 3 <= r2->right + 3 && r1->right + 3 >= r2->left - 3 && r1->top - 3 <= r2->bottom + 3 && r1->bottom + 3 >= r2->top - 3);
 }
 
 // if r2 is FULLY inside r1
@@ -1990,7 +1968,7 @@ void DisjointRectSetClear (DsjRectSet *pSet)
 
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
-	//TODO FIXME: Data race
+	//TODO FIXME: Fix this crap
 #ifdef DIRTY_RECT_TRACK
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
