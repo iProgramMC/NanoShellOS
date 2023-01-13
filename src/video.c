@@ -1962,12 +1962,14 @@ bool RectangleFullyInside(Rectangle* r1, Rectangle* r2)
 }
 void DisjointRectSetClear (DsjRectSet *pSet)
 {
+	if (!pSet) return;
 	pSet->m_rectCount = 0;
 	pSet->m_bIgnoreAndDrawAll = false;
 }
 
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
+	if (!pSet) return;
 	//TODO FIXME: Fix this crap
 #ifdef DIRTY_RECT_TRACK
 	if (rect.left < 0) rect.left = 0;
@@ -2035,7 +2037,7 @@ void DirtyRectLogger (int x, int y, int width, int height)
 		return;
 
 	Rectangle rect = { x, y, x + width, y + height };
-	DisjointRectSetAdd(&g_vbeData->m_drs, rect);
+	DisjointRectSetAdd(g_vbeData->m_drs, rect);
 #endif
 }
 void VidCorruptScreenForTesting()
@@ -2053,8 +2055,8 @@ void VidCorruptScreenForTesting()
 void DirtyRectInvalidateAll()
 {
 #ifdef DIRTY_RECT_TRACK
-	g_vbeData->m_drs.m_bIgnoreAndDrawAll = true;
-	DisjointRectSetClear(&g_vbeData->m_drs);
+	g_vbeData->m_drs->m_bIgnoreAndDrawAll = true;
+	DisjointRectSetClear(g_vbeData->m_drs);
 #endif
 }
 #endif

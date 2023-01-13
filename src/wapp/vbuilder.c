@@ -346,8 +346,6 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				// Are we dragging a handle ?
 				if (V->m_controlResized >= 0)
 				{
-					SLogMsg("Dragging a handle");
-					
 					int deltaX = posX - V->m_curPosX;
 					int deltaY = posY - V->m_curPosY;
 					
@@ -421,6 +419,8 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				
 				// de-select everything
 				int selected = -1;
+				
+				SLogMsg("Eh!");
 				
 				// go in reverse, because that's the order the controls are drawn in:
 				for (int i = (int)ARRAY_COUNT(V->m_controls) - 1; i >= 0; i--)
@@ -536,18 +536,18 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			V->m_curPosX = posX;
 			V->m_curPosY = posY;
 			
-			if (V->m_controlResized >= 0)
-			{
-				V->m_lastDrawnSelArea.left = -1;
-				V->m_controlResized = -1;
-			}
-			
 			V->m_drawing = false;
 			
 			int L = V->m_lastDrawnSelArea.left,
 			    T = V->m_lastDrawnSelArea.top,
 			    R = V->m_lastDrawnSelArea.right,
 				B = V->m_lastDrawnSelArea.bottom;
+			
+			if (V->m_controlResized >= 0)
+			{
+				V->m_lastDrawnSelArea.left = -1;
+				V->m_controlResized = -1;
+			}
 			
 			if (L != -1)
 			{
@@ -559,20 +559,27 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			
 			V->m_lastDrawnSelArea.left = -1;
 			
+			SLogMsg("Tool: %d", V->m_selCtlType);
+			
 			if (V->m_selCtlType > 0)
 			{
 				if (L != R && T != B) 
 				{
 					// Add the control
 					VbAddControl (pWindow, L, T, R, B);
+					
+					VbRedraw(pWindow);
 				}
-				
-				Rectangle thing = { L - 2, T - 2, R + 2, B + 2 };
-				VbDrawGrid  (pWindow, &thing);
-				VbRenderCtls(pWindow, &thing);
+				else
+				{
+					Rectangle thing = { L - 2, T - 2, R + 2, B + 2 };
+					VbDrawGrid  (pWindow, &thing);
+					VbRenderCtls(pWindow, &thing);
+				}
 			}
 			else if (V->m_selCtlType == TOOL_SELECT)
 			{
+				SLogMsg("Selecting L%d T%d R%d B%d",L,T,R,B);
 				VbSelect(pWindow, L, T, R, B);
 				VbRedraw(pWindow);
 			}
@@ -697,7 +704,7 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 0 * 24, 96, 23);
 			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Cursor",       E(TOOL_CURSOR),        WINDOW_TEXT_COLOR, WINDOW_TITLE_INACTIVE_COLOR_B);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 1 * 24, 96, 23);
-			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(CONTROL_NONE),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
+			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Select",       E(TOOL_SELECT),        WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 2 * 24, 96, 23);
 			AddControl(pWindow, CONTROL_BUTTON_COLORED, r, "Text",         E(CONTROL_TEXT),       WINDOW_TEXT_COLOR, BUTTON_MIDDLE_COLOR);
 			RECT(r, 3, 3 + TITLE_BAR_HEIGHT + 3 * 24, 96, 23);

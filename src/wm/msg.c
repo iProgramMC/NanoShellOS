@@ -70,6 +70,11 @@ void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int 
 		pWindow->m_lastHandledMessagesWhen = GetTickCount();
 		return;
 	}
+	if (!pWindow->m_eventQueue)
+	{
+		// Can't send events to windows being destroyed can you?
+		return;
+	}
 	if (pWindow->m_eventQueueSize < EVENT_QUEUE_MAX - 1)
 	{
 		pWindow->m_eventQueue[pWindow->m_eventQueueSize] = eventType;
@@ -574,7 +579,7 @@ bool HandleMessages(Window* pWindow)
 	if (!IsWindowManagerRunning())
 		return false;
 	
-	if (!pWindow->m_used)
+	if (!pWindow->m_used || !pWindow->m_eventQueue)
 	{
 		SLogMsg("Sir, this window is gone");
 		return false;

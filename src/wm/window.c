@@ -225,6 +225,26 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 
 void SelectWindowUnsafe(Window* pWindow);
 
+#define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
+
+void FreeWindow(Window* pWindow)
+{
+	SAFE_DELETE(pWindow->m_vbeData.m_framebuffer32);
+	pWindow->m_vbeData.m_version = 0;
+	
+	SAFE_DELETE (pWindow->m_pControlArray);
+	pWindow->m_controlArrayLen = 0;
+	
+	SAFE_DELETE(pWindow->m_title);
+	SAFE_DELETE(pWindow->m_eventQueue);
+	SAFE_DELETE(pWindow->m_eventQueueParm1);
+	SAFE_DELETE(pWindow->m_eventQueueParm2);
+	SAFE_DELETE(pWindow->m_vbeData.m_drs);
+	
+	// Clear everything
+	memset (pWindow, 0, sizeof (*pWindow));
+}
+
 void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
@@ -238,18 +258,8 @@ void NukeWindowUnsafe (Window* pWindow)
 	UserHeap *pHeapBackup = MuGetCurrentHeap();
 	MuResetHeap();
 	
-	if (pWindow->m_vbeData.m_framebuffer32)
-	{
-		MmFreeK (pWindow->m_vbeData.m_framebuffer32);
-		pWindow->m_vbeData.m_version       = 0;
-		pWindow->m_vbeData.m_framebuffer32 = NULL;
-	}
-	if (pWindow->m_pControlArray)
-	{
-		MmFreeK(pWindow->m_pControlArray);
-		pWindow->m_controlArrayLen = 0;
-	}
-	memset (pWindow, 0, sizeof (*pWindow));
+	FreeWindow(pWindow);
+	
 	MuUseHeap (pHeapBackup);
 	
 	int et, p1, p2;
@@ -356,7 +366,7 @@ void SelectWindowUnsafe(Window* pWindow)
 //		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
 		pWindow->m_renderFinished = true;
-		pWindow->m_vbeData.m_drs.m_bIgnoreAndDrawAll = true;
+		pWindow->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
 		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 		g_focusedOnWindow = pWindow;
 	}
@@ -385,8 +395,19 @@ void SelectWindow(Window* pWindow)
 	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
+void* WmCAllocate(size_t sz)
+{
+	void* pMem = MmAllocate(sz);
+	if (!pMem) return NULL;
+	
+	memset(pMem, 0, sz);
+	return pMem;
+}
+
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
+	SLogMsg("Sizeof window: %d", sizeof(Window));
+	
 	flags &= ~WI_INTEMASK;
 	
 	if (!IsWindowManagerRunning())
@@ -438,7 +459,26 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	Window* pWnd = &g_windows[freeArea];
 	memset (pWnd, 0, sizeof *pWnd);
 	
-	pWnd->m_used = true;
+	pWnd->m_used  = true;
+	pWnd->m_title = WmCAllocate(WINDOW_TITLE_MAX);
+	pWnd->m_eventQueue = WmCAllocate(EVENT_QUEUE_MAX * sizeof(short));
+	pWnd->m_eventQueueParm1 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
+	pWnd->m_eventQueueParm2 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
+	
+	if (!pWnd->m_title || !pWnd->m_eventQueue || !pWnd->m_eventQueueParm1 || !pWnd->m_eventQueueParm2)
+	{
+		SAFE_DELETE(pWnd->m_title);
+		SAFE_DELETE(pWnd->m_eventQueue);
+		SAFE_DELETE(pWnd->m_eventQueueParm1);
+		SAFE_DELETE(pWnd->m_eventQueueParm2);
+		
+		SLogMsg("Couldn't allocate some parameters for the window!");
+		
+		pWnd->m_used = false;
+		LockFree (&g_CreateLock);
+		return NULL;
+	}
+	
 	int strl = strlen (title) + 1;
 	if (strl >= WINDOW_TITLE_MAX) strl = WINDOW_TITLE_MAX - 1;
 	memcpy (pWnd->m_title, title, strl + 1);
@@ -473,9 +513,16 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_version       = VBEDATA_VERSION_2;
 	
 	pWnd->m_vbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
+	pWnd->m_vbeData.m_drs = WmCAllocate(sizeof(DsjRectSet));
 	
-	if (!pWnd->m_vbeData.m_framebuffer32)
+	if (!pWnd->m_vbeData.m_framebuffer32 || !pWnd->m_vbeData.m_drs)
 	{
+		SAFE_DELETE(pWnd->m_vbeData.m_framebuffer32);
+		SAFE_DELETE(pWnd->m_vbeData.m_drs);
+		SAFE_DELETE(pWnd->m_title);
+		SAFE_DELETE(pWnd->m_eventQueue);
+		SAFE_DELETE(pWnd->m_eventQueueParm1);
+		SAFE_DELETE(pWnd->m_eventQueueParm2);
 		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		ILogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		pWnd->m_used = false;
@@ -505,7 +552,12 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	{
 		// The framebuffer fit, but this didn't
 		ILogMsg("Couldn't allocate pControlArray for window, out of memory!");
-		MmFreeK(pWnd->m_vbeData.m_framebuffer32);
+		SAFE_DELETE(pWnd->m_vbeData.m_framebuffer32);
+		SAFE_DELETE(pWnd->m_vbeData.m_drs);
+		SAFE_DELETE(pWnd->m_title);
+		SAFE_DELETE(pWnd->m_eventQueue);
+		SAFE_DELETE(pWnd->m_eventQueueParm1);
+		SAFE_DELETE(pWnd->m_eventQueueParm2);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);
 		return NULL;
@@ -613,8 +665,8 @@ void RenderWindow (Window* pWindow)
 	cli;
 	
 	DsjRectSet local_copy;
-	memcpy (&local_copy, &pWindow->m_vbeData.m_drs, sizeof local_copy);
-	DisjointRectSetClear(&pWindow->m_vbeData.m_drs);
+	memcpy (&local_copy, pWindow->m_vbeData.m_drs, sizeof local_copy);
+	DisjointRectSetClear(pWindow->m_vbeData.m_drs);
 	
 	sti;
 #endif

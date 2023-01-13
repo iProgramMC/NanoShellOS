@@ -17,7 +17,7 @@
 #define THREADING_ENABLED 1 //0
 
 #define WINDOWS_MAX 64
-#define WINDOW_TITLE_MAX 250
+#define WINDOW_TITLE_MAX 4096
 #define EVENT_QUEUE_MAX 256
 
 //TODO
@@ -508,7 +508,7 @@ enum CURSORTYPE
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
-#define WIN_KB_BUF_SIZE  512
+#define WIN_KB_BUF_SIZE  4096
 typedef struct WindowStruct
 {
 	bool       m_used;
@@ -519,7 +519,7 @@ typedef struct WindowStruct
 	
 	bool       m_renderFinished;
 	
-	char       m_title [250];
+	char*      m_title;
 	
 	int 	   m_flags;
 	
@@ -531,9 +531,12 @@ typedef struct WindowStruct
 	int        m_iconID;
 	
 	bool       m_eventQueueLockUnused; // left to keep compatibity with old ELFs that modify the window structure directly
-	short      m_eventQueue[EVENT_QUEUE_MAX];
-	int        m_eventQueueParm1[EVENT_QUEUE_MAX];
-	int        m_eventQueueParm2[EVENT_QUEUE_MAX];
+	short*     m_eventQueue;
+	int*       m_eventQueueParm1;
+	int*       m_eventQueueParm2;
+	//short      m_eventQueue[EVENT_QUEUE_MAX];
+	//int        m_eventQueueParm1[EVENT_QUEUE_MAX];
+	//int        m_eventQueueParm2[EVENT_QUEUE_MAX];
 	int        m_eventQueueSize;
 	
 	int        m_minWidth, m_minHeight;
@@ -557,7 +560,7 @@ typedef struct WindowStruct
 	bool       m_maximized;
 	
 	// Raw input buffer.
-	char       m_inputBuffer[WIN_KB_BUF_SIZE];
+	char*      m_inputBuffer;
 	int        m_inputBufferBeg, m_inputBufferEnd;
 	
 	bool       m_clickedInside;

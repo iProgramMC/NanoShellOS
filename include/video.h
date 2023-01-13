@@ -160,7 +160,7 @@ typedef struct
 	//*1. Version is either 0 (if no one bothered to initialize this crap, which would be weird),
 	//    1 (Version 1, which does NOT support dirty rect logging), and finally, Version 2 (which does!)
 	//    Any other features of VBEData will be added later down the line as V3, V4...
-	DsjRectSet     m_drs;
+	DsjRectSet*    m_drs;
 }
 VBEData;
 
