@@ -257,21 +257,15 @@ void OnUIRightClick (int mouseX, int mouseY)
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
 	
-	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
-	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
+	Window* window = ShootRayAndGetWindow(mouseX, mouseY);
 	
-	if (idx > -1)
+	if (window)
 	{
-		Window* window = GetWindowFromIndex(idx);
-		
-		if (window)
+		if (!window->m_minimized)
 		{
-			if (!window->m_minimized)
-			{
-				int x = mouseX - window->m_rect.left;
-				int y = mouseY - window->m_rect.top;
-				WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
-			}
+			int x = mouseX - window->m_rect.left;
+			int y = mouseY - window->m_rect.top;
+			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
 }
@@ -283,25 +277,20 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 	g_prevMouseY = (int)mouseY;
 	
 	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
-	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
+	Window* window = ShootRayAndGetWindow(mouseX, mouseY);
 	
-	if (idx > -1)
+	if (window)
 	{
-		Window* window = GetWindowFromIndex(idx);
-		
-		if (window)
+		if (window->m_minimized)
 		{
-			if (window->m_minimized)
-			{
-				WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
-			}
-			else
-			{
-				int x = mouseX - window->m_rect.left;
-				int y = mouseY - window->m_rect.top;
-				
-				WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
-			}
+			WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
+		}
+		else
+		{
+			int x = mouseX - window->m_rect.left;
+			int y = mouseY - window->m_rect.top;
+			
+			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
 }

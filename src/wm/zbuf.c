@@ -74,14 +74,26 @@ short GetWindowIndexInDepthBuffer (int x, int y)
 	short test = g_windowDepthBuffer[GetScreenSizeX() * y + x];
 	return test;
 }
+
 Window* ShootRayAndGetWindow(int x, int y)
 {
-	short idx = GetWindowIndexInDepthBuffer(x, y);
-	if (idx >= 0)
-		return &g_windows[idx];
+	Point p = { x, y };
+	for (int i = WINDOWS_MAX-1; i >= 0; i--)
+	{
+		short order = g_windowDrawOrder[i];
+		if (order < 0) continue;
+		if (!g_windows[order].m_used)   continue;
+		if ( g_windows[order].m_hidden) continue;
+		
+		if (RectangleContains(&g_windows[order].m_rect, &p))
+		{
+			return &g_windows[order];
+		}
+	}
 	
 	return NULL;
 }
+
 //TODO: make this really work
 void FillDepthBufferWithWindowIndex (Rectangle r, /*uint32_t* framebuffer, */int index, bool *bObscuredOut, bool *bForeMostOut)
 {
