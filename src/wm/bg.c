@@ -74,11 +74,8 @@ inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
 {
 	if (!((int)x < 0 || (int)y < 0 || (int)x >= GetScreenSizeX() || (int)y >= GetScreenSizeY()))
 	{
-		if (GetWindowIndexInDepthBuffer(x, y) < 0)
-		{
-			VidPlotPixelToCopyInlineUnsafeRF(x, y, color);
-			VidPlotPixelRaw32IRF (x, y, color);
-		}
+		VidPlotPixelToCopyInlineUnsafeRF(x, y, color);
+		VidPlotPixelRaw32IRF (x, y, color);
 	}
 }
 

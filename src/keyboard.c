@@ -194,8 +194,8 @@ void KbAddRawKeyToBuffer(char key)
 	RawKeyboardBuffer[RawKeyboardBufferEnd++] = key;
 	while (RawKeyboardBufferEnd >= KB_RAW_SIZE)
 		RawKeyboardBufferEnd -= KB_RAW_SIZE;
-	if (g_focusedOnWindow)
-		WinAddToInputQueue(g_focusedOnWindow, key);
+	
+	WinAddToInputQueue(g_focusedOnWindow, key);
 }
 bool KbIsRawBufferEmpty()
 {

@@ -238,6 +238,7 @@ void FreeWindow(Window* pWindow)
 	SAFE_DELETE(pWindow->m_eventQueueParm1);
 	SAFE_DELETE(pWindow->m_eventQueueParm2);
 	SAFE_DELETE(pWindow->m_vbeData.m_drs);
+	SAFE_DELETE(pWindow->m_inputBuffer);
 	
 	// Clear everything
 	memset (pWindow, 0, sizeof (*pWindow));
@@ -247,7 +248,7 @@ void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
 	
-	Window* pDraggedWnd = GetWindowFromIndex(g_currentlyClickedWindow);
+	Window* pDraggedWnd = g_currentlyClickedWindow;
 	if (GetCurrentCursor() == &g_windowDragCursor  && pWindow == pDraggedWnd)
 	{
 		SetCursor(NULL);
@@ -467,13 +468,15 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_eventQueue = WmCAllocate(EVENT_QUEUE_MAX * sizeof(short));
 	pWnd->m_eventQueueParm1 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
 	pWnd->m_eventQueueParm2 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
+	pWnd->m_inputBuffer     = WmCAllocate(WIN_KB_BUF_SIZE);
 	
-	if (!pWnd->m_title || !pWnd->m_eventQueue || !pWnd->m_eventQueueParm1 || !pWnd->m_eventQueueParm2)
+	if (!pWnd->m_title || !pWnd->m_eventQueue || !pWnd->m_eventQueueParm1 || !pWnd->m_eventQueueParm2 || !pWnd->m_inputBuffer)
 	{
 		SAFE_DELETE(pWnd->m_title);
 		SAFE_DELETE(pWnd->m_eventQueue);
 		SAFE_DELETE(pWnd->m_eventQueueParm1);
 		SAFE_DELETE(pWnd->m_eventQueueParm2);
+		SAFE_DELETE(pWnd->m_inputBuffer);
 		
 		SLogMsg("Couldn't allocate some parameters for the window!");
 		
@@ -526,6 +529,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		SAFE_DELETE(pWnd->m_eventQueue);
 		SAFE_DELETE(pWnd->m_eventQueueParm1);
 		SAFE_DELETE(pWnd->m_eventQueueParm2);
+		SAFE_DELETE(pWnd->m_inputBuffer);
 		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		ILogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		pWnd->m_used = false;
@@ -561,6 +565,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		SAFE_DELETE(pWnd->m_eventQueue);
 		SAFE_DELETE(pWnd->m_eventQueueParm1);
 		SAFE_DELETE(pWnd->m_eventQueueParm2);
+		SAFE_DELETE(pWnd->m_inputBuffer);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);
 		return NULL;
@@ -683,12 +688,14 @@ void RenderWindow (Window* pWindow)
 		SLogMsg("Warning: Calling RenderWindow outside of the main window task can cause data races and stuff!");
 	}
 	
-	
+	/*
 	if (pWindow->m_bObscured)
 	{
 		SLogMsg("Window %s obscured, don't draw", pWindow->m_title);
 		return;
 	}
+	*/
+	
 	if (pWindow->m_minimized)
 	{
 		// Draw as icon

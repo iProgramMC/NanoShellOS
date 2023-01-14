@@ -6,7 +6,7 @@
 ******************************************/
 #include "wi.h"
 
-int g_currentlyClickedWindow = -1;
+Window* g_currentlyClickedWindow = NULL;
 int g_prevMouseX, g_prevMouseY;
 
 // note: these are called from the window manager task
@@ -19,17 +19,15 @@ void OnUILeftClick (int mouseX, int mouseY)
 	
 	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
 	
-	short idx = GetWindowIndexInDepthBuffer(mouseX, mouseY);
+	Window* window = ShootRayAndGetWindow(mouseX, mouseY);
 	
-	if (idx > -1)
+	if (window)
 	{
-		Window* window = GetWindowFromIndex(idx);
 		if (!(window->m_flags & WF_FROZEN))
 		{
 			SelectWindow (window);
 			
-			//bool wasSelectedBefore = g_currentlyClickedWindow == idx;
-			g_currentlyClickedWindow = idx;
+			g_currentlyClickedWindow = window;
 			
 			//are we in the title bar region? TODO
 			Rectangle recta = window->m_rect;
@@ -72,7 +70,9 @@ void OnUILeftClick (int mouseX, int mouseY)
 		}
 	}
 	else
-		g_currentlyClickedWindow = -1;
+	{
+		g_currentlyClickedWindow = NULL;
+	}
 	
 	//FREE_LOCK(g_windowLock);
 }
@@ -80,14 +80,14 @@ void OnUILeftClick (int mouseX, int mouseY)
 void OnUILeftClickDrag (int mouseX, int mouseY)
 {
 	if (!IsWindowManagerRunning()) return;
-	if (g_currentlyClickedWindow == -1) return;
+	if (!g_currentlyClickedWindow) return;
 	
 	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
 	
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
 	
-	Window* window = GetWindowFromIndex(g_currentlyClickedWindow);
+	Window* window = g_currentlyClickedWindow;
 	
 	// if we're not frozen AND we have a title to drag on
 	if (window->m_minimized || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
@@ -187,7 +187,7 @@ void RenderWindow (Window* pWindow);
 void OnUILeftClickRelease (int mouseX, int mouseY)
 {
 	if (!IsWindowManagerRunning()) return;
-	if (g_currentlyClickedWindow == -1) return;
+	if (!g_currentlyClickedWindow) return;
 	
 	mouseX = g_mouseX;
 	mouseY = g_mouseY;
@@ -195,7 +195,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
 	
-	Window* pWindow = GetWindowFromIndex(g_currentlyClickedWindow);
+	Window* pWindow = g_currentlyClickedWindow;
 	if (pWindow->m_isBeingDragged)
 	{
 		if (!g_RenderWindowContents)

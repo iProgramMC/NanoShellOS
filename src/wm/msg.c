@@ -619,7 +619,6 @@ bool HandleMessages(Window* pWindow)
 	LockFree (&pWindow->m_EventQueueLock);
 	
 	// Keyboard events are handled separately, in games you may miss input otherwise...
-
 	while (WinAnythingOnInputQueue(pWindow))
 	{
 		have_handled_events = true;
