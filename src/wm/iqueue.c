@@ -9,6 +9,8 @@
 void WinAddToInputQueue (Window* this, char input)
 {
 	if (!input) return;
+	if (!this)  return;
+	if (!this->m_inputBuffer) return;
 	
 	this->m_inputBuffer[this->m_inputBufferEnd++] = input;
 	while
@@ -18,11 +20,13 @@ void WinAddToInputQueue (Window* this, char input)
 
 bool WinAnythingOnInputQueue (Window* this)
 {
+	if (!this) return false;
 	return this->m_inputBufferBeg != this->m_inputBufferEnd;
 }
 
 char WinReadFromInputQueue (Window* this)
 {
+	if (!this) return 0;
 	if (WinAnythingOnInputQueue(this))
 	{
 		char k = this->m_inputBuffer[this->m_inputBufferBeg++];

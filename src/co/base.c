@@ -441,6 +441,8 @@ void CoVisComOnAnsiEscCode(Console *this)
 						headread++;
 					}
 					
+					// TODO: It's actually line;column. Fix this.
+					
 					int x1 = 1, y1 = 1;
 					if (*str1)
 						x1 = atoi (str1);

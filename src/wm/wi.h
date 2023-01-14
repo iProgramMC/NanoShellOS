@@ -22,6 +22,10 @@
 #include <image.h>
 #include <config.h>
 
+#define OPTIMIZED_WITH_RECTANGLE_STACK
+
+#define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
+
 #define WINDOW_ACTION_MENU_ORIG_CID (0x12345678)
 
 enum
@@ -72,6 +76,7 @@ g_shutdownDoneAll;
 
 extern Cursor* const g_CursorLUT[];
 
+void* WmCAllocate(size_t sz);
 void KeTaskDone(void);
 WindowAction* ActionQueueAdd(WindowAction action);
 WindowAction* ActionQueueGetFront(void);
@@ -125,5 +130,10 @@ void SetFocusedConsole(Console* console);
 void RequestTaskbarUpdate();
 void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor);
 void OnRightClickShowMenu(Window * pWindow, int parm1);
+void WmCreateRectangleStack();
+void WmFreeRectangleStack();
+int  WmAddRectangleToStack(Rectangle* rect);
+void WmSplitRectangleStackByWindow(Window* pWindow);
+void WmSplitRectangle(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut);
 
 #endif//INT_WI_H

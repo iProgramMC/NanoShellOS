@@ -57,6 +57,7 @@ void SetupWindowManager()
 	g_clickQueueSize = 0;
 	// load background?
 	InitWindowDepthBuffer();
+	WmCreateRectangleStack();
 	//CoClearScreen (&g_debugConsole);
 	g_debugConsole.curX = g_debugConsole.curY = 0;
 	g_debugConsole.pushOrWrap = 1;
@@ -376,6 +377,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	#endif
 	}
 	KillWindowDepthBuffer();
+	WmFreeRectangleStack();
 	g_debugConsole.pushOrWrap = 0;
 	VidSetFont (FONT_TAMSYN_REGULAR);
 }

@@ -225,8 +225,6 @@ void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int n
 
 void SelectWindowUnsafe(Window* pWindow);
 
-#define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
-
 void FreeWindow(Window* pWindow)
 {
 	SAFE_DELETE(pWindow->m_vbeData.m_framebuffer32);
@@ -253,6 +251,11 @@ void NukeWindowUnsafe (Window* pWindow)
 	if (GetCurrentCursor() == &g_windowDragCursor  && pWindow == pDraggedWnd)
 	{
 		SetCursor(NULL);
+	}
+	
+	if (g_focusedOnWindow == pWindow)
+	{
+		g_focusedOnWindow = NULL;
 	}
 	
 	UserHeap *pHeapBackup = MuGetCurrentHeap();
@@ -600,10 +603,37 @@ void RedrawEverything()
 	VidSetVBEData(pBkp);
 }
 
+#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
+void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
+{
+	//WmSplitRectangle
+	Rectangle* pRect = NULL, *end = NULL;
+	
+	WmSplitRectangle(e, pWindow, &pRect, &end);
+	
+	for (; pRect != end; pRect++)
+	{
+		int eleft = pRect->left - pWindow->m_rect.left;
+		int etop  = pRect->top  - pWindow->m_rect.top;
+		
+		//optimization
+		VidBitBlit(
+			g_vbeData,
+			pRect->left,
+			pRect->top,
+			pRect->right  - pRect->left,
+			pRect->bottom - pRect->top,
+			&pWindow->m_vbeData,
+			eleft, etop,
+			BOP_SRCCOPY
+		);
+	}
+
+}
+#else
 void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, UNUSED int th, int szx, int szy)
 {
 	//TODO: clean up this function!
-	
 	int oi = 0;
 	if (y < 0)
 	{
@@ -643,10 +673,17 @@ void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, i
 		oi += tw;
 	}
 }
+#endif
 
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
 {
+	if (!IsWindowManagerTask())
+	{
+		SLogMsg("Warning: Calling RenderWindow outside of the main window task can cause data races and stuff!");
+	}
+	
+	
 	if (pWindow->m_bObscured)
 	{
 		SLogMsg("Window %s obscured, don't draw", pWindow->m_title);
@@ -673,7 +710,10 @@ void RenderWindow (Window* pWindow)
 	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
+	
+#ifndef OPTIMIZED_WITH_RECTANGLE_STACK
 	int windIndex = pWindow - g_windows;
+#endif
 	
 	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
 	short n = GetWindowIndexInDepthBuffer (x, y);
@@ -705,10 +745,10 @@ void RenderWindow (Window* pWindow)
 #endif
 	if (pWindow->m_bForemost)
 	{
-#ifdef DIRTY_RECT_TRACK
+	#ifdef DIRTY_RECT_TRACK
 		if (local_copy.m_bIgnoreAndDrawAll)
 		{
-#endif
+	#endif
 			//optimization
 			VidBitBlit(
 				g_vbeData,
@@ -720,7 +760,7 @@ void RenderWindow (Window* pWindow)
 				0, 0,
 				BOP_SRCCOPY
 			);
-#ifdef DIRTY_RECT_TRACK
+	#ifdef DIRTY_RECT_TRACK
 		}
 		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
@@ -737,25 +777,40 @@ void RenderWindow (Window* pWindow)
 				BOP_SRCCOPY
 			);
 		}
-#endif
+	#endif
 	}
 	else
 	{
 		int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
+	#ifndef OPTIMIZED_WITH_RECTANGLE_STACK
 		uint32_t *texture = pWindow->m_vbeData.m_framebuffer32;
+	#endif
 		
 		int x2 = x + tw, y2 = y + th;
 		
-#ifdef DIRTY_RECT_TRACK
+	#ifdef DIRTY_RECT_TRACK
 		if (local_copy.m_bIgnoreAndDrawAll)
 		{
-#endif
+	#endif
+
+		#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
+			WindowBlitTakingIntoAccountOcclusions(pWindow->m_rect, pWindow);
+		#else
 			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
-#ifdef DIRTY_RECT_TRACK
+		#endif
+			
+	#ifdef DIRTY_RECT_TRACK
 		}
 		else for (int i = 0; i < local_copy.m_rectCount; i++)
 		{
 			Rectangle e = local_copy.m_rects[i];
+		#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
+			e.left   += pWindow->m_rect.left;
+			e.right  += pWindow->m_rect.left;
+			e.top    += pWindow->m_rect.top;
+			e.bottom += pWindow->m_rect.top;
+			WindowBlitTakingIntoAccountOcclusions(e, pWindow);
+		#else
 			WindowBlitTakingIntoAccountOcclusions(
 				windIndex,
 				texture,
@@ -768,7 +823,8 @@ void RenderWindow (Window* pWindow)
 				e.left,
 				e.top
 			);
+		#endif
 		}
-#endif
+	#endif
 	}
 }
