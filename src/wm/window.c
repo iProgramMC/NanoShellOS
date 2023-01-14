@@ -743,88 +743,22 @@ void RenderWindow (Window* pWindow)
 		}
 	}
 #endif
-	if (pWindow->m_bForemost)
-	{
-	#ifdef DIRTY_RECT_TRACK
-		if (local_copy.m_bIgnoreAndDrawAll)
-		{
-	#endif
-			//optimization
-			VidBitBlit(
-				g_vbeData,
-				pWindow->m_rect.left,
-				pWindow->m_rect.top,
-				pWindow->m_vbeData.m_width,
-				pWindow->m_vbeData.m_height,
-				&pWindow->m_vbeData,
-				0, 0,
-				BOP_SRCCOPY
-			);
-	#ifdef DIRTY_RECT_TRACK
-		}
-		else for (int i = 0; i < local_copy.m_rectCount; i++)
-		{
-			Rectangle e = local_copy.m_rects[i];
-			//optimization
-			VidBitBlit(
-				g_vbeData,
-				pWindow->m_rect.left + e.left,
-				pWindow->m_rect.top  + e.top,
-				e.right  - e.left,
-				e.bottom - e.top,
-				&pWindow->m_vbeData,
-				e.left, e.top,
-				BOP_SRCCOPY
-			);
-		}
-	#endif
-	}
-	else
-	{
-		int tw = pWindow->m_vbeData.m_width, th = pWindow->m_vbeData.m_height;
-	#ifndef OPTIMIZED_WITH_RECTANGLE_STACK
-		uint32_t *texture = pWindow->m_vbeData.m_framebuffer32;
-	#endif
-		
-		int x2 = x + tw, y2 = y + th;
-		
-	#ifdef DIRTY_RECT_TRACK
-		if (local_copy.m_bIgnoreAndDrawAll)
-		{
-	#endif
 
-		#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
-			WindowBlitTakingIntoAccountOcclusions(pWindow->m_rect, pWindow);
-		#else
-			WindowBlitTakingIntoAccountOcclusions(windIndex, texture, x, x2, y, y2, tw, th, 0, 0);
-		#endif
-			
-	#ifdef DIRTY_RECT_TRACK
-		}
-		else for (int i = 0; i < local_copy.m_rectCount; i++)
-		{
-			Rectangle e = local_copy.m_rects[i];
-		#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
-			e.left   += pWindow->m_rect.left;
-			e.right  += pWindow->m_rect.left;
-			e.top    += pWindow->m_rect.top;
-			e.bottom += pWindow->m_rect.top;
-			WindowBlitTakingIntoAccountOcclusions(e, pWindow);
-		#else
-			WindowBlitTakingIntoAccountOcclusions(
-				windIndex,
-				texture,
-				x + e.left,
-				x + e.right,
-				y + e.top,
-				y + e.bottom,
-				tw,
-				th,
-				e.left,
-				e.top
-			);
-		#endif
-		}
-	#endif
+#ifdef DIRTY_RECT_TRACK
+	if (local_copy.m_bIgnoreAndDrawAll)
+	{
+#endif
+		WindowBlitTakingIntoAccountOcclusions(pWindow->m_rect, pWindow);
+#ifdef DIRTY_RECT_TRACK
 	}
+	else for (int i = 0; i < local_copy.m_rectCount; i++)
+	{
+		Rectangle e = local_copy.m_rects[i];
+		e.left   += pWindow->m_rect.left;
+		e.right  += pWindow->m_rect.left;
+		e.top    += pWindow->m_rect.top;
+		e.bottom += pWindow->m_rect.top;
+		WindowBlitTakingIntoAccountOcclusions(e, pWindow);
+	}
+#endif
 }

@@ -189,17 +189,35 @@ void WmSplitRectangleStackByWindow(Window* pWindow)
 	}
 }
 
-void WmSplitRectangle(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut)
+void WmSplitRectangle(Rectangle ogRect, const Window* pThisWindow, Rectangle** pStartOut, Rectangle** pEndOut)
 {
 	WmClearRectangleStack();
 	WmAddRectangle(&ogRect);
 	
+	bool bFilledIn[WINDOWS_MAX] = { 0 };
+	
+	bool bReachedThisWindow = false;
+	if (!pThisWindow)
+		bReachedThisWindow = true;
+	
+	// TODO: Replace this window crap with a linked list.
 	for (int i = 0; i < WINDOWS_MAX; i++)
 	{
-		if (!g_windows[i].m_used) continue;
-		if (&g_windows[i] == pExcept) continue;
+		short order = g_windowDrawOrder[i];
+		if (order < 0) continue;
+		if (!g_windows[order].m_used) continue;
+		if ( g_windows[order].m_hidden) continue;
+		if (&g_windows[order] == pThisWindow)
+		{
+			bReachedThisWindow = true;
+			continue;
+		}
 		
-		WmSplitRectangleStackByWindow(&g_windows[i]);
+		if (bReachedThisWindow && !bFilledIn[order])
+		{
+			WmSplitRectangleStackByWindow(&g_windows[order]);
+			bFilledIn[order] = true;
+		}
 	}
 	
 	*pStartOut = &g_WmRectangleStack[0];
