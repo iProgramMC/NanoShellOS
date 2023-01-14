@@ -55,8 +55,7 @@ void SetupWindowManager()
 	
 	g_debugConsole.curY = g_debugConsole.height / 2;
 	g_clickQueueSize = 0;
-	// load background?
-	InitWindowDepthBuffer();
+	ResetWindowDrawOrder();
 	WmCreateRectangleStack();
 	//CoClearScreen (&g_debugConsole);
 	g_debugConsole.curX = g_debugConsole.curY = 0;
@@ -69,8 +68,6 @@ void SetupWindowManager()
 	g_shutdownSentDestroySignals = false;
 	g_shutdownWaiting			 = false;
 	
-	UpdateDepthBuffer();
-	
 	LoadDefaultThemingParms ();
 	//VidFillScreen(BACKGROUND_COLOR);
 	SetDefaultBackground ();
@@ -78,9 +75,6 @@ void SetupWindowManager()
 	//redraw background?
 	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
 	RedrawBackground (r);
-	
-	//CreateTestWindows();
-	UpdateDepthBuffer();
 	
 	CfgGetIntValue(&g_WmLockMS, "Desktop::UpdateMS", 16);
 	
@@ -297,16 +291,19 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		RunOneEffectFrame ();
 		
 		// Get the window we're over:
-		short windowOver = GetWindowIndexInDepthBuffer (g_mouseX, g_mouseY);
+		Window* pWindowOver = ShootRayAndGetWindow(g_mouseX, g_mouseY);
 		
-		if (windowOver >= 0)
+		if (pWindowOver)
 		{
-			Window* pWindow = &g_windows [windowOver];
-			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindow->m_cursorID, pWindow))
-				SetCursor(GetCursorBasedOnID(pWindow->m_cursorID, pWindow));
+			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver))
+			{
+				SetCursor(GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver));
+			}
 		}
 		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != &g_defaultCursor)
+		{
 			SetCursor(&g_defaultCursor);
+		}
 		
 		if (!handled)
 		{
@@ -376,7 +373,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 	#endif
 	#endif
 	}
-	KillWindowDepthBuffer();
+	
 	WmFreeRectangleStack();
 	g_debugConsole.pushOrWrap = 0;
 	VidSetFont (FONT_TAMSYN_REGULAR);

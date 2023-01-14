@@ -365,7 +365,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		ShowWindow (pWindow);
 		
-		UpdateDepthBuffer();
 		VidSetVBEData (&pWindow->m_vbeData);
 		PaintWindowBackgroundAndBorder(pWindow);
 		

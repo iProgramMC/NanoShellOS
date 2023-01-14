@@ -46,10 +46,6 @@ void HideWindowUnsafe (Window* pWindow)
 static void ShowWindowUnsafe (Window* pWindow)
 {
 	pWindow->m_hidden = false;
-	UpdateDepthBuffer();
-	//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
-	//pWindow->m_vbeData.m_dirty = true;
-	//pWindow->m_renderFinished = true;
 	
 	// Render it to the vbeData:
 	if (pWindow->m_minimized)
@@ -365,7 +361,6 @@ void SelectWindowUnsafe(Window* pWindow)
 		
 		MovePreExistingWindowToFront (pWindow - g_windows);
 		pWindow->m_isSelected = true;
-		UpdateDepthBuffer();
 		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
 //		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
 		pWindow->m_vbeData.m_dirty = true;
@@ -588,7 +583,6 @@ void RedrawEverything()
 {
 	VBEData* pBkp = g_vbeData;
 	VidSetVBEData(NULL);
-	UpdateDepthBuffer();
 	
 	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
 	RedrawBackground (r);
@@ -608,7 +602,6 @@ void RedrawEverything()
 	VidSetVBEData(pBkp);
 }
 
-#ifdef OPTIMIZED_WITH_RECTANGLE_STACK
 void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 {
 	//WmSplitRectangle
@@ -633,52 +626,7 @@ void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 			BOP_SRCCOPY
 		);
 	}
-
 }
-#else
-void WindowBlitTakingIntoAccountOcclusions(short windIndex, uint32_t* texture, int x, int x2, int y, int y2, int tw, UNUSED int th, int szx, int szy)
-{
-	//TODO: clean up this function!
-	int oi = 0;
-	if (y < 0)
-	{
-		oi += -y * tw;
-		y = 0;
-	}
-	
-	if (x > x2) return;
-	if (y > y2) return;
-	
-	oi += szy * tw + szx;
-	
-	int sx = GetScreenWidth(), sy = GetScreenHeight();
-	int pitch  = g_vbeData->m_pitch32, width  = g_vbeData->m_width;
-	int offfb,                         offcp;
-	for (int j = y; j != y2; j++)
-	{
-		int o = oi;
-		if (j >= sy) break;
-		offfb = j * pitch, offcp = j * width;
-		if (x > 0) offfb += x, offcp += x;
-		for (int i = x; i != x2; i++)
-		{
-			if (i < sx && i >= 0)
-			{
-				short n = g_windowDepthBuffer [offcp];
-				if (n == windIndex)
-				{
-					g_framebufferCopy         [offcp] = texture[o];
-					g_vbeData->m_framebuffer32[offfb] = texture[o];
-				}
-				offcp++;
-				offfb++;
-			}
-			o++;
-		}
-		oi += tw;
-	}
-}
-#endif
 
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);
 void RenderWindow (Window* pWindow)
@@ -687,14 +635,6 @@ void RenderWindow (Window* pWindow)
 	{
 		SLogMsg("Warning: Calling RenderWindow outside of the main window task can cause data races and stuff!");
 	}
-	
-	/*
-	if (pWindow->m_bObscured)
-	{
-		SLogMsg("Window %s obscured, don't draw", pWindow->m_title);
-		return;
-	}
-	*/
 	
 	if (pWindow->m_minimized)
 	{
@@ -717,21 +657,6 @@ void RenderWindow (Window* pWindow)
 	
 	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
-	
-#ifndef OPTIMIZED_WITH_RECTANGLE_STACK
-	int windIndex = pWindow - g_windows;
-#endif
-	
-	int x = pWindow->m_rect.left,  y = pWindow->m_rect.top;
-	short n = GetWindowIndexInDepthBuffer (x, y);
-	if (n == -1)
-	{
-		if (x >= 0 && y >= 0 && x < GetScreenWidth() && y < GetScreenHeight())
-		{
-			SLogMsg("Updating during RenderWindow()? Why?");
-			UpdateDepthBuffer();
-		}
-	}
 	
 #ifdef DIRTY_RECT_TRACK
 	if (!local_copy.m_bIgnoreAndDrawAll)

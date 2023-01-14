@@ -22,8 +22,6 @@
 #include <image.h>
 #include <config.h>
 
-#define OPTIMIZED_WITH_RECTANGLE_STACK
-
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
 
 #define WINDOW_ACTION_MENU_ORIG_CID (0x12345678)
@@ -83,7 +81,6 @@ WindowAction* ActionQueueGetFront(void);
 SafeLock* ActionQueueGetSafeLock(void);
 Window* GetWindowFromIndex(int i);
 Cursor* GetCursorBasedOnID(int m_cursorID, Window *pWindow);
-short GetWindowIndexInDepthBuffer (int x, int y);
 Window* ShootRayAndGetWindow (int x, int y);
 bool IsWindowManagerTask();
 bool ActionQueueWouldOverflow(void);
@@ -97,10 +94,11 @@ void RedrawBackground (Rectangle rect);
 void SetDefaultBackground(void);
 void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RefreshRectangle(Rectangle rect, Window* pWindowToExclude);
-void UpdateDepthBuffer(void);
+//void UpdateDepthBuffer(void);
 void MovePreExistingWindowToFront(short windowIndex);
-void InitWindowDepthBuffer(void);
-void KillWindowDepthBuffer(void);
+void ResetWindowDrawOrder();
+//void InitWindowDepthBuffer(void);
+//void KillWindowDepthBuffer(void);
 void AddWindowToDrawOrder(short windowIndex);
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2);
 bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, int *parm1, int *parm2);
