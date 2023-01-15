@@ -47,7 +47,15 @@ void CoVbeRefreshChar (Console *this, int x, int y)
 	VBEData* backup = g_vbeData;
 	g_vbeData = &g_mainScreenVBEData;
 	
-	VidPlotChar(cd & 0xFF, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[(cd >> 8) & 0xF], g_vgaColorsToRGB[cd >> 12]);
+	uint16_t colorFg = (cd >> 8) & 0xF, colorBg = (cd >> 12);
+	if (this->curX == x && this->curY == y)
+	{
+		uint16_t temp = colorFg;
+		colorFg = colorBg;
+		colorBg = temp;
+	}
+	
+	VidPlotChar(cd & 0xFF, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[colorFg], g_vgaColorsToRGB[colorBg]);
 	g_vbeData = backup;
 }
 
@@ -60,6 +68,8 @@ void CoVbeScrollUpByOne(Console *this)
 	}
 	else
 	{
+		CoVbeRefreshChar(this, this->lastX, this->lastY);
+		
 		//NOTE: This is actually slower than the VidShiftScreen method on qemu... probably because I have to re-render a lot.
 	#if USE_SHIFT_SCREEN
 		VidShiftScreen(1 << (3 + g_uses8by16Font));
@@ -90,7 +100,15 @@ void CoVbeScrollUpByOne(Console *this)
 
 void CoVbeUpdateCursor(UNUSED Console* this)
 {
+	if (this->lastX != this->curX || this->lastY != this->curY)
+	{
+		CoVbeRefreshChar(this, this->lastX, this->lastY);
+	}
 	
+	CoVbeRefreshChar(this, this->curX, this->curY);
+	
+	this->lastX = this->curX;
+	this->lastY = this->curY;
 }
 
 void CoVbeInit(Console *this)
