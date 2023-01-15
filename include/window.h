@@ -494,6 +494,8 @@ enum CURSORTYPE
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
+#define WF_BACKGRND 0x00000400//The window is on a separate 'background' layer, behind normal windows.
+#define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
 
 #define WI_NOHIDDEN 0x01000000//Internal flag: This window wasn't hidden at the time of resizing.
 #define WI_MESSGBOX 0x02000000//Internal flag: This is a message box. Wait for it

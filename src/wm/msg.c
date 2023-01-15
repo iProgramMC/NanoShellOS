@@ -548,7 +548,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_CREATE)
 	{
-		AddWindowToDrawOrder (pWindow - g_windows);
 		ShowWindow(pWindow);
 		SelectWindow(pWindow);
 	}

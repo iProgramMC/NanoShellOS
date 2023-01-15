@@ -414,7 +414,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	}
 	
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, wnwidth, wnheight, SystemMonitorProc, WF_ALWRESIZ);
+	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, wnwidth, wnheight, SystemMonitorProc, WF_ALWRESIZ | WF_FOREGRND);
 	
 	if (!pWindow)
 	{

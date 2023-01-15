@@ -6,47 +6,81 @@
 ******************************************/
 #include "wi.h"
 
-
 short* g_windowDepthBuffer = NULL; //must be allocated
-short  g_windowDrawOrder[WINDOWS_MAX];
+short g_windowDrawOrder[WINDOWS_MAX];
+int g_windowDrawOrderSize;
+int g_windowDrawOrderLayerEnds[6]; // [i] = Where the layer 'i+1' starts.
 
 void ResetWindowDrawOrder()
 {
-	memset(g_windowDrawOrder, 0xFF, sizeof(g_windowDrawOrder));
+    for (int i = 0; i < (int)ARRAY_COUNT(g_windowDrawOrderLayerEnds); i++)
+        g_windowDrawOrderLayerEnds[i] = 0;
+    for (int i = 0; i < (int)ARRAY_COUNT(g_windowDrawOrder); i++)
+        g_windowDrawOrder[i] = -1;
+    g_windowDrawOrderSize = 0;
 }
 
-void AddWindowToDrawOrder(short windowIndex)
+SAI int GetLayer(Window* pWindow)
 {
-	for (size_t i = 0; i < ARRAY_COUNT (g_windowDrawOrder); i++)
-	{
-		if (g_windowDrawOrder [i] == windowIndex)
-			g_windowDrawOrder [i] =  -1;
-	}
-	memcpy (g_windowDrawOrder, g_windowDrawOrder+1, sizeof(g_windowDrawOrder)-sizeof(short));
-	g_windowDrawOrder[WINDOWS_MAX-1] = windowIndex;
+	if (pWindow->m_flags & WF_FOREGRND) return 2;
+	if (pWindow->m_flags & WF_BACKGRND) return 0;
+	return 1;
+}
+
+void AddWindowToDrawOrder(short index)
+{
+    int layer = GetLayer(&g_windows[index]);
+    // Move everything from the next layer and beyond by one.
+    int start = g_windowDrawOrderLayerEnds[layer];
+
+    // Increase the size of the draw order array.
+    g_windowDrawOrderSize++;
+
+    // Move everything.
+    memmove(&g_windowDrawOrder[start + 1], &g_windowDrawOrder[start], sizeof(g_windowDrawOrder[0]) * (g_windowDrawOrderSize - start - 1));
+    for (int i = layer; i < (int)ARRAY_COUNT(g_windowDrawOrderLayerEnds); i++)
+    {
+        g_windowDrawOrderLayerEnds[i]++;
+    }
+
+    // Set the new order index.
+    g_windowDrawOrder[start] = index;
+}
+
+void RemovePlaceFromDrawOrder(int place)
+{
+    int layer = GetLayer(&g_windows[g_windowDrawOrder[place]]);
+
+    // memmove everything from 'place' onwards
+    memmove(&g_windowDrawOrder[place], &g_windowDrawOrder[place + 1], sizeof(g_windowDrawOrder[0]) * (g_windowDrawOrderSize - place - 1));
+
+    g_windowDrawOrder[--g_windowDrawOrderSize] = -1;
+
+    for (int i = layer; i < (int)ARRAY_COUNT(g_windowDrawOrderLayerEnds); i++)
+    {
+        g_windowDrawOrderLayerEnds[i]--;
+    }
+}
+
+void RemoveWindowFromDrawOrder(int index)
+{
+    for (int i = 0; i < g_windowDrawOrderSize; i++)
+    {
+        if (g_windowDrawOrder[i] == index)
+            RemovePlaceFromDrawOrder(i);
+    }
 }
 
 void MovePreExistingWindowToFront(short windowIndex)
 {
-	//where is our window located?
-	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
-	{
-		if (g_windowDrawOrder[i] == windowIndex)
-		{
-			g_windowDrawOrder[i] = -1;
-			//move everything after it back
-			memcpy (g_windowDrawOrder + i, g_windowDrawOrder + i + 1, sizeof (short) * (WINDOWS_MAX - i - 1));
-			g_windowDrawOrder[WINDOWS_MAX-1] = windowIndex;
-			
-			return;
-		}
-	}
+	RemoveWindowFromDrawOrder(windowIndex);
+	AddWindowToDrawOrder(windowIndex);
 }
 
 Window* ShootRayAndGetWindow(int x, int y)
 {
 	Point p = { x, y };
-	for (int i = WINDOWS_MAX-1; i >= 0; i--)
+	for (int i = g_windowDrawOrderSize; i >= 0; i--)
 	{
 		short order = g_windowDrawOrder[i];
 		if (order < 0) continue;
@@ -70,8 +104,14 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 	
 	LockAcquire (&g_BackgdLock);
 	
-	//redraw the background and all the things underneath:
-	RedrawBackground(rect);
+	//redraw the background, if needed
+	Rectangle* pStart = NULL, *pEnd = NULL;
+	WmSplitRectangle(rect, pWindowToExclude, &pStart, &pEnd);
+	
+	for (Rectangle* pRect = pStart; pRect != pEnd; pRect++)
+	{
+		RedrawBackground(*pRect);
+	}
 	
 	LockFree (&g_BackgdLock);
 	
@@ -106,17 +146,8 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		}
 		else
 		{
-			VidBitBlit (
-				g_vbeData,
-				rect.left,
-				rect.top,
-				rect.right  - rect.left,
-				rect.bottom - rect.top,
-				&windowDrawList[i]->m_vbeData,
-				rect.left - windowDrawList[i]->m_rect.left,
-				rect.top  - windowDrawList[i]->m_rect.top,
-				BOP_SRCCOPY
-			);
+			windowDrawList[i]->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
+			RenderWindow(windowDrawList[i]);
 		}
 	}
 	

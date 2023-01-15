@@ -59,6 +59,7 @@ extern bool     g_GlowOnHover, g_heldAlt;
 extern short    g_windowDrawOrder[WINDOWS_MAX];
 extern short*   g_windowDepthBuffer;
 extern uint32_t* g_framebufferCopy;
+extern int      g_windowDrawOrderSize;
 
 extern ClickInfo g_clickQueue [CLICK_INFO_MAX];
 extern int       g_clickQueueSize;
@@ -95,6 +96,7 @@ void SetDefaultBackground(void);
 void VidBlitImageForceOpaque(Image* pImage, int x, int y);
 void RefreshRectangle(Rectangle rect, Window* pWindowToExclude);
 //void UpdateDepthBuffer(void);
+void RemoveWindowFromDrawOrder(int windowIndex);
 void MovePreExistingWindowToFront(short windowIndex);
 void ResetWindowDrawOrder();
 //void InitWindowDepthBuffer(void);

@@ -53,16 +53,10 @@ static void ShowWindowUnsafe (Window* pWindow)
 		//TODO?
 	}
 	else
-		VidBitBlit (
-			g_vbeData,
-			pWindow->m_rect.left,
-			pWindow->m_rect.top,
-			pWindow->m_vbeData.m_width,
-			pWindow->m_vbeData.m_height,
-			&pWindow->m_vbeData,
-			0, 0,
-			BOP_SRCCOPY
-		);
+	{
+		// TODO: fix this will leave garbage that should be occluded out. Fix this by adding a RefreshRectangle which refreshes things above this window.
+		RefreshRectangle(pWindow->m_rect, NULL);
+	}
 }
 
 void HideWindow (Window* pWindow)
@@ -265,12 +259,7 @@ void NukeWindowUnsafe (Window* pWindow)
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
 
-	// Reset the draw order
-	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
-	{
-		if (GetWindowFromIndex(g_windowDrawOrder[i]) == pWindow) //this is our window, reset the draw order
-			g_windowDrawOrder[i] = -1;
-	}
+	RemoveWindowFromDrawOrder(pWindow - g_windows);
 
 	// Select the (currently) frontmost window
 	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
@@ -405,8 +394,6 @@ void* WmCAllocate(size_t sz)
 
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
-	SLogMsg("Sizeof window: %d", sizeof(Window));
-	
 	flags &= ~WI_INTEMASK;
 	
 	if (!IsWindowManagerRunning())
@@ -567,6 +554,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	}
 	
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
+	AddWindowToDrawOrder (freeArea);
 	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
 	WindowRegisterEvent(pWnd, EVENT_PAINT, 0, 0);

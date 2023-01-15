@@ -85,7 +85,7 @@ void SetupWindowManager()
 	VidSetFont(FONT_GLCD);
 	//VidSetFont(FONT_BIGTEST);
 	
-	LogMsg("\n\n\n");
+	//LogMsg("\n\n\n");
 	
 	WindowCallInit ();
 	
