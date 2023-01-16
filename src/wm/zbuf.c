@@ -96,8 +96,24 @@ Window* ShootRayAndGetWindow(int x, int y)
 	return NULL;
 }
 
+bool RectangleIntersect(Rectangle* r, Rectangle* r1, Rectangle* r2)
+{
+	#define MIN(a,b) ((a)<(b)?(a):(b))
+	#define MAX(a,b) ((a)>(b)?(a):(b))
+	r->left   = MAX(r1->left,  r2->left);
+	r->top    = MAX(r1->top,   r2->top);
+	r->right  = MIN(r1->right, r2->right);
+	r->bottom = MIN(r1->bottom,r2->bottom);
+	return !(r->left > r->right || r->top > r->bottom);
+	#undef MIN
+	#undef MAX
+}
+
+void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect);
 void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 {
+	KeVerifyInterruptsEnabled;
+	
 	// pWnd - the window that's being undrawn
 	VBEData* backup = g_vbeData;
 	VidSetVBEData(NULL);
@@ -146,7 +162,15 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		}
 		else
 		{
-			windowDrawList[i]->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
+			Rectangle rint, *pWndRect = &windowDrawList[i]->m_rect;
+			if (!RectangleIntersect(&rint, &rect, pWndRect))
+				continue;
+			rint.left   -= pWndRect->left;
+			rint.top    -= pWndRect->top;
+			rint.right  -= pWndRect->left;
+			rint.bottom -= pWndRect->top;
+			
+			DisjointRectSetAdd(windowDrawList[i]->m_vbeData.m_drs, rint);
 			RenderWindow(windowDrawList[i]);
 		}
 	}
