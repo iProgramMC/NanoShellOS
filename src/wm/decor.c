@@ -143,6 +143,10 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	}
 	else
 		PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+	
+	/*char thing[32];
+	sprintf(thing, "ID : %d", (int)(pWindow - g_windows));
+	VidTextOut(thing, 0, 0, 0xFFFFFF, 0x000000);*/
 }
 
 void PaintWindowBorder(Window* pWindow)

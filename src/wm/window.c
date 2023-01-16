@@ -238,6 +238,8 @@ void NukeWindowUnsafe (Window* pWindow)
 {
 	HideWindowUnsafe (pWindow);
 	
+	RemoveWindowFromDrawOrder(pWindow - g_windows);
+	
 	Window* pDraggedWnd = g_currentlyClickedWindow;
 	if (GetCurrentCursor() == &g_windowDragCursor  && pWindow == pDraggedWnd)
 	{
@@ -258,8 +260,6 @@ void NukeWindowUnsafe (Window* pWindow)
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
-
-	RemoveWindowFromDrawOrder(pWindow - g_windows);
 
 	// Select the (currently) frontmost window
 	for (int i = WINDOWS_MAX - 1; i >= 0; i--)

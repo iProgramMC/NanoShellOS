@@ -27,7 +27,22 @@ SAI int GetLayer(Window* pWindow)
 	return 1;
 }
 
-void AddWindowToDrawOrder(short index)
+void DebugDumpDrawOrder()
+{
+	SLogMsgNoCr("DrawOrderDebug: ");
+	
+	for (int i = 0; i < g_windowDrawOrderSize; i++)
+	{
+		for (int x = 0; x < (int)ARRAY_COUNT(g_windowDrawOrderLayerEnds); x++)
+			if (g_windowDrawOrderLayerEnds[x] == i)
+				SLogMsgNoCr("|%d|", x);
+		SLogMsgNoCr("%d ", g_windowDrawOrder[i]);
+	}
+	
+	SLogMsg("  End");
+}
+
+void AddWindowToDrawOrderUnsafe(short index)
 {
     int layer = GetLayer(&g_windows[index]);
     // Move everything from the next layer and beyond by one.
@@ -47,7 +62,7 @@ void AddWindowToDrawOrder(short index)
     g_windowDrawOrder[start] = index;
 }
 
-void RemovePlaceFromDrawOrder(int place)
+void RemovePlaceFromDrawOrderUnsafe(int place)
 {
     int layer = GetLayer(&g_windows[g_windowDrawOrder[place]]);
 
@@ -62,19 +77,45 @@ void RemovePlaceFromDrawOrder(int place)
     }
 }
 
-void RemoveWindowFromDrawOrder(int index)
+void RemoveWindowFromDrawOrderUnsafe(int index)
 {
     for (int i = 0; i < g_windowDrawOrderSize; i++)
     {
         if (g_windowDrawOrder[i] == index)
-            RemovePlaceFromDrawOrder(i);
+		{
+            RemovePlaceFromDrawOrderUnsafe(i);
+			i--;
+		}
     }
 }
 
 void MovePreExistingWindowToFront(short windowIndex)
 {
-	RemoveWindowFromDrawOrder(windowIndex);
-	AddWindowToDrawOrder(windowIndex);
+	cli;
+	RemoveWindowFromDrawOrderUnsafe(windowIndex);
+	AddWindowToDrawOrderUnsafe(windowIndex);
+	sti;
+}
+
+void AddWindowToDrawOrder(short windowIndex)
+{
+	cli;
+	AddWindowToDrawOrderUnsafe(windowIndex);
+	sti;
+}
+
+void RemovePlaceFromDrawOrder(int place)
+{
+	cli;
+	RemovePlaceFromDrawOrderUnsafe(place);
+	sti;
+}
+
+void RemoveWindowFromDrawOrder(int index)
+{
+	cli;
+	RemoveWindowFromDrawOrderUnsafe(index);
+	sti;
 }
 
 Window* ShootRayAndGetWindow(int x, int y)
