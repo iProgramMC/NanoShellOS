@@ -6,7 +6,7 @@ sh make_all.sh
 
 rm build/initrd.tar
 
-make image
+make image 
 
 sh run.sh
 

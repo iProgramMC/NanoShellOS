@@ -14,7 +14,7 @@ for d in * ; do
 		echo "Building $d"
 		cd "$d"
 		
-		make
+		make -j8
 		
 		cp "$d.nse" "../../fs/Bin/$d.nse"
 		

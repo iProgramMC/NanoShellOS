@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define DOOMGENERIC_RESX 640//320//640
 #define DOOMGENERIC_RESY 400//200//400

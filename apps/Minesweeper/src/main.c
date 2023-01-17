@@ -329,6 +329,8 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		}
 		case EVENT_PAINT:
 		{
+			LogMsg("Paint!");
+			
 			for (int y = 0; y < BoardHeight; y++)
 			{
 				for (int x = 0; x < BoardWidth; x++)

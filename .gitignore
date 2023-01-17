@@ -23,6 +23,10 @@ apps/Nano/*
 apps/Nano/keep/*
 apps/nsshell/*
 
+fs/Bin/Doom.nse
+fs/Bin/LimnEmu.nse
+fs/Bin/nsshell.nse
+
 crt/build_libnanoshell
 crt/build_crt1
 crt/crt1.o

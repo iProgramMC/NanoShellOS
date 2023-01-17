@@ -40,12 +40,6 @@ int strncasecmp (const char *s1, const char *s2, size_t n)
 	return result;
 }
 
-int mkdir(const char* path, int mode)
-{
-	LogMsg("NS: MKDIR attempt ('%s' mode %d)", path, mode);
-	return -1;
-}
-
 int system(const char* cmd)
 {
 	LogMsg("NS: Shell command attempt ('%s')", cmd);
