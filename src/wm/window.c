@@ -5,6 +5,7 @@
      Window Object Management Module
 ******************************************/
 #include "wi.h"
+#include "../mm/memoryi.h"
 
 #define DIRTY_RECT_TRACK
 
@@ -392,6 +393,15 @@ void* WmCAllocate(size_t sz)
 	return pMem;
 }
 
+void* WmCAllocateIntsDis(size_t sz)
+{
+	void* pMem = MhAllocate(sz, NULL);
+	if (!pMem) return NULL;
+	
+	memset(pMem, 0, sz);
+	return pMem;
+}
+
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
 	flags &= ~WI_INTEMASK;
@@ -445,12 +455,14 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	Window* pWnd = &g_windows[freeArea];
 	memset (pWnd, 0, sizeof *pWnd);
 	
+	cli;
 	pWnd->m_used  = true;
-	pWnd->m_title = WmCAllocate(WINDOW_TITLE_MAX);
-	pWnd->m_eventQueue = WmCAllocate(EVENT_QUEUE_MAX * sizeof(short));
-	pWnd->m_eventQueueParm1 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
-	pWnd->m_eventQueueParm2 = WmCAllocate(EVENT_QUEUE_MAX * sizeof(int));
-	pWnd->m_inputBuffer     = WmCAllocate(WIN_KB_BUF_SIZE);
+	pWnd->m_title = WmCAllocateIntsDis(WINDOW_TITLE_MAX);
+	pWnd->m_eventQueue = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(short));
+	pWnd->m_eventQueueParm1 = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(int));
+	pWnd->m_eventQueueParm2 = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(int));
+	pWnd->m_inputBuffer     = WmCAllocateIntsDis(WIN_KB_BUF_SIZE);
+	sti;
 	
 	if (!pWnd->m_title || !pWnd->m_eventQueue || !pWnd->m_eventQueueParm1 || !pWnd->m_eventQueueParm2 || !pWnd->m_inputBuffer)
 	{
