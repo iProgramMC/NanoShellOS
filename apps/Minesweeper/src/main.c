@@ -318,7 +318,22 @@ void InstantiateNewGame()
 
 // TODO: Improve the "cool move" thing :^)
 
-bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+void WidgetSweeperPaint(Control* this)
+{
+	for (int y = 0; y < BoardHeight; y++)
+	{
+		for (int x = 0; x < BoardWidth; x++)
+		{
+			if (m_upda[x][y])
+			{
+				m_upda[x][y] = 0;
+				MineDrawTile(x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
+			}
+		}
+	}
+}
+
+bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -329,19 +344,15 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		}
 		case EVENT_PAINT:
 		{
-			LogMsg("Paint!");
-			
 			for (int y = 0; y < BoardHeight; y++)
 			{
 				for (int x = 0; x < BoardWidth; x++)
 				{
-					if (m_upda[x][y])
-					{
-						m_upda[x][y] = 0;
-						MineDrawTile(x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
-					}
+					m_upda[x][y] = 1;
 				}
 			}
+			
+			WidgetSweeperPaint(this);
 			
 			break;
 		}
@@ -376,10 +387,10 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			m_leftClickHeld  = true;
 			
-			
 			SetIcon (pWindow, 2001, ICON_SWEEP_CLICK);
+			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
 			
-			RequestRepaint(pWindow);
+			WidgetSweeperPaint(this);
 			
 			break;
 		}
@@ -419,7 +430,7 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 							m_clck[x1][y1] = true;
 						}
 				
-				RequestRepaint(pWindow);
+				WidgetSweeperPaint(this);
 			}
 			
 			break;
@@ -493,7 +504,8 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 			}
 			
-			RequestRepaint(pWindow);
+			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+			WidgetSweeperPaint(this);
 			
 			break;
 		}
@@ -530,8 +542,8 @@ bool WidgetSweeper_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
 			}
 			
-			//WidgetSweeper_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-			RequestRepaint(pWindow);
+			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+			WidgetSweeperPaint(this);
 			
 			break;
 		}
@@ -584,6 +596,10 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 		{
 			if (parm1 == 2000) switch (parm2)
 			{
+				case 3:
+					// About
+					ShellAbout("Minesweeper", ICON_BOMB_SPIKEY);
+					break;
 				case 4:
 					// New Game
 					
@@ -593,8 +609,9 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
 					
 					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
+					CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+					CallControlCallback(pWindow, 1000, EVENT_PAINT, 0, 0);
 					
-					RequestRepaint(pWindow);
 					break;
 				case 11:
 					// Exit
@@ -649,8 +666,8 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
 					
 					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
-					
-					RequestRepaint(pWindow);
+					CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+					CallControlCallback(pWindow, 1000, EVENT_PAINT, 0, 0);
 					break;
 				}
 			}
