@@ -14,6 +14,12 @@ struct timespec
 	long   tv_nsec;
 };
 
+struct timeval
+{
+	time_t tv_sec;
+	long   tv_usec;
+};
+
 struct tm
 {
 	int tm_sec;           // Seconds after the minute. [0, 59]

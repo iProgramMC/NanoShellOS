@@ -4,6 +4,8 @@
 #ifndef _STRING__H
 #define _STRING__H
 
+#include <sys/types.h>
+
 int    memcmp     (const void* ap, const void* bp, size_t size);
 void*  memcpy     (void* restrict dstptr, const void* restrict srcptr, size_t size);
 void*  memmove    (void* restrict dstptr, const void* restrict srcptr, size_t size);
