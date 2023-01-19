@@ -332,6 +332,38 @@ static int FiFindFreeDirDescriptor(UNUSED const char* reqPath)
 //TODO: improve MT
 SafeLock g_FileSystemLock;
 
+void FiReleaseResourcesFromTask(void * task)
+{
+	// check if we actually crashed during a file system operation...
+	cli;
+	if (g_FileSystemLock.m_task_owning_it == task)
+	{
+		SLogMsg("!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		SLogMsg("An I/O operation has failed within the task that crashed.");
+		SLogMsg("This message is supposed to look pompous like this to be easily");
+		SLogMsg("noticeable within the peripheral vision of the user, if they're");
+		SLogMsg("running this in QEMU.");
+		SLogMsg("NOTE: The lock will be unlocked, but the file system may be left");
+		SLogMsg("in a state we can't really recover from!");
+		
+		g_FileSystemLock.m_held           = false;
+		g_FileSystemLock.m_task_owning_it = NULL;
+	}
+	sti;
+	
+	// ok, the lock is now free, we should start closing files.
+	for (int i = 0; i < (int)ARRAY_COUNT(g_FileNodeToDescriptor); i++)
+	{
+		if (g_FileNodeToDescriptor[i].m_ownerTask == task)
+			FiClose(i);
+	}
+	for (int i = 0; i < (int)ARRAY_COUNT(g_DirNodeToDescriptor); i++)
+	{
+		if (g_DirNodeToDescriptor[i].m_ownerTask == task)
+			FiCloseDir(i);
+	}
+}
+
 bool FiIsValidDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
@@ -485,6 +517,7 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 	pDesc->m_nFileEnd		= pFile->m_length;
 	pDesc->m_bIsFIFO		= pFile->m_type == FILE_TYPE_CHAR_DEVICE || pFile->m_type == FILE_TYPE_PIPE;
 	pDesc->m_bBlocking      = !(oflag & O_NONBLOCK);
+	pDesc->m_ownerTask      = KeGetRunningTask();
 	
 	// if we passed the reference already, add 1 to the reference counter of this node.
 	// otherwise, FsResolvePath or FsCreateFile have already done that.
@@ -547,6 +580,7 @@ int FiClose (int fd)
 	
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
+	pDesc->m_ownerTask = NULL;
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
@@ -595,6 +629,7 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	pDesc->m_openFile	 	= srcFile;
 	pDesc->m_openLine	 	= srcLine;
 	pDesc->m_nStreamOffset 	= 0;
+	pDesc->m_ownerTask      = KeGetRunningTask();
 	
 	LockFree (&g_FileSystemLock);
 	
@@ -621,6 +656,7 @@ int FiCloseDir (int dd)
 	
 	pDesc->m_pNode = NULL;
 	pDesc->m_nStreamOffset = 0;
+	pDesc->m_ownerTask     = NULL;
 	
 	LockFree (&g_FileSystemLock);
 	return -ENOTHING;

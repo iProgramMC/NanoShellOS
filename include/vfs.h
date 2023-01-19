@@ -239,6 +239,8 @@ void FsInit ();
 		
 		const char* m_openFile;
 		int       m_openLine;
+		
+		void*     m_ownerTask;
 	}
 	FileDescriptor;
 	
@@ -251,6 +253,8 @@ void FsInit ();
 		
 		const char* m_openFile;
 		int       m_openLine;
+		
+		void*     m_ownerTask;
 	}
 	DirDescriptor ;
 	
@@ -359,6 +363,9 @@ void FsInit ();
 	// Send an I/O control request to a device on a file descriptor.
 	// If the file description does not point to a device file, this returns -ENOTTY.
 	int FiIoControl(int fd, unsigned long request, void * argp);
+	
+	// Releases all file resources owned by a task.
+	void FiReleaseResourcesFromTask(void* task);
 	
 #endif
 

@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <idt.h>
 #include <elf.h>
+#include <vfs.h>
 
 bool KeDidATaskCrash();
 void KeAcknowledgeTaskCrash();//sigh.
@@ -113,14 +114,25 @@ void CrashReportWindow( int argument )
 	while (HandleMessages (pWindow));
 }
 
+void WmOnTaskCrashed(Task *pTask);
+
 void CrashReporterCheck()
 {
 	if (KeDidATaskCrash())
 	{
-		// OMG! A task died? Call the ambulance!!!
+		// A task died? Call the ambulance!!!
+		cli;
+		CrashInfo crashInfo = *KeGetCrashedTaskInfo();
+		sti;
 		
 		// Allocate the registers so we can pass them onto the new task.
-		CrashInfo* pCrashInfo = MmAllocate (sizeof (CrashInfo)), crashInfo = *KeGetCrashedTaskInfo();
+		CrashInfo* pCrashInfo = MmAllocate (sizeof (CrashInfo));
+		
+		// Close the file resources opened by this task.
+		FiReleaseResourcesFromTask(crashInfo.m_pTaskKilled);
+		
+		// Close the windows that have been opened by this task.
+		WmOnTaskCrashed(crashInfo.m_pTaskKilled);
 		
 		if (!pCrashInfo)
 		{
@@ -179,8 +191,9 @@ void CrashReporterCheckNoWindow()
 		// Allocate the registers so we can pass them onto the new task.
 		CrashInfo* pCrashInfo, crashInfo = *KeGetCrashedTaskInfo();
 		
-		SLogMsg("CrashReporterCheckNoWindow found a crash!  Oops.");
-		if (!IsWindowManagerTask(crashInfo.m_pTaskKilled->m_pProcess))
+		SLogMsg("CrashReporterCheckNoWindow found a crash! Uh oh.");
+		
+		if (!IsWindowManagerTask(crashInfo.m_pTaskKilled))
 			if (g_windowManagerRunning) return;
 		
 		pCrashInfo = &crashInfo;

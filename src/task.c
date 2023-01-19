@@ -474,6 +474,9 @@ bool KeKillTask(Task* pTask)
 	if (pTask->m_pProcess)
 		ExOnThreadExit ((Process*)pTask->m_pProcess, pTask);
 	
+	if (!pTask->m_bExists)
+		return false;
+	
 	KeVerifyInterruptsEnabled;
 	cli;
 	if (pTask == NULL)

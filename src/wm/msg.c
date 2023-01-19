@@ -430,7 +430,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
 		
+		if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
+		
 		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
+		
+		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		
 		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
 		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
@@ -448,7 +452,14 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		Rectangle new_title_rect = { pWindow->m_rectBackup.left + 3, pWindow->m_rectBackup.top + 3, pWindow->m_rectBackup.right - 3, pWindow->m_rectBackup.top + 3 + TITLE_BAR_HEIGHT };
 		
 		if (pWindow->m_maximized)
+		{
+			if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
+			
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
+			
+			if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
+		}
+		
 		pWindow->m_maximized = false;
 		
 		if (pWindow->m_flags & WF_FLBRDFRC)
@@ -663,6 +674,15 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 	
 	switch (messageType)
 	{
+		case EVENT_BGREPAINT:
+		{
+			// By default, this draws the window's background color. This can be changed by overloading the event.
+			Rectangle rect = { GET_X_PARM(parm1), GET_Y_PARM(parm1), GET_X_PARM(parm2), GET_Y_PARM(parm2) };
+			
+			VidFillRect(WINDOW_BACKGD_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+			
+			break;
+		}
 		case EVENT_CREATE:
 		{
 			// Add a default QUIT button control.

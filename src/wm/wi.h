@@ -136,5 +136,6 @@ void WmFreeRectangleStack();
 int  WmAddRectangleToStack(Rectangle* rect);
 void WmSplitRectangleStackByWindow(Window* pWindow);
 void WmSplitRectangle(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut);
+void WmTakeOverWindow(Window* pWindow);
 
 #endif//INT_WI_H

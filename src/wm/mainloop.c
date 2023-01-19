@@ -131,12 +131,49 @@ void WmOnTaskDied(Task *pTask)
 	{
 		if (g_windows[i].m_used)
 		{
-			if (g_windows[i].m_pOwnerThread == pTask)
-				g_windows[i].m_pOwnerThread =  NULL;
 			if (g_windows[i].m_pSubThread   == pTask)
 				g_windows[i].m_pSubThread   =  NULL;
 		}
 	}
+}
+
+void WmOnTaskCrashed(Task *pTask)
+{
+	if (!g_windowManagerRunning) return;
+	
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (!g_windows[i].m_used) continue;
+		
+		if (g_windows[i].m_pOwnerThread != pTask) continue;
+		
+		// if there's a sub thread, kill that too
+		if (g_windows[i].m_pSubThread)
+		{
+			KeKillTask(g_windows[i].m_pSubThread);
+			g_windows[i].m_pSubThread = NULL;
+		}
+		
+		// take over it ourselves.
+		WmTakeOverWindow(&g_windows[i]);
+		
+		// send it an event: Die
+		WindowRegisterEvent(&g_windows[i], EVENT_DESTROY, 0, 0);
+	}
+}
+
+// Takes over a window. Simple enough, this will make the window inert (i.e. the default
+// steps will be taken for every event.) Good if you want to destroy it later.
+void WmTakeOverWindow(Window* pWindow)
+{
+	cli;
+	
+	pWindow->m_bWindowManagerUpdated = true;
+	pWindow->m_callback              = DefaultWindowProc;
+	pWindow->m_screenLock.m_held     = false;
+	pWindow->m_EventQueueLock.m_held = false;
+	
+	sti;
 }
 
 int g_oldMouseX = -1, g_oldMouseY = -1;

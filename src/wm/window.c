@@ -483,6 +483,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (strl >= WINDOW_TITLE_MAX) strl = WINDOW_TITLE_MAX - 1;
 	memcpy (pWnd->m_title, title, strl + 1);
 	
+	pWnd->m_pOwnerThread   = KeGetRunningTask();
 	pWnd->m_renderFinished = false;
 	pWnd->m_hidden         = true;//false;
 	pWnd->m_isBeingDragged = false;
