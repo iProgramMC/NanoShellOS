@@ -8,7 +8,10 @@ then
 fi
 
 # make it
-make -C apps/$1
+if ! make -C apps/$1; then
+	echo "Make failed!"
+	exit
+fi
 
 # copy it
 cp apps/$1/$1.nse fs/Bin/$1.nse

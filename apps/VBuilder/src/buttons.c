@@ -45,6 +45,7 @@ void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned co
 	if (colorMiddle != TRANSPARENT)
 		VidFillRectangle(colorMiddle, rect);
 }
+
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	rectb.bottom--;
@@ -74,6 +75,7 @@ void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorL
 	VidDrawHLine(colorAvg, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorAvg, rectb.top,  rectb.bottom-1, rectb.left);
 }
+
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle)
 {
 	rectb.bottom--;
@@ -103,6 +105,7 @@ void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsig
 	VidDrawHLine(colorAvg, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorAvg, rectb.top,  rectb.bottom-1, rectb.left);
 }
+
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	//draw some lines
@@ -115,3 +118,42 @@ void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, 
 	RenderButtonShapeNoRounding(rect, colorDark, colorLight, colorMiddle);
 	//RenderButtonShapeSmall(rect, colorDark, colorLight, colorMiddle);
 }
+
+#define BUTTONDARK 0x808080
+#define BUTTONMIDD BUTTON_MIDDLE_COLOR
+#define BUTTONLITE 0xFFFFFF
+#define BUTTONMIDC WINDOW_BACKGD_COLOR
+
+#define CHECKBOX_SIZE 14
+
+int xGetLineHeight()
+{
+	int width = 0, height = 0;
+	
+	VidTextOutInternal("Wp", 0, 0, 0, 0, true, &width, &height);
+	
+	return height;
+}
+
+void RenderCheckbox(Rectangle rect, bool checked, const char * text)
+{
+	Rectangle check_rect = rect;
+	check_rect.right  = check_rect.left + CHECKBOX_SIZE;
+	check_rect.bottom = check_rect.top  + CHECKBOX_SIZE;
+	
+	Rectangle text_rect = rect;
+	text_rect.left =  check_rect.right + 6;
+	text_rect.top  += (check_rect.bottom - check_rect.top - xGetLineHeight()) / 2 + 1;
+	
+	RenderButtonShapeSmallInsideOut (check_rect, 0xBFBFBF, BUTTONDARK, checked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT);
+	
+	//if checked, mark it as "checked"
+	if (checked)
+	{
+		VidTextOut("\x15", check_rect.left + 3, check_rect.top + 3, WINDOW_TEXT_COLOR, TRANSPARENT);
+	}
+	
+	VidDrawText(text, text_rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+}
+
+

@@ -7,6 +7,8 @@
 
 #include <nanoshell/nanoshell.h>
 
+#include "buttons.h"
+
 #define DEF_VBUILD_WID 640
 #define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2+6)
 #define DEF_FDESIGN_WID 500
@@ -66,11 +68,6 @@ enum
 	TOOL_CURSOR = -100,
 	TOOL_SELECT,
 };
-
-void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
-void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 
 typedef struct
 {
@@ -159,15 +156,7 @@ void VbRenderCtls(Rectangle* pWithinRect /*= NULL*/)
 			case CONTROL_CHECKBOX:
 			{
 				VidFillRectangle(WINDOW_BACKGD_COLOR, srect);
-				// Since I am too lazy to replicate that code, just construct a fake control and
-				// call its render event
-				//Control c;
-				//memset (&c, 0, sizeof c);
-				//c.m_rect = srect;
-				//c.m_checkBoxData.m_checked = false;
-				//strcpy (c.m_text, C->m_text);
-				
-				//WidgetCheckbox_OnEvent(&c, EVENT_PAINT, 0, 0, g_pFormDesignerWindow);
+				RenderCheckbox(srect, false, C->m_text);
 				
 				break;
 			}
@@ -737,7 +726,6 @@ int NsMain(UNUSED int argc, UNUSED char** argv)
 {
 	// The form builder window
 	Window* pMainWindow  = CreateWindow ("Codename V-Builder", 100, 100, DEF_VBUILD_WID, DEF_VBUILD_HEI, PrgVbMainWndProc, WF_ALWRESIZ);
-	SetWindowIcon(pMainWindow, ICON_DLGEDIT);
 	
 	if (!pMainWindow)
 	{
@@ -745,8 +733,9 @@ int NsMain(UNUSED int argc, UNUSED char** argv)
 		return 1;
 	}
 	
+	SetWindowIcon(pMainWindow, ICON_DLGEDIT);
+	
 	Window* pFormWindow  = CreateWindow ("Form Designer", 240, 180-18+TITLE_BAR_HEIGHT, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
-	SetWindowIcon(pFormWindow, ICON_DLGEDIT);
 	
 	if (!pFormWindow)
 	{
@@ -755,11 +744,10 @@ int NsMain(UNUSED int argc, UNUSED char** argv)
 		return 1;
 	}
 	
+	SetWindowIcon(pFormWindow, ICON_DLGEDIT);
+	
 	// The tool box window
 	Window* pToolsWindow = CreateWindow ("Toolbox", 100, 180-18+TITLE_BAR_HEIGHT, DEF_TOOLBOX_WID, DEF_TOOLBOX_HEI, PrgToolkitProc, WF_NOCLOSE | WF_NOMINIMZ | WF_SYSPOPUP);
-	SetWindowIcon(pToolsWindow, ICON_NULL);
-	SetWindowData(pToolsWindow, pFormWindow);
-	SetWindowData(pMainWindow,  pFormWindow);
 	
 	if (!pToolsWindow)
 	{
@@ -768,6 +756,10 @@ int NsMain(UNUSED int argc, UNUSED char** argv)
 		KillWindow(pFormWindow);
 		return 1;
 	}
+	
+	SetWindowIcon(pToolsWindow, ICON_NULL);
+	SetWindowData(pToolsWindow, pFormWindow);
+	SetWindowData(pMainWindow,  pFormWindow);
 	
 	g_pMainWindow         = pMainWindow;
 	g_pToolboxWindow      = pToolsWindow;
