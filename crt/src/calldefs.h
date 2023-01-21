@@ -469,3 +469,23 @@ CALL_END
 CALL(VidGetVbeData, VID_GET_VBE_DATA, VBEData*, void)
 	RARGS()
 CALL_END
+
+// Calls V2.1
+CALL(GetWindowTitle, WIN_GET_WINDOW_TITLE, const char*, Window* pWindow)
+	RARGS(pWindow)
+CALL_END
+CALL(GetWindowData, WIN_GET_WINDOW_DATA, void*, Window* pWindow)
+	RARGS(pWindow)
+CALL_END
+CALL(SetWindowData, WIN_SET_WINDOW_DATA, void, Window* pWindow, void* ptr)
+	SARGS(pWindow, ptr)
+CALL_END
+CALL(GetWindowRect, WIN_GET_WINDOW_RECT, void, Window* pWindow, Rectangle* pRectOut)
+	SARGS(pWindow, pRectOut)
+CALL_END
+CALL(CallWindowCallbackAndControls, WIN_CALL_CALLBACK_AND_CTLS, void, int et, int p1, int p2)
+	SARGS(et, p1, p2)
+CALL_END
+CALL(ChangeCursor, WIN_CHANGE_CURSOR, void, Window* pWindow, int cursorID)
+	SARGS(pWindow, cursorID)
+CALL_END

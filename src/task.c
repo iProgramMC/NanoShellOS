@@ -632,8 +632,14 @@ void WaitPipeRead (void* pPipe)
 
 void WaitProcess (void* pProcessToWait1)
 {
+	cli;
 	Process* pProcessToWait = (Process*)pProcessToWait1;
-	if (!pProcessToWait) return;
+	if (!pProcessToWait || !pProcessToWait->bActive)
+	{
+		sti;
+		return;
+	}
+	
 	Task *pTask = KeGetRunningTask();
 	
 	if (ExGetRunningProc() == pProcessToWait)
@@ -641,12 +647,15 @@ void WaitProcess (void* pProcessToWait1)
 		// No point in waiting like this.
 		
 		// TODO: Kill the process instead
+		sti;
 		return;
 	}
 	
 	pTask->m_suspensionType       = SUSPENSION_UNTIL_PROCESS_EXPIRY;
 	pTask->m_pWaitedTaskOrProcess = pProcessToWait;
 	pTask->m_bSuspended           = true;
+	
+	sti;
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }

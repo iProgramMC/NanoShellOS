@@ -96,6 +96,13 @@ void        AddTableColumn(Window* pWindow, int comboID, const char* pText, int 
 bool        GetRowStringsFromTable(Window* pWindow, int comboID, int index, const char * output[]);
 void        RemoveRowFromTable(Window* pWindow, int comboID, int elementIndex);
 void        ResetTable(Window* pWindow, int comboID);
+const char* GetWindowTitle(Window* pWindow);
+void*       GetWindowData(Window* pWindow);
+void        SetWindowData(Window* pWindow, void* pData);
+void        GetWindowRect(Window* pWindow, Rectangle* pRectOut);
+void        ChangeCursor(Window* pWindow, int cursorID);
+void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
+void        CallWindowCallbackAndControls(Window* pWindow, int eventType, int parm1, int parm2);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

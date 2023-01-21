@@ -289,4 +289,17 @@ typedef struct
 }
 VBEData;
 
+typedef struct
+{
+	uint16_t width, height;
+	int16_t leftOffs, topOffs;
+	const uint32_t* bitmap;
+	bool m_transparency;//optimization
+	
+	bool m_resizeMode;
+	uint16_t boundsWidth, boundsHeight;
+	uint16_t mouseLockX, mouseLockY;
+}
+Cursor;
+
 #endif//_NANOSHELL_GRAPHICS_TYPES_H

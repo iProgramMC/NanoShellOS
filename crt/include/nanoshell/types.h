@@ -36,9 +36,23 @@ typedef uint8_t BYTE;
 
 //#define TITLE_BAR_HEIGHT 18
 
-#define WINDOW_BACKGD_COLOR (GetThemingParameter(P_WINDOW_BACKGD_COLOR))
-#define WINDOW_TEXT_COLOR   (GetThemingParameter(P_WINDOW_TEXT_COLOR))
-#define TITLE_BAR_HEIGHT    (GetThemingParameter(P_TITLE_BAR_HEIGHT))
+#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR              ))
+#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR           ))
+#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR           ))
+#define WINDOW_EDGE_COLOR               (GetThemingParameter(P_WINDOW_EDGE_COLOR             ))
+#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     ))
+#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   ))
+#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   ))
+#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B ))
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW))
+#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
+#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
+#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
+#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT              ))
+#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT         ))
+#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
+#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR           ))
+#define SELECTED_ITEM_COLOR_B           (GetThemingParameter(P_SELECTED_ITEM_COLOR_B         ))
 
 // Mark your system callbacks with this anyway!!!
 #define CALLBACK
@@ -82,6 +96,10 @@ typedef uint8_t BYTE;
 #define WF_ALWRESIZ 0x00000020//Allow resize
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
+#define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
+#define WF_BACKGRND 0x00000400//The window is on a separate 'background' layer, behind normal windows.
+#define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
+#define WF_SYSPOPUP 0x10000000//System Popup (omit from taskbar)
 
 #define WINDOWS_MAX 256
 #define WINDOW_TITLE_MAX 250
@@ -462,7 +480,7 @@ typedef struct WindowStruct
 	
 	bool       m_renderFinished;
 	
-	char       m_title [250];
+	char*      m_title;
 	
 	int 	   m_flags;
 	
@@ -474,9 +492,12 @@ typedef struct WindowStruct
 	int        m_iconID;
 	
 	bool       m_eventQueueLockUnused; // left to keep compatibity with old ELFs that modify the window structure directly
-	short      m_eventQueue[EVENT_QUEUE_MAX];
-	int        m_eventQueueParm1[EVENT_QUEUE_MAX];
-	int        m_eventQueueParm2[EVENT_QUEUE_MAX];
+	short*     m_eventQueue;
+	int*       m_eventQueueParm1;
+	int*       m_eventQueueParm2;
+	//short      m_eventQueue[EVENT_QUEUE_MAX];
+	//int        m_eventQueueParm1[EVENT_QUEUE_MAX];
+	//int        m_eventQueueParm2[EVENT_QUEUE_MAX];
 	int        m_eventQueueSize;
 	
 	int        m_minWidth, m_minHeight;
@@ -488,9 +509,8 @@ typedef struct WindowStruct
 	
 	void*      m_data; //user data
 	
-	// DO NOT TOUCH!
 	void      *m_pOwnerThread, 
-	          *m_pSubThread;
+	          *m_pSubThread;//in case you ever want to use this
 	
 	Console*   m_consoleToFocusKeyInputsTo;
 	
@@ -501,12 +521,34 @@ typedef struct WindowStruct
 	bool       m_maximized;
 	
 	// Raw input buffer.
-	char m_inputBuffer[WIN_KB_BUF_SIZE];
-	int  m_inputBufferBeg, m_inputBufferEnd;
+	char*      m_inputBuffer;
+	int        m_inputBufferBeg, m_inputBufferEnd;
 	
 	bool       m_clickedInside;
 	
 	SafeLock   m_EventQueueLock;
+	
+	Rectangle  m_taskbarRect;
+	
+	Cursor     m_customCursor;
+	
+	int        m_frequentWindowRenders;
+	int        m_lastSentPaintEventExternallyWhen;
+	
+	int        m_cursorID_backup;
+	
+	int        m_lastHandledMessagesWhen;
+	
+	//these two booleans are updated by UpdateDepthBuffer() internally
+	//if none of the window's pixels are visible
+	bool       m_bObscured;
+	//if all of the window's pixels are visible at the same time
+	//(we can optimize drawing by just VidBitBlitting it directly
+	//to the screen, instead of taking occlusion into account)
+	bool       m_bForemost;
+	
+	//avoid a data race while resizing the screen
+	SafeLock   m_screenLock;
 } Window;
 
 typedef Window* PWINDOW;

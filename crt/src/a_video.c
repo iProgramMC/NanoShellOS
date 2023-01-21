@@ -16,6 +16,16 @@ void SetMousePos (UNUSED unsigned pX, UNUSED unsigned pY)
 	//TODO
 }
 
+int GetWidth (Rectangle* rect)
+{
+	return rect->right - rect->left;
+}
+
+int GetHeight (Rectangle* rect)
+{
+	return rect->bottom - rect->top;
+}
+
 void VidDrawRectangle(unsigned color, Rectangle rect)
 {
 	VidDrawRect(color, rect.left, rect.top, rect.right, rect.bottom);
@@ -24,4 +34,14 @@ void VidDrawRectangle(unsigned color, Rectangle rect)
 void VidFillRectangle(unsigned color, Rectangle rect)
 {
 	VidFillRect(color, rect.left, rect.top, rect.right, rect.bottom);
+}
+
+bool RectangleContains(Rectangle*r, Point*p) 
+{
+	return (r->left <= p->x && r->right >= p->x && r->top <= p->y && r->bottom >= p->y);
+}
+
+bool RectangleOverlap(Rectangle *r1, Rectangle *r2)
+{
+	return (r1->left <= r2->right && r1->right >= r2->left && r1->top <= r2->bottom && r1->bottom >= r2->top);
 }

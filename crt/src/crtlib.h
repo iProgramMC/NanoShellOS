@@ -13,7 +13,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 20
+#define WCALL_VERSION 21
 enum
 {
 	// System Calls V1.0
@@ -224,6 +224,16 @@ enum
 		VID_READ_PIXEL,
 		CFG_GET_STRING,
 		VID_GET_VBE_DATA,
+	#endif
+	
+	// System Calls V2.1
+	#if WCALL_VERSION >= 21
+		WIN_GET_WINDOW_TITLE,
+		WIN_GET_WINDOW_DATA,
+		WIN_SET_WINDOW_DATA,
+		WIN_GET_WINDOW_RECT,
+		WIN_CALL_CALLBACK_AND_CTLS,
+		WIN_CHANGE_CURSOR,
 	#endif
 };
 

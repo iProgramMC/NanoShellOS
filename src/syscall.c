@@ -142,6 +142,26 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	WindowAddEventToMasterQueue(pWindow, EVENT_SET_WINDOW_TITLE_PRIVATE, (int)str_dupl, 0);
 }
 
+const char * GetWindowTitle(Window* pWindow)
+{
+	return pWindow->m_title;
+}
+
+void* GetWindowData(Window* pWindow)
+{
+	return pWindow->m_data;
+}
+
+void SetWindowData(Window* pWindow, void* pData)
+{
+	pWindow->m_data = pData;
+}
+
+void GetWindowRect(Window* pWindow, Rectangle * pRectOut)
+{
+	*pRectOut = pWindow->m_rect;
+} 
+
 int ShellExecute(const char *pCommand)
 {
 	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);
@@ -345,6 +365,14 @@ enum
 		VID_READ_PIXEL,
 		CFG_GET_STRING,
 		VID_GET_VBE_DATA,
+		
+	// System Calls V2.1
+		WIN_GET_WINDOW_TITLE,
+		WIN_GET_WINDOW_DATA,
+		WIN_SET_WINDOW_DATA,
+		WIN_GET_WINDOW_RECT,
+		WIN_CALL_CALLBACK_AND_CTLS,
+		WIN_CHANGE_CURSOR,
 };
 
 const void *WindowCall[] = {
@@ -528,6 +556,14 @@ const void *WindowCall[] = {
 		VidReadPixel,
 		CfgGetEntryValue,
 		VidGetVBEData,
+		
+	// System Calls V2.1 - 21/01/2023
+		GetWindowTitle,
+		GetWindowData,
+		SetWindowData,
+		GetWindowRect,
+		CallWindowCallbackAndControls,
+		ChangeCursor,
 };
 
 

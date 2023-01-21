@@ -36,4 +36,7 @@ void RenderIconOutline(int type, int x, int y, uint32_t color);
 void RenderIconForceSize(int type, int x, int y, int size);
 void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color);
 
+bool RectangleContains(Rectangle *r, Point *p);
+bool RectangleOverlap (Rectangle *r1, Rectangle *r2);
+
 #endif//_NANOSHELL_GRAPHICS__H
