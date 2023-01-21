@@ -79,26 +79,27 @@ enum
 };
 
 typedef struct ConsoleStruct {
-	int  type; // ConsoleType enum
-	int  width, height; // width and height
+	int       type; // ConsoleType enum
+	int       width, height; // width and height
 	uint16_t *textBuffer; // unused in fb mode
-	uint16_t color; // colors
-	int  curX, curY; // cursor X and Y positions
-	bool pushOrWrap;// check if we should push whole screen up, or clear&wrap
-	VBEData* m_vbeData;//vbe data to switch to when drawing, ONLY APPLIES TO CONSOLE_TYPE_WINDOW!!
-	int  offX, offY;
-	int  font;
-	int  cwidth, cheight;
-	bool m_dirty;
-	char m_inputBuffer[KB_BUF_SIZE];
-	int  m_inputBufferBeg, m_inputBufferEnd;
-	int  m_cursorFlashTimer, m_cursorFlashState;
-	int  m_scrollY, m_actualHeight;//for wterm
-	char m_ansiEscCode[64];
-	bool m_usingAnsiEscCode;
-	uint32_t m_ansiAttributes;
-	uint8_t  m_ansiBgColorBackup, m_ansiFgColorBackup;
-	int  lastX, lastY; // for wterm
+	uint16_t  color; // colors
+	int       curX, curY; // cursor X and Y positions
+	bool      pushOrWrap;// check if we should push whole screen up, or clear&wrap
+	VBEData*  m_vbeData;//vbe data to switch to when drawing, ONLY APPLIES TO CONSOLE_TYPE_WINDOW!!
+	int       offX, offY;
+	int       font;
+	int       cwidth, cheight;
+	bool      m_dirty;
+	char      m_inputBuffer[KB_BUF_SIZE];
+	int       m_inputBufferBeg, m_inputBufferEnd;
+	int       m_cursorFlashTimer, m_cursorFlashState;
+	int       m_scrollY, m_actualHeight;//for wterm
+	char      m_ansiEscCode[64];
+	bool      m_usingAnsiEscCode;
+	uint32_t  m_ansiAttributes;
+	uint8_t   m_ansiBgColorBackup, m_ansiFgColorBackup;
+	int       lastX, lastY; // for wterm
+	void*     m_backPtr;    // for wterm, stores the window's pointer
 } Console;
 
 extern Console g_debugConsole; // for LogMsg

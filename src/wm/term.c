@@ -246,6 +246,7 @@ void TerminalHostTask(int arg)
 	CoClearScreen(pConsole);
 	pConsole->curX = 0;
 	pConsole->curY = 0;
+	pConsole->m_backPtr = pWindow;
 	
 	
 	if (providedShellCmd)

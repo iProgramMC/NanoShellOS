@@ -576,6 +576,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		return false;
 	}
+	else if (eventType == EVENT_SET_WINDOW_TITLE_PRIVATE)
+	{
+		// free whatever we have in parm1
+		MmFree((void*)parm1);
+	}
 	
 	if (!bLock)
 		LockFree (&pWindow->m_screenLock);
@@ -784,6 +789,20 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 				if (eventType != EVENT_NULL)
 					WindowAddEventToMasterQueue(pWindow, eventType, 0, 0);
 			}
+			break;
+		}
+		case EVENT_SET_WINDOW_TITLE_PRIVATE:
+		{
+			char* chr = (char*)parm1;
+			size_t sz = strlen(chr);
+			if (sz < WINDOW_TITLE_MAX - 1)
+				sz = WINDOW_TITLE_MAX - 1;
+			memcpy(pWindow->m_title, chr, sz);
+			pWindow->m_title[sz] = 0;
+			
+			//paint the window border:
+			PaintWindowBorderNoBackgroundOverpaint(pWindow);
+			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
 			break;
 		}
 		default:

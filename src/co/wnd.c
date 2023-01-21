@@ -20,6 +20,7 @@ void CoWndClearScreen(Console *this)
 		for (int x = 0; x < this->width; x++)
 			CoPlotChar(this, x, y, 0);
 }
+
 void CoWndPlotChar (Console *this, int x, int y, char c)
 {
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
@@ -30,6 +31,7 @@ void CoWndPlotChar (Console *this, int x, int y, char c)
 	uint16_t chr = TextModeMakeChar (this->color, c);
 	this->textBuffer [x + y * this->width] = chr;
 }
+
 void CoWndRefreshChar (Console *this, int x, int y)
 {
 	// TODO: Actually have a proper fix. I think this is a race condition where the terminal window updates the blinking cursor during a scroll operation.
@@ -42,6 +44,7 @@ void CoWndRefreshChar (Console *this, int x, int y)
 	VidPlotChar (cd & 0xFF, this->offX + x * this->cwidth, this->offY + y  * this->cheight, g_vgaColorsToRGB[(cd>>8) & 0xF], g_vgaColorsToRGB[cd >> 12]);
 	g_vbeData = backup;
 }
+
 void CoWndScrollUpByOne(Console *this)
 {
 	if (this->pushOrWrap)
@@ -55,13 +58,16 @@ void CoWndScrollUpByOne(Console *this)
 		CoPlotChar (this, i, this->height - 1, 0);
 	}
 }
+
 void CoWndUpdateCursor(UNUSED Console* this)
 {
 	
 }
+
 void CoWndInit(UNUSED Console *this)
 {
 }
+
 void CoWndKill(Console *this)
 {
 	if (this->textBuffer)
@@ -69,4 +75,13 @@ void CoWndKill(Console *this)
 		MmFree(this->textBuffer);
 		this->textBuffer = NULL;
 	}
+}
+
+void CoWndSetWndTitle(Console* this, const char* str)
+{
+	Window* pWnd = this->m_backPtr;
+	
+	if (!pWnd) return;
+	
+	SetWindowTitle(pWnd, str);
 }

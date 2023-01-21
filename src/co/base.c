@@ -49,12 +49,19 @@ void SetConsole(Console* pConsole)
 {
 	g_currentConsole = pConsole;
 }
+
 void ResetConsole()
 {
 	g_currentConsole = &g_debugConsole;
 }
+
 void CoNopKill(UNUSED Console *this)
 {
+}
+
+void CoNopSetWndTitle(UNUSED Console *this, UNUSED const char* unused)
+{
+	
 }
 
 void CoColorFlip (Console *this);
@@ -108,6 +115,8 @@ void CoColorFlip (Console *this);
 		void CoVbeScrollUpByOne(Console *this);
 		void CoVgaScrollUpByOne(Console *this);
 		void CoWndScrollUpByOne(Console *this);
+		void CoNopSetWndTitle  (Console *this, const char*);
+		void CoWndSetWndTitle  (Console *this, const char*);
 	#endif
 	
 	// Type definitions
@@ -120,6 +129,7 @@ void CoColorFlip (Console *this);
 		typedef void (*tCoRefreshChar)  (Console *this, int,  int);
 		typedef void (*tCoUpdateCursor) (Console *this);
 		typedef void (*tCoScrollUpByOne)(Console *this);
+		typedef void (*tCoSetWndTitle)  (Console *this, const char*);
 	#endif
 	
 	// Array definitions
@@ -196,6 +206,15 @@ void CoColorFlip (Console *this);
 			CoWndScrollUpByOne,
 			CoFilScrollUpByOne,
 		};
+		static tCoSetWndTitle g_set_window_title[] = {
+			NULL,
+			CoNopSetWndTitle,
+			CoNopSetWndTitle,
+			CoNopSetWndTitle,
+			CoNopSetWndTitle,
+			CoWndSetWndTitle,
+			CoNopSetWndTitle,
+		};
 	#endif
 	
 	// The functions themselves.
@@ -249,6 +268,10 @@ void CoColorFlip (Console *this);
 	bool CoPrintCharInternal (Console* this, char c, bool bDontUpdateCursor)
 	{
 		return g_print_char_int[this->type](this,c,bDontUpdateCursor);
+	}
+	void CoSetWindowTitle(Console* this, const char* str)
+	{
+		return g_set_window_title[this->type](this, str);
 	}
 #endif
 
@@ -382,6 +405,48 @@ void CoVisComOnAnsiEscCode(Console *this)
 	
 	switch (firstChar)
 	{
+		// Xterm Specific
+		case ']': {
+			switch (lastChar)
+			{
+				case '\a': // Bell - Set Window Title
+				{
+					char str1[16], str2[256];
+					str1[0] = 0;
+					str2[0] = 0;
+					char *headwrite = str1, *headend = str1 + sizeof str1;
+					char *headread  = contentsAfter, *headreadend = pLastChar;
+					while (*headread && headread != headreadend)
+					{
+						if (*headread == ';')
+						{
+							headwrite = str2, headend = str2 + sizeof str2;
+						}
+						else if (headwrite + 1 < headend)
+						{
+							*(headwrite++) = *headread;
+							*(headwrite)   = '\0';
+						}
+						headread++;
+					}
+					
+					// TODO: It's actually line;column. Fix this.
+					
+					int mode = 2;
+					if (*str1)
+						mode = atoi (str1);
+					
+					// if the mode isn't just "set icon name to <string>"
+					if (mode != 1)
+					{
+						CoSetWindowTitle(this, str2);
+					}
+					
+					break;
+				}
+			}
+			break;
+		}
 		// CSI
 		case '[': {
 			switch (lastChar)
@@ -427,13 +492,15 @@ void CoVisComOnAnsiEscCode(Console *this)
 					char str1[64], str2[64];
 					str1[0] = 0;
 					str2[0] = 0;
-					char *headwrite = str1;
-					char *headread  = contentsAfter;
-					while (*headread)
+					char *headwrite = str1, *headend = str1 + sizeof str1;
+					char *headread  = contentsAfter, *headreadend = pLastChar;
+					while (*headread && headread != headreadend)
 					{
 						if (*headread == ';')
-							headwrite = str2;
-						else
+						{
+							headwrite = str2, headend = str2 + sizeof str2;
+						}
+						else if (headwrite + 1 < headend)
 						{
 							*(headwrite++) = *headread;
 							*(headwrite)   = '\0';
@@ -560,7 +627,7 @@ bool CoVisComPrnChrInt (Console* this, char c, bool bDontUpdateCursor)
 		{
 			case '\e':
 			{
-				// ASCII escape code.
+				// ANSI escape code.
 				this->m_usingAnsiEscCode = true;
 				this->m_ansiEscCode[0] = 0;
 				break;
@@ -619,6 +686,7 @@ bool CoVisComPrnChrInt (Console* this, char c, bool bDontUpdateCursor)
 		t[1] = 0;
 		t[0] = c;
 		strcat (this->m_ansiEscCode, t);
+		
 		if (this->m_ansiEscCode[sizeof(this->m_ansiEscCode) - 2] != 0) // Uh oh
 		{
 			this->m_usingAnsiEscCode = false;
@@ -626,10 +694,23 @@ bool CoVisComPrnChrInt (Console* this, char c, bool bDontUpdateCursor)
 		}
 		
 		// if this is the end:
-		if (!bFirstChar && strchr("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\a", c) != NULL)
+		if (!bFirstChar)
 		{
-			this->m_usingAnsiEscCode = false;
-			CoVisComOnAnsiEscCode(this);
+			bool condition = false;
+			if (this->m_ansiEscCode[0] == ']')
+			{
+				condition = strchr("\a", c) != NULL;
+			}
+			else
+			{
+				condition = strchr("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\a", c) != NULL;
+			}
+			
+			if (condition)
+			{
+				this->m_usingAnsiEscCode = false;
+				CoVisComOnAnsiEscCode(this);
+			}
 		}
 		
 		return false;

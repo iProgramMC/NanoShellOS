@@ -130,19 +130,20 @@ void SetWindowIcon (Window* pWindow, int icon)
 
 void SetWindowTitle(Window* pWindow, const char* pTitle)
 {
-	int len = strlen (pTitle);
-	if (len < WINDOW_TITLE_MAX-1)
-		len = WINDOW_TITLE_MAX-1;
+	size_t sz = strlen(pTitle);
+	if (sz < WINDOW_TITLE_MAX-1)
+		sz = WINDOW_TITLE_MAX-1;
 	
-	memcpy (pWindow->m_title, pTitle, len);
-	pWindow->m_title[len] = 0;
+	char* str_dupl = MmAllocate(sz + 1);
+	if (!str_dupl)
+		return;
 	
-	VBEData * backup = g_vbeData;
-	VidSetVBEData (&pWindow->m_vbeData);
+	memcpy(str_dupl, pTitle, sz);
+	str_dupl[sz] = 0;
 	
-	RequestRepaintNew(pWindow);
-	
-	g_vbeData = backup;
+	// Warning: If something crashes but this event isn't handled, 4k of memory will be leaked.
+	// TODO  Free any buffers passed through such events.
+	WindowAddEventToMasterQueue(pWindow, EVENT_SET_WINDOW_TITLE_PRIVATE, (int)str_dupl, 0);
 }
 
 int ShellExecute(const char *pCommand)

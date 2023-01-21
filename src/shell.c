@@ -1386,10 +1386,14 @@ void ShellRun(UNUSED int unused_arg)
 	
 	while (1) 
 	{
+		LogMsgNoCr("\e]2;Command Prompt: %s\a", g_cwd);
+		
 		LogMsgNoCr("%s>", g_cwd);
 		char buffer[256];
 		CoGetString (buffer, 256);
 		memcpy (g_lastCommandExecuted, buffer, 256);
+		
+		LogMsgNoCr("\e]2;Command Prompt: %s - %s\a", g_cwd, buffer);
 		
 		ShellExecuteCommand (buffer);
 		
