@@ -122,6 +122,7 @@ char CoReadFromInputQueue  (Console* this);
 void LogHexDumpData (void* pData, int size);
 void ResetConsole();
 void SetConsole(Console* pConsole);
+Console* GetCurrentConsole();
 
 // on current console:
 

@@ -31,24 +31,6 @@
 
 char g_lastCommandExecuted[256] = {0};
 
-static JumpBuffer g_setJumpTest_JumpBuffer;
-
-static void Foo(int count)
-{
-	LogMsg("Foo(%d) has been called.", count);
-	LongJump (g_setJumpTest_JumpBuffer, count + 1);
-}
-static void SetJumpTest()
-{
-	volatile int count = 0;
-	
-	if (SetJump(g_setJumpTest_JumpBuffer) != 5)
-	{
-		count++;
-		Foo(count);
-	}
-}
-
 void FsPipeTest();
 void MemorySpy();
 void ShellTaskTest(int arg)
@@ -92,21 +74,6 @@ void TemporaryTask(__attribute__((unused)) int arg)
 		for (int i = 0; i < 30; i++)
 			hlt;
 	}
-}
-
-void HeapTest()
-{
-	/*Heap heap;
-	memset(&heap, 0, sizeof heap);
-	
-	AllocateHeap (&heap, 1024);
-	
-	UseHeap (&heap);
-	
-	void*ptr = MmAllocate(100000);
-	LogMsg("Allocated %x on %x", ptr, &heap);
-	
-	FreeHeap (&heap);*/
 }
 
 extern void KeTaskDone();
@@ -170,7 +137,7 @@ void ShellExecuteFile(const char* fileName, const char* arguments)
 	}
 }
 
-void ShellExecuteCommand(char* p)
+void ShellExecuteCommand(char* p, bool* pbExit)
 {
 	TokenState state;
 	state.m_bInitted = 0;
@@ -196,6 +163,7 @@ void ShellExecuteCommand(char* p)
 		LogMsg("e <elf>      - executes an ELF from the initrd");
 		LogMsg("ec <script>  - executes an NSScript file");
 		LogMsg("el           - prints the last returned value from an executed ELF");
+		LogMsg("exit         - exits the shell");
 		LogMsg("export       - loads some configuration data from the provided arguments");
 		LogMsg("hat          - performs a hex dump of a file");
 		LogMsg("help         - shows this list");
@@ -204,18 +172,17 @@ void ShellExecuteCommand(char* p)
 		LogMsg("lf           - list debugging information about the file system");
 		LogMsg("lc           - list clipboard contents");
 		LogMsg("lm           - list memory allocations");
-		LogMsg("lp           - list currently installed PCI devices");
+		LogMsg("lspci        - list currently installed PCI devices");
 		LogMsg("lr           - list the memory ranges provided by the bootloader");
-		LogMsg("ls           - list the current working directory (right now just /)");
-		LogMsg("lt           - list currently running threads (pauses them during the print)");
 		
 		//wait for new key
 		LogMsg("Strike a key to print more.");
 		CoGetChar();
 		
+		LogMsg("ls           - list the current working directory (right now just /)");
+		LogMsg("lt           - list currently running threads (pauses them during the print)");
 		LogMsg("movedata     - copies data from one file to another");
 		LogMsg("mkdir        - creates a new empty directory");
-		LogMsg("mpt          - memory read/write bit test");
 		LogMsg("mspy         - Memory Spy! (TM)");
 		LogMsg("mrd <file>   - mounts a RAM Disk from a file");
 		LogMsg("ph           - prints current heap's address in kernel address space (or NULL for the default heap)");
@@ -229,13 +196,14 @@ void ShellExecuteCommand(char* p)
 		LogMsg("sysinfoa     - dump advanced system information");
 		LogMsg("ta           - test ANSI escape codes");
 		LogMsg("tc           - copy 'Hello, world!' to the clipboard");
-		LogMsg("th           - test heap code");
-		LogMsg("tsc          - get timing information");
 		LogMsg("tm           - print the current date and time");
 		LogMsg("time         - time a shell command");
-		LogMsg("sjt          - SetJump() and LongJump() test");
 		LogMsg("ver          - print system version");
 		LogMsg("w            - start desktop manager");
+	}
+	else if (strcmp (token, "exit") == 0)
+	{
+		*pbExit = true;
 	}
 	else if (strcmp (token, "fac") == 0)
 	{
@@ -259,29 +227,6 @@ void ShellExecuteCommand(char* p)
 		//only here for debugging. Let me know if something is wrong
 		//LogMsg("Epoch to human time: %02d/%02d/%04d %02d:%02d:%02d", stt.day,stt.month,stt.year,stt.hours,stt.minutes,stt.seconds);
 		LogMsg("Epoch time: %d", e);
-	}
-	else if (strcmp (token, "sjt") == 0)
-	{
-		SetJumpTest();
-	}
-	else if (strcmp (token, "mpt") == 0)
-	{
-		// to test out whether a read only page would actually crash the shell
-		void *mem = MmMapPhysMemFastRW (0x7000, false);
-		
-		LogMsg("Mapped the single page.  Its address in virtual memory is %p. Testing write to it...", mem);
-		
-		uint32_t* ptr = ((uint32_t*)mem);
-		
-		uint32_t read = *ptr;
-		
-		*ptr = 5;
-		
-		LogMsg("Seems like I can write there.");
-		
-		*ptr = read;
-		
-		MmUnmapPhysMemFast(mem);
 	}
 	else if (strcmp (token, "ta") == 0) // Test ANSI
 	{
@@ -321,10 +266,6 @@ void ShellExecuteCommand(char* p)
 		else
 			LogMsg("Use the launcher's \"Shutdown computer\" option, shut down the computer, and click \"Restart\" to reboot, or use --force.");
 	}
-	else if (strcmp (token, "th") == 0)
-	{
-		HeapTest();
-	}
 	else if (strcmp (token, "ph") == 0)
 	{
 		LogMsg("Current Heap: %p", MuGetCurrentHeap());
@@ -362,7 +303,8 @@ void ShellExecuteCommand(char* p)
 	else if (strcmp (token, "time") == 0)
 	{
 		int timeThen = GetTickCount();
-		ShellExecuteCommand(state.m_pContinuation);
+		bool bExit = false;
+		ShellExecuteCommand(state.m_pContinuation, &bExit);
 		int timeNow  = GetTickCount();
 		
 		LogMsg("Real time: %d ms", timeNow - timeThen);
@@ -1189,15 +1131,6 @@ void ShellExecuteCommand(char* p)
 	{
 		ShellClearScreen();
 	}
-	else if (strcmp (token, "gv") == 0)
-	{
-		extern volatile uint32_t gVmwCounter2;
-		LogMsg("gVmwCounter2: %u", gVmwCounter2);
-	}
-	else if (strcmp (token, "sb") == 0)
-	{
-		LogMsg("Playing 1000 hz tone... (todo)");
-	}
 	else if (strcmp (token, "ver") == 0)
 	{
 		KePrintSystemVersion();
@@ -1218,7 +1151,7 @@ void ShellExecuteCommand(char* p)
 	{
 		CbCopyText("Hello, world!");
 	}
-	else if (strcmp (token, "lp") == 0)
+	else if (strcmp (token, "lspci") == 0)
 	{
 		PciDump();
 	}
@@ -1230,24 +1163,6 @@ void ShellExecuteCommand(char* p)
 	{
 		LogMsg("OK");
 		*((uint32_t*)0xFFFFFFFF) = 0;
-	}
-	else if (strcmp (token, "tsc") == 0)
-	{
-		uint32_t  hi, lo;
-		GetTimeStampCounter(&hi, &lo);
-		LogMsg("Timestamp counter: %x%x (%d, %d)", hi, lo, hi, lo);
-		
-		//int tkc = GetTickCount(), rtkc = GetRawTickCount();
-		//LogMsgNoCr("Tick count: %d, Raw tick count: %d", tkc, rtkc);
-		LogMsg("Press any key to stop timing.");
-		
-		while (CoInputBufferEmpty())
-		{
-			int tkc = GetTickCount(), rtkc = GetRawTickCount();
-			LogMsgNoCr("\rTick count: %d, Raw tick count: %d        ", tkc, rtkc);
-			//for(int i=0; i<50; i++) 
-			hlt;
-		}
 	}
 	else if (strcmp (token, "font") == 0)
 	{
@@ -1384,7 +1299,9 @@ void ShellRun(UNUSED int unused_arg)
 {
 	ShellPrintMotd();
 	
-	while (1) 
+	bool bExit = false;
+	
+	while (!bExit)
 	{
 		LogMsgNoCr("\e]2;Command Prompt: %s\a", g_cwd);
 		
@@ -1395,7 +1312,7 @@ void ShellRun(UNUSED int unused_arg)
 		
 		LogMsgNoCr("\e]2;Command Prompt: %s - %s\a", g_cwd, buffer);
 		
-		ShellExecuteCommand (buffer);
+		ShellExecuteCommand (buffer, &bExit);
 		
 		WaitMS (1);
 	}

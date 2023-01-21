@@ -808,6 +808,8 @@ void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 }
 void VidBlitImage(Image* pImage, int x, int y)
 {
+	if (!pImage) return;
+	
 	const uint32_t* fb = pImage->framebuffer;
 	
 	int ixe = x + pImage->width, iye = y + pImage->height;
@@ -823,6 +825,7 @@ void VidBlitImage(Image* pImage, int x, int y)
 }
 void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 {
+	if (!pImage) return;
 	const uint32_t* fb = pImage->framebuffer;
 	
 	int ixe = x + pImage->width, iye = y + pImage->height;
@@ -838,6 +841,7 @@ void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 }
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
+	if (!p) return;
 	if (width == p->width && height == p->height)
 	{
 		VidBlitImage (p, gx, gy);
@@ -860,6 +864,7 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 }
 void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, uint32_t outline)
 {
+	if (!p) return;
 	if (width == p->width && height == p->height)
 	{
 		VidBlitImageOutline (p, gx, gy, outline);

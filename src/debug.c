@@ -216,7 +216,7 @@ void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProc
 	}
 }
 
-void ShellExecuteCommand(char* p);
+void ShellExecuteCommand(char* p, bool* pbExit);
 void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 {
 	g_focusedOnConsole = &g_debugConsole;
@@ -273,7 +273,8 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 			ILogMsgNoCr("DEBUGSHELL>");
 			CoGetString (shellcmd, 256);
 			
-			ShellExecuteCommand(shellcmd);
+			bool bExit = false;
+			ShellExecuteCommand(shellcmd, &bExit);
 		}
 		else if (buf == 'm' || buf == 'M')
 		{

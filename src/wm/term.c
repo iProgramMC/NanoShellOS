@@ -9,13 +9,14 @@
 #include <wbuiltin.h>
 #include <misc.h>
 
+#define EVENT_TERMINAL_EXIT EVENT_USER
+
 int g_TerminalFont = FONT_TAMSYN_SMALL_REGULAR;
 
 #define DebugLogMsg  SLogMsg
 extern Console *g_currentConsole, *g_focusedOnConsole, g_debugConsole, g_debugSerialConsole;
 extern uint32_t g_vgaColorsToRGB[];
 
-void ShellExecuteCommand(char* p);
 void CoRefreshChar (Console *this, int x, int y);
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void KeKillThreadsByConsole(Console *pConsole);
@@ -43,6 +44,16 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 		{
 			//CoPrintChar(pConsole, (char)parm1);
 			break;
+		}
+		case EVENT_TERMINAL_EXIT:
+		{
+			// remove the subthread since it's already gone.
+			pWindow->m_pSubThread = NULL;
+			
+			// Call close event
+			messageType = EVENT_CLOSE;
+			
+			// fallthrough intended
 		}
 		case EVENT_CLOSE:
 		case EVENT_DESTROY:
@@ -118,7 +129,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 					}
 					else
 					{
-						VidTextOut ("No console buffer associated with this.", 10, 20, 0xFFFFFF, TRANSPARENT);
+						VidTextOut ("No console buffer associated with this.", 10, 10 + TITLE_BAR_HEIGHT, WINDOW_TEXT_COLOR, TRANSPARENT);
 					}
 				}
 				
@@ -163,7 +174,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			}
 			else
 			{
-				VidTextOut ("No console associated with this.", 10, 20, 0xFFFFFF, TRANSPARENT);
+				VidTextOut ("No console associated with this.", 10, 10 + TITLE_BAR_HEIGHT, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			break;
 		}
@@ -173,6 +184,18 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 	}
 }
 extern void ShellInit(void);
+
+void TermShellRun(int arg)
+{
+	ShellRun(arg);
+	
+	Window* pWindow = (Window*)GetCurrentConsole()->m_backPtr;
+	
+	if (pWindow)
+	{
+		WindowAddEventToMasterQueue(pWindow, EVENT_TERMINAL_EXIT, 0, 0);
+	}
+}
 
 void TerminalHostTask(int arg)
 {
@@ -268,7 +291,7 @@ void TerminalHostTask(int arg)
 	if (!hookDebugConsole)
 	{
 		int confusion = 0;
-		Task* pTask = KeStartTask(ShellRun, (int)(&basic_console),  &confusion);
+		Task* pTask = KeStartTask(TermShellRun, (int)(&basic_console),  &confusion);
 		
 		if (!pTask)
 		{

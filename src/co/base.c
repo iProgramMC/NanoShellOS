@@ -55,6 +55,11 @@ void ResetConsole()
 	g_currentConsole = &g_debugConsole;
 }
 
+Console* GetCurrentConsole()
+{
+	return g_currentConsole;
+}
+
 void CoNopKill(UNUSED Console *this)
 {
 }

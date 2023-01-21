@@ -769,11 +769,25 @@ bool KiEmergencyMode()
 	}
 	return textMode;
 }
+
+void KiLoop(int arg)
+{
+	TaskedFunction func = (TaskedFunction)arg;
+	
+	while (true)
+	{
+		// make sure the function can't exit.
+		// In the versions of DOS built in to Windows 9x, typing 'exit' while in safe cmd mode
+		// will just not exit. We simulate this by putting the tasked function into a while loop.
+		func(0);
+	}
+}
+
 void KiLaunch (TaskedFunction func)
 {
 	int err_code = 0;
 	//TODO: spawn a process instead
-	Task* pTask = KeStartTaskD(func, 0, &err_code, __FILE__, "Init", __LINE__);
+	Task* pTask = KeStartTaskD(KiLoop, (int)func, &err_code, __FILE__, "Init", __LINE__);
 	
 	if (!pTask)
 		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);

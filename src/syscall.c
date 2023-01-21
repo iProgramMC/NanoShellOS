@@ -92,10 +92,6 @@ int GetVersionNumber()
 {
 	return VersionNumber;
 }
-Console* GetCurrentConsole()
-{
-	return g_currentConsole;
-}
 
 void VidSetClipRectP (Rectangle rect)
 {
