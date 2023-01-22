@@ -421,6 +421,14 @@ typedef struct
 }
 CheckBoxData;
 
+typedef struct
+{
+	int m_frequency;
+	int m_nextTickAt;
+	int m_firedEvent;
+}
+WindowTimer;
+
 // By default, the control's anchoring mode is:
 // ANCHOR_LEFT_TO_LEFT | ANCHOR_RIGHT_TO_LEFT | ANCHOR_TOP_TO_TOP | ANCHOR_BOTTOM_TO_TOP
 
@@ -515,6 +523,8 @@ enum CURSORTYPE
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
 #define WIN_KB_BUF_SIZE  4096
+#define C_MAX_WIN_TIMER  8
+
 typedef struct WindowStruct
 {
 	bool       m_used;
@@ -594,6 +604,10 @@ typedef struct WindowStruct
 	
 	//avoid a data race while resizing the screen
 	SafeLock   m_screenLock;
+	
+	// a list of timers
+	WindowTimer m_timers[C_MAX_WIN_TIMER];
+	int        m_timer_count;
 } Window;
 
 /**
@@ -820,5 +834,20 @@ Rectangle* TooltipGetRect();
  * Check if we're below a certain resolution that iProgramInCpp decided (right now) should be 800x600.
  */
 bool IsLowResolutionMode();
+
+/**
+ * Adds a timer to the window and returns its ID.
+ */
+int AddTimer(Window* pWindow, int frequency, int event /* = EVENT_UPDATE */);
+
+/**
+ * Disarms a timer from the window (ie. removes it)
+ */
+void DisarmTimer(Window* pWindow, int timerID);
+
+/**
+ * Changes a timer's frequency.
+ */
+void ChangeTimer(Window* pWindow, int timerID, int newFrequency, int newTimer);
 
 #endif//_WINDOW_H

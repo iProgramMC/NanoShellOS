@@ -9,12 +9,48 @@
 #include <wmenu.h>
 #include <image.h>
 
+/*
+static int lastTick1 = 0;
+static int lastTick2 = 0;
+static int lastTick3 = 0;
+*/
+
 Image* GetIconImage(IconType type, int sz);
 
 void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		/*
+		case EVENT_USER:
+		{
+			int nowTick = GetTickCount();
+			SLogMsg("Update Timer 1. Diff = %d", nowTick - lastTick1);
+			lastTick1 = nowTick;
+			break;
+		}
+		case EVENT_USER + 1:
+		{
+			int nowTick = GetTickCount();
+			SLogMsg("Update Timer 2. Diff = %d", nowTick - lastTick2);
+			lastTick2 = nowTick;
+			break;
+		}
+		case EVENT_USER + 2:
+		{
+			int nowTick = GetTickCount();
+			SLogMsg("Update Timer 3. Diff = %d", nowTick - lastTick3);
+			lastTick3 = nowTick;
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			AddTimer(pWindow, 500, EVENT_USER);
+			AddTimer(pWindow, 250, EVENT_USER + 1);
+			AddTimer(pWindow, 100, EVENT_USER + 2);
+			break;
+		}
+		*/
 		case EVENT_PAINT:
 		{
 			//draw until ICON_COUNT:

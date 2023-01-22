@@ -176,6 +176,49 @@ void WmTakeOverWindow(Window* pWindow)
 	sti;
 }
 
+void WmTimerTick(Window* pWindow)
+{
+	int count = 0;
+	WindowTimer timers   [C_MAX_WIN_TIMER];
+	int         tickTimes[C_MAX_WIN_TIMER] = { 0 };
+	
+	// get the current tick count
+	int tickCount = GetTickCount();
+	
+	// take a snapshot
+	cli;
+	count = pWindow->m_timer_count;
+	for (int i = 0; i < pWindow->m_timer_count; i++)
+	{
+		if (pWindow->m_timers[i].m_frequency == 0) continue; // timer is disarmed
+		
+		if (!pWindow->m_timers[i].m_nextTickAt)
+		{
+			pWindow->m_timers[i].m_nextTickAt = tickCount;
+		}
+		
+		while (pWindow->m_timers[i].m_nextTickAt <= tickCount)
+		{
+			pWindow->m_timers[i].m_nextTickAt += pWindow->m_timers[i].m_frequency;
+			tickTimes[i]++;
+		}
+		
+		timers[i] = pWindow->m_timers[i];
+	}
+	sti;
+	
+	// look through each of the timers
+	
+	for (int i = 0; i < count; i++)
+	{
+		while (tickTimes[i] > 0)
+		{
+			tickTimes[i]--;
+			WindowAddEventToMasterQueue(pWindow, timers[i].m_firedEvent, i, 0);
+		}
+	}
+}
+
 int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
@@ -253,6 +296,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				UpdateTimeout = UPDATE_TIMEOUT;
 				updated = true;
 			}
+			
+			WmTimerTick(pWindow);
 			
 			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{

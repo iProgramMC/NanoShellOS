@@ -16,11 +16,65 @@ int g_NewWindowX = 10, g_NewWindowY = 10;
 Window g_windows [WINDOWS_MAX];
 
 SafeLock
-g_WindowLock, 
-g_ScreenLock, 
-g_BufferLock, 
-g_CreateLock, 
-g_BackgdLock; 
+g_WindowLock,
+g_ScreenLock,
+g_BufferLock,
+g_CreateLock,
+g_BackgdLock;
+
+int AddTimer(Window* pWindow, int frequency, int event)
+{
+	cli;
+	if (pWindow->m_timer_count >= C_MAX_WIN_TIMER)
+	{
+		sti;
+		return -1;
+	}
+	
+	WindowTimer* pTimer  = &pWindow->m_timers[pWindow->m_timer_count++];
+	pTimer->m_frequency  = frequency;
+	pTimer->m_nextTickAt = 0;
+	pTimer->m_firedEvent = event;
+	sti;
+	
+	return pTimer - pWindow->m_timers;
+}
+
+void DisarmTimer(Window* pWindow, int timerID)
+{
+	// timerID out of bounds guard
+	if (timerID < 0) return;
+	
+	cli;
+	if (pWindow->m_timer_count <= timerID)
+	{
+		sti;
+		return;
+	}
+	
+	memmove(&pWindow->m_timers[timerID], &pWindow->m_timers[timerID + 1], sizeof(WindowTimer) * (pWindow->m_timer_count - 1 - timerID));
+	pWindow->m_timer_count--;
+	
+	sti;
+}
+
+void ChangeTimer(Window* pWindow, int timerID, int newFrequency, int newEvent)
+{
+	// timerID out of bounds guard
+	if (timerID < 0) return;
+	
+	cli;
+	if (pWindow->m_timer_count <= timerID)
+	{
+		sti;
+		return;
+	}
+	
+	pWindow->m_timers[timerID].m_frequency  = newFrequency;
+	pWindow->m_timers[timerID].m_firedEvent = newEvent;
+	
+	sti;
+}
 
 bool IsLowResolutionMode()
 {
