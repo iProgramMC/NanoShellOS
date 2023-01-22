@@ -26,6 +26,7 @@ apps/nsshell/*
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
 fs/Bin/nsshell.nse
+fs/Bin/VBuilder.nse
 
 crt/build_libnanoshell
 crt/build_crt1
