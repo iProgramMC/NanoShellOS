@@ -9,8 +9,10 @@
 
 #include "buttons.h"
 
+#define TEXT_BOX_HEIGHT (22)
+
 #define DEF_VBUILD_WID 640
-#define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2+6)
+#define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2 + 6 + TEXT_BOX_HEIGHT + 6)
 #define DEF_FDESIGN_WID 500
 #define DEF_FDESIGN_HEI 400
 #define DEF_TOOLBOX_WID (96+6)
@@ -23,6 +25,16 @@
 
 #define GRABBER_SIZE (8)
 #define GRID_WIDTH   (8)
+
+enum eComboID
+{
+	CO_MENU_BAR = 1000,
+	CO_EDITED_CTL,
+	CO_EDITED_CHOOSE,
+	CO_EDITED_FIELD_NAME,
+	CO_EDITED_FIELD,
+	CO_EDITED_FIELD_CHOOSE,
+};
 
 enum eResizeHandle
 {
@@ -69,26 +81,49 @@ enum
 	TOOL_SELECT,
 };
 
-typedef struct
+typedef struct tagDesCtl
 {
-	bool      m_used;
+	struct tagDesCtl *m_pPrev, *m_pNext;
+	
 	Rectangle m_rect;
 	int       m_type;
+	char      m_name[128];
 	char      m_text[128];
 	bool      m_sele;
 	int       m_prm1, m_prm2;
+	int       m_comboID;
 }
 DesignerControl;
 
 // Data
-DesignerControl g_controls[64];
+DesignerControl* g_controlsFirst, *g_controlsLast;
+
+
+DesignerControl* g_pEditedControl;
+
+
+void VbAddControlToList(DesignerControl* pCtl)
+{
+	if (g_controlsLast == NULL)
+	{
+		g_controlsFirst = g_controlsLast = pCtl;
+		pCtl->m_pNext = pCtl->m_pPrev = NULL;
+	}
+	else
+	{
+		pCtl->m_pPrev = g_controlsLast;
+		g_controlsLast->m_pNext = pCtl;
+		g_controlsLast = pCtl;
+	}
+}
 
 int  g_anchorX, g_anchorY;
 int  g_curPosX, g_curPosY;
 bool g_drawing;
 int  g_selCtlType;
-int  g_controlResized;
 int  g_resizeKnob;
+
+DesignerControl* g_controlResized;
 
 Rectangle g_lastDrawnSelArea;
 Rectangle g_resizeRect;
@@ -123,12 +158,8 @@ void VbDrawGrid(Rectangle* pWithinRect /*= NULL*/)
 
 void VbRenderCtls(Rectangle* pWithinRect /*= NULL*/)
 {
-	for (int i = 0; i < (int)ARRAY_COUNT(g_controls); i++)
+	for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 	{
-		if (!g_controls[i].m_used) continue;
-		
-		DesignerControl *C = &g_controls[i];
-		
 		if (pWithinRect && !RectangleOverlap(pWithinRect, &C->m_rect)) continue;
 		
 		Rectangle rect = C->m_rect;
@@ -220,74 +251,141 @@ void FixUpCoords (int *L, int *T, int *R, int *B)
 	*B += 4;
 }
 
+int g_ctlNameNums[CONTROL_COUNT];
+
+const char* const g_ctlNames[] = {
+	"None",
+	"Text",
+	"Icon",
+	"Button",
+	"TextBox",
+	"CheckBox",
+	"ClickLabel",
+	"TextCen",
+	"ButtonEvent",
+	"ListView",
+	"VScrollBar",
+	"HScrollBar",
+	"MenuBar",
+	"TextHuge",
+	"IconView",
+	"SurroundRect",
+	"ButtonColor",
+	"ButtonList",
+	"ButtonIcon",
+	"ButtonIconBar",
+	"HLine",
+	"Image",
+	"TaskList",
+	"IconViewDrag",
+};
+
+const char* VbGetCtlName(int type)
+{
+	if (type >= (int)ARRAY_COUNT(g_ctlNames)) return "Unknown";
+	
+	return g_ctlNames[type];
+}
+
+void VbSetEditedControl(DesignerControl* pControl);
+
 void VbAddControl(int L, int T, int R, int B)
 {
 	Rectangle rect;
 	rect.left = L, rect.top = T, rect.right = R, rect.bottom = B;
 	
-	for (int i = 0; i < (int)ARRAY_COUNT(g_controls); i++)
+	for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 	{
-		if (!g_controls[i].m_used) continue;
-		g_controls[i].m_sele = false;
-	}
-	// Add a control
-	for (int i = 0; i < (int)ARRAY_COUNT(g_controls); i++)
-	{
-		if (g_controls[i].m_used) continue;
-		
-		DesignerControl *C = &g_controls[i];
-		
-		strcpy (C->m_text, "Hello");
-		C->m_used = true;
-		C->m_type = g_selCtlType;
-		C->m_rect = rect;
-		C->m_sele = true;
-		C->m_prm1 = 0;
-		C->m_prm2 = 0;
-		
-		if (C->m_type == CONTROL_TEXTCENTER)
-		{
-			C->m_prm2 = TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED;
-		}
-		else if (C->m_type == CONTROL_TEXT)//fake
-		{
-			C->m_type = CONTROL_TEXTCENTER;
-			C->m_prm2 = TEXTSTYLE_WORDWRAPPED;
-		}
-		else if (C->m_type == CONTROL_TEXTINPUT)//fake
-		{
-			C->m_type = CONTROL_TEXTINPUT;
-			C->m_prm1 = 0;
-		}
-		else if (C->m_type == CONTROL_COUNT)//fake - textinputmultiline
-		{
-			C->m_type = CONTROL_TEXTINPUT;
-			C->m_prm1 = TEXTEDIT_MULTILINE;
-		}
-		
-		return;
+		C->m_sele = false;
 	}
 	
-	MessageBox(g_pFormDesignerWindow, "There are too many controls in this form, delete some.", "Codename V-Builder", MB_OK | ICON_WARNING << 16);
+	// Add a control
+	DesignerControl *C = calloc(1, sizeof(DesignerControl));
+	
+	if (!C) return;
+	
+	strcpy (C->m_text, "Hello");
+	sprintf(C->m_name, "%s%d", VbGetCtlName(g_selCtlType), ++g_ctlNameNums[g_selCtlType]);
+	C->m_type = g_selCtlType;
+	C->m_rect = rect;
+	C->m_sele = true;
+	C->m_prm1 = 0;
+	C->m_prm2 = 0;
+	
+	if (C->m_type == CONTROL_TEXTCENTER)
+	{
+		C->m_prm2 = TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED;
+	}
+	else if (C->m_type == CONTROL_TEXT)//fake
+	{
+		C->m_type = CONTROL_TEXTCENTER;
+		C->m_prm2 = TEXTSTYLE_WORDWRAPPED;
+	}
+	else if (C->m_type == CONTROL_TEXTINPUT)//fake
+	{
+		C->m_type = CONTROL_TEXTINPUT;
+		C->m_prm1 = 0;
+	}
+	else if (C->m_type == CONTROL_COUNT)//fake - textinputmultiline
+	{
+		C->m_type = CONTROL_TEXTINPUT;
+		C->m_prm1 = TEXTEDIT_MULTILINE;
+	}
+	
+	VbAddControlToList(C);
+	VbSetEditedControl(C);
 }
 
-void VbDelControl(int i)
+void VbDelControl(DesignerControl* C)
 {
-	if (!g_controls[i].m_used) return;
+	if (C->m_pNext)
+	{
+		C->m_pNext->m_pPrev = C->m_pPrev;
+	}
+	if (C->m_pPrev)
+	{
+		C->m_pPrev->m_pNext = C->m_pNext;
+	}
 	
-	g_controls[i].m_used = false;
+	if (g_controlsFirst == C)
+	{
+		g_controlsFirst = g_controlsFirst->m_pNext;
+	}
+	if (g_controlsLast  == C)
+	{
+		g_controlsLast  = g_controlsLast->m_pPrev;
+	}
+	
+	if (g_pEditedControl == C)
+	{
+		VbSetEditedControl(NULL);
+	}
+	
+	free(C);
 }
 
 void VbSelect(int L, int T, int R, int B)
 {
 	Rectangle rect = {L,T,R,B};
+	
+	int selectedNum = 0;
+	DesignerControl* pCtl = NULL;
+	
 	// go in reverse, because that's the order the controls are drawn in:
-	for (int i = (int)ARRAY_COUNT(g_controls) - 1; i >= 0; i--)
+	for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 	{
-		if (!g_controls[i].m_used) continue;
-		
-		g_controls[i].m_sele = RectangleOverlap (&rect, &g_controls[i].m_rect);
+		C->m_sele = RectangleOverlap (&rect, &C->m_rect);
+		if (C->m_sele)
+		{
+			selectedNum++;
+			pCtl = C;
+		}
 	}
+	
+	if (selectedNum != 1)
+		VbSetEditedControl (NULL);
+	else
+		VbSetEditedControl (pCtl);
 }
 
 void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -297,7 +395,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 		case EVENT_CREATE:
 		{
 			g_anchorX = g_anchorY = g_curPosX = g_curPosY = -1;
-			g_controlResized = -1;
+			g_controlResized = NULL;
 			g_selCtlType = TOOL_CURSOR;
 			
 			break;
@@ -324,12 +422,12 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				Point p = { posX, posY };
 				
 				// Are we dragging a handle ?
-				if (g_controlResized >= 0)
+				if (g_controlResized)
 				{
 					int deltaX = posX - g_curPosX;
 					int deltaY = posY - g_curPosY;
 					
-					DesignerControl * C = &g_controls[g_controlResized];
+					DesignerControl * C = g_controlResized;
 					
 					if (deltaX != 0 || deltaY != 0)
 					{
@@ -388,7 +486,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 					
 					if (deltaX != 0 || deltaY != 0)
 					{
-						VbRedraw();
+						VbRenderCtls(NULL);
 					}
 				
 					g_curPosX = posX;
@@ -398,38 +496,37 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 				}
 				
 				// de-select everything
-				int selected = -1;
+				DesignerControl* selected = NULL;
 				
 				// go in reverse, because that's the order the controls are drawn in:
-				for (int i = (int)ARRAY_COUNT(g_controls) - 1; i >= 0; i--)
+				for (DesignerControl* C = g_controlsLast; C; C = C->m_pPrev)
 				{
-					if (!g_controls[i].m_used) continue;
-					
-					if (selected < 0 && RectangleContains(&g_controls[i].m_rect, &p))
+					if (!selected && RectangleContains(&C->m_rect, &p))
 					{
-						selected = i;
-						g_controls[i].m_sele = true;
+						selected = C;
+						C->m_sele = true;
+						VbSetEditedControl (C);
 					}
 					else
 					{
-						g_controls[i].m_sele = false;
+						C->m_sele = false;
 					}
 				}
 				
 				// if we have selected something
-				if (selected >= 0)
+				if (selected)
 				{
 					// Check if the cursor is within any of the handles
 					
 					for (int i = HANDLE_BR; i < HANDLE_COUNT; i++)
 					{
-						Rectangle sHandle = VbMakeHandleRect(i, g_controls[selected].m_rect);
+						Rectangle sHandle = VbMakeHandleRect(i, selected->m_rect);
 						
 						if (RectangleContains(&sHandle, &p))
 						{
 							g_controlResized = selected;
 							g_resizeKnob     = i;
-							g_resizeRect     = g_controls[selected].m_rect;
+							g_resizeRect     = selected->m_rect;
 							break;
 						}
 					}
@@ -488,16 +585,14 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 		{
 			if (parm1 == (0x80 | KEY_DELETE))
 			{
-				for (int i = 0; i < (int)ARRAY_COUNT(g_controls); i++)
+				for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 				{
-					DesignerControl *C = &g_controls[i];
-					
 					if (!C->m_sele) continue;
 					
 					//Delete
-					VidFillRectangle(WINDOW_BACKGD_COLOR, g_controls[i].m_rect);
+					VidFillRectangle(WINDOW_BACKGD_COLOR, C->m_rect);
 					
-					VbDelControl (i);
+					VbDelControl (C);
 					
 					C->m_sele = false;
 				}
@@ -521,10 +616,10 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 			    R = g_lastDrawnSelArea.right,
 				B = g_lastDrawnSelArea.bottom;
 			
-			if (g_controlResized >= 0)
+			if (g_controlResized)
 			{
 				g_lastDrawnSelArea.left = -1;
-				g_controlResized = -1;
+				g_controlResized = NULL;
 			}
 			
 			if (L != -1)
@@ -569,32 +664,160 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 }
 void CALLBACK VbPreviewWindow();
 
-void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int parm2)
+
+void VbSetEditedControl2(DesignerControl* pControl)
+{
+	if (pControl)
+	{
+		SetTextInputText(g_pMainWindow, CO_EDITED_CTL, pControl->m_name);
+	}
+	else
+	{
+		SetTextInputText(g_pMainWindow, CO_EDITED_CTL, "");
+	}
+	
+	CallWindowCallbackAndControls(g_pMainWindow, EVENT_PAINT, 0, 0);
+}
+
+void VbSetEditedControl(DesignerControl* pControl)
+{
+	RegisterEvent(g_pMainWindow, EVENT_USER, (int)pControl, 0);
+}
+
+#define SELECT_CTL_WIDTH  (150)
+#define SELECT_CTL_HEIGHT (200 + TITLE_BAR_HEIGHT)
+
+void CALLBACK PrgVbSelectCtlProc(Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
 		case EVENT_CREATE:
 		{
-			Rectangle r = {0,0,0,0};
+			Rectangle r;
 			
-			AddControl (pWindow, CONTROL_MENUBAR, r, NULL, 1000, 0, 0);
+			RECT(r, 10, TITLE_BAR_HEIGHT + 10, SELECT_CTL_WIDTH - 20, SELECT_CTL_HEIGHT - 50 - TITLE_BAR_HEIGHT);
 			
-			AddMenuBarItem(pWindow, 1000, 0, 1, "File");
-			AddMenuBarItem(pWindow, 1000, 0, 2, "Edit");
-			AddMenuBarItem(pWindow, 1000, 0, 3, "View");
-			AddMenuBarItem(pWindow, 1000, 0, 4, "Window");
-			AddMenuBarItem(pWindow, 1000, 0, 5, "Help");
-			AddMenuBarItem(pWindow, 1000, 5, 6, "About Codename V-Builder...");
-			AddMenuBarItem(pWindow, 1000, 3, 7, "Preview...");
-			AddMenuBarItem(pWindow, 1000, 3, 8, "");
-			AddMenuBarItem(pWindow, 1000, 3, 9, "Exit");
+			AddControl(pWindow, CONTROL_LISTVIEW, r, NULL, 1000, 0, 0);
+			
+			RECT(r, SELECT_CTL_WIDTH - 80, SELECT_CTL_HEIGHT - 30, 70, 20);
+			
+			AddControl(pWindow, CONTROL_BUTTON, r, "OK", 1001, 0, 0);
+			
+			// Add whatever's in the list
+			for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
+			{
+				AddElementToList(pWindow, 1000, C->m_name, ICON_FORWARD);
+			}
 			
 			break;
 		}
 		case EVENT_COMMAND:
 		{
-			if (parm1 != 1000)
+			if (parm1 == 1001)
 			{
+				// Get the element.
+				DesignerControl* element = NULL;
+				
+				int index = GetSelectedIndexList(pWindow, 1000);
+				const char* str = GetElementStringFromList(pWindow, 1000, index);
+				
+				if (str)
+				{
+					for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
+					{
+						if (strcmp(C->m_name, str) == 0)
+						{
+							element = C;
+							break;
+						}
+					}
+					
+					*((DesignerControl**)GetWindowData(pWindow)) = element;
+				}
+				
+				DestroyWindow(pWindow);
+			}
+			break;
+		}
+		default:
+		{
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			break;
+		}
+	}
+}
+
+void VbSelectControlDialog()
+{
+	Rectangle mwr;
+	GetWindowRect(g_pMainWindow, &mwr);
+	
+	DesignerControl* ctler = NULL;
+	
+	PopupWindowEx(g_pMainWindow, "Select Control", mwr.left + 50, mwr.top + 50, SELECT_CTL_WIDTH, SELECT_CTL_HEIGHT, PrgVbSelectCtlProc, WF_SYSPOPUP | WF_NOMINIMZ, &ctler);
+	
+	for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
+		C->m_sele = false;
+	
+	if (ctler)
+	{
+		ctler->m_sele = true;
+	}
+	
+	VbSetEditedControl2(ctler);
+	
+	RegisterEvent(g_pFormDesignerWindow, EVENT_PAINT, 0, 0);
+}
+
+void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int parm2)
+{
+	switch (messageType)
+	{
+		case EVENT_USER:
+		{
+			VbSetEditedControl2((DesignerControl*)parm1);
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			Rectangle r = {0,0,0,0};
+			
+			AddControl (pWindow, CONTROL_MENUBAR, r, NULL, CO_MENU_BAR, 0, 0);
+			
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 0, 1, "File");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 0, 2, "Edit");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 0, 3, "View");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 0, 4, "Window");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 0, 5, "Help");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 5, 6, "About Codename V-Builder...");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 3, 7, "Preview...");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 3, 8, "");
+			AddMenuBarItem(pWindow, CO_MENU_BAR, 3, 9, "Exit");
+			
+			//#define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2 + 6 + TEXT_BOX_HEIGHT + 6)
+			int thingY = TITLE_BAR_HEIGHT * 2 + 6;
+			
+			RECT(r, 10, thingY, 120, TEXT_BOX_HEIGHT);
+			
+			AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, CO_EDITED_CTL, TEXTEDIT_READONLY, 0);
+			
+			RECT(r, 132, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
+			
+			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CO_EDITED_CHOOSE, ICON_FORWARD, 16);
+			
+			break;
+		}
+		case EVENT_COMMAND:
+		{
+			if (parm1 != CO_MENU_BAR)
+			{
+				switch (parm1)
+				{
+					case CO_EDITED_CHOOSE:
+						VbSelectControlDialog();
+						break;
+				}
+				
 				break;
 			}
 			
@@ -624,12 +847,12 @@ void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int
 	{
 		case EVENT_CREATE:
 		{
-			for (int i = 0; i < (int)ARRAY_COUNT(g_controls); i++)
+			int i = 0;
+			for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 			{
-				DesignerControl *C = &g_controls[i];
-				if (!C->m_used) continue;
-				
 				AddControl (pWindow, C->m_type, C->m_rect, C->m_text, 1000 + i, C->m_prm1, C->m_prm2);
+				C->m_comboID = i;
+				i++;
 			}
 			
 			break;
