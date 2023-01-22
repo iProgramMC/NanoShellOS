@@ -556,6 +556,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			int defaultStartX = 22;
 			int topOffset = (TABLE_ITEM_HEIGHT - GetLineHeight()) / 2;
 			
+			if (!table->m_pColumnData) return false;
+			
 			for (int i = -1; i < table->m_column_count + 1; i++)
 			{
 				TableViewColumn * col = NULL;

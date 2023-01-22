@@ -242,6 +242,10 @@ enum
 	CONTROL_TASKLIST,
 	//Same as CONTROL_ICONVIEW but with draggable icons.
 	CONTROL_ICONVIEWDRAG,
+	//A table view. Even more complicated.
+	CONTROL_TABLEVIEW,
+	//Checkable icon button.
+	CONTROL_BUTTON_ICON_CHECKABLE,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.

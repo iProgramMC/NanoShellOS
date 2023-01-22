@@ -46,6 +46,9 @@ void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 	if (nLengthMax < nLengthCur)
 		nLengthMax = nLengthCur;
 	
+	if (nLengthMax == 0)
+		nLengthMax = 1;
+	
 	int cw = GetCharWidth('W');
 	SetScrollBarMax (pWindow, 0x70000000 - this->m_comboID, nLengthMax * cw);
 	
