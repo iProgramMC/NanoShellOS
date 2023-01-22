@@ -385,7 +385,7 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	restoreEnt->bHasIcons = true;
 	restoreEnt->nLineSeparators = 0;
 	restoreEnt->pOpenWindow = NULL;
-	restoreEnt->nIconID     = 0;
+	restoreEnt->nIconID     = ICON_RESTORE;
 	restoreEnt->nWidth      = MenuWidth;
 	restoreEnt->bDisabled   = false;
 	restoreEnt->bPrivate    = true;
@@ -407,11 +407,15 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	spacerEnt  ->nMenuComboID = 4;
 	closeEnt   ->nMenuComboID = 5;
 	
+	minimizeEnt->nIconID = ICON_MINIMIZE;
+	maximizeEnt->nIconID = ICON_MAXIMIZE;
+	closeEnt   ->nIconID = ICON_CLOSE;
+	
 	// Disable the buttons on a case-by-case basis
 	restoreEnt->bDisabled  = !pWindow->m_maximized || !!(pWindow->m_flags & WF_NOMAXIMZ);
 	minimizeEnt->bDisabled = pWindow->m_minimized || !!(pWindow->m_flags & WF_NOMINIMZ);
 	maximizeEnt->bDisabled = pWindow->m_maximized || !!(pWindow->m_flags & WF_NOMAXIMZ);
-	closeEnt->bDisabled = !!(pWindow->m_flags & WF_NOCLOSE);
+	closeEnt->bDisabled    = !!(pWindow->m_flags & WF_NOCLOSE);
 	
 	// then, I guess just spawn the menu!
 	SpawnMenu(pWindow, &rootEnt, p.x, p.y);

@@ -181,7 +181,8 @@ void CrashReporterCheck()
 }
 
 extern bool g_windowManagerRunning;
-bool IsWindowManagerTask (Task *pTask);
+extern Task *g_pWindowMgrTask;
+
 void CrashReporterCheckNoWindow()
 {
 	if (KeDidATaskCrash())
@@ -191,13 +192,12 @@ void CrashReporterCheckNoWindow()
 		// Allocate the registers so we can pass them onto the new task.
 		CrashInfo* pCrashInfo, crashInfo = *KeGetCrashedTaskInfo();
 		
-		SLogMsg("CrashReporterCheckNoWindow found a crash! Uh oh.");
-		
-		if (!IsWindowManagerTask(crashInfo.m_pTaskKilled))
+		if (crashInfo.m_pTaskKilled != g_pWindowMgrTask)
+		{
 			if (g_windowManagerRunning) return;
+		}
 		
 		pCrashInfo = &crashInfo;
-		
 		
 		// Let the kernel know that we have processed its crash report.
 		KeAcknowledgeTaskCrash();
