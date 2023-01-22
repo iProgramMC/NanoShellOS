@@ -208,6 +208,29 @@
 #include <icons/box_check.h>
 #include <icons/box_uncheck.h>
 #include <icons/folder_settings16.h>
+//icons V1.8
+#include <icons/minimize.h>
+#include <icons/maximize.h>
+#include <icons/restore.h>
+#include <icons/close.h>
+#include <icons/arrow_up.h>
+#include <icons/arrow_down.h>
+#include <icons/arrow_left.h>
+#include <icons/arrow_right.h>
+#include <icons/pipe.h>
+#include <icons/pipe16.h>
+#include <icons/vb_cursor.h>
+#include <icons/vb_select.h>
+#include <icons/vb_text.h>
+#include <icons/vb_text_cen.h>
+#include <icons/vb_input_1line.h>
+#include <icons/vb_input_mline.h>
+#include <icons/vb_checkbox.h>
+#include <icons/vb_surr_rect.h>
+#include <icons/vb_button.h>
+#include <icons/clipboard.h>
+#include <icons/paint2.h>
+#include <icons/file_broken.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -397,6 +420,28 @@ Image * g_iconTable[] = {
 	&g_box_check_icon,
 	&g_box_uncheck_icon,
 	&g_folder_settings16_icon,
+	&g_minimize_icon,
+	&g_maximize_icon,
+	&g_restore_icon,
+	&g_close_icon,
+	&g_arrow_up_icon,
+	&g_arrow_down_icon,
+	&g_arrow_left_icon,
+	&g_arrow_right_icon,
+	&g_pipe_icon,
+	&g_pipe16_icon,
+	&g_vb_cursor_icon,
+	&g_vb_select_icon,
+	&g_vb_text_icon,
+	&g_vb_text_cen_icon,
+	&g_vb_input_1line_icon,
+	&g_vb_input_mline_icon,
+	&g_vb_checkbox_icon,
+	&g_vb_surr_rect_icon,
+	&g_vb_button_icon,
+	&g_clipboard_icon,
+	&g_paint2_icon,
+	&g_file_broken_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -462,6 +507,7 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(JOURNAL)
 			CASE(PACKAGER)
 			CASE(FOLDER_SETTINGS)
+			CASE(PIPE)
 			#undef CASE
 		}
 	}
