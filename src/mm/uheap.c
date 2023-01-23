@@ -397,7 +397,7 @@ bool MuiIsMappingFree(UserHeap *pHeap, uintptr_t start, size_t nPages)
 // Otherwise, pPhysicalAddresses is treated as an ARRAY of physical page addresses of size `numPages`.
 // If `bAllowClobbering` is on, all the previous mappings will be discarded. Dangerous!
 // The `nDaiFlags` passed in only apply if the page is to be mapped as DAI (don't allocate instantly)
-bool MuiMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, bool bAllowClobbering, bool bIsMMIO, uint32_t nDaiFlags)
+bool MuiMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, int clobberingLevel, bool bIsMMIO, uint32_t nDaiFlags)
 {
 	if (bIsMMIO && !pPhysicalAddresses)
 	{
@@ -405,13 +405,11 @@ bool MuiMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uin
 		bIsMMIO = false;
 	}
 	
-	if (bAllowClobbering)
-	{
-		if (!MuAreMappingParmsValid(hint, numPages))
-			// can't map here!
-			return false;
-	}
-	else
+	if (!MuAreMappingParmsValid(hint, numPages))
+		// can't map here!
+		return false;
+	
+	if (clobberingLevel == CLOBBER_NO)
 	{
 		if (!MuiIsMappingFree(pHeap, hint, numPages))
 			// can't map here!
@@ -429,11 +427,15 @@ bool MuiMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uin
 		// If this is going to get clobbered..
 		if (*pPageEntry & (PAGE_BIT_PRESENT | PAGE_BIT_DAI))
 		{
-			if (!bAllowClobbering)
+			if (clobberingLevel == CLOBBER_ALL)
+				// Reset it
+				MuiRemoveMapping(pHeap, hint + numPagesMappedSoFar * PAGE_SIZE); 
+			else if (clobberingLevel == CLOBBER_SKIP)
+				// Skip it
+				continue;
+			else
+				// Fail
 				goto _rollback;
-			
-			// Reset it
-			MuiRemoveMapping(pHeap, hint + numPagesMappedSoFar * PAGE_SIZE); 
 		}
 		
 		if (pPhysicalAddresses)
@@ -501,7 +503,7 @@ bool MuiMapMemoryNonFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, 
 	
 	*pAddressOut = (void*)newHint;
 	
-	return MuiMapMemoryFixedHint(pHeap, newHint, numPages, pPhysicalAddresses, bReadWrite, false, bIsMMIO, 0);
+	return MuiMapMemoryFixedHint(pHeap, newHint, numPages, pPhysicalAddresses, bReadWrite, CLOBBER_NO, bIsMMIO, 0);
 }
 
 // Maps a chunk a memory without a hint address.
@@ -644,10 +646,10 @@ bool MuMapMemoryNonFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, u
 	return res;
 }
 
-bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, bool bAllowClobbering, bool bIsMMIO, uint32_t nDaiFlags)
+bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, int clobberingLevel, bool bIsMMIO, uint32_t nDaiFlags)
 {
 	LockAcquire (&pHeap->m_lock);
-	bool res = MuiMapMemoryFixedHint(pHeap, hint, numPages, pPhysicalAddresses, bReadWrite, bAllowClobbering, bIsMMIO, nDaiFlags);
+	bool res = MuiMapMemoryFixedHint(pHeap, hint, numPages, pPhysicalAddresses, bReadWrite, clobberingLevel, bIsMMIO, nDaiFlags);
 	LockFree (&pHeap->m_lock);
 	return res;
 }
@@ -719,7 +721,7 @@ int MmMapMemoryUser(void *pAddr, size_t lengthBytes, int protectionFlags, int ma
 	{
 		bool bAllowClobbering = !(mapFlags & MAP_DONTREPLACE);
 		
-		bool bResult = MuMapMemoryFixedHint(pHeap, (uintptr_t)pAddr, numPages, NULL, bWrite, bAllowClobbering, false, 0);
+		bool bResult = MuMapMemoryFixedHint(pHeap, (uintptr_t)pAddr, numPages, NULL, bWrite, bAllowClobbering ? CLOBBER_ALL : CLOBBER_NO, false, 0);
 		
 		if (!bResult)
 		{

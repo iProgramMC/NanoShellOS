@@ -35,6 +35,14 @@ typedef struct
 }
 RefCountTableLevel0;
 
+typedef enum
+{
+	CLOBBER_NO,   // fail if there are any pre-existing pages
+	CLOBBER_ALL,  // remove all pre-existing pages
+	CLOBBER_SKIP, // skip all pre-existing pages
+}
+eClobberingLevel;
+
 // Physical memory manager
 uint32_t MpFindFreeFrame();
 void MpSetFrame  (uint32_t frameAddr);
@@ -76,7 +84,7 @@ bool MuAreMappingParmsValid(uintptr_t start, size_t nPages);
 bool MuIsMappingFree(UserHeap *pHeap, uintptr_t start, size_t nPages);
 bool MuMapMemory(UserHeap *pHeap, size_t numPages, uint32_t* pPhysicalAddresses, void** pAddressOut, bool bReadWrite, bool bIsMMIO);
 bool MuMapMemoryNonFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, void** pAddressOut, bool bReadWrite, bool bIsMMIO);
-bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, bool bAllowClobbering, bool bIsMMIO, uint32_t nDaiFlags);
+bool MuMapMemoryFixedHint(UserHeap *pHeap, uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, int clobberingLevel, bool bIsMMIO, uint32_t nDaiFlags);
 void MuCreatePageTable(UserHeap *pHeap, int pageTable);
 void MuRemovePageTable(UserHeap *pHeap, int pageTable);
 bool MuRemoveMapping(UserHeap *pHeap, uintptr_t address);
