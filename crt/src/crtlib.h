@@ -258,6 +258,7 @@ int    atoi       (const char* str);
 char*  Tokenize   (TokenState* pState, char* pString, char* separator);
 
 void*  malloc     (size_t size);
+void*  calloc     (size_t nmemb, size_t size);
 void   free       (void*  ptr);
 
 void   exit       (int num);

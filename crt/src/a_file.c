@@ -428,7 +428,7 @@ int FiChDir(const char *pfn)
 // C Standard I/O
 FILE* fdopen (int fd, UNUSED const char* type)
 {
-	FILE* pFile = malloc(sizeof(FILE));
+	FILE* pFile = calloc(1, sizeof(FILE));
 	if (!pFile)
 	{
 		close(fd);
@@ -482,24 +482,68 @@ int fclose(FILE* file)
 
 size_t fread (void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
-	return read(stream->fd, ptr, size * nmemb);
+	SetErrorNumber(0);
+	
+	size_t nbyte = size * nmemb;
+	size_t rd = read(stream->fd, ptr, nbyte);
+	
+	if (rd < nbyte)
+	{
+		// must have reached end of file
+		stream->eof = true;
+	}
+	
+	if (GetErrorNumber())
+	{
+		stream->error = true;
+	}
+	
+	return rd;
 }
 
 size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
-	size_t ultimate_size = size*nmemb;
+	SetErrorNumber(0);
 	
-	return write(stream->fd, ptr, ultimate_size);
+	size_t nbyte = size * nmemb;
+	size_t wr = write(stream->fd, ptr, nbyte);
+	if (wr < nbyte)
+	{
+		stream->eof = true;
+	}
+	
+	if (GetErrorNumber())
+	{
+		stream->error = true;
+	}
+	
+	return wr;
 }
 
 int fseek(FILE* file, int offset, int whence)
 {
-	return lseek(file->fd, offset, whence);
+	SetErrorNumber(0);
+	int rv = lseek(file->fd, offset, whence);
+	
+	if (GetErrorNumber())
+	{
+		file->error = true;
+	}
+	
+	return rv;
 }
 
 int ftell(FILE* file)
 {
-	return tellf(file->fd);
+	SetErrorNumber(0);
+	int rv = tellf(file->fd);
+	
+	if (GetErrorNumber())
+	{
+		file->error = true;
+	}
+	
+	return rv;
 }
 
 void rewind(FILE* stream)
@@ -534,8 +578,7 @@ void _I_Setup()
 	
 	//well, they're going to be the same file, which is fine.
 	//Points to file description 0, which is handle FD_STDIO, should be ok.
-	stdin = stdout = stderr = malloc(sizeof(FILE));
-	memset(stdin, 0, sizeof(FILE));
+	stdin = stdout = stderr = calloc(1, sizeof(FILE));
 	stdin->fd = 0;
 }
 
@@ -546,26 +589,46 @@ int unlink (const char* filename)
 
 int getc (FILE* pFile)
 {
+	if (pFile->ungetc_buf_sz > 0)
+	{
+		return pFile->ungetc_buf[--pFile->ungetc_buf_sz];
+	}
+	
 	char chr = 0;
-	size_t sz = fread(&chr, 1, 1, pFile);
-	if (sz == 0)
+	fread(&chr, 1, 1, pFile);
+	if (pFile->eof)
 		return EOF;
 	
 	return chr;
 }
 
-int feof(FILE* f)
+int fgetc(FILE* stream)
 {
-	//TODO: kernel side implementation
-	int chr = EOF;
-	
-	if (read(f->fd, &chr, 1) == 0)
+	return getc(stream);
+}
+
+int ungetc(int c, FILE * stream)
+{
+	if (stream->ungetc_buf_sz >= (int) sizeof stream->ungetc_buf)
 		return EOF;
 	
-	//seek back
-	fseek(f, ftell(f) - 1, SEEK_SET);
-	
+	stream->ungetc_buf[stream->ungetc_buf_sz++] = c;
 	return 0;
+}
+
+int feof(FILE* f)
+{
+	return f->eof;
+}
+
+int ferror(FILE* f)
+{
+	return f->error;
+}
+
+void clearerr(FILE* f)
+{
+	f->error = 0;
 }
 
 // empty for now. There's no actual flushing to be done.

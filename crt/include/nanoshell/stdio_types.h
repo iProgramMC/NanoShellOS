@@ -12,6 +12,10 @@
 typedef struct
 {
 	int fd;
+	uint8_t ungetc_buf[4];
+	int     ungetc_buf_sz;
+	bool    eof;
+	bool    error;
 }
 FILE;
 
