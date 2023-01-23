@@ -51,6 +51,19 @@ void CrashReporterCheckNoWindow();
 void KiLaunch(TaskedFunction func);
 bool KiEmergencyMode();
 
+static int s_stopwatchStart;
+
+void StopwatchStart()
+{
+	s_stopwatchStart = GetTickCount();
+}
+
+int StopwatchEnd()
+{
+	return GetTickCount() - s_stopwatchStart;
+}
+
+
 NO_RETURN
 void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 {

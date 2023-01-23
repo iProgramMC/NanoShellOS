@@ -96,4 +96,7 @@ void KeVerifyInterruptsEnabledD(const char * file, int line);
 
 #include <console.h>
 
+void StopwatchStart();
+int  StopwatchEnd();
+
 #endif//_MAIN_H
