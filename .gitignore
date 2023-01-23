@@ -27,6 +27,8 @@ fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
 fs/Bin/nsshell.nse
 fs/Bin/VBuilder.nse
+fs/Bin/test.nse
+fs/Tests/*.png
 
 crt/build_libnanoshell
 crt/build_crt1
