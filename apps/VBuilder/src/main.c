@@ -33,6 +33,8 @@ enum eComboID
 	CO_EDITED_CTL,
 	CO_EDITED_CHOOSE,
 	CO_COMPILE,
+	CO_STOP,
+	CO_SHOW_CODE,
 	CO_EDITED_FIELD_NAME,
 	CO_EDITED_FIELD,
 	CO_EDITED_FIELD_CHOOSE,
@@ -779,6 +781,11 @@ void VbSelectControlDialog()
 	RegisterEvent(g_pFormDesignerWindow, EVENT_PAINT, 0, 0);
 }
 
+void VbCodeWindow()
+{
+	LogMsg("Code window!");
+}
+
 void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -813,11 +820,16 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 			
 			RECT(r, 132, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
 			
-			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CO_EDITED_CHOOSE, ICON_FORWARD, 16);
+			AddControl(pWindow, CONTROL_BUTTON_ICON, r, NULL, CO_EDITED_CHOOSE, ICON_BROWSE_SMALL, 16);
 			
 			RECT(r, 132 + TEXT_BOX_HEIGHT * 1, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
+			AddControl(pWindow, CONTROL_BUTTON_ICON, r, NULL, CO_COMPILE, ICON_PLAY_SMALL, 16);
 			
-			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CO_COMPILE, ICON_GO, 16);
+			RECT(r, 132 + TEXT_BOX_HEIGHT * 2, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
+			AddControl(pWindow, CONTROL_BUTTON_ICON, r, NULL, CO_STOP, ICON_STOP_SMALL, 16);
+			
+			RECT(r, 132 + TEXT_BOX_HEIGHT * 3, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
+			AddControl(pWindow, CONTROL_BUTTON_ICON, r, NULL, CO_SHOW_CODE, ICON_FILE_WRITE, 16);
 			
 			break;
 		}
@@ -832,6 +844,15 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 						break;
 					case CO_COMPILE:
 						VbPreviewWindow();
+						break;
+					case CO_SHOW_CODE:
+						VbCodeWindow();
+						break;
+					case CO_STOP:
+						if (!g_pPreviewWindow)
+							MessageBox(pWindow, "The preview is not running.", "Codename V-Builder", MB_OK);
+						else
+							RegisterEvent(g_pPreviewWindow, EVENT_DESTROY, 0, 0);
 						break;
 				}
 				

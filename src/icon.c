@@ -259,6 +259,13 @@ typedef uint32_t IconColor;
 #include <icons/clipboard.h>
 #include <icons/paint2.h>
 #include <icons/file_broken.h>
+#include <icons/stop_black.h>
+#include <icons/stop_small.h>
+#include <icons/pause.h>
+#include <icons/pause_small.h>
+#include <icons/play_wide.h>
+#include <icons/play_small.h>
+#include <icons/browse.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -470,6 +477,13 @@ Image * g_iconTable[] = {
 	&g_clipboard_icon,
 	&g_paint2_icon,
 	&g_file_broken_icon,
+	&g_stop_black_icon,
+	&g_stop_small_icon,
+	&g_pause_icon,
+	&g_pause_small_icon,
+	&g_play_wide_icon,
+	&g_play_small_icon,
+	&g_browse_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");

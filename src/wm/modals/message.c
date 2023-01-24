@@ -110,7 +110,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	// Measure the pText text.
 	VidTextOutInternal (test, 0, 0, 0, 0, true, &szX, &szY);
 	
-	szY += 12;
+	szY += 22;
 	
 	int  iconID = style >> 16;
 	bool iconAvailable = iconID != ICON_NULL;
