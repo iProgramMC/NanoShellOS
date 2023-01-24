@@ -3,7 +3,6 @@
 #include "s_all.h"
 
 extern jmp_buf g_errorJumpBuffer;
-extern FILE* g_file;
 
 int g_lineNum = 0;
 
@@ -34,10 +33,12 @@ const char* gKeywordKeys[] =
 
 Token** tokens = NULL;
 size_t ntokens = 0;
+extern char g_ErrorBuffer[ERROR_BUFFER_SIZE];
 
 NORETURN void TokenOnError(int error)
 {
-	LogMsg("At line %d:", g_lineNum);
+	g_ErrorBuffer[0] = 0;
+	snprintf(g_ErrorBuffer, sizeof g_ErrorBuffer, "At line %d:", g_lineNum);
 	longjmp(g_errorJumpBuffer, error);
 }
 
@@ -164,25 +165,24 @@ int FileGetChar(FILE* f)
 	#endif
 }
 
-void Tokenise()
+void Tokenise(const char * str)
 {
 	char* currentToken = NULL;
 	size_t currentTokenSize = 0;
 	g_lineNum = 1;
+	
+	int sptr = 0;
 
-	while (!feof(g_file))
+	while (str[sptr])
 	{
-		int cint = FileGetChar(g_file);
-		if (cint == EOF) break; // Er, but feof is false? Just making sure..
-
-		char c = (char)cint;
+		char c = str[sptr++];
 
 		// If this is a hash, we're starting a new comment.
 		if (c == '#')
 		{
-			while (c != EOF)
+			while (c != 0)
 			{
-				c = (char)FileGetChar(g_file);
+				c = (char)str[sptr++];
 				if (c == '\n')
 					break;
 			}
@@ -232,10 +232,10 @@ void Tokenise()
 			currentTokenSize = 0;
 
 			// while we have characters
-			while (!feof(g_file))
+			while (str[sptr])
 			{
-				int cint = FileGetChar(g_file);
-				if (cint == EOF) break; // Er, but feof is false? Just making sure..
+				int cint = str[sptr++];
+				if (cint == 0) break; // Er, but feof is false? Just making sure..
 
 				char c = (char)cint;
 				char toAppend = c;
@@ -253,8 +253,8 @@ void Tokenise()
 				if (c == '\\')
 				{
 					// Allow escaping some characters. Read another.
-					int cint2 = FileGetChar(g_file);
-					if (cint2 == EOF)
+					int cint2 = str[sptr++];
+					if (cint2 == 0)
 						TokenOnError(ERROR_UNTERMINATED_ESC_SEQ);
 
 					char c2 = (char)cint2;

@@ -42,6 +42,8 @@ struct Function
 	};
 };
 
-void RunnerGo(int argc, char** argv);
+void RunnerPrepareRunTime();
+//void RunnerGo(const char* pFuncName, int argc, char** argv);
+bool RunnerCall(const char* pFuncName, const char* argStr, ...);
 void RunnerCleanup();
 void RunnerAddFunctionPtr(CallableFunPtr fp, const char* fname, int nargs, bool returns);

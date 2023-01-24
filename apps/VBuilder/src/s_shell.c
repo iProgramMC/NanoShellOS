@@ -104,7 +104,21 @@ const char* GetErrorMessage(int error)
 	return g_errorMsgs[error];
 }
 
-void ShellExecuteFile(const char* pfn, int argc, char** argv)
+void CompileSource(const char* src)
+{
+	Tokenise(src);
+	Parse();
+	RunnerPrepareRunTime();
+}
+
+void CompilerTeardown()
+{
+	RunnerCleanup();
+	ParserTeardown();
+	TokenTeardown();
+}
+
+void ShellExecuteFile(const char* pfn, UNUSED int argc, UNUSED char** argv)
 {
 	FILE* f = fopen(pfn, "r");
 	if (!f)
@@ -113,24 +127,31 @@ void ShellExecuteFile(const char* pfn, int argc, char** argv)
 		return;
 	}
 	
-	CrappyScriptContext * pContext = MemCAllocate(1, sizeof(CrappyScriptContext));
+	char* chr;
+	fseek(f, 0, SEEK_END);
+	int szint = ftell(f);
+	size_t sz = (size_t)szint;
+	fseek(f, 0, SEEK_SET);
+	chr = malloc(sz + 1);
+	chr[sz] = 0;
+	size_t readin = fread(chr, 1, sz, f);
+	if (readin > sz) readin = 0;
+	chr[readin] = 0;
 	
-	pContext->m_file = f;
-	
-	int error = setjmp(pContext->m_errorJumpBuffer);
+	int error = setjmp(g_errorJumpBuffer);
 	if (error)
 	{
 		LogMsg("ERROR %c%04d: %s", GetErrorCategory(error), GetErrorNo(error), GetErrorMessage(error));
 		
 		fclose(f);
-		
-		MemFree(pContext);
 		return;
 	}
 
-	Tokenise();
+	Tokenise(chr);
 	Parse();
-	RunnerGo(argc, argv);
+	//RunnerGo(argc, argv);
+	RunnerPrepareRunTime();
+	RunnerCall("main", "iiii", 1,2,3,4);
 	RunnerCleanup();
 	ParserTeardown();
 	TokenTeardown();
@@ -140,6 +161,5 @@ void ShellExecuteFile(const char* pfn, int argc, char** argv)
 	#endif
 
 	fclose(f);
-	MemFree(pContext);
 	return;
 }

@@ -99,9 +99,13 @@ enum eErrorCode
 	ERROR_END,
 };
 
+#define ERROR_BUFFER_SIZE (16384)
+
+const char* GetErrorMessage(int error);
 char GetErrorCategory(int error);
 int  GetErrorNo(int error);
 const char* GetErrorMessage(int error);
-
+void CompileSource(const char* src);
+void CompilerTeardown();
 void LoadFile(const char* pfn);
 

@@ -8,6 +8,7 @@
 #include <nanoshell/nanoshell.h>
 
 #include "buttons.h"
+#include "s_all.h"
 
 #define TEXT_BOX_HEIGHT (22)
 
@@ -31,6 +32,7 @@ enum eComboID
 	CO_MENU_BAR = 1000,
 	CO_EDITED_CTL,
 	CO_EDITED_CHOOSE,
+	CO_COMPILE,
 	CO_EDITED_FIELD_NAME,
 	CO_EDITED_FIELD,
 	CO_EDITED_FIELD_CHOOSE,
@@ -45,6 +47,12 @@ enum eResizeHandle
 	HANDLE_TL, // top left
 	HANDLE_COUNT,
 };
+
+char g_SourceCode[] = 
+	"function Button1_Click"
+	"{"
+	"\techo(\"hello there\");"
+	"}";
 
 static Rectangle VbMakeHandleRect(int handleType, Rectangle ctlRect)
 {
@@ -806,6 +814,10 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 			
 			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CO_EDITED_CHOOSE, ICON_FORWARD, 16);
 			
+			RECT(r, 132 + TEXT_BOX_HEIGHT * 1, thingY, TEXT_BOX_HEIGHT - 1, TEXT_BOX_HEIGHT - 1);
+			
+			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, CO_COMPILE, ICON_GO, 16);
+			
 			break;
 		}
 		case EVENT_COMMAND:
@@ -816,6 +828,9 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 				{
 					case CO_EDITED_CHOOSE:
 						VbSelectControlDialog();
+						break;
+					case CO_COMPILE:
+						VbPreviewWindow();
 						break;
 				}
 				
@@ -842,25 +857,98 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 	}
 }
 
+jmp_buf g_errorJumpBuffer;
+extern int g_lineNum;
+
+char g_ErrorBuffer[ERROR_BUFFER_SIZE];
+char g_ErrorBuffer_Temp[ERROR_BUFFER_SIZE];
+
+bool g_bFirstPaint = false;
+
+void VbOnRuntimeError(Window* pWindow, int error, const char* pTitle)
+{
+	snprintf(g_ErrorBuffer_Temp, sizeof g_ErrorBuffer_Temp, "%s\n\n%s\nERROR %c%04d: %s", pTitle, g_ErrorBuffer, GetErrorCategory(error), GetErrorNo(error), GetErrorMessage(error));
+	
+	MessageBox(pWindow, g_ErrorBuffer_Temp, pTitle, MB_OK | (ICON_ERROR << 16));
+	DestroyWindow(pWindow);
+}
+
+// TODO: Identify the bug that makes it fail when the code is inlined within the switch case
+void VbTryCompile(Window* pWindow)
+{
+	int error = setjmp(g_errorJumpBuffer);
+	if (error != 0)
+	{
+		VbOnRuntimeError(pWindow, error, "Compiler Error!");
+		return;
+	}
+	
+	CompileSource(g_SourceCode);
+}
+
+void VbPreviewOnClickButton(Window* pWindow, int comboID)
+{
+	// lookup the control with the comboID
+	DesignerControl* C;
+	for (C = g_controlsFirst; C; C = C->m_pNext)
+	{
+		if (C->m_comboID == comboID) break;
+	}
+	
+	if (!C) return;
+	
+	// try to locate the button's click event
+	char c[512];
+	snprintf(c, sizeof c, "%s_Click", C->m_name);
+	
+	
+	int error = setjmp(g_errorJumpBuffer);
+	if (error != 0)
+	{
+		VbOnRuntimeError(pWindow, error, "Runtime Error!");
+		return;
+	}
+	
+	// try to call that function
+	RunnerCall(c, "");
+}
+
 void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
 		case EVENT_CREATE:
 		{
+			g_bFirstPaint = true;
+			
 			int i = 0;
 			for (DesignerControl* C = g_controlsFirst; C; C = C->m_pNext)
 			{
 				AddControl (pWindow, C->m_type, C->m_rect, C->m_text, 1000 + i, C->m_prm1, C->m_prm2);
-				C->m_comboID = i;
+				C->m_comboID = 1000 + i;
 				i++;
 			}
 			
 			break;
 		}
+		case EVENT_PAINT:
+		{
+			if (g_bFirstPaint)
+			{
+				VbTryCompile(pWindow);
+				g_bFirstPaint = false;
+			}
+			break;
+		}
+		
 		case EVENT_COMMAND:
 		{
-			
+			VbPreviewOnClickButton(pWindow, parm1);
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			CompilerTeardown();
 			break;
 		}
 		default:

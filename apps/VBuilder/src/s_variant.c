@@ -19,6 +19,7 @@ Variant* VariantCreateInt(long long value)
 
 Variant* VariantCreateString(const char* value)
 {
+	if (value == NULL) value = "";
 	Variant* pVar = MemCAllocate(1, sizeof(Variant));
 	pVar->m_type = VAR_STRING;
 	pVar->m_strValue = StrDuplicate(value);

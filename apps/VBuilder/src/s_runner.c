@@ -8,12 +8,21 @@ Statement* g_pCurrentStatement;
 static CallStackFrame g_callStack[C_MAX_STACK];
 static int g_callStackPointer;
 
+extern char g_ErrorBuffer[ERROR_BUFFER_SIZE];
+
 NORETURN void RunnerOnError(int error)
 {
+	g_ErrorBuffer[0] = 0;
+	
+	char buff[4096];
 	if (g_pCurrentStatement)
-		LogMsg("At line %d:", g_pCurrentStatement->m_firstLine);
-	LogMsg("Runtime Error %c%04d: %s", GetErrorCategory(error), GetErrorNo(error), GetErrorMessage(error));
-	LogMsg("Call stack: ");
+	{
+		snprintf(buff, sizeof buff, "At line %d:\n", g_pCurrentStatement->m_firstLine);
+		strcat(g_ErrorBuffer, buff);
+	}
+	snprintf(buff, sizeof buff, "Runtime Error %c%04d: %s\nCall stack: \n", GetErrorCategory(error), GetErrorNo(error), GetErrorMessage(error));
+	strcat(g_ErrorBuffer, buff);
+	
 	for (int i = g_callStackPointer; i >= 0; i--)
 	{
 		const char* fName = "Entry point";
@@ -21,7 +30,8 @@ NORETURN void RunnerOnError(int error)
 		if (pFn != NULL)
 			fName = pFn->m_name;
 
-		LogMsg("%s %s", i == g_callStackPointer ? "->" : " *", fName);
+		snprintf(buff, sizeof buff, "%s %s", i == g_callStackPointer ? "->" : " *", fName);
+		strcat(g_ErrorBuffer, buff);
 	}
 
 	longjmp(g_errorJumpBuffer, error);
@@ -485,6 +495,94 @@ Variant* BuiltInArgs(Variant* index)
 	return VariantDuplicate(g_callStack[0].m_args[1+index->m_intValue]);
 }
 
+void RunnerPrepareRunTime()
+{
+	// This prepares the runtime.
+	RunnerAddStandardFunctions();
+	PrepareGlobals(g_mainBlock);
+}
+
+void RunFunction(Function* pFunc)
+{
+	switch (pFunc->type)
+	{
+		case FUNCTION_STATEMENT:
+			RunStatement(pFunc->m_pStatement);
+			break;
+		case FUNCTION_POINTER:
+			RunnerOnError(ERROR_UNKNOWN_FUNCTION);
+			break;
+		case FUNCTION_VARIABLE:
+			break;
+	}
+}
+
+// Calls a function.
+// The argument string is something like "iiss", for two ints and two strings.
+bool RunnerCall(const char* pFuncName, const char* argStr, ...)
+{
+	size_t strl = strlen(argStr);
+	
+	g_callStackPointer = 0;
+	memset(&g_callStack[g_callStackPointer], 0, sizeof(CallStackFrame));
+	
+	Function * pFunc = RunnerLookUpFunction(pFuncName);
+	if (!pFunc)
+	{
+		//RunnerOnError(ERROR_UNKNOWN_FUNCTION);
+		LogMsg("Function '%s' not found.", pFuncName);
+		return false;
+	}
+	
+	if ((int)strl > pFunc->m_nArgs)
+		RunnerOnError(ERROR_TOO_MANY_ARGUMENTS);
+	if ((int)strl < pFunc->m_nArgs)
+		RunnerOnError(ERROR_TOO_FEW_ARGUMENTS);
+	
+	va_list lst;
+	va_start(lst, argStr);
+	
+	// Set up the arguments
+	CallStackFrame* pFrame = &g_callStack[0];
+	pFrame->m_pFunction = pFunc;
+	pFrame->m_nargs = strl;
+	
+	for (size_t i = 0; i < strl; i++)
+	{
+		switch (argStr[i])
+		{
+			case 'i':
+				// This argument shall be an int.
+				pFrame->m_args[i] = VariantCreateInt(va_arg(lst, int));
+				break;
+			case 's':
+				// This argument shall be a string.
+				pFrame->m_args[i] = VariantCreateString(va_arg(lst, const char *));
+				break;
+			case 'n':
+				// This argument shall be null
+				pFrame->m_args[i] = VariantCreateNull();
+				break;
+			default:
+				RunnerOnError(ERROR_UNKNOWN_VARIANT_TYPE);
+				break;
+		}
+	}
+	
+	RunFunction(pFunc);
+	
+	// Free the arguments.
+	pFrame->m_nargs = 0;
+	for (size_t i = 0; i < strl; i++)
+	{
+		VariantFree(pFrame->m_args[i]);
+		pFrame->m_args[i] = NULL;
+	}
+	
+	return true;
+}
+
+/*
 void RunnerGo(int argc, char** argv)
 {
 	if (argc >= C_MAX_ARGS - 1)
@@ -540,4 +638,4 @@ void RunnerGo(int argc, char** argv)
 	}
 	g_callStack[0].m_nargs = 0;
 }
-
+*/

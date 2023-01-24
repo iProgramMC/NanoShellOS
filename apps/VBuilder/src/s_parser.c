@@ -10,9 +10,11 @@ int ParserUpdateLine(int line)
 	return g_parserLine = line;
 }
 
+extern char g_ErrorBuffer[ERROR_BUFFER_SIZE];
+
 NORETURN void ParserOnError(int error)
 {
-	LogMsg("At line %d:", g_parserLine);
+	snprintf(g_ErrorBuffer, sizeof g_ErrorBuffer, "At line %d:", g_parserLine);
 	longjmp(g_errorJumpBuffer, error);
 }
 

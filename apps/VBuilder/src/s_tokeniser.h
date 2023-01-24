@@ -50,6 +50,6 @@ typedef struct Token
 }
 Token;
 
-void Tokenise();
+void Tokenise(const char * str);
 void TokenDump();
 void TokenTeardown();

@@ -17,29 +17,4 @@ typedef struct
 }
 CallStackFrame;
 
-typedef struct
-{
-	// tokenizer
-	jmp_buf m_errorJumpBuffer;
-	FILE*   m_file;
-	
-	int     m_lineNum;
-	
-	Token** m_tokens;
-	size_t  m_nTokens;
-	
-	// parser
-	Statement* m_mainBlock;
-	
-	int     m_parserLine;
-	size_t  m_currentToken;
-	
-	// runner
-	Statement* m_pCurrentStatement;
-	CallStackFrame m_callStack[C_MAX_STACK];
-	int        m_callStackPointer;
-	
-	Function*  m_functionsList;
-}
-CrappyScriptContext;
 
