@@ -104,6 +104,8 @@ void        GetWindowRect(Window* pWindow, Rectangle* pRectOut);
 void        ChangeCursor(Window* pWindow, int cursorID);
 void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
 void        CallWindowCallbackAndControls(Window* pWindow, int eventType, int parm1, int parm2);
+int         GetWindowFlags(Window * pWindow);
+void        SetWindowFlags(Window * pWindow, int flags);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

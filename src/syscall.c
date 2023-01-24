@@ -160,7 +160,17 @@ void SetWindowData(Window* pWindow, void* pData)
 void GetWindowRect(Window* pWindow, Rectangle * pRectOut)
 {
 	*pRectOut = pWindow->m_rect;
-} 
+}
+
+int GetWindowFlags(Window* pWindow)
+{
+	return pWindow->m_flags;
+}
+
+void SetWindowFlags(Window* pWindow, int flags)
+{
+	pWindow->m_flags = flags;
+}
 
 int ShellExecute(const char *pCommand)
 {
@@ -373,6 +383,8 @@ enum
 		WIN_GET_WINDOW_RECT,
 		WIN_CALL_CALLBACK_AND_CTLS,
 		WIN_CHANGE_CURSOR,
+		WIN_SET_FLAGS,
+		WIN_GET_FLAGS,
 };
 
 const void *WindowCall[] = {
@@ -564,6 +576,8 @@ const void *WindowCall[] = {
 		GetWindowRect,
 		CallWindowCallbackAndControls,
 		ChangeCursor,
+		SetWindowFlags,
+		GetWindowFlags,
 };
 
 

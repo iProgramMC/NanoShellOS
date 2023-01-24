@@ -489,3 +489,9 @@ CALL_END
 CALL(ChangeCursor, WIN_CHANGE_CURSOR, void, Window* pWindow, int cursorID)
 	SARGS(pWindow, cursorID)
 CALL_END
+CALL(SetWindowFlags, WIN_SET_FLAGS, void, Window* pWindow, int flags)
+	SARGS(pWindow, flags)
+CALL_END
+CALL(GetWindowFlags, WIN_GET_FLAGS, int, Window* pWindow)
+	RARGS(pWindow)
+CALL_END

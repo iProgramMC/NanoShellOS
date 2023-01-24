@@ -139,6 +139,7 @@ Rectangle g_resizeRect;
 Window* g_pFormDesignerWindow;
 Window* g_pToolboxWindow;
 Window* g_pMainWindow;
+Window* g_pPreviewWindow;
 
 #define SWAPI(a,b)  do{int tmp; tmp=a; a=b; b=tmp; }while (0)
 
@@ -913,6 +914,16 @@ void VbPreviewOnClickButton(Window* pWindow, int comboID)
 	RunnerCall(c, "");
 }
 
+void FreezeWindow(Window* pWindow)
+{
+	SetWindowFlags(pWindow, GetWindowFlags(pWindow) | WF_FROZEN);
+}
+
+void UnfreezeWindow(Window* pWindow)
+{
+	SetWindowFlags(pWindow, GetWindowFlags(pWindow) & ~WF_FROZEN);
+}
+
 void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -949,6 +960,9 @@ void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int
 		case EVENT_DESTROY:
 		{
 			CompilerTeardown();
+			
+			UnfreezeWindow(g_pFormDesignerWindow);
+			
 			break;
 		}
 		default:
@@ -958,6 +972,12 @@ void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int
 
 void CALLBACK VbPreviewWindow()
 {
+	if (g_pPreviewWindow)
+	{
+		MessageBox(g_pMainWindow, "The preview is already running.", "Codename V-Builder", MB_OK | ICON_WARNING << 16);
+		return;
+	}
+	
 	char buffer[1024];
 	strcpy(buffer, "Preview - ");
 	strcat(buffer, GetWindowTitle(g_pFormDesignerWindow));
@@ -965,8 +985,10 @@ void CALLBACK VbPreviewWindow()
 	Rectangle rect;
 	GetWindowRect(g_pFormDesignerWindow, &rect);
 	
-	PopupWindow(
-		g_pFormDesignerWindow,
+	// Freeze the form designer window
+	FreezeWindow(g_pFormDesignerWindow);
+	
+	g_pPreviewWindow = CreateWindow(
 		buffer,
 		rect.left + 30,
 		rect.top  + 30,
@@ -1108,35 +1130,39 @@ int NsMain(UNUSED int argc, UNUSED char** argv)
 		bool b1 = HandleMessages (pMainWindow);
 		bool b2 = HandleMessages (pFormWindow);
 		bool b3 = HandleMessages (pToolsWindow);
+		bool b4 = false;
 		
-		if (!b1)
-		{
-			pMainWindow = NULL;
-		}
+		if (g_pPreviewWindow)
+			b4 = HandleMessages (g_pPreviewWindow);
 		
-		if (!b2)
-		{
-			pFormWindow = NULL;
-		}
+		if (!b4)
+			g_pPreviewWindow = NULL;
 		
-		if (!b3)
-		{
-			pToolsWindow = NULL;
-		}
+		if (!b1) g_pMainWindow         = pMainWindow  = NULL;
+		if (!b2) g_pFormDesignerWindow = pFormWindow  = NULL;
+		if (!b3) g_pToolboxWindow      = pToolsWindow = NULL;
 		
 		if (!b1 || !b2 || !b3)
 		{
 			if (pMainWindow)
 			{
 				KillWindow(pMainWindow);
+				g_pMainWindow = pMainWindow = NULL;
 			}
 			if (pFormWindow)
 			{
 				KillWindow(pFormWindow);
+				g_pFormDesignerWindow = pFormWindow = NULL;
 			}
 			if (pToolsWindow)
 			{
 				KillWindow(pToolsWindow);
+				g_pToolboxWindow = pToolsWindow = NULL;
+			}
+			if (g_pPreviewWindow)
+			{
+				KillWindow(g_pPreviewWindow);
+				g_pPreviewWindow = NULL;
 			}
 			break;
 		}
