@@ -451,6 +451,12 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 		g_bAddedToLastHeaderHint = false;
 	}
 	
+	// Actually, is the size the same?
+	if (size == pHeader->m_size)
+	{
+		return pMem;
+	}
+	
 	// Are we trying to shrink this memory region? This case is trivial.
 	if (size < pHeader->m_size)
 	{

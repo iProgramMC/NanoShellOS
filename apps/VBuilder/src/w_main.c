@@ -217,7 +217,7 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 
 void VbCreateMainWindow()
 {
-	Window* pMainWindow = CreateWindow ("Codename V-Builder", 100, 100, DEF_VBUILD_WID, DEF_VBUILD_HEI, PrgVbMainWndProc, WF_ALWRESIZ);
+	Window* pMainWindow = CreateWindow ("Codename V-Builder", 100 - D_OFFSET, 100 - D_OFFSET, DEF_VBUILD_WID, DEF_VBUILD_HEI, PrgVbMainWndProc, WF_ALWRESIZ);
 	
 	if (!pMainWindow) exit(1);
 	

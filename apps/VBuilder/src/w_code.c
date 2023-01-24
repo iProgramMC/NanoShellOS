@@ -9,6 +9,10 @@
 #include "buttons.h"
 #include "w_defs.h"
 
+enum
+{
+	CODE_TEXTINPUT = 1000,
+};
 
 char * g_SourceCode = NULL;
 
@@ -16,12 +20,41 @@ Window* g_pCodeWindow;
 
 void VbInitCode()
 {
-	g_SourceCode = strdup("function Test\n{\n\techo(\"hello world\");\n}\n\nfunction Button1_Click\n{\n\tTest();\n}\n\n");
+	g_SourceCode = strdup(
+		"# This is merely an example of what you can do in NanoShell Codename V-Builder!\n"
+		"# Create a button with the name 'Button1', then preview the form and click the button.\n"
+		"# You should now see in whatever console this program is run from, the string 'hello world'.\n"
+		"\n"
+		"function Test\n"
+		"{\n"
+		"\techo(\"hello world\");\n"
+		"}\n"
+		"\n"
+		"function Button1_Click\n"
+		"{\n"
+		"\tTest();\n"
+		"}\n"
+		"\n"
+	);
 }
 
 void VbRefreshCode(Window* pWindow)
 {
+	const char* rawText = TextInputGetRawText(pWindow, CODE_TEXTINPUT);
 	
+	size_t sl = strlen(rawText);
+	
+	char* src = realloc(g_SourceCode, sl + 1);
+	if (!src)
+	{
+		// this is awkward
+		LogMsg("Couldn't refresh code, try again later?");
+		return;
+	}
+	
+	g_SourceCode = src;
+	
+	strcpy(src, rawText);
 }
 
 void CALLBACK PrgCodeProc(Window* pWindow, int eventType, int parm1, int parm2)
@@ -32,9 +65,9 @@ void CALLBACK PrgCodeProc(Window* pWindow, int eventType, int parm1, int parm2)
 		{
 			Rectangle r = { 10, 10 + TITLE_BAR_HEIGHT, DEF_CODEWIN_WID - 10, DEF_CODEWIN_HEI - 10 };
 			
-			AddControlEx(pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, TEXTEDIT_MULTILINE | TEXTEDIT_LINENUMS, 0);
+			AddControlEx(pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, CODE_TEXTINPUT, TEXTEDIT_MULTILINE | TEXTEDIT_LINENUMS, 0);
 			
-			SetTextInputText(pWindow, 1000, g_SourceCode);
+			SetTextInputText(pWindow, CODE_TEXTINPUT, g_SourceCode);
 			
 			break;
 		}

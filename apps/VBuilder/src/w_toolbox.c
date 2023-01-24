@@ -95,7 +95,7 @@ void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int p
 void VbCreateToolboxWindow()
 {
 	// The tool box window
-	Window* pToolsWindow = CreateWindow ("Toolbox", 100, 180-18+TITLE_BAR_HEIGHT, DEF_TOOLBOX_WID, DEF_TOOLBOX_HEI, PrgToolkitProc, WF_NOCLOSE | WF_NOMINIMZ | WF_SYSPOPUP);
+	Window* pToolsWindow = CreateWindow ("Toolbox", 100 - D_OFFSET, 180 - D_OFFSET-18+TITLE_BAR_HEIGHT, DEF_TOOLBOX_WID, DEF_TOOLBOX_HEI, PrgToolkitProc, WF_NOCLOSE | WF_NOMINIMZ | WF_SYSPOPUP);
 	
 	if (!pToolsWindow)
 	{

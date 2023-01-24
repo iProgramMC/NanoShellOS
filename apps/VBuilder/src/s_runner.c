@@ -231,9 +231,13 @@ Variant* RunStatementSub(Statement* pStatement)
 			if (pPreExistingFunc)
 			{
 				// If the function has the same body, it should be okay.
-				if (pPreExistingFunc->m_pStatement != pData->m_statement)
+				if (pPreExistingFunc->type != FUNCTION_STATEMENT || pPreExistingFunc->m_pStatement != pData->m_statement)
 				{
 					RunnerOnError(ERROR_FUNCTION_ALREADY_EXISTS);
+				}
+				else
+				{
+					break;
 				}
 			}
 
@@ -247,7 +251,17 @@ Variant* RunStatementSub(Statement* pStatement)
 
 			Function* pPreExistingFunc = RunnerLookUpFunction(pData->m_name);
 			if (pPreExistingFunc)
-				RunnerOnError(ERROR_VARIABLE_ALREADY_EXISTS);
+			{
+				// If the variable has the same body, it should be okay.
+				if (pPreExistingFunc->type != FUNCTION_STATEMENT || pPreExistingFunc->m_pStatement != pData->m_statement)
+				{
+					RunnerOnError(ERROR_VARIABLE_ALREADY_EXISTS);
+				}
+				else
+				{
+					break;
+				}
+			}
 			
 			RunnerAddFunctionVariable(pData->m_statement, pData->m_name);
 
@@ -467,7 +481,7 @@ void PrepareGlobals(Statement* pStatement)
 	for (size_t i = 0; i < pStatement->m_blk_data->m_nstatements; i++)
 	{
 		Statement* pStmt = pStatement->m_blk_data->m_statements[i];
-		if (pStmt->type == STMT_FUNCTION)
+		if (pStmt->type == STMT_FUNCTION || pStmt->type == STMT_VARIABLE)
 		{
 			RunStatement(pStmt);
 		}

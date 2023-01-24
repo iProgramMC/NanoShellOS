@@ -19,6 +19,8 @@
 #define GRABBER_SIZE (8)
 #define GRID_WIDTH   (8)
 
+#define D_OFFSET (50)
+
 enum
 {
 	TOOL_CURSOR = -100,

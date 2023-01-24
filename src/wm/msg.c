@@ -13,6 +13,9 @@ static bool IsEventPrivate(int eventType)
 
 void OnWindowHung(Window *pWindow)
 {
+	if (!pWindow->m_used)
+		return;
+	
 	//don't hang twice
 	if (pWindow->m_flags & WI_HUNGWIND)
 		return;

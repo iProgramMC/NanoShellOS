@@ -606,7 +606,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 
 void VbCreateFormDesignerWindow()
 {
-	Window* pFormWindow  = CreateWindow ("Form Designer", 240, 180-18+TITLE_BAR_HEIGHT, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
+	Window* pFormWindow  = CreateWindow ("Form Designer", 240 - D_OFFSET, 180 - D_OFFSET-18+TITLE_BAR_HEIGHT, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
 	
 	if (!pFormWindow)
 	{
