@@ -15,11 +15,7 @@ extern Window *g_pFormDesignerWindow, *g_pMainWindow;
 extern DesignerControl* g_controlsFirst, *g_controlsLast;
 extern DesignerControl* g_pEditedControl;
 
-char g_SourceCode[] = 
-	"function Button1_Click"
-	"{"
-	"\techo(\"hello there\");"
-	"}";
+extern char* g_SourceCode;
 
 Window* g_pPreviewWindow;
 

@@ -122,11 +122,6 @@ void VbSelectControlDialog()
 	RegisterEvent(g_pFormDesignerWindow, EVENT_PAINT, 0, 0);
 }
 
-void VbCodeWindow()
-{
-	LogMsg("Code window!");
-}
-
 void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -187,7 +182,7 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 						VbPreviewWindow();
 						break;
 					case CO_SHOW_CODE:
-						VbCodeWindow();
+						VbCreateCodeWindow();
 						break;
 					case CO_STOP:
 						if (!g_pPreviewWindow)

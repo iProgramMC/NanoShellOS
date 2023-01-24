@@ -6,6 +6,8 @@
 #define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2 + 6 + TEXT_BOX_HEIGHT + 6)
 #define DEF_FDESIGN_WID 500
 #define DEF_FDESIGN_HEI 400
+#define DEF_CODEWIN_WID 500
+#define DEF_CODEWIN_HEI 400
 #define DEF_TOOLBOX_WID (24 * 2 + 6)
 #define DEF_TOOLBOX_HEI (24 * 4 + 6 + TITLE_BAR_HEIGHT)
 
@@ -60,10 +62,10 @@ typedef struct tagDesCtl
 }
 DesignerControl;
 
+void VbInitCode();
 void VbPreviewWindow();
 void VbSelectControlDialog();
 void VbCreateMainWindow();
 void VbCreateFormDesignerWindow();
 void VbCreateToolboxWindow();
-
-
+void VbCreateCodeWindow();
