@@ -382,12 +382,19 @@ void DestroyWindow (Window* pWindow)
 
 void SelectWindowUnsafe(Window* pWindow)
 {
+	bool bNeverSelect = (pWindow->m_flags & WI_NEVERSEL);
+	
 	bool wasSelectedBefore = pWindow->m_isSelected;
+	
 	if (!wasSelectedBefore)
 	{
-		SetFocusedConsole (NULL);
-		g_focusedOnWindow = NULL;
-		for (int i = 0; i < WINDOWS_MAX; i++)
+		if (!bNeverSelect)
+		{
+			SetFocusedConsole (NULL);
+			g_focusedOnWindow = NULL;
+		}
+		
+		for (int i = 0; i < WINDOWS_MAX && !bNeverSelect; i++)
 		{
 			if (g_windows[i].m_used)
 			{
@@ -395,23 +402,22 @@ void SelectWindowUnsafe(Window* pWindow)
 				{
 					g_windows[i].m_isSelected = false;
 					WindowRegisterEventUnsafe(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
-//					WindowRegisterEventUnsafe(&g_windows[i], EVENT_PAINT, 0, 0);
-					//g_windows[i].m_vbeData.m_dirty = true;
-					//g_windows[i].m_renderFinished = true;
-					//todo: just draw the title bar
 				}
 			}
 		}
 		
 		MovePreExistingWindowToFront (pWindow - g_windows);
-		pWindow->m_isSelected = true;
-		WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
-//		WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
-		pWindow->m_vbeData.m_dirty = true;
-		pWindow->m_renderFinished = true;
-		pWindow->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
-		SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
-		g_focusedOnWindow = pWindow;
+		
+		if (!bNeverSelect)
+		{
+			pWindow->m_isSelected = true;
+			WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
+			pWindow->m_vbeData.m_dirty = true;
+			pWindow->m_renderFinished = true;
+			pWindow->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
+			SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
+			g_focusedOnWindow = pWindow;
+		}
 	}
 	
 	RequestTaskbarUpdate();

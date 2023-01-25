@@ -509,6 +509,8 @@ enum CURSORTYPE
 #define WF_BACKGRND 0x00000400//The window is on a separate 'background' layer, behind normal windows.
 #define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
 
+#define WI_OPENMENU 0x00400000//Internal flag: A menu is open from this window's menu bar -- don't open another.
+#define WI_NEVERSEL 0x00800000//Internal flag: Never select this window.
 #define WI_NOHIDDEN 0x01000000//Internal flag: This window wasn't hidden at the time of resizing.
 #define WI_MESSGBOX 0x02000000//Internal flag: This is a message box. Wait for it
 #define WI_FROZENRM 0x04000000//Internal flag: Remove the 'frozen' flag when the window is no longer hung
@@ -518,7 +520,7 @@ enum CURSORTYPE
 #define WI_INITGOOD 0x40000000//If the initialization process succeeded
 #define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
-#define WI_INTEMASK 0xCD000000//Internal flag mask that CreateWindow will filter
+#define WI_INTEMASK 0xCD400000//Internal flag mask that CreateWindow will filter
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 

@@ -96,69 +96,78 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			Point p = {GET_X_PARM(parm1), GET_Y_PARM(parm1)};
 			// Determine what item we've clicked.
-			if (pData->m_root.m_childrenArray)
+			if (!pData->m_root.m_childrenArray) break;
+			
+			// if we already have a menu open, don't open another
+			if (pWindow->m_flags & WI_OPENMENU) break;
+			
+			int  current_x = 8;
+			bool needsUpdate = false;
+			for (int i = 0; i < pData->m_root.m_childrenCount; i++)
 			{
-				int  current_x = 8;
-				bool needsUpdate = false;
-				for (int i = 0; i < pData->m_root.m_childrenCount; i++)
+				int width, height;
+				MenuBarTreeItem* pChild = &pData->m_root.m_childrenArray[i];
+				const char* pText = pChild->m_text;
+				VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
+				
+				width += 15;
+				
+				Rectangle rect;
+				rect.left   = menu_bar_rect.left + current_x;
+				rect.right  = menu_bar_rect.left + current_x + width;
+				rect.top    = menu_bar_rect.top  + 2;
+				rect.bottom = menu_bar_rect.bottom;
+				
+				if (RectangleContains (&rect, &p))
 				{
-					int width, height;
-					MenuBarTreeItem* pChild = &pData->m_root.m_childrenArray[i];
-					const char* pText = pChild->m_text;
-					VidTextOutInternal (pText, 0, 0, 0, 0, true, &width, &height);
-					
-					width += 15;
-					
-					Rectangle rect;
-					rect.left   = menu_bar_rect.left + current_x;
-					rect.right  = menu_bar_rect.left + current_x + width;
-					rect.top    = menu_bar_rect.top  + 2;
-					rect.bottom = menu_bar_rect.bottom;
-					
-					if (RectangleContains (&rect, &p))
+					for (int i = 0; i < pData->m_root.m_childrenCount; i++)
 					{
-						for (int i = 0; i < pData->m_root.m_childrenCount; i++)
-						{
-							MenuBarTreeItem* pChild = &pData->m_root.m_childrenArray[i];
-							pChild->m_isOpen = false;
-						}
-						// Open this and call the paint event.
-						
-						if (pChild->m_childrenCount)
-						{
-							pChild->m_isOpen = true;
-							WindowMenu menu;
-							ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
-							SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + MENU_BAR_HEIGHT);
-							MenuRecursivelyFreeEntries (&menu);
-						}
-						else
-						{
-							CallWindowCallback (pWindow, EVENT_COMMAND, this->m_comboID, pChild->m_comboID);
-						}
-						
-						//WmMenuOnEvent (this, EVENT_PAINT, 0, 0, pWindow);
-						//break;
-						needsUpdate = true;
+						MenuBarTreeItem* pChild = &pData->m_root.m_childrenArray[i];
+						pChild->m_isOpen = false;
+					}
+					// Open this and call the paint event.
+					
+					if (pChild->m_childrenCount)
+					{
+						pChild->m_isOpen = true;
+						WindowMenu menu;
+						ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
+						SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + MENU_BAR_HEIGHT);
+						pWindow->m_flags |= WI_OPENMENU;
+						MenuRecursivelyFreeEntries (&menu);
+					}
+					else
+					{
+						CallWindowCallback (pWindow, EVENT_COMMAND, this->m_comboID, pChild->m_comboID);
 					}
 					
-					if (pChild->m_isOpen)
-					{
-						needsUpdate = true;
-					}
-					
-					current_x += width;
-					if (needsUpdate) break;
+					//WidgetMenuBar_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+					//break;
+					needsUpdate = true;
 				}
-				if (needsUpdate)
-					//CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
-					RequestRepaintNew(pWindow);
+				
+				if (pChild->m_isOpen)
+				{
+					needsUpdate = true;
+				}
+				
+				current_x += width;
+				if (needsUpdate) break;
+			}
+			
+			if (needsUpdate)
+			{
+				//CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
+				//RequestRepaintNew(pWindow);
+				CallControlCallback(pWindow, this->m_comboID, EVENT_PAINT, 0, 0);
 			}
 			break;
 		}
 		case EVENT_MENU_CLOSE:
 		{
 			if (!pData) break;
+			
+			pWindow->m_flags &= ~WI_OPENMENU;
 			
 			if (parm1 == this->m_comboID)
 			{
@@ -167,7 +176,9 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 					MenuBarTreeItem* pChild = &pData->m_root.m_childrenArray[i];
 					pChild->m_isOpen = false;
 				}
-				RequestRepaintNew(pWindow);
+				//RequestRepaintNew(pWindow);
+				
+				CallControlCallback(pWindow, this->m_comboID, EVENT_PAINT, 0, 0);
 			}
 			break;
 		}

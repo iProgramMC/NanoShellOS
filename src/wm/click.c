@@ -9,6 +9,25 @@
 Window* g_currentlyClickedWindow = NULL;
 int g_prevMouseX, g_prevMouseY;
 
+void CloseAnyOpenMenusOutside(int posX, int posY)
+{
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		Window* pWnd = &g_windows[i];
+		
+		if (!pWnd->m_used) continue;
+		if (~pWnd->m_flags & WF_MENUITEM) continue;
+		
+		// this is a menu item.
+		Point p = { posX, posY };
+		
+		if (!RectangleContains(&pWnd->m_rect, &p))
+		{
+			WindowAddEventToMasterQueue(pWnd, EVENT_KILLFOCUS, 0, 0);
+		}
+	}
+}
+
 // note: these are called from the window manager task
 
 void OnUILeftClick (int mouseX, int mouseY)
@@ -73,6 +92,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 	{
 		g_currentlyClickedWindow = NULL;
 	}
+	
+	CloseAnyOpenMenusOutside(mouseX, mouseY);
 	
 	//FREE_LOCK(g_windowLock);
 }
@@ -268,6 +289,8 @@ void OnUIRightClick (int mouseX, int mouseY)
 			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
+	
+	CloseAnyOpenMenusOutside(mouseX, mouseY);
 }
 
 void OnUIRightClickRelease (int mouseX, int mouseY)
