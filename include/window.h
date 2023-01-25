@@ -608,6 +608,8 @@ typedef struct WindowStruct
 	// a list of timers
 	WindowTimer m_timers[C_MAX_WIN_TIMER];
 	int        m_timer_count;
+	
+	MenuBarData* m_pMenuBar; // The menu bar's data.
 } Window;
 
 /**

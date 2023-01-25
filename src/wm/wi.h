@@ -137,5 +137,8 @@ int  WmAddRectangleToStack(Rectangle* rect);
 void WmSplitRectangleStackByWindow(Window* pWindow);
 void WmSplitRectangle(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut);
 void WmTakeOverWindow(Window* pWindow);
+void WmDeleteMenuBar(MenuBarData* pData);
+bool WmMenuTryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comboID_as, const char* text);
+MenuBarData* WmCreateMenuBar();
 
 #endif//INT_WI_H
