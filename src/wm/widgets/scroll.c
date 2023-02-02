@@ -190,13 +190,13 @@ go_back:;
 				this->m_scrollBarData.m_isBeingDragged = false;
 				if (this->m_scrollBarData.m_yMinButton)
 				{
-					this->m_scrollBarData.m_pos -= (this->m_scrollBarData.m_max - this->m_scrollBarData.m_min) / 10;
+					this->m_scrollBarData.m_pos -= this->m_scrollBarData.m_dbi;
 					if (this->m_scrollBarData.m_pos < this->m_scrollBarData.m_min)
 						this->m_scrollBarData.m_pos = this->m_scrollBarData.m_min;
 				}
 				if (this->m_scrollBarData.m_yMaxButton)
 				{
-					this->m_scrollBarData.m_pos += (this->m_scrollBarData.m_max - this->m_scrollBarData.m_min) / 10;
+					this->m_scrollBarData.m_pos += this->m_scrollBarData.m_dbi;
 					if (this->m_scrollBarData.m_pos >= this->m_scrollBarData.m_max)
 						this->m_scrollBarData.m_pos  = this->m_scrollBarData.m_max - 1;
 				}

@@ -87,7 +87,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			VidBlitImage(&gWorldMap,  10 + 3, 10 + 3 + TITLE_BAR_HEIGHT + 40);
 			break;
 		}
-		case EVENT_CLICKCURSOR:
+		case EVENT_SCROLLDONE:
 		{
 			// update the selected country
 			int pos = GetScrollBarPos (pWindow, 0x100);
