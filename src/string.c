@@ -77,6 +77,31 @@ void fmemcpy128 (void* restrict dest, const void* restrict src, int size) {
 	}
 }
 
+void memmove_ints(void* pMemOut, const void* pMemIn, int nSize)
+{
+	uint32_t* pMemOut32 = (uint32_t*)pMemOut;
+	const uint32_t* pMemIn32 = (const uint32_t*)pMemIn;
+	
+	if (pMemOut == pMemIn) return;
+	
+	if (pMemOut <= pMemIn)
+	{
+		while (nSize--)
+		{
+			*pMemOut32++ = *pMemIn32++;
+		}
+	}
+	else
+	{
+		pMemOut32 += nSize;
+		pMemIn32  += nSize;
+		while (nSize--)
+		{
+			*(--pMemOut32) = *(--pMemIn32);
+		}
+	}
+}
+
 void* memmove(void* restrict dstptr, const void* restrict srcptr, size_t size)
 {
 	BYTE* dst = (BYTE*) dstptr;

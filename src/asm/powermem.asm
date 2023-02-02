@@ -308,6 +308,7 @@ memcpy_ints:
 	mov esp, ebp
 	pop ebp
 	ret
+
 align4_memcpy:
 	push ebp
 	mov  ebp, esp

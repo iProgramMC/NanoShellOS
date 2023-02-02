@@ -1046,6 +1046,10 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 	if (width  <= 0) return;
 	if (height <= 0) return;
 	
+	// if the source and destination are the same, use memmove to ensure all the data is moved properly.
+	// Otherwise, use the optimized memcpy_ints.
+	void (*MemcpyInts)(void*, const void*, int) = pSrc == pDest ? memmove_ints : memcpy_ints;
+	
 	//SLogMsg("VidBitBlitR(%x, %d, %d, %d, %d, %x, %d, %d, %x)",pDest,cx,cy,width,height,pSrc,x1,y1,mode);
 	
 	if (mode == BOP_SRCCOPY)
@@ -1057,26 +1061,32 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 			SLogMsg("TODO: VidBitBlit to differing bitdepths!!");
 		}
 		
+		const bool isMainScreen = (pSrc == &g_mainScreenVBEData);
+		
+		uint32_t* const pSrcFB   = isMainScreen ? g_framebufferCopy : pSrc->m_framebuffer32;
+		uint32_t  const srcPitch = isMainScreen ? pSrc->m_width     : pSrc->m_pitch32;
+		
 		//basic bit copy:
-		for (int y = 0; y < height; y++)
+		bool reverseCheck = cy >= y1;
+		for (int y = reverseCheck ? height - 1 : 0; reverseCheck ? (y >= 0) : (y < height); reverseCheck ? (--y) : (++y))
 		{
 			//copy one scanline from cy to y1
 			int yDest = cy + y, ySrc = y1 + y;
 			
 			//determine the offset for each scanline:
 			uint32_t* pdoffset = pDest->m_framebuffer32 + (yDest * pDest->m_pitch32) + cx;
-			uint32_t* psoffset = pSrc ->m_framebuffer32 + (ySrc  * pSrc ->m_pitch32) + x1;
+			uint32_t* psoffset = pSrcFB                 + (ySrc  * srcPitch)         + x1;
 			
-			memcpy_ints(pdoffset, psoffset, width);
+			MemcpyInts(pdoffset, psoffset, width);
 			if (pDest == &g_mainScreenVBEData)
 			{
 				// Hrm. Also draw to the copy, you never know.
 				pdoffset = g_framebufferCopy + (yDest * pDest->m_width) + cx;
-				memcpy_ints(pdoffset, psoffset, width);
+				MemcpyInts(pdoffset, psoffset, width);
 			}
 		}
 		
-		DirtyRectLogger(x1, y1, width, height);
+		DirtyRectLogger(cx, cy, width, height);
 	}
 	else if (mode == BOP_DSTFILL)
 	{
@@ -1096,11 +1106,25 @@ void VidBitBlit(VBEData* pDest, int cx, int cy, int width, int height, VBEData* 
 				memset_ints(pdoffset, x1, width);
 			}
 		}
-		DirtyRectLogger(x1, y1, width, height);
+		DirtyRectLogger(cx, cy, width, height);
 	}
 	else SLogMsg("TODO: VidBitBlit mode %x");
 }
 
+void ScrollRect(Rectangle* pRect, int amountX, int amountY)
+{
+	if (amountX == 0 && amountY == 0) return;
+	
+	int cx = pRect->left, cy = pRect->top, x1 = cx, y1 = cy;
+	int width = GetWidth(pRect), height = GetHeight(pRect);
+	
+	if (amountX > 0) cx += amountX, width  -= amountX;
+	else             x1 -= amountX, width  += amountX;
+	if (amountY > 0) cy += amountY, height -= amountY;
+	else             y1 -= amountY, height += amountY;
+	
+	VidBitBlit(VidGetVBEData(), cx, cy, width, height, VidGetVBEData(), x1, y1, BOP_SRCCOPY);
+}
 
 #endif
 
