@@ -161,7 +161,7 @@ void VmwAbsCursorIrq()
 			x = (scaled_x * GetScreenWidth ()) / 0xFFFF,
 			y = (scaled_y * GetScreenHeight()) / 0xFFFF;
 			
-			SetMousePos (x, y);
+			SetMousePosUnsafe(x, y);
 		}
 	}
 }

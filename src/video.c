@@ -126,8 +126,6 @@ bool RefreshMouse()
 				newMouseX += QueueMouseUpdateTo.newX;
 				newMouseY += QueueMouseUpdateTo.newY;
 			}
-			if (newMouseX < 0) newMouseX = 0;
-			if (newMouseY < 0) newMouseY = 0;
 			
 			SetMousePos(newMouseX, newMouseY);
 		}
@@ -267,7 +265,9 @@ Cursor* GetCurrentCursor()
 {
 	return g_currentCursor;
 }
+
 void RenderCursor(void);
+
 void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor)
 {
 	if (!pCursor) pCursor = g_pDefaultCursor;
@@ -311,6 +311,7 @@ void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor)
 	KeVerifyInterruptsDisabled;
 	sti;
 }
+
 void SetCursor(Cursor* pCursor)
 {
 	SetCursorInternal(pCursor, true);
@@ -1767,7 +1768,8 @@ Point GetMousePos ()
 	Point p = { g_mouseX, g_mouseY };
 	return p;
 }
-void SetMousePos (unsigned newX, unsigned newY)
+
+void SetMousePosUnsafe(int newX, int newY)
 {
 	//NOTE: As this is called in an interrupt too, a call here might end up coming right
 	//while we we're drawing a  or something.  Keep a backup of the previous settings.
@@ -1777,8 +1779,10 @@ void SetMousePos (unsigned newX, unsigned newY)
 	
 	int oldX = g_mouseX, oldY = g_mouseY;
 	
-	if (newX >= (unsigned)GetScreenSizeX()) newX = GetScreenSizeX() - 1;
-	if (newY >= (unsigned)GetScreenSizeY()) newY = GetScreenSizeY() - 1;
+	if (newX < 0) newX = 0;
+	if (newY < 0) newY = 0;
+	if (newX >= GetScreenSizeX()) newX = GetScreenSizeX() - 1;
+	if (newY >= GetScreenSizeY()) newY = GetScreenSizeY() - 1;
 	
 	g_mouseX = newX, g_mouseY = newY;
 	
@@ -1794,6 +1798,14 @@ void SetMousePos (unsigned newX, unsigned newY)
 	//TODO: check flags here
 	
 	g_vbeData = backup;
+}
+
+void SetMousePos(int x, int y)
+{
+	KeVerifyInterruptsEnabled;
+	cli;
+	SetMousePosUnsafe(x, y);
+	sti;
 }
 
 #endif

@@ -359,7 +359,7 @@ void MouseInit()
 		g_mouseInitted = true;
 		SetDefaultCursor();
 		SetMouseVisible (true);
-		SetMousePos (GetScreenSizeX() / 2, GetScreenSizeY() / 2);
+		SetMousePos(GetScreenSizeX() / 2, GetScreenSizeY() / 2);
 		g_ps2MouseAvail = true;
 	}
 	else

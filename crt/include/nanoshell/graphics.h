@@ -29,7 +29,7 @@ void VidFillRectangle(unsigned color, Rectangle rect);
 void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, int right, int bottom);
 void VidFillRectVGradient(unsigned colorU, unsigned colorD, int left, int top, int right, int bottom);
 void VidDrawRectangle(unsigned color, Rectangle rect);
-void SetMousePos (unsigned pX, unsigned pY);
+void SetMousePos (int pX, int pY);
 void VidSetVbeData (VBEData* pData);
 void RenderIcon(int type, int x, int y);
 void RenderIconOutline(int type, int x, int y, uint32_t color);

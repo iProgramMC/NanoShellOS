@@ -420,7 +420,8 @@ Cursor* GetCurrentCursor();
 /**
  * Forces the mouse position to go somewhere.
  */
-void SetMousePos (unsigned pX, unsigned pY);
+void SetMousePosUnsafe (int pX, int pY);
+void SetMousePos (int pX, int pY);
 
 /**
  * Gets the width of a character 'c' in the current font.

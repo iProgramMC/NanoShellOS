@@ -92,7 +92,7 @@ void IrqVirtualBox()
 		x = (gVbMouse->nX * GetScreenWidth ()) / 0xFFFF,
 		y = (gVbMouse->nY * GetScreenHeight()) / 0xFFFF;
 		
-		SetMousePos (x, y);
+		SetMousePosUnsafe (x, y);
 	}
 	
 	// Flush PIC - TODO

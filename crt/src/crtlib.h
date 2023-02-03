@@ -13,7 +13,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 21
+#define WCALL_VERSION 22
 enum
 {
 	// System Calls V1.0
@@ -236,6 +236,14 @@ enum
 		WIN_CHANGE_CURSOR,
 		WIN_SET_FLAGS,
 		WIN_GET_FLAGS,
+	#endif
+	
+	// System Calls V2.2
+	#if WCALL_VERSION >= 22
+		VID_SET_MOUSE_POS,
+		WIN_ADD_TIMER,
+		WIN_DISARM_TIMER,
+		WIN_CHANGE_TIMER,
 	#endif
 };
 

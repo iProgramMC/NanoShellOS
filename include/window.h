@@ -423,9 +423,10 @@ CheckBoxData;
 
 typedef struct
 {
-	int m_frequency;
-	int m_nextTickAt;
-	int m_firedEvent;
+	bool m_used;
+	int  m_frequency;
+	int  m_nextTickAt;
+	int  m_firedEvent;
 }
 WindowTimer;
 

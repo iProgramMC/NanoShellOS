@@ -106,6 +106,9 @@ void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
 void        CallWindowCallbackAndControls(Window* pWindow, int eventType, int parm1, int parm2);
 int         GetWindowFlags(Window * pWindow);
 void        SetWindowFlags(Window * pWindow, int flags);
+int         AddTimer(Window* pWindow, int frequencyMs, int eventFired);
+void        DisarmTimer(Window* pWindow, int timerID);
+void        ChangeTimer(Window* pWindow, int newFrequencyMs /* = -1 */, int newEventFired /* = -1 */);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

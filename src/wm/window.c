@@ -24,6 +24,8 @@ g_BackgdLock;
 
 int AddTimer(Window* pWindow, int frequency, int event)
 {
+	KeVerifyInterruptsEnabled;
+	
 	cli;
 	if (pWindow->m_timer_count >= C_MAX_WIN_TIMER)
 	{
@@ -31,10 +33,24 @@ int AddTimer(Window* pWindow, int frequency, int event)
 		return -1;
 	}
 	
-	WindowTimer* pTimer  = &pWindow->m_timers[pWindow->m_timer_count++];
+	// find a free spot
+	int freeSpot = 0;
+	for (int i = 0; i < C_MAX_WIN_TIMER; i++)
+	{
+		if (pWindow->m_timers[i].m_used == false)
+		{
+			freeSpot = i;
+			break;
+		}
+	}
+	
+	WindowTimer* pTimer  = &pWindow->m_timers[freeSpot];
+	pTimer->m_used       = true;
 	pTimer->m_frequency  = frequency;
 	pTimer->m_nextTickAt = 0;
 	pTimer->m_firedEvent = event;
+	
+	pWindow->m_timer_count++;
 	sti;
 	
 	return pTimer - pWindow->m_timers;
@@ -43,16 +59,13 @@ int AddTimer(Window* pWindow, int frequency, int event)
 void DisarmTimer(Window* pWindow, int timerID)
 {
 	// timerID out of bounds guard
-	if (timerID < 0) return;
+	if (timerID < 0 || timerID >= C_MAX_WIN_TIMER) return;
+	
+	KeVerifyInterruptsEnabled;
 	
 	cli;
-	if (pWindow->m_timer_count <= timerID)
-	{
-		sti;
-		return;
-	}
 	
-	memmove(&pWindow->m_timers[timerID], &pWindow->m_timers[timerID + 1], sizeof(WindowTimer) * (pWindow->m_timer_count - 1 - timerID));
+	pWindow->m_timers[timerID].m_used = false;
 	pWindow->m_timer_count--;
 	
 	sti;
@@ -61,17 +74,17 @@ void DisarmTimer(Window* pWindow, int timerID)
 void ChangeTimer(Window* pWindow, int timerID, int newFrequency, int newEvent)
 {
 	// timerID out of bounds guard
-	if (timerID < 0) return;
+	if (timerID < 0 || timerID >= C_MAX_WIN_TIMER) return;
+	
+	KeVerifyInterruptsEnabled;
 	
 	cli;
-	if (pWindow->m_timer_count <= timerID)
-	{
-		sti;
-		return;
-	}
 	
-	pWindow->m_timers[timerID].m_frequency  = newFrequency;
-	pWindow->m_timers[timerID].m_firedEvent = newEvent;
+	if (newFrequency != -1)
+		pWindow->m_timers[timerID].m_frequency  = newFrequency;
+	
+	if (newEvent != -1)
+		pWindow->m_timers[timerID].m_firedEvent = newEvent;
 	
 	sti;
 }

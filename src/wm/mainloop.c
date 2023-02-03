@@ -178,7 +178,6 @@ void WmTakeOverWindow(Window* pWindow)
 
 void WmTimerTick(Window* pWindow)
 {
-	int count = 0;
 	WindowTimer timers   [C_MAX_WIN_TIMER];
 	int         tickTimes[C_MAX_WIN_TIMER] = { 0 };
 	
@@ -187,9 +186,10 @@ void WmTimerTick(Window* pWindow)
 	
 	// take a snapshot
 	cli;
-	count = pWindow->m_timer_count;
-	for (int i = 0; i < pWindow->m_timer_count; i++)
+	
+	for (int i = 0; i < C_MAX_WIN_TIMER; i++)
 	{
+		if (pWindow->m_timers[i].m_used      == 0) continue;
 		if (pWindow->m_timers[i].m_frequency == 0) continue; // timer is disarmed
 		
 		if (!pWindow->m_timers[i].m_nextTickAt)
@@ -209,7 +209,7 @@ void WmTimerTick(Window* pWindow)
 	
 	// look through each of the timers
 	
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < C_MAX_WIN_TIMER; i++)
 	{
 		while (tickTimes[i] > 0)
 		{

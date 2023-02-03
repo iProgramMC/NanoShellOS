@@ -395,7 +395,7 @@ void UpdateFakeMouse()
 		g_mouseInitted = true;
 		SetDefaultCursor();
 		SetMouseVisible (true);
-		SetMousePos (GetScreenSizeX() / 2, GetScreenSizeY() / 2);
+		SetMousePosUnsafe(GetScreenSizeX() / 2, GetScreenSizeY() / 2);
 	}
 	
 	int mflags = 

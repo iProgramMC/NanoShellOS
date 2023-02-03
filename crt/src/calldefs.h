@@ -495,3 +495,20 @@ CALL_END
 CALL(GetWindowFlags, WIN_GET_FLAGS, int, Window* pWindow)
 	RARGS(pWindow)
 CALL_END
+
+// Calls V2.2
+CALL(SetMousePos, VID_SET_MOUSE_POS, void, int newX, int newY)
+	SARGS(newX, newY)
+CALL_END
+
+CALL(AddTimer, WIN_ADD_TIMER, int, Window* pWindow, int frequency, int event)
+	RARGS(pWindow, frequency, event)
+CALL_END
+
+CALL(DisarmTimer, WIN_DISARM_TIMER, void, Window* pWindow, int timerID)
+	SARGS(pWindow, timerID)
+CALL_END
+
+CALL(ChangeTimer, WIN_CHANGE_TIMER, void, Window* pWindow, int timerID, int newFreq, int newEvent)
+	SARGS(pWindow, timerID, newFreq, newEvent)
+CALL_END

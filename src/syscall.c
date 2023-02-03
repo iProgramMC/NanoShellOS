@@ -385,6 +385,12 @@ enum
 		WIN_CHANGE_CURSOR,
 		WIN_SET_FLAGS,
 		WIN_GET_FLAGS,
+		
+	// System Calls V2.2
+		VID_SET_MOUSE_POS,
+		WIN_ADD_TIMER,
+		WIN_DISARM_TIMER,
+		WIN_CHANGE_TIMER,
 };
 
 const void *WindowCall[] = {
@@ -578,6 +584,12 @@ const void *WindowCall[] = {
 		ChangeCursor,
 		SetWindowFlags,
 		GetWindowFlags,
+		
+	// System Calls V2.2
+		SetMousePos,
+		AddTimer,
+		DisarmTimer,
+		ChangeTimer,
 };
 
 

@@ -11,11 +11,6 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
-void SetMousePos (UNUSED unsigned pX, UNUSED unsigned pY)
-{
-	//TODO
-}
-
 int GetWidth (Rectangle* rect)
 {
 	return rect->right - rect->left;
