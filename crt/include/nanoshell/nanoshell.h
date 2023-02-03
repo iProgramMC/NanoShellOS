@@ -33,7 +33,7 @@ void exit (int errcode);
 //NOTE: size must be 4 byte aligned!!
 void  ZeroMemory (void* bufptr1, size_t size);
 void  fmemcpy32 (void* restrict dest, const void* restrict src, size_t size);
-void* fast_memset(void* bufptr, BYTE val, size_t size);
+void* fast_memset(void* bufptr, uint8_t val, size_t size);
 
 // File management
 

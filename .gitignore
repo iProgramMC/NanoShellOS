@@ -13,7 +13,7 @@ tools/*
 apps/**/build/*
 apps/**/*.nse
 
-#apps I don't want out yet because I do not like embedding third party code into the OS
+#apps I don't want out yet because I do not like embedding third party code or experiments into the OS repo
 apps/ArduNS/*
 fs/Bin/ArduNS.nse
 fs/Bin/Dink.nse
@@ -22,11 +22,13 @@ apps/LimnEmu/*
 apps/Nano/*
 apps/Nano/keep/*
 apps/nsshell/*
+apps/Reversi/*
 
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
 fs/Bin/nsshell.nse
 fs/Bin/VBuilder.nse
+fs/Bin/Reversi.nse
 fs/Bin/test.nse
 fs/Tests/*.png
 

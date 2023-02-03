@@ -22,8 +22,6 @@
 #include <nanoshell/keyboard.h>
 #include <sys/types.h>
 
-typedef uint8_t BYTE;
-
 #define false 0
 #define true 1
 
