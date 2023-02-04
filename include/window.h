@@ -855,4 +855,16 @@ void DisarmTimer(Window* pWindow, int timerID);
  */
 void ChangeTimer(Window* pWindow, int timerID, int newFrequency, int newTimer);
 
+/**
+ * Loads a cursor from a specified image and returns the ID that
+ * may be passed on later to ChangeCursor().
+ * Release this resource with ReleaseCursor().
+ */
+int UploadCursor(Image * pImage, int xOff, int yOff);
+
+/**
+ * Release a cursor resource uploaded using UploadCursor().
+ */
+void ReleaseCursor(int cursorID);
+
 #endif//_WINDOW_H

@@ -51,6 +51,27 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			break;
 		}
 		*/
+		
+		case EVENT_CREATE:
+		{
+			//Image* pImg = GetIconImage(ICON_EXPERIMENT, 32);
+			
+			//int id = UploadCursor(pImg, 16, 16);
+			//pWindow->m_data = (void*)id;
+			
+			//ChangeCursor(pWindow, id);
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			//int id = (int)pWindow->m_data;
+			//ChangeCursor(pWindow, CURSOR_DEFAULT);
+			//ReleaseCursor(id);
+			
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			break;
+		}
 		case EVENT_PAINT:
 		{
 			//draw until ICON_COUNT:

@@ -377,9 +377,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		if (pWindowOver)
 		{
-			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver))
+			Cursor* pCur = GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver);
+			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != pCur)
 			{
-				SetCursor(GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver));
+				SetCursor(pCur);
 			}
 		}
 		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != &g_defaultCursor)

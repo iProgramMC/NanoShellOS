@@ -116,6 +116,12 @@ const char* TransformTag(const char* tag, uint32_t range)
 
 bool OnAssertionFail (const char *pStr, const char *pFile, const char *pFunc, int nLine)
 {
+	// TODO weird sync issue. Make sure only one thing can assert at a time, somehow.
+	// This is called in both interrupt and non interrupt contexts....
+	
+	if (!KeCheckInterruptsDisabled())
+		cli;
+	
 	Registers regs;
 	regs.eax = (uint32_t)pStr;
 	regs.ebx = (uint32_t)pFile;
@@ -339,7 +345,7 @@ void KeVerifyInterruptsEnabledD(const char *file, int line)
 	{
 		SLogMsg("Interrupts are disabled, but they should be enabled! (called from %s:%d)", file, line);
 		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
-		ASSERT(!"Hmm, interrupts shouldn't be enabled here");
+		ASSERT(!"Hmm, interrupts should be enabled here");
 	}
 }
 
