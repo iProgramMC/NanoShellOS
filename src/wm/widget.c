@@ -55,6 +55,27 @@ void SetDisabledControl(Window *pWindow, int comboID, bool bDisabled)
 	LDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 	DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 ***************************************************************************/
+void RenderButtonShapeSmallBorder(Rectangle rect, unsigned colorDarker, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
+{
+	VidDrawHLine(colorDarker, rect.left, rect.right - 1, rect.bottom - 1);
+	VidDrawVLine(colorDarker, rect.top, rect.bottom - 1, rect.right  - 1);
+	
+	rect.right--;
+	rect.bottom--;
+	
+	//draw some lines
+	VidDrawVLine (colorLight, rect.top,   rect.bottom-1,   rect.left);
+	VidDrawVLine (colorDark,  rect.top,   rect.bottom-1,   rect.right  - 1);
+	VidDrawHLine (colorDark,  rect.left,  rect.right -1,   rect.bottom - 1);
+	VidDrawHLine (colorLight, rect.left,  rect.right -1,   rect.top);
+	
+	//shrink
+	rect.left++, rect.right -= 2, rect.top++, rect.bottom -= 2;
+	
+	//fill the background:
+	if (colorMiddle != TRANSPARENT)
+		VidFillRectangle(colorMiddle, rect);
+}
 void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle)
 {
 	//draw some lines

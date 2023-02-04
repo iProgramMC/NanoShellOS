@@ -219,6 +219,8 @@ void WmTimerTick(Window* pWindow)
 	}
 }
 
+void WindowCheckButtons(Window* pWindow, int eventType, int x, int y);
+
 int g_oldMouseX = -1, g_oldMouseY = -1;
 void WindowManagerTask(__attribute__((unused)) int useless_argument)
 {
@@ -313,6 +315,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					
 					if (g_GlowOnHover)
 					{
+						WindowCheckButtons(pWindow, EVENT_MOVECURSOR, posX, posY);
 						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
 					}
 					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)

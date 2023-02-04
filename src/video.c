@@ -1,8 +1,8 @@
 /*****************************************
 		NanoShell Operating System
-		  (C) 2021 iProgramInCpp
+	   (C) 2021-2023 iProgramInCpp
 
-             VBE Video module
+        Graphical Interface Module
 ******************************************/
 #include <main.h>
 #include <vga.h>
@@ -14,6 +14,20 @@
 #include "mm/memoryi.h"
 
 #define VISIBLE_DRAW_BORDER_THICKNESS 1
+
+// -------------------------------------------------------------------------
+//  Warning
+//
+//       The code you are about to see is a mess. However, it's optimized
+//   to hell, and my (few) attempts to split it up and generalize it have
+//   dealt a severe performance hit to features such as console scrolling,
+//   and window dragging.
+//       If you're up to the challenge of cleaning this up yourself, I
+//   invite you to do so, and create a pull request, however, be prepared
+//   for the challenges ahead.
+//
+//     -iProgramInCpp
+// -------------------------------------------------------------------------
 
 // Basic definitions for video
 #if 1
@@ -555,6 +569,8 @@ void VidFillScreen(unsigned color)
 }
 void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 {
+	if (left > right || top > bottom) return;
+	
 	// Is this rectangle fully outside of the clip rect ?
 	if (left >= g_vbeData->m_clipRect.right)  return;
 	if (top  >= g_vbeData->m_clipRect.bottom) return;
@@ -566,6 +582,8 @@ void VidFillRect(unsigned color, int left, int top, int right, int bottom)
 	if (top    < g_vbeData->m_clipRect.top   ) top    = g_vbeData->m_clipRect.top   ;
 	if (right >= g_vbeData->m_clipRect.right ) right  = g_vbeData->m_clipRect.right-1;
 	if (bottom>= g_vbeData->m_clipRect.bottom) bottom = g_vbeData->m_clipRect.bottom-1;
+	
+	if (left > right || top > bottom) return;
 	
 	int yoffs = top * g_vbeData->m_pitch32;
 	int start = yoffs + left;

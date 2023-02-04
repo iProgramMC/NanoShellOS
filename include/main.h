@@ -44,8 +44,8 @@ void KeEnableInterrupts();
 
 // December 4, 2022. This marks Version 1.00 of the operating system,
 // simply because I decided to make it 1.00 now. :-)
-#define VersionNumber 100
-#define VersionString "V1.00"
+#define VersionNumber 101
+#define VersionString "V1.01"
 
 #define UNUSED __attribute__((unused))
 

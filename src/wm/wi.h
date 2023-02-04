@@ -23,8 +23,8 @@
 #include <config.h>
 
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
-
 #define WINDOW_ACTION_MENU_ORIG_CID (0x12345678)
+#define C_ACTION_BUTTON_WIDTH (TITLE_BAR_HEIGHT)
 
 enum
 {
@@ -75,6 +75,7 @@ g_shutdownDoneAll;
 
 extern Cursor* const g_CursorLUT[];
 
+void RenderButtonShapeSmallBorder(Rectangle rect, unsigned colorDarker, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 void* WmCAllocate(size_t sz);
 void KeTaskDone(void);
 WindowAction* ActionQueueAdd(WindowAction action);
@@ -83,6 +84,7 @@ SafeLock* ActionQueueGetSafeLock(void);
 Window* GetWindowFromIndex(int i);
 Cursor* GetCursorBasedOnID(int m_cursorID, Window *pWindow);
 Window* ShootRayAndGetWindow (int x, int y);
+bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut);
 bool IsWindowManagerTask();
 bool ActionQueueWouldOverflow(void);
 void ActionQueuePop(void);

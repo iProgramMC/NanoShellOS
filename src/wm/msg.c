@@ -402,34 +402,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		if (!(pWindow->m_flags & WF_FLATBORD))
 			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
 		
-		Control* pControl;
-		
-		//adjust top buttons
-		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   += 4;
-			pControl->m_triedRect.top    -= 4;
-			pControl->m_triedRect.right  += 4;
-			pControl->m_triedRect.bottom -= 4;
-		}
-		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   += 4;
-			pControl->m_triedRect.top    -= 4;
-			pControl->m_triedRect.right  += 4;
-			pControl->m_triedRect.bottom -= 4;
-		}
-		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   += 4;
-			pControl->m_triedRect.top    -= 4;
-			pControl->m_triedRect.right  += 4;
-			pControl->m_triedRect.bottom -= 4;
-		}
-		
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
 		
@@ -438,9 +410,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
 		
 		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
-		
-		SetLabelText(pWindow, 0xFFFF0002, "\x13");//TODO: 0xA technically has the restore icon, but that's literally '\n', so we'll use \x1F for now
-		SetIcon     (pWindow, 0xFFFF0002, EVENT_UNMAXIMIZE);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -469,36 +438,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		{
 			pWindow->m_flags &= ~(WF_FLBRDFRC | WF_FLATBORD);
 		}
-		
-		//adjust top buttons
-		Control*
-		pControl = GetControlByComboID (pWindow, 0xFFFF0000);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   -= 4;
-			pControl->m_triedRect.top    += 4;
-			pControl->m_triedRect.right  -= 4;
-			pControl->m_triedRect.bottom += 4;
-		}
-		pControl = GetControlByComboID (pWindow, 0xFFFF0001);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   -= 4;
-			pControl->m_triedRect.top    += 4;
-			pControl->m_triedRect.right  -= 4;
-			pControl->m_triedRect.bottom += 4;
-		}
-		pControl = GetControlByComboID (pWindow, 0xFFFF0002);
-		if (pControl)
-		{
-			pControl->m_triedRect.left   -= 4;
-			pControl->m_triedRect.top    += 4;
-			pControl->m_triedRect.right  -= 4;
-			pControl->m_triedRect.bottom += 4;
-		}
-		
-		SetLabelText(pWindow, 0xFFFF0002, "\x08");
-		SetIcon     (pWindow, 0xFFFF0002, EVENT_MAXIMIZE);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -686,91 +625,47 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		{
 			// By default, this draws the window's background color. This can be changed by overloading the event.
 			Rectangle rect = { GET_X_PARM(parm1), GET_Y_PARM(parm1), GET_X_PARM(parm2), GET_Y_PARM(parm2) };
-			
 			VidFillRect(WINDOW_BACKGD_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
-			
 			break;
 		}
 		case EVENT_CREATE:
 		{
-			// Add a default QUIT button control.
-			
 			if (pWindow->m_flags & WI_INITGOOD) break;
-			
-			if (!(pWindow->m_flags & WF_NOCLOSE))
-			{
-				bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
-				
-				#define ACTION_BUTTON_WIDTH TITLE_BAR_HEIGHT
-				
-				Rectangle rect;
-				rect.right = pWindow->m_vbeData.m_width - 3 - WINDOW_RIGHT_SIDE_THICKNESS - has3dBorder * 2;
-				rect.left  = rect.right - ACTION_BUTTON_WIDTH+2;
-				rect.top   = 2 + has3dBorder * 3;
-				rect.bottom= rect.top + TITLE_BAR_HEIGHT - 4;
-				AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x09", 0xFFFF0000, EVENT_CLOSE, 0);
-				
-				#ifdef ENABLE_MAXIMIZE
-				if (!(pWindow->m_flags & WF_NOMAXIMZ))
-				{
-					rect.left -= ACTION_BUTTON_WIDTH;
-					rect.right -= ACTION_BUTTON_WIDTH;
-					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x08", 0xFFFF0002, EVENT_MAXIMIZE, 0);
-				}
-				#endif
-				
-				if (!(pWindow->m_flags & WF_NOMINIMZ))
-				{
-					rect.left -= ACTION_BUTTON_WIDTH;
-					rect.right -= ACTION_BUTTON_WIDTH;
-					AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, rect, "\x07", 0xFFFF0001, EVENT_MINIMIZE, 0);
-				}
-			}
 			
 			pWindow->m_flags |= WI_INITGOOD;
 			
 			break;
 		}
+		
 		case EVENT_PAINT:
 			//nope, user should handle this themselves
 			//Actually EVENT_PAINT just requests a paint event,
 			//so just mark this as dirty
 			pWindow->m_vbeData.m_dirty = 1;
 			break;
+			
 		case EVENT_SETFOCUS:
 		case EVENT_KILLFOCUS:
+		case EVENT_REPAINT_BORDER_PRIVATE:
 			PaintWindowBorderNoBackgroundOverpaint(pWindow);
-			CallControlCallback (pWindow, 0xFFFF0000, EVENT_PAINT, 0, 0);
-			CallControlCallback (pWindow, 0xFFFF0001, EVENT_PAINT, 0, 0);
-			CallControlCallback (pWindow, 0xFFFF0002, EVENT_PAINT, 0, 0);
 			break;
+			
 		case EVENT_CLOSE:
 			DestroyWindow(pWindow);
 			break;
+			
 		case EVENT_DESTROY:
 			//NukeWindow(pWindow);//exits
 			break;
+			
 		case EVENT_RIGHTCLICKRELEASE_PRIVATE:
 		{
-			Rectangle recta = pWindow->m_rect;
-			if (!pWindow->m_minimized)
-			{
-				recta.right  -= recta.left; recta.left = 0;
-				recta.bottom -= recta.top;  recta.top  = 0;
-				recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS;
-				recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS;
-				recta.left++; recta.right--; recta.top++; recta.bottom = recta.top + TITLE_BAR_HEIGHT;
-			}
-			else
-			{
-				recta.right  -= recta.left; recta.left = 0;
-				recta.bottom -= recta.top;  recta.top  = 0;
-			}
-			
+			Rectangle recta;
+			if (!GetWindowTitleRect(pWindow, &recta)) break;
 			Point mousePoint = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			
 			if (!(pWindow->m_flags & WF_NOTITLE) && RectangleContains(&recta, &mousePoint))
 			{
+		case EVENT_SHOW_MENU_PRIVATE:
 				OnRightClickShowMenu(pWindow, parm1);
 			}
 			
@@ -805,7 +700,6 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			//paint the window border:
 			PaintWindowBorderNoBackgroundOverpaint(pWindow);
-			CallWindowCallbackAndControls(pWindow, EVENT_PAINT, 0, 0);
 			break;
 		}
 		default:

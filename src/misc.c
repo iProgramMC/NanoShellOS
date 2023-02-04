@@ -690,10 +690,11 @@ char g_cmdline [1024];
 
 void KePrintSystemVersion()
 {
-	LogMsg("NanoShell (TM), January 2023 - " VersionString);
+	LogMsg("NanoShell (TM), February 2023 - " VersionString);
 	LogMsg("[%d Kb System Memory, %d Kb Usable Memory]", g_pMultibootInfo->mem_upper, MpGetNumAvailablePages() * 4);
 	LogMsg("Built on: %s %s", __DATE__, __TIME__);
 }
+
 void MbSetup (uint32_t check, uint32_t mbaddr)
 {
 	if (check != 0x2badb002)
@@ -706,10 +707,12 @@ void MbSetup (uint32_t check, uint32_t mbaddr)
 	multiboot_info_t *mbi = (multiboot_info_t *)(mbaddr + KERNEL_BASE_ADDRESS);
 	g_pMultibootInfo = mbi;
 }
+
 multiboot_info_t* KiGetMultibootInfo()
 {
 	return g_pMultibootInfo;
 }
+
 void MbReadCmdLine ()
 {
 	uint32_t cmdlineaddr = g_pMultibootInfo->cmdline;

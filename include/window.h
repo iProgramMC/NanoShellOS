@@ -162,6 +162,8 @@ enum {
 	EVENT_RIGHTCLICKRELEASE_PRIVATE,
 	EVENT_COMMAND_PRIVATE,
 	EVENT_SET_WINDOW_TITLE_PRIVATE,
+	EVENT_REPAINT_BORDER_PRIVATE,
+	EVENT_SHOW_MENU_PRIVATE,
 	
 	EVENT_USER = 0x1000,
 };
@@ -497,6 +499,17 @@ enum CURSORTYPE
 	CURSOR_CUSTOM,
 };
 
+//m_privFlags
+#define WPF_MINIMIZEHOVERED 0x00000001
+#define WPF_MAXIMIZEHOVERED 0x00000002
+#define WPF_CLOSEBTNHOVERED 0x00000004
+#define WPF_ICONBUTNHOVERED 0x00000008
+#define WPF_MINIMIZECLICKED 0x00000010
+#define WPF_MAXIMIZECLICKED 0x00000020
+#define WPF_CLOSEBTNCLICKED 0x00000040
+#define WPF_ICONBUTNCLICKED 0x00000080
+
+//m_flags
 #define WF_NOCLOSE  0x00000001//Disable close button
 #define WF_FROZEN   0x00000002//Freeze window
 #define WF_NOTITLE  0x00000004//Disable title
@@ -613,6 +626,9 @@ typedef struct WindowStruct
 	int        m_timer_count;
 	
 	MenuBarData* m_pMenuBar; // The menu bar's data.
+	
+	// Private flags. These aren't modifiable by the window's controller.
+	uint32_t   m_privFlags;
 } Window;
 
 /**

@@ -51,11 +51,14 @@ void WmRemoveRectangleFromStack(Rectangle* rect)
 
 int WmAddRectangle(Rectangle* rect)
 {
-	if (rect->left >= rect->right || rect->top >= rect->bottom)
+	if (rect->left > rect->right || rect->top > rect->bottom)
 	{
 		SLogMsg("INVALID RECT!! Left %d, Right %d, Top %d, Bottom %d", rect->left, rect->right, rect->top, rect->bottom);
 		return -1;
 	}
+	
+	if (rect->left == rect->right || rect->top == rect->bottom)
+		return -1;
 	
 	if (g_WmRectangleStackIndex >= C_RECTANGLE_STACK_SIZE)
 		return -1;
