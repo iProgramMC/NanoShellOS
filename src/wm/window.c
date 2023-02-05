@@ -22,6 +22,29 @@ g_BufferLock,
 g_CreateLock,
 g_BackgdLock;
 
+Rectangle GetWindowClientRect(Window* pWindow, bool offset)
+{
+	Rectangle rect = pWindow->m_rect;
+	rect.right  -= rect.left;
+	rect.bottom -= rect.top;
+	rect.left = rect.top = 0;
+	
+	if (offset)
+	{
+		rect.left   += BORDER_SIZE;
+		rect.right  += BORDER_SIZE;
+		rect.top    += BORDER_SIZE + TITLE_BAR_HEIGHT;
+		rect.bottom += BORDER_SIZE + TITLE_BAR_HEIGHT;
+	}
+	else
+	{
+		rect.right  -= BORDER_SIZE;
+		rect.bottom -= BORDER_SIZE + TITLE_BAR_HEIGHT;
+	}
+	
+	return rect;
+}
+
 int AddTimer(Window* pWindow, int frequency, int event)
 {
 	KeVerifyInterruptsEnabled;
@@ -200,7 +223,7 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	}
 	
 	// Copy the entire framebuffer's contents from old to new.
-	int oldWidth = pWindow->m_vbeData.m_width, oldHeight = pWindow->m_vbeData.m_height;
+	int oldWidth = pWindow->m_fullVbeData.m_width, oldHeight = pWindow->m_fullVbeData.m_height;
 	int minWidth = newWidth, minHeight = newHeight;
 	if (minWidth > oldWidth)
 		minWidth = oldWidth;
@@ -209,19 +232,26 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	
 	for (int i = 0; i < minHeight; i++)
 	{
-		memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_vbeData.m_framebuffer32[i * oldWidth], minWidth);
+		memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_fullVbeData.m_framebuffer32[i * oldWidth], minWidth);
 	}
 	
 	// Free the old framebuffer.  This action should be done atomically.
 	// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
 	
-	MmFree(pWindow->m_vbeData.m_framebuffer32);
-	pWindow->m_vbeData.m_framebuffer32 = pNewFb;
-	pWindow->m_vbeData.m_width   = newWidth;
-	pWindow->m_vbeData.m_pitch32 = newWidth;
-	pWindow->m_vbeData.m_pitch16 = newWidth*2;
-	pWindow->m_vbeData.m_pitch   = newWidth*4;
-	pWindow->m_vbeData.m_height  = newHeight;
+	MmFree(pWindow->m_fullVbeData.m_framebuffer32);
+	pWindow->m_fullVbeData.m_framebuffer32 = pNewFb;
+	pWindow->m_fullVbeData.m_width   = newWidth;
+	pWindow->m_fullVbeData.m_pitch32 = newWidth;
+	pWindow->m_fullVbeData.m_pitch16 = newWidth*2;
+	pWindow->m_fullVbeData.m_pitch   = newWidth*4;
+	pWindow->m_fullVbeData.m_height  = newHeight;
+	
+	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * (BORDER_SIZE + TITLE_BAR_HEIGHT) + BORDER_SIZE];
+	pWindow->m_vbeData.m_width    = newWidth  - 2 * BORDER_SIZE;
+	pWindow->m_vbeData.m_height   = newHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT;
+	pWindow->m_vbeData.m_pitch32  = newWidth;
+	pWindow->m_vbeData.m_pitch16  = newWidth * 2;
+	pWindow->m_vbeData.m_pitch    = newWidth * 4;
 	
 	pWindow->m_rect.left   = newPosX;
 	pWindow->m_rect.top    = newPosY;
@@ -229,11 +259,13 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_rect.bottom = pWindow->m_rect.top  + newHeight;
 	
 	// Mark as dirty.
-	pWindow->m_vbeData.m_dirty = true;
+	pWindow->m_fullVbeData.m_dirty = true;
 	
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
-	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  MAKE_MOUSE_PARM(newWidth, newHeight), MAKE_MOUSE_PARM(oldWidth, oldHeight));
-	//WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
+	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
+		MAKE_MOUSE_PARM(newWidth - 2 * BORDER_SIZE, newHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT),
+		MAKE_MOUSE_PARM(oldWidth - 2 * BORDER_SIZE, oldHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT)
+	);
 	
 	LockFree(&pWindow->m_screenLock);
 }
@@ -285,7 +317,8 @@ void SelectWindowUnsafe(Window* pWindow);
 
 void FreeWindow(Window* pWindow)
 {
-	SAFE_DELETE(pWindow->m_vbeData.m_framebuffer32);
+	SAFE_DELETE(pWindow->m_fullVbeData.m_framebuffer32);
+	pWindow->m_fullVbeData.m_version = 0;
 	pWindow->m_vbeData.m_version = 0;
 	
 	SAFE_DELETE (pWindow->m_pControlArray);
@@ -295,7 +328,7 @@ void FreeWindow(Window* pWindow)
 	SAFE_DELETE(pWindow->m_eventQueue);
 	SAFE_DELETE(pWindow->m_eventQueueParm1);
 	SAFE_DELETE(pWindow->m_eventQueueParm2);
-	SAFE_DELETE(pWindow->m_vbeData.m_drs);
+	SAFE_DELETE(pWindow->m_fullVbeData.m_drs);
 	SAFE_DELETE(pWindow->m_inputBuffer);
 	
 	// Clear everything
@@ -395,6 +428,8 @@ void DestroyWindow (Window* pWindow)
 
 void SelectWindowUnsafe(Window* pWindow)
 {
+	if (!pWindow->m_used) return;
+	
 	bool bNeverSelect = (pWindow->m_flags & WI_NEVERSEL);
 	
 	bool wasSelectedBefore = pWindow->m_isSelected;
@@ -425,9 +460,9 @@ void SelectWindowUnsafe(Window* pWindow)
 		{
 			pWindow->m_isSelected = true;
 			WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
-			pWindow->m_vbeData.m_dirty = true;
+			pWindow->m_fullVbeData.m_dirty = true;
 			pWindow->m_renderFinished = true;
-			pWindow->m_vbeData.m_drs->m_bIgnoreAndDrawAll = true;
+			pWindow->m_fullVbeData.m_drs->m_bIgnoreAndDrawAll = true;
 			SetFocusedConsole (pWindow->m_consoleToFocusKeyInputsTo);
 			g_focusedOnWindow = pWindow;
 		}
@@ -479,6 +514,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 {
 	flags &= ~WI_INTEMASK;
 	
+	// TODO: For now.
+	flags &= ~(WF_NOTITLE | WF_NOBORDER | WF_FLATBORD);
+	
 	if (!IsWindowManagerRunning())
 	{
 		LogMsg("WARNING: This program is a GUI program. It does not run in emergency text mode. To run this program, run the command \"w\" in the console.");
@@ -486,6 +524,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	}
 	
 	LockAcquire (&g_CreateLock);
+	
+	xSize += BORDER_SIZE * 2;
+	ySize += BORDER_SIZE * 2 + TITLE_BAR_HEIGHT;
 	
 	if (xSize > GetScreenWidth())
 		xSize = GetScreenWidth();
@@ -504,6 +545,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		yPos = g_NewWindowY;
 	}
 	
+	xPos  -= BORDER_SIZE;
+	yPos  -= BORDER_SIZE - TITLE_BAR_HEIGHT;
+	
 	if (!(flags & WF_EXACTPOS))
 	{
 		if (xPos >= GetScreenWidth () - xSize)
@@ -514,6 +558,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	if (!(flags & WF_ALWRESIZ))
 		flags |= WF_NOMAXIMZ;
+	
+	int clientXSize = xSize - BORDER_SIZE * 2, clientYSize = ySize - BORDER_SIZE * 2 - TITLE_BAR_HEIGHT;
 	
 	int freeArea = -1;
 	for (int i = 0; i < WINDOWS_MAX; i++)
@@ -584,15 +630,15 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_consoleToFocusKeyInputsTo = NULL;
 	
-	pWnd->m_vbeData.m_version       = VBEDATA_VERSION_2;
+	pWnd->m_fullVbeData.m_version       = VBEDATA_VERSION_3;
 	
-	pWnd->m_vbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
-	pWnd->m_vbeData.m_drs = WmCAllocate(sizeof(DsjRectSet));
+	pWnd->m_fullVbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
+	pWnd->m_fullVbeData.m_drs = WmCAllocate(sizeof(DsjRectSet));
 	
-	if (!pWnd->m_vbeData.m_framebuffer32 || !pWnd->m_vbeData.m_drs)
+	if (!pWnd->m_fullVbeData.m_framebuffer32 || !pWnd->m_fullVbeData.m_drs)
 	{
-		SAFE_DELETE(pWnd->m_vbeData.m_framebuffer32);
-		SAFE_DELETE(pWnd->m_vbeData.m_drs);
+		SAFE_DELETE(pWnd->m_fullVbeData.m_framebuffer32);
+		SAFE_DELETE(pWnd->m_fullVbeData.m_drs);
 		SAFE_DELETE(pWnd->m_title);
 		SAFE_DELETE(pWnd->m_eventQueue);
 		SAFE_DELETE(pWnd->m_eventQueueParm1);
@@ -604,11 +650,30 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		LockFree (&g_CreateLock);
 		return NULL;
 	}
-	ZeroMemory (pWnd->m_vbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
-	pWnd->m_vbeData.m_width         = xSize;
-	pWnd->m_vbeData.m_height        = ySize;
-	pWnd->m_vbeData.m_pitch32       = xSize;
-	pWnd->m_vbeData.m_bitdepth      = 2;     // 32 bit :)
+	
+	pWnd->m_fullVbeData.m_offsetX = 0;
+	pWnd->m_fullVbeData.m_offsetY = 0;
+	
+	ZeroMemory (pWnd->m_fullVbeData.m_framebuffer32,  sizeof (uint32_t) * xSize * ySize);
+	pWnd->m_fullVbeData.m_width    = xSize;
+	pWnd->m_fullVbeData.m_height   = ySize;
+	pWnd->m_fullVbeData.m_pitch32  = xSize;
+	pWnd->m_fullVbeData.m_pitch16  = xSize * 2;
+	pWnd->m_fullVbeData.m_pitch    = xSize * 4;
+	pWnd->m_fullVbeData.m_bitdepth = 2;     // 32 bit :)
+	
+	// set up the client vbeData
+	pWnd->m_vbeData.m_framebuffer32 = &pWnd->m_fullVbeData.m_framebuffer32[xSize * (BORDER_SIZE + TITLE_BAR_HEIGHT) + BORDER_SIZE];
+	pWnd->m_vbeData.m_width    = clientXSize;
+	pWnd->m_vbeData.m_height   = clientYSize;
+	pWnd->m_vbeData.m_pitch32  = xSize;
+	pWnd->m_vbeData.m_pitch16  = xSize * 2;
+	pWnd->m_vbeData.m_pitch    = xSize * 4;
+	pWnd->m_vbeData.m_bitdepth = 2;
+	pWnd->m_vbeData.m_drs      = pWnd->m_fullVbeData.m_drs;
+	pWnd->m_vbeData.m_offsetX  = BORDER_SIZE;
+	pWnd->m_vbeData.m_offsetY  = BORDER_SIZE + TITLE_BAR_HEIGHT;
+	pWnd->m_vbeData.m_version  = VBEDATA_VERSION_3;
 	
 	pWnd->m_iconID   = ICON_APPLICATION;
 	
@@ -627,8 +692,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	{
 		// The framebuffer fit, but this didn't
 		ILogMsg("Couldn't allocate pControlArray for window, out of memory!");
-		SAFE_DELETE(pWnd->m_vbeData.m_framebuffer32);
-		SAFE_DELETE(pWnd->m_vbeData.m_drs);
+		SAFE_DELETE(pWnd->m_fullVbeData.m_framebuffer32);
+		SAFE_DELETE(pWnd->m_fullVbeData.m_drs);
 		SAFE_DELETE(pWnd->m_title);
 		SAFE_DELETE(pWnd->m_eventQueue);
 		SAFE_DELETE(pWnd->m_eventQueueParm1);
@@ -695,7 +760,7 @@ void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 			pRect->top,
 			pRect->right  - pRect->left,
 			pRect->bottom - pRect->top,
-			&pWindow->m_vbeData,
+			&pWindow->m_fullVbeData,
 			eleft, etop,
 			BOP_SRCCOPY
 		);
@@ -742,10 +807,10 @@ void RenderWindow (Window* pWindow)
 			if (e->left < 0) e->left = 0;
 			if (e->top  < 0) e->top  = 0;
 			
-			if (e->right >= (int)pWindow->m_vbeData.m_width)
-				e->right  = (int)pWindow->m_vbeData.m_width;
-			if (e->bottom >= (int)pWindow->m_vbeData.m_height)
-				e->bottom  = (int)pWindow->m_vbeData.m_height;
+			if (e->right >= (int)pWindow->m_fullVbeData.m_width)
+				e->right  = (int)pWindow->m_fullVbeData.m_width;
+			if (e->bottom >= (int)pWindow->m_fullVbeData.m_height)
+				e->bottom  = (int)pWindow->m_fullVbeData.m_height;
 		}
 	}
 #endif

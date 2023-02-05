@@ -15,7 +15,7 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+extern void WmRepaintBorder(Window* pWindow);
 extern void SelectWindow(Window* pWindow);
 
 void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2)
@@ -66,7 +66,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
+			WmRepaintBorder (pWindow);
 		}
 	}
 	
@@ -316,7 +316,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		WmRepaintBorder (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

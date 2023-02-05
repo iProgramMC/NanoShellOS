@@ -310,17 +310,18 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				{
 					if (posX < 0) posX = 0;
 					if (posY < 0) posY = 0;
-					if (posX >= (int)pWindow->m_vbeData.m_width)  posX = (int)pWindow->m_vbeData.m_width  - 1;
-					if (posY >= (int)pWindow->m_vbeData.m_height) posY = (int)pWindow->m_vbeData.m_height - 1;
+					if (posX >= (int)pWindow->m_fullVbeData.m_width)  posX = (int)pWindow->m_fullVbeData.m_width  - 1;
+					if (posY >= (int)pWindow->m_fullVbeData.m_height) posY = (int)pWindow->m_fullVbeData.m_height - 1;
 					
+					int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
 					if (g_GlowOnHover)
 					{
 						WindowCheckButtons(pWindow, EVENT_MOVECURSOR, posX, posY);
-						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(offsX + posX, offsY + posY), 0);
 					}
-					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
+					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_fullVbeData.m_width && posY < (int)pWindow->m_fullVbeData.m_height)
 					{
-						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(offsX + posX, offsY + posY), 0);
 					}
 				}
 			}

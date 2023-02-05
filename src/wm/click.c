@@ -157,7 +157,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 			
 			if (!window->m_maximized && (t || window->m_minimized))
 			{
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 1);
+				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT); //  MAKE_MOUSE_PARM (offsX + x, offsY + y)
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
 			else if (!window->m_minimized)
@@ -167,9 +168,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 				
 				window->m_clickedInside = true;
 				
-				//WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-				
+				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
 		}
@@ -236,29 +236,29 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				}
 				else if (g_heldAlt && (window->m_flags & WF_ALWRESIZ))
 				{
-					g_windowDragCursor.width    = window->m_vbeData.m_width;
-					g_windowDragCursor.height   = window->m_vbeData.m_height;
+					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
 					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
 					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = true;
-					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
 					g_windowDragCursor.mouseLockX = mouseX;
 					g_windowDragCursor.mouseLockY = mouseY;
 				}
 				else
 				{
-					g_windowDragCursor.width    = window->m_vbeData.m_width;
-					g_windowDragCursor.height   = window->m_vbeData.m_height;
+					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
 					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
 					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = false;
-					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
 					g_windowDragCursor.mouseLockX = -1;
 					g_windowDragCursor.mouseLockY = -1;
 				}
@@ -269,7 +269,9 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			{
 				window->m_clickedInside = true;
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
+				
+				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 			}
 		}
 	}
@@ -318,7 +320,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		}
 		
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
-		pWindow->m_vbeData.m_dirty = true;
+		pWindow->m_fullVbeData.m_dirty = true;
 		pWindow->m_renderFinished = false;
 		pWindow->m_isBeingDragged = false;
 		ShowWindow(pWindow);
@@ -338,12 +340,16 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	{
 		pWindow->m_clickedInside = false;
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
+		
+		int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 	}
 	else
 	{
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 1);
+		
+		int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 	}
 	//FREE_LOCK(g_windowLock);
 }

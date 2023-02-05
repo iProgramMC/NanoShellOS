@@ -16,7 +16,7 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+extern void WmRepaintBorder(Window* pWindow);
 extern void SelectWindow(Window* pWindow);
 extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
@@ -51,13 +51,13 @@ void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int p
 	}
 	else if (messageType == EVENT_CREATE)
 	{
-		pWindow->m_vbeData.m_dirty = 1;
+		pWindow->m_fullVbeData.m_dirty = 1;
 		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 	}
 	else if (messageType == EVENT_PAINT || messageType == EVENT_SETFOCUS || messageType == EVENT_KILLFOCUS ||
 			 messageType == EVENT_CLICKCURSOR || messageType == EVENT_RELEASECURSOR)
 	{
-		pWindow->m_vbeData.m_dirty = 1;
+		pWindow->m_fullVbeData.m_dirty = 1;
 		pWindow->m_renderFinished  = 1;
 		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 	}
@@ -106,7 +106,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
+			WmRepaintBorder (pWindow);
 		}
 	}
 	
@@ -188,7 +188,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		WmRepaintBorder (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

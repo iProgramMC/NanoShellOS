@@ -275,7 +275,10 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			DefaultWindowProc(pWindow, eventType, parm1, parm2);
 			
 			if (pParentWindow)
+			{
+				SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
 				SelectWindow(pParentWindow);
+			}
 			if (pWindow->m_data)
 			{
 				WindowMenu* pData = (WindowMenu*)pWindow->m_data;
@@ -368,6 +371,7 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	maximizeEnt = &table[2];
 	spacerEnt   = &table[3];
 	closeEnt    = &table[4];
+	strcpy(rootEnt.sText, "Menu");
 	rootEnt.pMenuEntries = table;
 	rootEnt.nMenuEntries = (int)ARRAY_COUNT(table);
 	rootEnt.bPrivate     = true;

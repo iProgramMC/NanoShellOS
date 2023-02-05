@@ -558,6 +558,7 @@ typedef struct WindowStruct
 	WindowProc m_callback;
 	Rectangle  m_rect;
 	Rectangle  m_rectBackup;
+	// Now only includes the client area of the window.
 	VBEData    m_vbeData;
 	
 	int        m_iconID;
@@ -629,6 +630,9 @@ typedef struct WindowStruct
 	
 	// Private flags. These aren't modifiable by the window's controller.
 	uint32_t   m_privFlags;
+	
+	// Includes everything, including window decorations and stuff.
+	VBEData    m_fullVbeData;
 } Window;
 
 /**

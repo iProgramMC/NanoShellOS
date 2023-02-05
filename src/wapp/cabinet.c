@@ -467,8 +467,11 @@ reset:
 	//SetWindowIcon (pWindow, icon);
 	//SetWindowTitle(pWindow, pFolderNode->m_name);
 	pWindow->m_iconID = icon;
-	strcpy (pWindow->m_title, "Cabinet - ");
-	strcat (pWindow->m_title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	
+	char* title = MmAllocate(WINDOW_TITLE_MAX);
+	strcpy (title, "Cabinet - ");
+	strcat (title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	SetWindowTitle(pWindow, title);
 	RequestTaskbarUpdate();
 	
 	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);

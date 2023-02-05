@@ -72,6 +72,11 @@ void WindowTitleLayout(
 			rectb.right  -= 2;
 			rectb.bottom -= 2;
 		}
+		
+		rectb.left   += BORDER_SIZE - 3;
+		rectb.top    += BORDER_SIZE - 3;
+		rectb.right  -= BORDER_SIZE - 3;
+		rectb.bottom -= BORDER_SIZE - 3;
 	}
 	if (!(flags & WF_NOTITLE))
 	{
@@ -273,7 +278,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 #undef X
 }
 
-void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
+void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 {	
 	Rectangle recta = pWindow->m_rect;
 	recta.right  -= recta.left; recta.left = 0;
@@ -294,21 +299,45 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	VidTextOut(thing, 0, 0, 0xFFFFFF, 0x000000);*/
 }
 
-void PaintWindowBorder(Window* pWindow)
+void WmPaintWindowBorder(Window* pWindow)
 {
 	Rectangle recta = pWindow->m_rect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
-	//! X adjusts the size of the dropshadow on the window.
-	//recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-	//recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-	
 	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
 	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 
-void PaintWindowBackgroundAndBorder(Window* pWindow)
+void WmRepaintBackground(Window* pWindow)
 {
-	PaintWindowBorder(pWindow);
+	Rectangle rect = GetWindowClientRect(pWindow, false);
+	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
 }
+
+void WmRepaintBorder(Window* pWindow)
+{
+	VBEData* bkp = VidSetVBEData(&pWindow->m_fullVbeData);
+	
+	Rectangle rect = pWindow->m_rect;
+	rect.right  -= rect.left;
+	rect.bottom -= rect.top;
+	rect.left = rect.top = 0;
+	
+	// repaint edges.
+	VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + BORDER_SIZE - 1, rect.bottom - 1);
+	VidFillRect(BUTTONMIDD, rect.right - BORDER_SIZE, rect.top, rect.right - 1, rect.bottom - 1);
+	VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.top, rect.right - BORDER_SIZE, rect.top + BORDER_SIZE + TITLE_BAR_HEIGHT - 1);
+	VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.bottom - BORDER_SIZE - 1, rect.right - BORDER_SIZE, rect.bottom - 1);
+	
+	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);
+	
+	VidSetVBEData(bkp);
+}
+
+void WmRepaintBorderAndBackground(Window* pWindow)
+{
+	WmRepaintBorder(pWindow);
+	WmRepaintBackground(pWindow);
+}
+
