@@ -22,6 +22,44 @@ g_BufferLock,
 g_CreateLock,
 g_BackgdLock;
 
+// note: The rectangle structure works as "how much to expand from X direction".
+// So a margin of {3, 0, 3, 0} means you expand a rectangle by 3 to the left, and 3 to the right.
+
+Rectangle GetMarginsWindowFlags(uint32_t flags)
+{
+	Rectangle rect = { 0, 0, 0, 0 };
+	
+	// if the window has a title...
+	if (~flags & WF_NOTITLE)
+	{
+		rect.top += 18;
+	}
+	
+	// If the window has a flat border.
+	if (flags & WF_FLATBORD)
+	{
+		rect.left  ++;
+		rect.top   ++;
+		rect.right ++;
+		rect.bottom++;
+	}
+	// Otherwise, check if the window doesn't want no border.
+	else if (~flags & WF_NOBORDER)
+	{
+		rect.left   += BORDER_SIZE;
+		rect.right  += BORDER_SIZE;
+		rect.top    += BORDER_SIZE;
+		rect.bottom += BORDER_SIZE;
+	}
+	
+	return rect;
+}
+
+Rectangle GetWindowMargins(Window* pWindow)
+{
+	return GetMarginsWindowFlags(pWindow->m_flags);
+}
+
 Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 {
 	Rectangle rect = pWindow->m_rect;
@@ -31,15 +69,11 @@ Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 	
 	if (offset)
 	{
-		rect.left   += BORDER_SIZE;
-		rect.right  += BORDER_SIZE;
-		rect.top    += BORDER_SIZE + TITLE_BAR_HEIGHT;
-		rect.bottom += BORDER_SIZE + TITLE_BAR_HEIGHT;
-	}
-	else
-	{
-		rect.right  -= BORDER_SIZE;
-		rect.bottom -= BORDER_SIZE + TITLE_BAR_HEIGHT;
+		Rectangle margins = GetWindowMargins(pWindow);
+		rect.left   += margins.left;
+		rect.right  -= margins.right;
+		rect.top    += margins.top;
+		rect.bottom -= margins.bottom;
 	}
 	
 	return rect;
@@ -246,9 +280,10 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_fullVbeData.m_pitch   = newWidth*4;
 	pWindow->m_fullVbeData.m_height  = newHeight;
 	
-	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * (BORDER_SIZE + TITLE_BAR_HEIGHT) + BORDER_SIZE];
-	pWindow->m_vbeData.m_width    = newWidth  - 2 * BORDER_SIZE;
-	pWindow->m_vbeData.m_height   = newHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT;
+	Rectangle margins = GetWindowMargins(pWindow);
+	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * margins.top + margins.left];
+	pWindow->m_vbeData.m_width    = newWidth  - margins.left - margins.right;
+	pWindow->m_vbeData.m_height   = newHeight - margins.top  - margins.bottom;
 	pWindow->m_vbeData.m_pitch32  = newWidth;
 	pWindow->m_vbeData.m_pitch16  = newWidth * 2;
 	pWindow->m_vbeData.m_pitch    = newWidth * 4;
@@ -263,8 +298,8 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
-		MAKE_MOUSE_PARM(newWidth - 2 * BORDER_SIZE, newHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT),
-		MAKE_MOUSE_PARM(oldWidth - 2 * BORDER_SIZE, oldHeight - 2 * BORDER_SIZE - TITLE_BAR_HEIGHT)
+		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.left - margins.right),
+		MAKE_MOUSE_PARM(oldWidth - margins.left - margins.right, oldHeight - margins.left - margins.right)
 	);
 	
 	LockFree(&pWindow->m_screenLock);
@@ -515,7 +550,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	flags &= ~WI_INTEMASK;
 	
 	// TODO: For now.
-	flags &= ~(WF_NOTITLE | WF_NOBORDER | WF_FLATBORD);
+	//flags &= ~(WF_NOTITLE | WF_NOBORDER | WF_FLATBORD);
 	
 	if (!IsWindowManagerRunning())
 	{
@@ -525,8 +560,10 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	LockAcquire (&g_CreateLock);
 	
-	xSize += BORDER_SIZE * 2;
-	ySize += BORDER_SIZE * 2 + TITLE_BAR_HEIGHT;
+	Rectangle margins = GetMarginsWindowFlags(flags);
+	
+	xSize += margins.left + margins.right;
+	ySize += margins.top  + margins.bottom;
 	
 	if (xSize > GetScreenWidth())
 		xSize = GetScreenWidth();
@@ -545,8 +582,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		yPos = g_NewWindowY;
 	}
 	
-	xPos  -= BORDER_SIZE;
-	yPos  -= BORDER_SIZE - TITLE_BAR_HEIGHT;
+	xPos  -= margins.left;
+	yPos  -= margins.top;
 	
 	if (!(flags & WF_EXACTPOS))
 	{
@@ -559,7 +596,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	if (!(flags & WF_ALWRESIZ))
 		flags |= WF_NOMAXIMZ;
 	
-	int clientXSize = xSize - BORDER_SIZE * 2, clientYSize = ySize - BORDER_SIZE * 2 - TITLE_BAR_HEIGHT;
+	int clientXSize = xSize - margins.left - margins.right, clientYSize = ySize - margins.top - margins.bottom;
 	
 	int freeArea = -1;
 	for (int i = 0; i < WINDOWS_MAX; i++)
@@ -663,7 +700,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_fullVbeData.m_bitdepth = 2;     // 32 bit :)
 	
 	// set up the client vbeData
-	pWnd->m_vbeData.m_framebuffer32 = &pWnd->m_fullVbeData.m_framebuffer32[xSize * (BORDER_SIZE + TITLE_BAR_HEIGHT) + BORDER_SIZE];
+	pWnd->m_vbeData.m_framebuffer32 = &pWnd->m_fullVbeData.m_framebuffer32[xSize * margins.top + margins.left];
 	pWnd->m_vbeData.m_width    = clientXSize;
 	pWnd->m_vbeData.m_height   = clientYSize;
 	pWnd->m_vbeData.m_pitch32  = xSize;
@@ -671,8 +708,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_vbeData.m_pitch    = xSize * 4;
 	pWnd->m_vbeData.m_bitdepth = 2;
 	pWnd->m_vbeData.m_drs      = pWnd->m_fullVbeData.m_drs;
-	pWnd->m_vbeData.m_offsetX  = BORDER_SIZE;
-	pWnd->m_vbeData.m_offsetY  = BORDER_SIZE + TITLE_BAR_HEIGHT;
+	pWnd->m_vbeData.m_offsetX  = margins.left;
+	pWnd->m_vbeData.m_offsetY  = margins.top;
 	pWnd->m_vbeData.m_version  = VBEDATA_VERSION_3;
 	
 	pWnd->m_iconID   = ICON_APPLICATION;

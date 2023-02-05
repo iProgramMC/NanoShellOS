@@ -155,9 +155,11 @@ void OnUILeftClick (int mouseX, int mouseY)
 			
 			bool t = hasTitle ? RectangleContains(&recta, &mousePoint) : false;
 			
+			Rectangle margins = GetWindowMargins(window);
+			int offsX = -margins.left, offsY = -margins.top;
+			
 			if (!window->m_maximized && (t || window->m_minimized))
 			{
-				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT); //  MAKE_MOUSE_PARM (offsX + x, offsY + y)
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
@@ -168,7 +170,6 @@ void OnUILeftClick (int mouseX, int mouseY)
 				
 				window->m_clickedInside = true;
 				
-				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
@@ -203,7 +204,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 		{
 			//are we in the title bar region?
 			Rectangle recta;
-			bool hasTitle = GetWindowTitleRect(window, &recta);
+			UNUSED bool hasTitle = GetWindowTitleRect(window, &recta);
 			
 			int x = mouseX - window->m_rect.left;
 			int y = mouseY - window->m_rect.top;
@@ -270,7 +271,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				window->m_clickedInside = true;
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 				
-				int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+				Rectangle margins = GetWindowMargins(window);
+				int offsX = -margins.left, offsY = -margins.top;
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 			}
 		}
@@ -336,19 +338,17 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	int x = mouseX - pWindow->m_rect.left;
 	int y = mouseY - pWindow->m_rect.top;
 	
+	Rectangle margins = GetWindowMargins(pWindow);
+	int offsX = -margins.left, offsY = -margins.top;
 	if (pWindow->m_clickedInside)
 	{
 		pWindow->m_clickedInside = false;
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		
-		int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
 		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 	}
 	else
 	{
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		
-		int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
 		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 	}
 	//FREE_LOCK(g_windowLock);

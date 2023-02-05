@@ -145,6 +145,8 @@ bool WmMenuTryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comboID_as, 
 void WmRepaintBorder(Window* pWindow);
 void WmRepaintBorderAndBackground(Window* pWindow);
 void WmRepaintWindowBorder(Window* pWindow);
+Rectangle GetMarginsWindowFlags(uint32_t flags);
+Rectangle GetWindowMargins(Window* pWindow);
 Rectangle GetWindowClientRect(Window* pWindow, bool offset);
 MenuBarData* WmCreateMenuBar();
 

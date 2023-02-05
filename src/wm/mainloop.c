@@ -313,7 +313,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					if (posX >= (int)pWindow->m_fullVbeData.m_width)  posX = (int)pWindow->m_fullVbeData.m_width  - 1;
 					if (posY >= (int)pWindow->m_fullVbeData.m_height) posY = (int)pWindow->m_fullVbeData.m_height - 1;
 					
-					int offsX = -BORDER_SIZE, offsY = -(BORDER_SIZE + TITLE_BAR_HEIGHT);
+					Rectangle margins = GetWindowMargins(pWindow);
+					int offsX = -margins.left, offsY = -margins.top;
 					if (g_GlowOnHover)
 					{
 						WindowCheckButtons(pWindow, EVENT_MOVECURSOR, posX, posY);

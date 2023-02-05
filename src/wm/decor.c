@@ -325,10 +325,17 @@ void WmRepaintBorder(Window* pWindow)
 	rect.left = rect.top = 0;
 	
 	// repaint edges.
-	VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + BORDER_SIZE - 1, rect.bottom - 1);
-	VidFillRect(BUTTONMIDD, rect.right - BORDER_SIZE, rect.top, rect.right - 1, rect.bottom - 1);
-	VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.top, rect.right - BORDER_SIZE, rect.top + BORDER_SIZE + TITLE_BAR_HEIGHT - 1);
-	VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.bottom - BORDER_SIZE - 1, rect.right - BORDER_SIZE, rect.bottom - 1);
+	if (pWindow->m_flags & WF_FLATBORD)
+	{
+		VidDrawRect(WINDOW_TEXT_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+	}
+	else if (~pWindow->m_flags & WF_NOBORDER)
+	{
+		VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + BORDER_SIZE - 1, rect.bottom - 1);
+		VidFillRect(BUTTONMIDD, rect.right - BORDER_SIZE, rect.top, rect.right - 1, rect.bottom - 1);
+		VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.top, rect.right - BORDER_SIZE, rect.top + BORDER_SIZE + TITLE_BAR_HEIGHT - 1);
+		VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.bottom - BORDER_SIZE - 1, rect.right - BORDER_SIZE, rect.bottom - 1);
+	}
 	
 	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);
 	
