@@ -69,8 +69,7 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 int GetMenuHeight (WindowMenu* pMenu)
 {
 	int haute = (MENU_ITEM_HEIGHT + (pMenu->bHasIcons ? 4 : 0));
-	return 3 + 
-	       pMenu->nMenuEntries * haute - 
+	return pMenu->nMenuEntries * haute - 
 		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
 }
 
@@ -121,18 +120,18 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				
 				//Add some controls
 				Rectangle r;
-				int height = (MENU_ITEM_HEIGHT + (pData->bHasIcons ? 4 : 0)), y = 2;
+				int height = (MENU_ITEM_HEIGHT + (pData->bHasIcons ? 4 : 0)), y = 0;
 				for (int i = 0; i < pData->nMenuEntries; i++)
 				{
 					if (pData->pMenuEntries[i].sText[0] == 0)
 					{
-						RECT(r, 2, y, GetMenuWidth(pData)-5, MENU_SEPA_HEIGHT);
+						RECT(r, 0, y, GetMenuWidth(pData), MENU_SEPA_HEIGHT);
 						AddControl (pWindow, CONTROL_SIMPLE_HLINE, r, NULL, MENU_ITEM_COMBOID+i, 0, 0);
 						y += MENU_SEPA_HEIGHT;
 					}
 					else
 					{
-						RECT(r, 2, y, GetMenuWidth(pData)-5, height - 2);
+						RECT(r, 0, y, GetMenuWidth(pData), height - 2);
 						char buffer[110];
 						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
 						
@@ -156,11 +155,6 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				re.right  -= re.left;
 				re.bottom -= re.top;
 				re.left = re.top = 0;
-				
-				re.left += 2;
-				re.top  += 2;
-				re.right  -= 3;
-				re.bottom -= 3;
 				
 				int offs = 16;
 				if (pData->bHasIcons) offs += 8;
