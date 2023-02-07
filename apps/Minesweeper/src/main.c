@@ -36,11 +36,11 @@ int minesweeperX = CW_AUTOPOSITION, minesweeperY = CW_AUTOPOSITION;
 
 #define MINE_NUMBER  15
 
-#define MINESW_WIDTH  ((BoardWidth  * 16) + 26)
-#define MINESW_HEIGHT ((BoardHeight * 16) + 78 + 11 + TITLE_BAR_HEIGHT)
+#define MINESW_WIDTH  ((BoardWidth  * 16) + 16)
+#define MINESW_HEIGHT ((BoardHeight * 16) + 91)
 
 #define HUD_TOP  50
-#define HUD_LEFT 12
+#define HUD_LEFT 8
 
 #define MENU_BAR_HEIGHT TITLE_BAR_HEIGHT - 3
 
@@ -559,7 +559,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 		{
 			Rectangle rect;
 			
-			RECT(rect, 15, 96-18+TITLE_BAR_HEIGHT-15+MENU_BAR_HEIGHT, BoardWidth*16, BoardHeight*16);
+			RECT(rect, HUD_LEFT, 96-18-HUD_LEFT+MENU_BAR_HEIGHT, BoardWidth*16, BoardHeight*16);
 			
 			AddControl (pWindow, CONTROL_NONE, rect, NULL, 1000, 0, 0);
 			
@@ -585,9 +585,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 			AddMenuBarItem (pWindow, 2000, 1,10, "");
 			AddMenuBarItem (pWindow, 2000, 1,11, "Exit");
 			
-			
-			
-			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - 24) - 26) / 2/*74*/, 56-18+TITLE_BAR_HEIGHT-15+MENU_BAR_HEIGHT, 26, 26);
+			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - HUD_LEFT * 2) - 26) / 2/*74*/, 56-18-15+MENU_BAR_HEIGHT, 26, 26);
 			AddControl (pWindow, CONTROL_BUTTON_ICON, rect, "", 2001, ICON_SWEEP_SMILE, 17);
 			
 			break;

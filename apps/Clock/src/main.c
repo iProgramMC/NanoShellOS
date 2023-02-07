@@ -11,7 +11,7 @@
 #define VERSION_BUTTON_OK_COMBO 0x1000
 
 #define CLOCK_WIDTH   (200)
-#define CLOCK_HEIGHT  (200 + TITLE_BAR_HEIGHT)
+#define CLOCK_HEIGHT  (200)
 
 int cosa[]={    0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,   0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995,-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105 };
 int sina[]={-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105,   0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,    0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995 };
@@ -35,8 +35,8 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 		case EVENT_PAINT:
 		{
 			//calculate stuff
-			int windowWidth  = GetScreenSizeX()-4, windowHeight = GetScreenSizeY()-TITLE_BAR_HEIGHT-4;
-			int centerX = windowWidth / 2 + 2, centerY = windowHeight / 2 + TITLE_BAR_HEIGHT + 2;
+			int windowWidth  = GetScreenSizeX()-4, windowHeight = GetScreenSizeY()-4;
+			int centerX = windowWidth / 2 + 2, centerY = windowHeight / 2 + 2;
 			int diameter = min (windowWidth, windowHeight);
 			int handMaxLength = (2 * diameter / 5);
 			

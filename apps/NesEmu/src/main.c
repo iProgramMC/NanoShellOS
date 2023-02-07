@@ -97,7 +97,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			image.width  = 256;
 			image.height = 240;
 			image.framebuffer = g_screenBitmap;
-			VidBlitImageResize(&image, 3, 2 + TITLE_BAR_HEIGHT, 256*SIZE_MULT, 240*SIZE_MULT);
+			VidBlitImageResize(&image, 0, 0, 256*SIZE_MULT, 240*SIZE_MULT);
 			break;
 		}
 		case EVENT_KEYRAW:
@@ -186,7 +186,7 @@ int NsMain (UNUSED int argc, UNUSED char **argv)
 	nes_ppu_init (&nes_ppu, &nes_memory);
 	
 	// Initialize GUI
-	Window* pWindow = CreateWindow ("nes_emu", 200,200, 256*SIZE_MULT+6, 240*SIZE_MULT+6+TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow ("nes_emu", 200,200, 256*SIZE_MULT, 240*SIZE_MULT, WndProc, 0);
 	if (!pWindow)
 	{
 		die ("Could not create window");

@@ -188,7 +188,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 		case EVENT_PAINT:
 		case EVENT_UPDATE:
 		{
-			VidBlitImageResize(&g_GameImage, 3, 2 + TITLE_BAR_HEIGHT, ScreenWidth,ScreenHeight);
+			VidBlitImageResize(&g_GameImage, 0, 0, ScreenWidth,ScreenHeight);
 			break;
 		}
 		case EVENT_SIZE:
@@ -196,8 +196,8 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			if (g_GameImage.framebuffer)
 				free((void*)g_GameImage.framebuffer);
 			
-			ScreenWidth  = GET_X_PARM(parm1) - 6;
-			ScreenHeight = GET_Y_PARM(parm1) - 6 - TITLE_BAR_HEIGHT;
+			ScreenWidth  = GET_X_PARM(parm1);
+			ScreenHeight = GET_Y_PARM(parm1);
 			
 			if (!SetupGameVbeData())
 				// Bye!
@@ -224,7 +224,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 static bool SetupWindow (const char* TITLE)
 {
-	Window* pWindow = CreateWindow (TITLE, 200,200, ScreenWidth+6, ScreenHeight + 6 + TITLE_BAR_HEIGHT, WndProc, WF_ALWRESIZ);
+	Window* pWindow = CreateWindow (TITLE, 200,200, ScreenWidth, ScreenHeight, WndProc, WF_ALWRESIZ);
 	if (!pWindow)
 	{
 		LogMsg ("Could not create window");

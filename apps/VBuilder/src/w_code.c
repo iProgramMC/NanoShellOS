@@ -63,7 +63,7 @@ void CALLBACK PrgCodeProc(Window* pWindow, int eventType, int parm1, int parm2)
 	{
 		case EVENT_CREATE:
 		{
-			Rectangle r = { 10, 10 + TITLE_BAR_HEIGHT, DEF_CODEWIN_WID - 10, DEF_CODEWIN_HEI - 10 };
+			Rectangle r = { 10, 10, DEF_CODEWIN_WID - 10, DEF_CODEWIN_HEI - 10 };
 			
 			AddControlEx(pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, CODE_TEXTINPUT, TEXTEDIT_MULTILINE | TEXTEDIT_LINENUMS, 0);
 			
@@ -91,7 +91,7 @@ void VbCreateCodeWindow()
 		return;
 	}
 	
-	Window * pWindow = CreateWindow("Code Window", 300, 180+60-18+TITLE_BAR_HEIGHT, DEF_CODEWIN_WID, DEF_CODEWIN_HEI, PrgCodeProc, WF_ALWRESIZ);
+	Window * pWindow = CreateWindow("Code Window", 300, 180+60, DEF_CODEWIN_WID, DEF_CODEWIN_HEI, PrgCodeProc, WF_ALWRESIZ);
 	
 	if (!pWindow)
 	{

@@ -8,7 +8,7 @@
 #include <nanoshell/nanoshell.h>
 
 #define WAVE_WIDTH  (320)
-#define WAVE_HEIGHT (96 + TITLE_BAR_HEIGHT + 6)
+#define WAVE_HEIGHT (96)
 
 #define SAMPLES_PER_TICK (735)
 #define SAMPLE_RATE      (44100)
@@ -386,32 +386,32 @@ void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
 		{
 			Rectangle r;
 			
-			RECT (r, 12, 40 + TITLE_BAR_HEIGHT, WAVE_WIDTH - 25, 20);
+			RECT (r, 12, 40, WAVE_WIDTH - 25, 20);
 			
 			AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, C_SEEK_BAR, (0 << 16) | (1000), 0);
 			
-			RECT (r, 12, 8 + TITLE_BAR_HEIGHT, WAVE_WIDTH - 24, 15);
+			RECT (r, 12, 8, WAVE_WIDTH - 24, 15);
 			
 			AddControl(pWindow, CONTROL_TEXT, r, "No file loaded", C_FILE_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECT (r, 12, 24 + TITLE_BAR_HEIGHT, WAVE_WIDTH / 2, 15);
+			RECT (r, 12, 24, WAVE_WIDTH / 2, 15);
 			
 			AddControl(pWindow, CONTROL_TEXT, r, "00:00", C_START_LABEL, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			int right = WAVE_WIDTH - 12;
 			
-			RECT (r, right - WAVE_WIDTH / 2, 24 + TITLE_BAR_HEIGHT, WAVE_WIDTH / 2, 15);
+			RECT (r, right - WAVE_WIDTH / 2, 24, WAVE_WIDTH / 2, 15);
 			
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "00:00", C_END_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
 			
 			int buttonWidth = 68, buttonWidthGap = buttonWidth + 8;
-			RECT (r, 12 + 0 * buttonWidthGap, 64 + TITLE_BAR_HEIGHT, buttonWidth, 30);
+			RECT (r, 12 + 0 * buttonWidthGap, 64, buttonWidth, 30);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Play", C_PLAY_BUTTON, 0, 0);
-			RECT (r, 12 + 1 * buttonWidthGap, 64 + TITLE_BAR_HEIGHT, buttonWidth, 30);
+			RECT (r, 12 + 1 * buttonWidthGap, 64, buttonWidth, 30);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Stop", C_STOP_BUTTON, 0, 0);
-			RECT (r, 12 + 2 * buttonWidthGap, 64 + TITLE_BAR_HEIGHT, buttonWidth, 30);
+			RECT (r, 12 + 2 * buttonWidthGap, 64, buttonWidth, 30);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Open...", C_OPEN_BUTTON, 0, 0);
-			RECT (r, 12 + 3 * buttonWidthGap, 64 + TITLE_BAR_HEIGHT, buttonWidth, 30);
+			RECT (r, 12 + 3 * buttonWidthGap, 64, buttonWidth, 30);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Help", C_HELP_BUTTON, 0, 0);
 			
 			break;
