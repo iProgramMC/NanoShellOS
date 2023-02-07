@@ -32,7 +32,7 @@ Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize)
 	// if the window has a title...
 	if (~flags & WF_NOTITLE)
 	{
-		rect.top += 18;
+		rect.top += TITLE_BAR_HEIGHT;
 	}
 	
 	// If the window has a flat border.

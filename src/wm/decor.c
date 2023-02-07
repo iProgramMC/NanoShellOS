@@ -326,10 +326,12 @@ void WmRepaintBorder(Window* pWindow)
 	}
 	else if (~pWindow->m_flags & WF_NOBORDER)
 	{
-		VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + BORDER_SIZE - 1, rect.bottom - 1);
-		VidFillRect(BUTTONMIDD, rect.right - BORDER_SIZE, rect.top, rect.right - 1, rect.bottom - 1);
-		VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.top, rect.right - BORDER_SIZE, rect.top + BORDER_SIZE + TITLE_BAR_HEIGHT - 1);
-		VidFillRect(BUTTONMIDD, rect.left + BORDER_SIZE, rect.bottom - BORDER_SIZE - 1, rect.right - BORDER_SIZE, rect.bottom - 1);
+		Rectangle margins = GetWindowMargins(pWindow);
+		
+		VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + margins.left - 1, rect.bottom - 1);
+		VidFillRect(BUTTONMIDD, rect.right - margins.right, rect.top, rect.right - 1, rect.bottom - 1);
+		VidFillRect(BUTTONMIDD, rect.left + margins.left, rect.top, rect.right - margins.right, rect.top + margins.top - 1);
+		VidFillRect(BUTTONMIDD, rect.left + margins.left, rect.bottom - margins.bottom, rect.right - margins.right, rect.bottom - 1);
 	}
 	
 	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);

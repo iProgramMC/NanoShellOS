@@ -140,7 +140,7 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 		
 		if (!line) break;
 		
-		SLogMsg("Line:%s", line);
+		//SLogMsg("Line:%s", line);
 		
 		//Process the line by tokenizing that
 		TokenState lineState;
@@ -153,7 +153,7 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 			continue;
 		}
 			
-		SLogMsg("Insn:%s", insn);
+		//SLogMsg("Insn:%s", insn);
 		
 		if (strcmp (insn, "char") == 0)
 		{
@@ -192,13 +192,13 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 				else if (strcmp (var, "xadvance") == 0)
 					info.xadvance = vali;
 				else
-					SLogMsg("[Font load] warning: unknown variable '%s' on line %d. Skipping.", var, linen);
+					;//SLogMsg("[Font load] warning: unknown variable '%s' on line %d. Skipping.", var, linen);
 			}
 			
 			chinfo[info_id] = info;
 		}
 		else
-			SLogMsg("[Font load] warning: unknown insn '%s', skipping", insn);
+			;//SLogMsg("[Font load] warning: unknown insn '%s', skipping", insn);
 	}
 	while (1);
 	

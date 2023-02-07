@@ -7,6 +7,7 @@
 #include <wtheme.h>
 #include <config.h>
 #include <print.h>
+#include <image.h>
 #include <vfs.h>
 
 typedef struct
@@ -132,8 +133,48 @@ uint8_t* ThmLoadEntireFile (const char *pPath, int *pSizeOut)
 	int read_size = FiRead (fd, pMem, size);
 	pMem[read_size] = 0;//for text parsers
 	
+	FiClose(fd);
+	
 	*pSizeOut = read_size;
 	return pMem;
+}
+
+uint8_t* ThmLoadImageBWFile(const char *pPath, int *pSizeOut, int *pWidthOut, int *pHeightOut)
+{
+	int sz = 0;
+	uint8_t* entireFile = ThmLoadEntireFile(pPath, &sz);
+	if (!entireFile) return NULL;
+	
+	int errorCode = -1;
+	Image* imgFile = LoadImageFile(entireFile, &errorCode);
+	
+	// if an image didn't load, just pass its raw output. This is insane and you shouldn't do that.
+	if (!imgFile)
+	{
+		SLogMsg("LoadImageFile didn't like it. Error Code: %x", errorCode);
+		return NULL;
+	}
+	
+	sz = imgFile->width * imgFile->height;
+	uint8_t * pBWImage = MmAllocate(sz);
+	
+	for (int i = 0; i < sz; i++)
+	{
+		// TODO: Do something other than just simply grabbing the green channel
+		uint32_t color = imgFile->framebuffer[i];
+		uint8_t* colorBytes = (uint8_t*)&color;
+		
+		pBWImage[i] = colorBytes[1];
+	}
+	
+	*pSizeOut   = sz;
+	*pWidthOut  = imgFile->width;
+	*pHeightOut = imgFile->height;
+	
+	MmFree(imgFile);
+	MmFree(entireFile);
+	
+	return pBWImage;
 }
 
 void ThmLoadFont(ConfigEntry *pEntry)
@@ -148,7 +189,6 @@ void ThmLoadFont(ConfigEntry *pEntry)
 	sprintf(buffer2, "%s::FontData",     pEntry->value);
 	sprintf(buffer3, "%s::SystemFont",   pEntry->value);
 	sprintf(buffer4, "%s::TitleBarFont", pEntry->value);
-	sprintf(buffer5, "%s::BmpSize",      pEntry->value);
 	sprintf(buffer6, "%s::ChrHeight",    pEntry->value);
 	
 	pBmpPath = CfgGetEntry (buffer1),
@@ -167,19 +207,28 @@ void ThmLoadFont(ConfigEntry *pEntry)
 		bTibFont = strcmp (pTibFont->value, "yes") == 0;
 	
 	// Load Data
-	int nBmpSize = 128;
-	if (pBmpSize)
-		nBmpSize = atoi (pBmpSize->value);
+	int nBitmapWidth = 128, nBitmapHeight = 16;
 	int nChrHeit = 16;
 	if (pChrHeit)
 		nChrHeit = atoi (pChrHeit->value);
 	
 	int sizeof_bmp = 0, sizeof_fnt = 0;
 	uint8_t
-	*pBmp = ThmLoadEntireFile (pBmpPath->value, &sizeof_bmp),
-	*pFnt = ThmLoadEntireFile (pFntPath->value, &sizeof_fnt);
+	*pFnt = ThmLoadEntireFile (pFntPath->value, &sizeof_fnt),
+	*pBmp = ThmLoadImageBWFile(pBmpPath->value, &sizeof_bmp, &nBitmapWidth, &nBitmapHeight);
 	
-	int font_id = CreateFont ((char*)pFnt, pBmp, nBmpSize, nBmpSize, nChrHeit);
+	if (!pBmp)
+	{
+		SLogMsg("Loading bitmap failed!");
+		return;
+	}
+	if (!pFnt)
+	{
+		SLogMsg("Loading font failed!");
+		return;
+	}
+	
+	int font_id = CreateFont ((char*)pFnt, pBmp, nBitmapWidth, nBitmapHeight, nChrHeit);
 	if (bSysFont)
 		SetThemingParameter (P_SYSTEM_FONT, font_id);
 	if (bTibFont)

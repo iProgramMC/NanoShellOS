@@ -70,7 +70,7 @@ int GetMenuHeight (WindowMenu* pMenu)
 {
 	int haute = (MENU_ITEM_HEIGHT + (pMenu->bHasIcons ? 4 : 0));
 	return pMenu->nMenuEntries * haute - 
-		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
+		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT) - 1;
 }
 
 #define MENU_ITEM_COMBOID (1000000)
