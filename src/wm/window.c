@@ -829,6 +829,7 @@ void RenderWindow (Window* pWindow)
 	if (!IsWindowManagerTask())
 	{
 		SLogMsg("Warning: Calling RenderWindow outside of the main window task can cause data races and stuff!");
+		SLogMsg("Return Address: %p, Task: %p", __builtin_return_address(0), KeGetRunningTask());
 	}
 	
 	if (pWindow->m_minimized)

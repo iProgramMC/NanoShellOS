@@ -15,6 +15,8 @@ static int lastTick2 = 0;
 static int lastTick3 = 0;
 */
 
+int g_IconTestTooltipNumber = 0;
+
 Image* GetIconImage(IconType type, int sz);
 
 void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -123,8 +125,10 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 					break;
 				case 1003:
 				{
+					char buf[128];
+					snprintf(buf, sizeof buf, "This is the #%d testing tooltip!\n\nLook ma, I'm on another line!!\nThis is awesome!", ++g_IconTestTooltipNumber);
 					Point p = GetMousePos();
-					TooltipShow("This is a testing tooltip!\n\nLook ma, I'm on another line!!\nThis is awesome!", p.x, p.y + 30);
+					TooltipShow(buf, p.x, p.y + 30);
 					break;
 				}
 			}

@@ -280,8 +280,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				case WACT_SELECT:
 					SelectWindow(pFront->pWindow);
 					break;
-				case WACT_RESIZE:
-					ResizeWindow(pFront->pWindow, pFront->rect.left, pFront->rect.top, GetWidth(&pFront->rect), GetHeight(&pFront->rect));
+				case WACT_UNDRAW_RECT:
+					RefreshRectangle(pFront->rect, pFront->pWindow);
 					break;
 			}
 			

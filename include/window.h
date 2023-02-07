@@ -668,7 +668,7 @@ typedef Window* PWINDOW;
 //For internal use only - actions that may not be safe to perform outside the main window manager task
 enum {
 	WACT_NONE,
-	WACT_RESIZE,
+	WACT_UNDRAW_RECT,
 	WACT_HIDE,
 	WACT_SHOW,
 	WACT_DESTROY,

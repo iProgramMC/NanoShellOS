@@ -155,6 +155,18 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 {
 	KeVerifyInterruptsEnabled;
 	
+	if (!IsWindowManagerTask())
+	{
+		WindowAction act;
+		act.bInProgress = true;
+		act.nActionType = WACT_UNDRAW_RECT;
+		act.pWindow = pWindowToExclude;
+		act.rect    = rect;
+		ActionQueueAdd(act);
+		// TODO: maybe we should wait for it to complete?
+		return;
+	}
+	
 	// pWnd - the window that's being undrawn
 	VBEData* backup = g_vbeData;
 	VidSetVBEData(NULL);
