@@ -310,15 +310,12 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	if (newHeight< WINDOW_MIN_HEIGHT)
 		newHeight= WINDOW_MIN_HEIGHT;
 	
-	//acquire the screen lock
-	SLogMsg("Task who owns lock %p for now: %p", &pWindow->m_screenLock, pWindow->m_screenLock.m_task_owning_it);
-	LockAcquire(&pWindow->m_screenLock);
+	HideWindow(pWindow);
 	
 	uint32_t* pNewFb = (uint32_t*)MmAllocatePhy(newWidth * newHeight * sizeof(uint32_t), ALLOCATE_BUT_DONT_WRITE_PHYS);
 	if (!pNewFb)
 	{
 		SLogMsg("Cannot resize window to %dx%d, out of memory", newWidth, newHeight);
-		LockFree(&pWindow->m_screenLock);
 		return;
 	}
 	
@@ -333,6 +330,14 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	for (int i = 0; i < minHeight; i++)
 	{
 		memcpy_ints (&pNewFb[i * newWidth], &pWindow->m_fullVbeData.m_framebuffer32[i * oldWidth], minWidth);
+		
+		if (newWidth > minWidth)
+			memset_ints(&pNewFb[i * newWidth + minWidth], 0, newWidth - minWidth);
+	}
+	
+	for (int i = minHeight; i < newHeight; i++)
+	{
+		memset_ints(&pNewFb[i * newWidth], 0x80, newWidth);
 	}
 	
 	// Free the old framebuffer.  This action should be done atomically.
@@ -367,56 +372,19 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	// Mark as dirty.
 	pWindow->m_fullVbeData.m_dirty = true;
 	
+	ShowWindow(pWindow);
+	
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
 		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.left - margins.right),
 		MAKE_MOUSE_PARM(oldWidth - oldMarg.left - oldMarg.right, oldHeight - oldMarg.left - oldMarg.right)
 	);
-	
-	LockFree(&pWindow->m_screenLock);
-}
-
-static void ResizeWindowUnsafe(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
-{
-	if (!pWindow->m_hidden)
-	{
-		pWindow->m_hidden |= WI_NOHIDDEN;
-		HideWindowUnsafe (pWindow);
-	}
-	else
-	{
-		pWindow->m_hidden &= ~WI_NOHIDDEN;
-	}
-	
-	ResizeWindowInternal (pWindow, newPosX, newPosY, newWidth, newHeight);
-	
-	//going to show up later by itself
-	//ShowWindowUnsafe (pWindow);
 }
 
 void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
-	if (IsWindowManagerTask())
-	{
-		// Automatically resort to unsafe versions because we're running in the wm task already
-		ResizeWindowUnsafe(pWindow, newPosX, newPosY, newWidth, newHeight);
-		return;
-	}
-	
-	WindowAction action;
-	action.bInProgress = true;
-	action.pWindow     = pWindow;
-	action.nActionType = WACT_RESIZE;
-	action.rect.left   = newPosX;
-	action.rect.top    = newPosY;
-	action.rect.right  = newPosX + newWidth;
-	action.rect.bottom = newPosY + newHeight;
-	
-	//WindowAction* ptr =
-	ActionQueueAdd(action);
-	
-	//while (ptr->bInProgress)
-	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+	// request a resize from the window itself.
+	WindowAddEventToMasterQueue(pWindow, EVENT_REQUEST_RESIZE_PRIVATE, MAKE_MOUSE_PARM(newPosX, newPosY), MAKE_MOUSE_PARM(newWidth, newHeight));
 }
 
 void SelectWindowUnsafe(Window* pWindow);

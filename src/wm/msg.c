@@ -375,6 +375,8 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_SIZE)
 	{
+		WaitMS(2500);
+		
 		DirtyRectInvalidateAll();
 		
 		WmRepaintBorderAndBackground(pWindow);
@@ -614,6 +616,8 @@ bool HandleMessages(Window* pWindow)
 	return true;
 }
 
+void ResizeWindowInternal(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight);
+
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
 {
 	if (!IsWindowManagerRunning())
@@ -626,6 +630,17 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			// By default, this draws the window's background color. This can be changed by overloading the event.
 			Rectangle rect = { GET_X_PARM(parm1), GET_Y_PARM(parm1), GET_X_PARM(parm2), GET_Y_PARM(parm2) };
 			VidFillRect(WINDOW_BACKGD_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+			break;
+		}
+		case EVENT_REQUEST_RESIZE_PRIVATE:
+		{
+			int x = GET_X_PARM(parm1);
+			int y = GET_Y_PARM(parm1);
+			int w = GET_X_PARM(parm2);
+			int h = GET_Y_PARM(parm2);
+			
+			ResizeWindowInternal(pWindow, x, y, w, h);
+			
 			break;
 		}
 		case EVENT_CREATE:

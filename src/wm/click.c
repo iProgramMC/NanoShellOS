@@ -307,7 +307,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
 			
 			//note that we resize the window this way here because we're running inside the wm task
-			ResizeWindowInternal (pWindow, -1, -1, newWidth, newHeight);
+			//ResizeWindowInternal (pWindow, -1, -1, newWidth, newHeight);
+			ResizeWindow(pWindow, -1, -1, newWidth, newHeight);
 		}
 		else
 		{
