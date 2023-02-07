@@ -27,8 +27,11 @@ void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int 
 	if (pWindow->m_flags & WF_FROZEN)
 	{
 		// Can't send events to frozen objects! Just pretend it's handled already
-		pWindow->m_lastHandledMessagesWhen = GetTickCount();
-		return;
+		if (eventType != EVENT_BORDER_SIZE_UPDATE_PRIVATE && eventType != EVENT_REQUEST_RESIZE_PRIVATE)
+		{
+			pWindow->m_lastHandledMessagesWhen = GetTickCount();
+			return;
+		}
 	}
 	
 	//if hasn't responded in 5 seconds:

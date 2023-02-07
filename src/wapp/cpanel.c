@@ -199,7 +199,7 @@ void RedrawEverything();
 					
 					if ((uint32_t)borderSize != BORDER_SIZE)
 					{
-						//WmOnChangedBorderSize();
+						WmOnChangedBorderSize();
 					}
 					
 					RedrawEverything();

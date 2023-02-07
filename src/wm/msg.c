@@ -375,8 +375,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_SIZE)
 	{
-		WaitMS(2500);
-		
 		DirtyRectInvalidateAll();
 		
 		WmRepaintBorderAndBackground(pWindow);
@@ -641,6 +639,11 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			ResizeWindowInternal(pWindow, x, y, w, h);
 			
+			break;
+		}
+		case EVENT_BORDER_SIZE_UPDATE_PRIVATE:
+		{
+			WmOnChangedBorderParms(pWindow);
 			break;
 		}
 		case EVENT_CREATE:

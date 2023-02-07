@@ -62,23 +62,18 @@ Rectangle GetMarginsWindowFlags(uint32_t flags)
 
 Rectangle GetWindowMargins(Window* pWindow)
 {
-	return GetMarginsWindowFlags(pWindow->m_flags);
+	return GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, pWindow->m_knownBorderSize);
 }
 
 Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 {
-	Rectangle rect = pWindow->m_fullRect;
-	rect.right  -= rect.left;
-	rect.bottom -= rect.top;
-	rect.left = rect.top = 0;
+	Rectangle rect = pWindow->m_rect;
 	
-	if (offset)
+	if (!offset)
 	{
-		Rectangle margins = GetWindowMargins(pWindow);
-		rect.left   += margins.left;
-		rect.right  -= margins.right;
-		rect.top    += margins.top;
-		rect.bottom -= margins.bottom;
+		rect.right  -= rect.left;
+		rect.bottom -= rect.top;
+		rect.left = rect.top = 0;
 	}
 	
 	return rect;
@@ -87,8 +82,8 @@ Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 void WmOnChangedBorderParms(Window* pWindow)
 {
 	Rectangle ca = GetWindowClientRect(pWindow, true);
-	int clientAreaWidth  = ca.right - ca.left;
-	int clientAreaHeight = ca.top   - ca.bottom;
+	int clientAreaWidth  = ca.right  - ca.left;
+	int clientAreaHeight = ca.bottom - ca.top;
 	
 	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, BORDER_SIZE);
 	
@@ -102,8 +97,7 @@ void WmOnChangedBorderParms(Window* pWindow)
 	ResizeWindow(pWindow, newX, newY, newW, newH);
 }
 
-/*
-void WmOnChangedBorderSizeUnsafe()
+void WmOnChangedBorderSize()
 {
 	for (int i = 0; i < WINDOWS_MAX; i++)
 	{
@@ -114,26 +108,6 @@ void WmOnChangedBorderSizeUnsafe()
 		WindowAddEventToMasterQueue(pWindow, EVENT_BORDER_SIZE_UPDATE_PRIVATE, 0, 0);
 	}
 }
-
-void WmOnChangedBorderSize()
-{
-	if (IsWindowManagerTask())
-	{
-		// Automatically resort to unsafe versions because we're running in the wm task already
-		WmOnChangedBorderSizeUnsafe();
-		return;
-	}
-	
-	WindowAction action;
-	action.bInProgress = true;
-	action.nActionType = WACT_UPDATEALL;
-	
-	WindowAction* ptr = ActionQueueAdd(action);
-	
-	while (ptr->bInProgress)
-		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
-}
-*/
 
 void WmRecalculateClientRect(Window* pWindow)
 {
@@ -351,8 +325,9 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_fullVbeData.m_pitch   = newWidth*4;
 	pWindow->m_fullVbeData.m_height  = newHeight;
 	
+	Rectangle oldMarg = GetWindowMargins(pWindow);
+	pWindow->m_knownBorderSize = BORDER_SIZE;
 	Rectangle margins = GetWindowMargins(pWindow);
-	Rectangle oldMarg = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, pWindow->m_knownBorderSize);
 	
 	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * margins.top + margins.left];
 	pWindow->m_vbeData.m_width    = newWidth  - margins.left - margins.right;
@@ -360,12 +335,13 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_vbeData.m_pitch32  = newWidth;
 	pWindow->m_vbeData.m_pitch16  = newWidth * 2;
 	pWindow->m_vbeData.m_pitch    = newWidth * 4;
+	pWindow->m_vbeData.m_offsetX  = margins.left;
+	pWindow->m_vbeData.m_offsetY  = margins.top;
 	
 	pWindow->m_fullRect.left   = newPosX;
 	pWindow->m_fullRect.top    = newPosY;
 	pWindow->m_fullRect.right  = pWindow->m_fullRect.left + newWidth;
 	pWindow->m_fullRect.bottom = pWindow->m_fullRect.top  + newHeight;
-	pWindow->m_knownBorderSize = BORDER_SIZE;
 	
 	WmRecalculateClientRect(pWindow);
 	
