@@ -13,8 +13,8 @@
 #define MAGWID   160
 #define MAGHEI   128
 
-#define DEF_MAGNIFY_WID (MAGWID*MAGSCALE+6)
-#define DEF_MAGNIFY_HEI (MAGHEI*MAGSCALE+6 + TITLE_BAR_HEIGHT)
+#define DEF_MAGNIFY_WID (MAGWID*MAGSCALE)
+#define DEF_MAGNIFY_HEI (MAGHEI*MAGSCALE)
 
 unsigned VidReadPixelU (unsigned x, unsigned y);
 void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -24,7 +24,7 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 		case EVENT_CREATE:
 		{
 			Rectangle r;
-			RECT (r, 3, 3 + TITLE_BAR_HEIGHT, MAGWID*MAGSCALE, MAGHEI*MAGSCALE);
+			RECT (r, 0, 0, MAGWID*MAGSCALE, MAGHEI*MAGSCALE);
 			
 			// a la C#'s  new Bitmap(320,200);
 			Image *pImage = BitmapAllocate(MAGWID, MAGHEI, 0x00FFFFFF);

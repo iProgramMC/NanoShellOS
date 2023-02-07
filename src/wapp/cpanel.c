@@ -47,17 +47,17 @@ void RedrawEverything();
 				
 				//add a button
 				Rectangle r;
-				RECT(r,8,8+TITLE_BAR_HEIGHT,MOUSE_POPUP_WIDTH-16,35);
+				RECT(r,8,8,MOUSE_POPUP_WIDTH-16,35);
 				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Mouse tracking speed", 1, 0, 0);
 				{
 					//add stuff inside the rect.
 					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
 					
-					RECT(r, 16,  24 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 16,  24, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, MOUSE_POPUP_WIDTH - 40, 24 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, MOUSE_POPUP_WIDTH - 40, 24, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 50,  22 + TITLE_BAR_HEIGHT, MOUSE_POPUP_WIDTH - 100, 1);
+					RECT(r, 50,  22, MOUSE_POPUP_WIDTH - 100, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, MOUSEP_SPEED_SCROLL, (0)<<16|(4), (1)<<16|(GetMouseSpeedMultiplier()));
 				}
 				
@@ -108,21 +108,21 @@ void RedrawEverything();
 			case EVENT_PAINT:
 			{
 				Rectangle r;
-				RECT (r, DESKTOP_POPUP_WIDTH/2+10, TITLE_BAR_HEIGHT+3+10, DESKTOP_POPUP_WIDTH/2-20, 150+TITLE_BAR_HEIGHT);
+				RECT (r, DESKTOP_POPUP_WIDTH/2+10, 3+10, DESKTOP_POPUP_WIDTH/2-20, 150);
 				RenderButtonShapeSmallInsideOut      (r, 0xBFBFBF, 0x808080, BACKGROUND_COLOR);
 				
-				RECT (r, DESKTOP_POPUP_WIDTH/2+20, TITLE_BAR_HEIGHT+3+20, 250-1, 100+TITLE_BAR_HEIGHT-1);
+				RECT (r, DESKTOP_POPUP_WIDTH/2+20, 3+20, 250-1, 100-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
 				PaintWindowBorderStandard            (r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, false, false);
 				
-				RECT (r, DESKTOP_POPUP_WIDTH/2+30, TITLE_BAR_HEIGHT+3+50, 250-1, 100+TITLE_BAR_HEIGHT-1);
+				RECT (r, DESKTOP_POPUP_WIDTH/2+30, 3+50, 250-1, 100-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
 				
 				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, true, false);
 				
-				RECT (r, DESKTOP_POPUP_WIDTH/2+40, TITLE_BAR_HEIGHT+3+75, 180-1, 70+TITLE_BAR_HEIGHT-1);
+				RECT (r, DESKTOP_POPUP_WIDTH/2+40, 3+75, 180-1, 70-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
 				
@@ -135,18 +135,18 @@ void RedrawEverything();
 				
 				//add a button
 				Rectangle r;
-				RECT(r,10, 15 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 150, 15);
+				RECT(r,10, 15, DESKTOP_POPUP_WIDTH/2 - 150, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", DESKTOP_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
-				RECT(r,DESKTOP_POPUP_WIDTH/2-80, 10 + TITLE_BAR_HEIGHT, 70, 20);
+				RECT(r,DESKTOP_POPUP_WIDTH/2-80, 10, 70, 20);
 				AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
-				RECT(r,10, 35 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
+				RECT(r,10, 35, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
-				RECT(r,10, 55 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
+				RECT(r,10, 55, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make buttons glow when hovering over them", DESKTOP_GLOW_ON_HOVER, g_GlowOnHover, 0);
-				RECT(r,10, 75 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
+				RECT(r,10, 75, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make task bar buttons compact", DESKTOP_TASKBAR_COMPACT, g_TaskListCompact, 0);
 				
-				RECT(r, 10, 95 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
+				RECT(r, 10, 95, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
 				#define THEMES_PER_ROW 4
@@ -154,7 +154,7 @@ void RedrawEverything();
 				#define ADD_THEME(themenum) \
 					RECT(r, \
 					     10 + ((DESKTOP_POPUP_WIDTH/2 - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
-						 115 + TITLE_BAR_HEIGHT + ((themenum) / THEMES_PER_ROW) * 25,\
+						 115 + ((themenum) / THEMES_PER_ROW) * 25,\
 						 (DESKTOP_POPUP_WIDTH/2 - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
 						 20);\
 					AddControl(pWindow, CONTROL_BUTTON, r, GetThemeName(themenum), DESKTOP_THEME_DEFAULT + (themenum), 0, 0);
@@ -169,7 +169,7 @@ void RedrawEverything();
 				ADD_THEME(TH_DESERT);
 				ADD_THEME(TH_RAINYDAY);
 				
-				RECT(r, 10, 195 + TITLE_BAR_HEIGHT, DESKTOP_POPUP_WIDTH/2 - 20, 15);
+				RECT(r, 10, 195, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
 				RECT(r,(DESKTOP_POPUP_WIDTH/2-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
@@ -234,7 +234,7 @@ void RedrawEverything();
 		KEYBDP_TEST_BOX,
 	};
 	#define KEYBD_POPUP_WIDTH 400
-	#define KEYBD_POPUP_HEITE 300
+	#define KEYBD_POPUP_HEITE 230
 	
 	uint8_t g_oldTypematicRepeatRate, g_oldTypematicRepeatDelay;
 	void CALLBACK Cpl$KeybdPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
@@ -250,43 +250,43 @@ void RedrawEverything();
 				
 				//add a button
 				Rectangle r;
-				RECT(r,8,8+TITLE_BAR_HEIGHT,KEYBD_POPUP_WIDTH-16,180);
+				RECT(r,8,8,KEYBD_POPUP_WIDTH-16,180);
 				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Character Repeat", 1, 0, 0);
 				{
 					//add stuff inside the rect.
 					//this scope has no actual reason for its existence other than to mark that stuff we add here goes inside the rect above.
 					
-					RECT(r, 16,  34 + TITLE_BAR_HEIGHT, 32, 32);
+					RECT(r, 16,  34, 32, 32);
 					AddControl(pWindow, CONTROL_ICON, r, NULL, 12, ICON_KEYB_REP_SPEED, 0);
-					RECT(r, 66,  34 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 66,  34, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Repeat rate:", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 66,  54 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 66,  54, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, KEYBD_POPUP_WIDTH - 40, 54 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 54, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 100, 52 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
+					RECT(r, 100, 52, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_CPS,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)),
 						(1)<<16|(GetKeyboardProperty(KBPROPERTY_REPEAT_FREQUENCY_MAX)-1-g_oldTypematicRepeatRate)
 					);
 					
-					RECT(r, 16,  15+80 + TITLE_BAR_HEIGHT, 32, 32);
+					RECT(r, 16,  15+80, 32, 32);
 					AddControl(pWindow, CONTROL_ICON, r, NULL, 22, ICON_KEYB_REP_DELAY, 0);
-					RECT(r, 66,  15+80 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 66,  15+80, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Repeat delay:", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 66,  35+80 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, 66,  35+80, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Slow", 2, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, KEYBD_POPUP_WIDTH - 40, 35+80 + TITLE_BAR_HEIGHT, 32, 20);
+					RECT(r, KEYBD_POPUP_WIDTH - 40, 35+80, 32, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Fast", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 100, 33+80 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 150, 1);
+					RECT(r, 100, 33+80, KEYBD_POPUP_WIDTH - 150, 1);
 					AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, KEYBDP_REPEAT_DELAY,
 						(0)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)),
 						(1)<<16|(GetKeyboardProperty(KBPROPERTY_DELAY_BEFORE_REPEAT_MAX)-1-g_oldTypematicRepeatDelay)
 					);
 					
-					RECT(r, 16, 145 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 100, 20);
+					RECT(r, 16, 145, KEYBD_POPUP_WIDTH - 100, 20);
 					AddControl(pWindow, CONTROL_TEXT, r, "Click here and hold down a key to test repeat rate:", 10000, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-					RECT(r, 16, 155 + TITLE_BAR_HEIGHT, KEYBD_POPUP_WIDTH - 50, 20);
+					RECT(r, 16, 155, KEYBD_POPUP_WIDTH - 50, 20);
 					AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, 10000, 0, 0);
 				}
 				RECT(r,(KEYBD_POPUP_WIDTH-160)/2,KEYBD_POPUP_HEITE - 30,75,20);
@@ -294,7 +294,7 @@ void RedrawEverything();
 				RECT(r,(KEYBD_POPUP_WIDTH-160)/2+80,KEYBD_POPUP_HEITE - 30,75,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  KEYBDP_OK_BUTTON,     0, 0);
 				/*
-				RECT(r,8,8+TITLE_BAR_HEIGHT+80,KEYBD_POPUP_WIDTH-16,80);
+				RECT(r,8,8+80,KEYBD_POPUP_WIDTH-16,80);
 				AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, KEYBDP_TEST_BOX, 0, 0);
 				SetTextInputText(pWindow, KEYBDP_TEST_BOX, "Test");
 				*/
@@ -363,9 +363,9 @@ void RedrawEverything();
 				pWindow->m_data = (void*)g_TerminalFont;
 				
 				Rectangle r;
-				RECT(r, 10, 10 + TITLE_BAR_HEIGHT, NTERM_POPUP_WIDTH - 20, NTERM_POPUP_HEIT1 - 45);
+				RECT(r, 10, 10, NTERM_POPUP_WIDTH - 20, NTERM_POPUP_HEIT1 - 45);
 				AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Terminal font", NTERM_FONT_SURR, 0, 0);
-				RECT(r, 20, 25 + TITLE_BAR_HEIGHT, NTERM_POPUP_WIDTH/2 - 40, NTERM_POPUP_HEIT1 - 70);
+				RECT(r, 20, 25, NTERM_POPUP_WIDTH/2 - 40, NTERM_POPUP_HEIT1 - 70);
 				AddControl(pWindow, CONTROL_LISTVIEW, r, NULL, NTERM_FONT_LIST, 0, 0);
 				
 				RECT(r, r.left, r.bottom + 20, 250, 20);
@@ -404,7 +404,7 @@ void RedrawEverything();
 				//Paint a little console window to show the user what they picked
 				Rectangle r;
 				//draw around the window
-				RECT(r, NTERM_POPUP_WIDTH/2, 25 + TITLE_BAR_HEIGHT, NTERM_POPUP_WIDTH/2-20, NTERM_POPUP_HEIT1-70);
+				RECT(r, NTERM_POPUP_WIDTH/2, 25, NTERM_POPUP_WIDTH/2-20, NTERM_POPUP_HEIT1-70);
 				VidFillRectangle(0x000000, r);
 				r.top++, r.bottom--, r.left++, r.right--;//Shrink the rect by 1
 				VidDrawRectangle(0xFFFFFF, r);
@@ -416,7 +416,7 @@ void RedrawEverything();
 				
 				VidTextOut("Window preview", r.left + 1, r.top + 1, 0xFFFFFF, TRANSPARENT);
 				
-				RECT(r, NTERM_POPUP_WIDTH/2+5, 40 + TITLE_BAR_HEIGHT, NTERM_POPUP_WIDTH/2-30, NTERM_POPUP_HEIT1-85);
+				RECT(r, NTERM_POPUP_WIDTH/2+5, 40, NTERM_POPUP_WIDTH/2-30, NTERM_POPUP_HEIT1-85);
 				VidSetFont((int)pWindow->m_data);
 				
 				char buffer[1024];
@@ -468,10 +468,10 @@ void RedrawEverything();
 				
 				Rectangle r;
 				
-				RECT(r, 10, TITLE_BAR_HEIGHT + 10, TSKBR_POPUP_WIDTH - 20, 20);
+				RECT(r, 10, 10, TSKBR_POPUP_WIDTH - 20, 20);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show the date on the task bar", TASKBAR_POPUP_DATECHECK, g_bShowDate, 0);
 				
-				RECT(r, 10, TITLE_BAR_HEIGHT + 30, TSKBR_POPUP_WIDTH - 20, 20);
+				RECT(r, 10, 30, TSKBR_POPUP_WIDTH - 20, 20);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Show the seconds on the clock on the task bar", TASKBAR_POPUP_TIMECHECK, g_bShowTimeSeconds, 0);
 				
 				RECT(r, (TSKBR_POPUP_WIDTH - 160) / 2,     TSKBR_POPUP_HEITE - 30, 75, 20);
@@ -539,14 +539,14 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			
 			// Add a icon list view.
 			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             (TITLE_BAR_HEIGHT + 5)
+			#define TOP_PADDING             (5)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
 				/*X Size */ 400 - PADDING_AROUND_LISTVIEW * 2, 
 				/*Y Size */ 260 - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
 			);
-			AddControl(pWindow, CONTROL_ICONVIEW, r, NULL, CONTPNL_LISTVIEW, 0, 0);
+			AddControlEx(pWindow, CONTROL_ICONVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, CONTPNL_LISTVIEW, 0, 0);
 			
 			// Add list items:
 			ResetList(pWindow, CONTPNL_LISTVIEW);
@@ -723,7 +723,7 @@ void ControlEntry(__attribute__((unused)) int arg)
 	int ww = 400, wh = 260;
 	int wx = 150, wy = 150;
 	
-	Window* pWindow = CreateWindow ("Control Panel", wx, wy, ww, wh, Cpl$WndProc, 0);//WF_NOCLOSE);
+	Window* pWindow = CreateWindow ("Control Panel", wx, wy, ww, wh, Cpl$WndProc, WF_ALWRESIZ);//WF_NOCLOSE);
 	pWindow->m_iconID = ICON_FOLDER_SETTINGS;
 	
 	if (!pWindow)

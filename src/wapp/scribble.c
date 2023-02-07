@@ -60,7 +60,7 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 		case EVENT_CREATE:
 		{
 			Rectangle r;
-			RECT (r, 10, 10 + TITLE_BAR_HEIGHT, DEF_SCRIB_WID - 20, DEF_SCRIB_HEI - TITLE_BAR_HEIGHT - 20- 40);
+			RECT (r, 10, 10, DEF_SCRIB_WID - 20, DEF_SCRIB_HEI - 20- 40);
 			
 			// TODO: we shouldn't need to do this if we have the data
 			Image *pImage = BitmapAllocate(320, 200, 0x00FFFFFF);

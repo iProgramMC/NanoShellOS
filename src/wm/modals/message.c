@@ -133,8 +133,6 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	int wSzY = szY + 
 			20 + //Y padding on both sides
 			buttonHeight + //Button's size.
-			TITLE_BAR_HEIGHT +
-			5 + 
 			WINDOW_RIGHT_SIDE_THICKNESS;
 	
 	int wPosX = (GetScreenSizeX() - wSzX) / 2,
@@ -166,7 +164,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	// Add the basic controls required.
 	Rectangle rect;
 	rect.left   = 20 + iconAvailable*32 + 10;
-	rect.top    = TITLE_BAR_HEIGHT + 2;
+	rect.top    = 2;
 	rect.right  = wSzX - 20;
 	rect.bottom = wSzY - buttonHeight - 20;
 	AddControl (pBox, CONTROL_TEXTHUGE, rect, NULL, 0x10000, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
@@ -177,7 +175,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	if (iconAvailable)
 	{
 		rect.left = 20;
-		rect.top  = TITLE_BAR_HEIGHT + 2 + (szY - 32) / 2;
+		rect.top  = 2 + (szY - 32) / 2;
 		rect.right = rect.left + 32;
 		rect.bottom= rect.top  + 32;
 		AddControl (pBox, CONTROL_ICON, rect, NULL, 0x10001, iconID, 0);

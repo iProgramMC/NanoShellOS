@@ -23,7 +23,7 @@ extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int message
 //Null but all 0xffffffff's. Useful
 #define FNULL ((void*)0xffffffff)
 #define POPUP_WIDTH  (400)
-#define POPUP_HEIGHT (120-18+TITLE_BAR_HEIGHT)
+#define POPUP_HEIGHT (120)
 void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	if (messageType == EVENT_COMMAND)
@@ -132,13 +132,13 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	// Add the basic controls required.
 	Rectangle rect;
 	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT;
+	rect.top    = 12;
 	rect.right  = POPUP_WIDTH - 20;
 	rect.bottom = 50;
 	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, 0, WINDOW_BACKGD_COLOR);
 	
 	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT + 20;
+	rect.top    = 12 + 20;
 	rect.right  = POPUP_WIDTH - 20;
 	rect.bottom = 20;
 	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100000, 0, 0);

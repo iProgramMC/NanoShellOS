@@ -244,12 +244,12 @@ void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			// Add a list view control.
 			
 			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             (TITLE_BAR_HEIGHT + 18)
+			#define TOP_PADDING             (TITLE_BAR_HEIGHT)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TOP_PADDING, 
 				/*X Size */ HELP_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
-				/*Y Size */ HELP_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+				/*Y Size */ HELP_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TOP_PADDING
 			);
 			
 			AddControlEx (pWindow, CONTROL_TEXTINPUT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, HELP_TEXTVIEW, 1 | 4 | 8, 0);

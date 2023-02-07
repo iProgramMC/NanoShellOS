@@ -82,23 +82,23 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			for (int i = ICON_NULL+1; i < ICON_COUNT; i++)
 			{
 				int x = i % icons_per_width, y = i / icons_per_width;
-				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + TITLE_BAR_HEIGHT+8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
+				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + 8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
 			}
 			
 			Rectangle r;
-			RECT(r, 10, 10 + TITLE_BAR_HEIGHT, 100, 20);
+			RECT(r, 10, 10, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (5 sec)", 1002, 0, 0);
 			
-			RECT(r, 10, 40 + TITLE_BAR_HEIGHT, 100, 20);
+			RECT(r, 10, 40, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (10 sec)", 1000, 0, 0);
 			
-			RECT(r, 10, 70 + TITLE_BAR_HEIGHT, 100, 20);
+			RECT(r, 10, 70, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (30 sec)", 1001, 0, 0);
 			
-			RECT(r, 10, 100 + TITLE_BAR_HEIGHT, 100, 20);
+			RECT(r, 10, 100, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Show Tooltip", 1003, 0, 0);
 			
-			RECT(r, 10, 130 + TITLE_BAR_HEIGHT, 100, 20);
+			RECT(r, 10, 130, 100, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Crash Now!", 1004, 0, 0);
 			
 			break;

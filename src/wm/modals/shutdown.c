@@ -86,7 +86,7 @@ int ShutdownBox (Window* pWindow)
 		pWindow->m_flags |= WF_FROZEN;//Do not respond to user attempts to move/other
 	}
 	
-	int wSzX = 320, wSzY = 170 + TITLE_BAR_HEIGHT - 18;
+	int wSzX = 320, wSzY = 144;
 	
 	int wPosX = (GetScreenWidth () - wSzX) / 2;
 	int wPosY = (GetScreenHeight() - wSzY) / 2;
@@ -101,17 +101,17 @@ int ShutdownBox (Window* pWindow)
 	}
 	
 	Rectangle rect;
-	RECT (rect, 20, 10 + TITLE_BAR_HEIGHT, 32, 32);
+	RECT (rect, 20, 10, 32, 32);
 	AddControl (pBox, CONTROL_ICON, rect, NULL, 100, ICON_EXIT, 0);
-	RECT (rect, 80, 20 + TITLE_BAR_HEIGHT, 200, 32);
+	RECT (rect, 80, 15, 200, 32);
 	AddControl (pBox, CONTROL_TEXT, rect, "You want to:", 101, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-	RECT (rect, 80, 45 + TITLE_BAR_HEIGHT, 200, 22);
+	RECT (rect, 80, 40, 200, 22);
 	AddControl (pBox, CONTROL_CHECKBOX, rect, "Shutdown", 102, 0, 0);
-	RECT (rect, 80, 70 + TITLE_BAR_HEIGHT, 200, 22);
+	RECT (rect, 80, 65, 200, 22);
 	AddControl (pBox, CONTROL_CHECKBOX, rect, "Shutdown and Restart", 103, 0, 0);
-	RECT (rect, 80, 95 + TITLE_BAR_HEIGHT, 200, 22);
+	RECT (rect, 80, 90, 200, 22);
 	AddControl (pBox, CONTROL_CHECKBOX, rect, "Continue to NanoShell", 104, 0, 0);
-	RECT (rect, (wSzX - 50) / 2, 120 + TITLE_BAR_HEIGHT, 50, 20);
+	RECT (rect, (wSzX - 50) / 2, 115, 50, 20);
 	AddControl (pBox, CONTROL_BUTTON, rect, "OK", 105, 0, 0);
 	
 	CheckboxSetChecked(pBox, 102, true);

@@ -351,8 +351,8 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 void OnRightClickShowMenu(Window* pWindow, int parm1)
 {
 	Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-	p.x += pWindow->m_rect.left;
-	p.y += pWindow->m_rect.top;
+	p.x += pWindow->m_fullRect.left;
+	p.y += pWindow->m_fullRect.top;
 	
 	int MenuWidth = 100;
 	
