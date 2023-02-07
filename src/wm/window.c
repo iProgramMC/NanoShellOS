@@ -25,7 +25,7 @@ g_BackgdLock;
 // note: The rectangle structure works as "how much to expand from X direction".
 // So a margin of {3, 0, 3, 0} means you expand a rectangle by 3 to the left, and 3 to the right.
 
-Rectangle GetMarginsWindowFlags(uint32_t flags)
+Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize)
 {
 	Rectangle rect = { 0, 0, 0, 0 };
 	
@@ -46,13 +46,18 @@ Rectangle GetMarginsWindowFlags(uint32_t flags)
 	// Otherwise, check if the window doesn't want no border.
 	else if (~flags & WF_NOBORDER)
 	{
-		rect.left   += BORDER_SIZE;
-		rect.right  += BORDER_SIZE;
-		rect.top    += BORDER_SIZE;
-		rect.bottom += BORDER_SIZE;
+		rect.left   += borderSize;
+		rect.right  += borderSize;
+		rect.top    += borderSize;
+		rect.bottom += borderSize;
 	}
 	
 	return rect;
+}
+
+Rectangle GetMarginsWindowFlags(uint32_t flags)
+{
+	return GetMarginsWindowFlagsAndBorderSize(flags, BORDER_SIZE);
 }
 
 Rectangle GetWindowMargins(Window* pWindow)
@@ -62,7 +67,7 @@ Rectangle GetWindowMargins(Window* pWindow)
 
 Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 {
-	Rectangle rect = pWindow->m_rect;
+	Rectangle rect = pWindow->m_fullRect;
 	rect.right  -= rect.left;
 	rect.bottom -= rect.top;
 	rect.left = rect.top = 0;
@@ -77,6 +82,67 @@ Rectangle GetWindowClientRect(Window* pWindow, bool offset)
 	}
 	
 	return rect;
+}
+
+void WmOnChangedBorderParms(Window* pWindow)
+{
+	Rectangle ca = GetWindowClientRect(pWindow, true);
+	int clientAreaWidth  = ca.right - ca.left;
+	int clientAreaHeight = ca.top   - ca.bottom;
+	
+	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, BORDER_SIZE);
+	
+	int newX = ca.left - margins.left, newY = ca.top - margins.top;
+	int newW = clientAreaWidth + margins.left + margins.right;
+	int newH = clientAreaHeight + margins.top + margins.bottom;
+	
+	if (pWindow->m_rect.left == newX && pWindow->m_rect.top == newY && pWindow->m_rect.right == newX + newW && pWindow->m_rect.bottom == newY + newH)
+		return;
+	
+	ResizeWindow(pWindow, newX, newY, newW, newH);
+}
+
+/*
+void WmOnChangedBorderSizeUnsafe()
+{
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		Window* pWindow = &g_windows[i];
+		
+		if (!pWindow->m_used) continue;
+		
+		WindowAddEventToMasterQueue(pWindow, EVENT_BORDER_SIZE_UPDATE_PRIVATE, 0, 0);
+	}
+}
+
+void WmOnChangedBorderSize()
+{
+	if (IsWindowManagerTask())
+	{
+		// Automatically resort to unsafe versions because we're running in the wm task already
+		WmOnChangedBorderSizeUnsafe();
+		return;
+	}
+	
+	WindowAction action;
+	action.bInProgress = true;
+	action.nActionType = WACT_UPDATEALL;
+	
+	WindowAction* ptr = ActionQueueAdd(action);
+	
+	while (ptr->bInProgress)
+		KeTaskDone(); //Spinlock: pass execution off to other threads immediately
+}
+*/
+
+void WmRecalculateClientRect(Window* pWindow)
+{
+	pWindow->m_rect = pWindow->m_fullRect;
+	Rectangle margins = GetWindowMargins(pWindow);
+	pWindow->m_rect.left   += margins.left;
+	pWindow->m_rect.top    += margins.top;
+	pWindow->m_rect.right  -= margins.right;
+	pWindow->m_rect.bottom -= margins.bottom;
 }
 
 int AddTimer(Window* pWindow, int frequency, int event)
@@ -159,7 +225,7 @@ Window* GetWindowFromIndex(int i)
 
 void UndrawWindow (Window* pWnd)
 {
-	RefreshRectangle(pWnd->m_rect, pWnd);
+	RefreshRectangle(pWnd->m_fullRect, pWnd);
 }
 
 void HideWindowUnsafe (Window* pWindow)
@@ -180,7 +246,7 @@ static void ShowWindowUnsafe (Window* pWindow)
 	else
 	{
 		// TODO: fix this will leave garbage that should be occluded out. Fix this by adding a RefreshRectangle which refreshes things above this window.
-		RefreshRectangle(pWindow->m_rect, NULL);
+		RefreshRectangle(pWindow->m_fullRect, NULL);
 	}
 }
 
@@ -236,8 +302,8 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	}
 	else
 	{
-		newPosX = pWindow->m_rect.left;
-		newPosY = pWindow->m_rect.top;
+		newPosX = pWindow->m_fullRect.left;
+		newPosY = pWindow->m_fullRect.top;
 	}
 	if (newWidth < WINDOW_MIN_WIDTH)
 		newWidth = WINDOW_MIN_WIDTH;
@@ -281,6 +347,8 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_fullVbeData.m_height  = newHeight;
 	
 	Rectangle margins = GetWindowMargins(pWindow);
+	Rectangle oldMarg = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, pWindow->m_knownBorderSize);
+	
 	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * margins.top + margins.left];
 	pWindow->m_vbeData.m_width    = newWidth  - margins.left - margins.right;
 	pWindow->m_vbeData.m_height   = newHeight - margins.top  - margins.bottom;
@@ -288,10 +356,13 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_vbeData.m_pitch16  = newWidth * 2;
 	pWindow->m_vbeData.m_pitch    = newWidth * 4;
 	
-	pWindow->m_rect.left   = newPosX;
-	pWindow->m_rect.top    = newPosY;
-	pWindow->m_rect.right  = pWindow->m_rect.left + newWidth;
-	pWindow->m_rect.bottom = pWindow->m_rect.top  + newHeight;
+	pWindow->m_fullRect.left   = newPosX;
+	pWindow->m_fullRect.top    = newPosY;
+	pWindow->m_fullRect.right  = pWindow->m_fullRect.left + newWidth;
+	pWindow->m_fullRect.bottom = pWindow->m_fullRect.top  + newHeight;
+	pWindow->m_knownBorderSize = BORDER_SIZE;
+	
+	WmRecalculateClientRect(pWindow);
 	
 	// Mark as dirty.
 	pWindow->m_fullVbeData.m_dirty = true;
@@ -299,7 +370,7 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
 		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.left - margins.right),
-		MAKE_MOUSE_PARM(oldWidth - margins.left - margins.right, oldHeight - margins.left - margins.right)
+		MAKE_MOUSE_PARM(oldWidth - oldMarg.left - oldMarg.right, oldHeight - oldMarg.left - oldMarg.right)
 	);
 	
 	LockFree(&pWindow->m_screenLock);
@@ -652,10 +723,10 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_EventQueueLock.m_held = false;
 	pWnd->m_EventQueueLock.m_task_owning_it = NULL;
 	
-	pWnd->m_rect.left = xPos;
-	pWnd->m_rect.top  = yPos;
-	pWnd->m_rect.right  = xPos + xSize;
-	pWnd->m_rect.bottom = yPos + ySize;
+	pWnd->m_fullRect.left = xPos;
+	pWnd->m_fullRect.top  = yPos;
+	pWnd->m_fullRect.right  = xPos + xSize;
+	pWnd->m_fullRect.bottom = yPos + ySize;
 	pWnd->m_eventQueueSize = 0;
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 
@@ -671,6 +742,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_fullVbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
 	pWnd->m_fullVbeData.m_drs = WmCAllocate(sizeof(DsjRectSet));
+	
+	pWnd->m_knownBorderSize = BORDER_SIZE;
 	
 	if (!pWnd->m_fullVbeData.m_framebuffer32 || !pWnd->m_fullVbeData.m_drs)
 	{
@@ -719,6 +792,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_eventQueueSize = 0;
 	
 	pWnd->m_screenLock.m_held = false;
+	
+	WmRecalculateClientRect(pWnd);
 	
 	//give the window a starting point of 10 controls:
 	pWnd->m_controlArrayLen = 10;
@@ -769,7 +844,7 @@ void RedrawEverything()
 		Window* pWindow = &g_windows [p];
 		if (!pWindow->m_used) continue;
 		
-		int prm = MAKE_MOUSE_PARM(pWindow->m_rect.right - pWindow->m_rect.left, pWindow->m_rect.bottom - pWindow->m_rect.top);
+		int prm = MAKE_MOUSE_PARM(pWindow->m_fullRect.right - pWindow->m_fullRect.left, pWindow->m_fullRect.bottom - pWindow->m_fullRect.top);
 		WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  prm, prm);
 		WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0,   0);
 		//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
@@ -787,8 +862,8 @@ void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 	
 	for (; pRect != end; pRect++)
 	{
-		int eleft = pRect->left - pWindow->m_rect.left;
-		int etop  = pRect->top  - pWindow->m_rect.top;
+		int eleft = pRect->left - pWindow->m_fullRect.left;
+		int etop  = pRect->top  - pWindow->m_fullRect.top;
 		
 		//optimization
 		VidBitBlit(
@@ -815,7 +890,7 @@ void RenderWindow (Window* pWindow)
 	if (pWindow->m_minimized)
 	{
 		// Draw as icon
-		RenderIconForceSize(pWindow->m_iconID, pWindow->m_rect.left, pWindow->m_rect.top, 32);
+		RenderIconForceSize(pWindow->m_iconID, pWindow->m_fullRect.left, pWindow->m_fullRect.top, 32);
 		
 		return;
 	}
@@ -856,16 +931,16 @@ void RenderWindow (Window* pWindow)
 	if (local_copy.m_bIgnoreAndDrawAll)
 	{
 #endif
-		WindowBlitTakingIntoAccountOcclusions(pWindow->m_rect, pWindow);
+		WindowBlitTakingIntoAccountOcclusions(pWindow->m_fullRect, pWindow);
 #ifdef DIRTY_RECT_TRACK
 	}
 	else for (int i = 0; i < local_copy.m_rectCount; i++)
 	{
 		Rectangle e = local_copy.m_rects[i];
-		e.left   += pWindow->m_rect.left;
-		e.right  += pWindow->m_rect.left;
-		e.top    += pWindow->m_rect.top;
-		e.bottom += pWindow->m_rect.top;
+		e.left   += pWindow->m_fullRect.left;
+		e.right  += pWindow->m_fullRect.left;
+		e.top    += pWindow->m_fullRect.top;
+		e.bottom += pWindow->m_fullRect.top;
 		WindowBlitTakingIntoAccountOcclusions(e, pWindow);
 	}
 #endif

@@ -21,7 +21,7 @@ void CloseAnyOpenMenusOutside(int posX, int posY)
 		// this is a menu item.
 		Point p = { posX, posY };
 		
-		if (!RectangleContains(&pWnd->m_rect, &p))
+		if (!RectangleContains(&pWnd->m_fullRect, &p))
 		{
 			WindowAddEventToMasterQueue(pWnd, EVENT_KILLFOCUS, 0, 0);
 		}
@@ -101,7 +101,7 @@ void WindowCheckButtons(Window* pWindow, int eventType, int x, int y)
 	uint32_t flags = pWindow->m_flags;
 	if (flags & WF_NOTITLE) return;
 	
-	Rectangle rectb = pWindow->m_rect;
+	Rectangle rectb = pWindow->m_fullRect;
 	rectb.right  -= rectb.left;
 	rectb.bottom -= rectb.top;
 	rectb.top     = rectb.left = 0;
@@ -149,8 +149,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 			Rectangle recta;
 			bool hasTitle = GetWindowTitleRect(window, &recta);
 			
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			Point mousePoint = {x, y};
 			
 			bool t = hasTitle ? RectangleContains(&recta, &mousePoint) : false;
@@ -165,8 +165,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 			}
 			else if (!window->m_minimized)
 			{
-				int x = mouseX - window->m_rect.left;
-				int y = mouseY - window->m_rect.top;
+				int x = mouseX - window->m_fullRect.left;
+				int y = mouseY - window->m_fullRect.top;
 				
 				window->m_clickedInside = true;
 				
@@ -206,8 +206,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			Rectangle recta;
 			UNUSED bool hasTitle = GetWindowTitleRect(window, &recta);
 			
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			Point mousePoint = {x, y};
 			
 			if (!window->m_maximized && (RectangleContains(&recta, &mousePoint) || window->m_minimized))
@@ -225,8 +225,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					Image* p = GetIconImage(window->m_iconID, 32);
 					g_windowDragCursor.width    = p->width;
 					g_windowDragCursor.height   = p->height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
 					g_windowDragCursor.bitmap   = p->framebuffer;
 					g_windowDragCursor.m_transparency = true;
 					g_windowDragCursor.m_resizeMode   = false;
@@ -239,8 +239,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				{
 					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
 					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
 					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = true;
@@ -253,8 +253,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				{
 					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
 					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
 					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = false;
@@ -316,9 +316,10 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
 			if (newWndRect.top < 0)
 				newWndRect.top = 0;
-			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_rect);
-			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_rect);
-			pWindow->m_rect = newWndRect;
+			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_fullRect);
+			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_fullRect);
+			pWindow->m_fullRect = newWndRect;
+			WmRecalculateClientRect(pWindow);
 		}
 		
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
@@ -335,8 +336,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	
 	if (pWindow->m_minimized) return;
 	
-	int x = mouseX - pWindow->m_rect.left;
-	int y = mouseY - pWindow->m_rect.top;
+	int x = mouseX - pWindow->m_fullRect.left;
+	int y = mouseY - pWindow->m_fullRect.top;
 	
 	Rectangle margins = GetWindowMargins(pWindow);
 	int offsX = -margins.left, offsY = -margins.top;
@@ -366,8 +367,8 @@ void OnUIRightClick (int mouseX, int mouseY)
 	{
 		if (!window->m_minimized)
 		{
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
@@ -392,8 +393,8 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 		}
 		else
 		{
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			
 			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
 		}

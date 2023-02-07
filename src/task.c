@@ -890,6 +890,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 			// So grab it.
 			pLock->m_held = true;
 			pLock->m_task_owning_it = KeGetRunningTask ();
+			pLock->m_return_addr    = __builtin_return_address(0);
 			KeVerifyInterruptsDisabled;
 			sti;
 			return;

@@ -44,6 +44,8 @@
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
 #define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
 #define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE
+#define DEFAULT_BORDER_SIZE                     3
+#define DEFAULT_WINDOW_BORDER_COLOR             0x00B0B0B0
 
 //#define HARDCODE_EVERYTHING
 
@@ -66,6 +68,8 @@
 #define SYSTEM_FONT                     FONT_BASIC
 #define TITLE_BAR_HEIGHT 18
 #define TITLE_BAR_FONT   FONT_BASIC
+#define BORDER_SIZE                     DEFAULT_BORDER_SIZE
+#define WINDOW_BORDER_COLOR             DEFAULT_WINDOW_BORDER_COLOR
 
 #else
 
@@ -88,6 +92,8 @@ P_TITLE_BAR_HEIGHT,
 P_TITLE_BAR_FONT,
 P_SELECTED_ITEM_COLOR,
 P_SELECTED_ITEM_COLOR_B,
+P_WINDOW_BORDER_COLOR,
+P_BORDER_SIZE,
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
@@ -110,6 +116,8 @@ void     SetThemingParameter(int type, uint32_t);
 #define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
 #define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR           ))
 #define SELECTED_ITEM_COLOR_B           (GetThemingParameter(P_SELECTED_ITEM_COLOR_B         ))
+#define BORDER_SIZE                     (GetThemingParameter(P_BORDER_SIZE                   ))
+#define WINDOW_BORDER_COLOR             (GetThemingParameter(P_WINDOW_BORDER_COLOR           ))
 
 #endif
 
@@ -164,6 +172,7 @@ enum {
 	EVENT_SET_WINDOW_TITLE_PRIVATE,
 	EVENT_REPAINT_BORDER_PRIVATE,
 	EVENT_SHOW_MENU_PRIVATE,
+	EVENT_BORDER_SIZE_UPDATE_PRIVATE,
 	
 	EVENT_USER = 0x1000,
 };
@@ -633,7 +642,15 @@ typedef struct WindowStruct
 	
 	// Includes everything, including window decorations and stuff.
 	VBEData    m_fullVbeData;
-} Window;
+	
+	// The full rectangle. For backwards compatibility, the m_rect will now refer only
+	// to the client rect offset by the position of the top-leftmost pixel of said area.
+	Rectangle  m_fullRect;
+	
+	// The known border size. This is used in ResizeWindow when the border size changes.
+	int        m_knownBorderSize;
+}
+Window;
 
 /**
  * Define that does nothing... yet.
@@ -655,6 +672,7 @@ enum {
 	WACT_SHOW,
 	WACT_DESTROY,
 	WACT_SELECT,
+	WACT_UPDATEALL,
 };
 
 typedef struct

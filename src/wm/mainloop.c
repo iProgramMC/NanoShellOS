@@ -265,6 +265,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			
 			switch (pFront->nActionType)
 			{
+				case WACT_UPDATEALL:
+					//WmOnChangedBorderSize();
+					break;
 				case WACT_DESTROY:
 					NukeWindow(pFront->pWindow);
 					break;
@@ -304,9 +307,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{
 				//Also send an EVENT_MOVECURSOR
-				int posX = g_mouseX - pWindow->m_rect.left;
-				int posY = g_mouseY - pWindow->m_rect.top;
-				if (g_oldMouseX - pWindow->m_rect.left != posX || g_oldMouseY - pWindow->m_rect.top != posY)
+				int posX = g_mouseX - pWindow->m_fullRect.left;
+				int posY = g_mouseY - pWindow->m_fullRect.top;
+				if (g_oldMouseX - pWindow->m_fullRect.left != posX || g_oldMouseY - pWindow->m_fullRect.top != posY)
 				{
 					if (posX < 0) posX = 0;
 					if (posY < 0) posY = 0;
@@ -352,10 +355,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					//FREE_LOCK(g_backgdLock);
 					
 					Point p = { g_mouseX, g_mouseY };
-					if (RectangleContains(&pWindow->m_rect, &p))
+					if (RectangleContains(&pWindow->m_fullRect, &p))
 						RenderCursor();
 					
-					if (RectangleOverlap(&pWindow->m_rect, &g_tooltip.m_rect))
+					if (RectangleOverlap(&pWindow->m_fullRect, &g_tooltip.m_rect))
 						TooltipDraw();
 				}
 			}

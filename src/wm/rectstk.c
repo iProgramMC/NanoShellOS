@@ -173,7 +173,7 @@ void WmSplitAlong(Rectangle* rectToSplit, int top, int bottom, int left, int rig
 
 void WmSplitRectangleStackByWindow(Window* pWindow)
 {
-	Rectangle rect = pWindow->m_rect;
+	Rectangle rect = pWindow->m_fullRect;
 
 	for (int i = 0; i < g_WmRectangleStackIndex; i++)
 	{

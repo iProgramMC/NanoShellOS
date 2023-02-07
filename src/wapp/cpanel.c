@@ -100,6 +100,7 @@ void RedrawEverything();
 	#define DESKTOP_POPUP_HEITE 400
 	void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected, bool maximized);
 	void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+	void WmOnChangedBorderSize();
 	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 	{
 		switch (messageType)
@@ -191,7 +192,16 @@ void RedrawEverything();
 				}
 				else if (parm1 >= DESKTOP_THEME_DEFAULT)
 				{
+					int borderSize = BORDER_SIZE;
+					pWindow->m_data = (void*)borderSize;
+					
 					ApplyTheme(parm1 - DESKTOP_THEME_DEFAULT);
+					
+					if ((uint32_t)borderSize != BORDER_SIZE)
+					{
+						//WmOnChangedBorderSize();
+					}
+					
 					RedrawEverything();
 					break;
 				}

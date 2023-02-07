@@ -128,7 +128,7 @@ Window* ShootRayAndGetWindow(int x, int y)
 		if (!g_windows[order].m_used)   continue;
 		if ( g_windows[order].m_hidden) continue;
 		
-		if (RectangleContains(&g_windows[order].m_rect, &p))
+		if (RectangleContains(&g_windows[order].m_fullRect, &p))
 		{
 			return &g_windows[order];
 		}
@@ -184,7 +184,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		
 		Window* pWindow = &g_windows[drawOrder];
 		
-		if (RectangleOverlap (&pWindow->m_rect, &rect) && pWindow != pWindowToExclude)
+		if (RectangleOverlap (&pWindow->m_fullRect, &rect) && pWindow != pWindowToExclude)
 			windowDrawList[sz++] = pWindow;
 	}
 	
@@ -203,7 +203,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		}
 		else
 		{
-			Rectangle rint, *pWndRect = &windowDrawList[i]->m_rect;
+			Rectangle rint, *pWndRect = &windowDrawList[i]->m_fullRect;
 			if (!RectangleIntersect(&rint, &rect, pWndRect))
 				continue;
 			rint.left   -= pWndRect->left;

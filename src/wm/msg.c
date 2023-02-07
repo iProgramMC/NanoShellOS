@@ -384,10 +384,16 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_MAXIMIZE)
 	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+		Rectangle old_title_rect;
+		
+		if (!GetWindowTitleRect(pWindow, &old_title_rect))
+		{
+			Rectangle newRect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+			old_title_rect = newRect;
+		}
 		
 		if (!pWindow->m_maximized)
-			pWindow->m_rectBackup = pWindow->m_rect;
+			pWindow->m_rectBackup = pWindow->m_fullRect;
 		pWindow->m_maximized  = true;
 		
 		pWindow->m_rect.left = 0;

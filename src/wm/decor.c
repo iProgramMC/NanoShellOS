@@ -67,16 +67,11 @@ void WindowTitleLayout(
 		}
 		else
 		{
-			rectb.left   += 2;
-			rectb.top    += 2;
-			rectb.right  -= 2;
-			rectb.bottom -= 2;
+			rectb.left   += BORDER_SIZE - 1;
+			rectb.top    += BORDER_SIZE - 1;
+			rectb.right  -= BORDER_SIZE - 1;
+			rectb.bottom -= BORDER_SIZE - 1;
 		}
-		
-		rectb.left   += BORDER_SIZE - 3;
-		rectb.top    += BORDER_SIZE - 3;
-		rectb.right  -= BORDER_SIZE - 3;
-		rectb.bottom -= BORDER_SIZE - 3;
 	}
 	if (!(flags & WF_NOTITLE))
 	{
@@ -170,7 +165,7 @@ void WindowTitleLayout(
 
 bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut)
 {
-	Rectangle rect = pWindow->m_rect;
+	Rectangle rect = pWindow->m_fullRect;
 	rect.right  -= rect.left;
 	rect.bottom -= rect.top;
 	rect.left    = rect.top = 0;
@@ -280,7 +275,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 
 void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 {	
-	Rectangle recta = pWindow->m_rect;
+	Rectangle recta = pWindow->m_fullRect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
@@ -301,7 +296,7 @@ void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 
 void WmPaintWindowBorder(Window* pWindow)
 {
-	Rectangle recta = pWindow->m_rect;
+	Rectangle recta = pWindow->m_fullRect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
@@ -319,7 +314,7 @@ void WmRepaintBorder(Window* pWindow)
 {
 	VBEData* bkp = VidSetVBEData(&pWindow->m_fullVbeData);
 	
-	Rectangle rect = pWindow->m_rect;
+	Rectangle rect = pWindow->m_fullRect;
 	rect.right  -= rect.left;
 	rect.bottom -= rect.top;
 	rect.left = rect.top = 0;
