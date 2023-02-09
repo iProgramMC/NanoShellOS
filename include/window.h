@@ -47,7 +47,7 @@
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
 #define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
 #define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE
-#define DEFAULT_BORDER_SIZE                     3
+#define DEFAULT_BORDER_SIZE                     10
 #define DEFAULT_WINDOW_BORDER_COLOR             0x00B0B0B0
 
 //#define HARDCODE_EVERYTHING

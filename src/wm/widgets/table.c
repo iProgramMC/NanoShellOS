@@ -531,7 +531,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 		case EVENT_PAINT:
 		{
 			VidSetClipRect(&this->m_rect);
-			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, this->m_rect);
+			VidFillRectangle(LIST_BACKGD_COLOR, this->m_rect);
 			
 			Rectangle inRect = this->m_rect;
 			inRect.right--;
@@ -612,11 +612,11 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				// TODO: Choose better colors.
 				if (table->m_selected_row == index)
 				{
-					VidFillRectangle(0x7F, rect);
+					VidFillRectangle(SELECTED_ITEM_COLOR, rect);
 				}
 				else if (index % 2 == 1)
 				{
-					VidFillRectangle(BUTTON_MIDDLE_COLOR, rect);
+					VidFillRectangle(TABLE_VIEW_ALT_ROW_COLOR, rect);
 				}
 				
 				// draw the icon
@@ -627,7 +627,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				{
 					TableViewColumn* col = &table->m_pColumnData[j];
 					
-					VidTextOutLimit(row->m_items[j].m_text, startX, offs + topOffset, (table->m_selected_row == index) ? WINDOW_TEXT_COLOR_LIGHT : WINDOW_TEXT_COLOR, TRANSPARENT, col->m_width);
+					VidTextOutLimit(row->m_items[j].m_text, startX, offs + topOffset, (table->m_selected_row == index) ? SELECTED_MENU_ITEM_TEXT_COLOR : DESELECTED_MENU_ITEM_TEXT_COLOR, TRANSPARENT, col->m_width);
 					
 					startX += col->m_width;
 				}
