@@ -17,6 +17,29 @@ void RenderCursor(void);
 int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
 int g_TaskbarHeight = 0;
 
+void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows)
+{
+	cli;
+	*numWindows = 0;
+	
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (!g_windows[i].m_used) continue;
+		
+		Window* pWindow = &g_windows[i];
+		WindowQuery* pQuery = &table[(*numWindows)++];
+		pQuery->windowID = i;
+		pQuery->flags    = pWindow->m_flags;
+		pQuery->iconID   = pWindow->m_iconID;
+		strncpy(pQuery->titleOut, pWindow->m_title, pQuery->titleOutSize);
+		pQuery->titleOut[pQuery->titleOutSize - 1] = 0;
+		
+		if (*numWindows == tableSize) break;
+	}
+	
+	sti;
+}
+
 void UpdateFPSCounter()
 {
 	if (g_FPSLastCounted + 1000 <= GetTickCount())

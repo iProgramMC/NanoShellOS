@@ -418,13 +418,6 @@ MenuBarData;
 
 typedef struct
 {
-	bool m_clicked[WINDOWS_MAX];
-	bool m_hovered[WINDOWS_MAX];
-}
-TaskListData;
-
-typedef struct
-{
 	Image    *pImage;
 	uint32_t  nCurrentColor;
 	//if parm2 flag IMAGECTL_PAN  is set, this has an effect.  By default it is 0
@@ -524,7 +517,6 @@ typedef struct ControlStruct
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
 		ImageCtlData  m_imageCtlData;
-		TaskListData  m_taskListData;
 		TableViewData m_tableViewData;
 	};
 	
@@ -949,5 +941,25 @@ int UploadCursor(Image * pImage, int xOff, int yOff);
  * Release a cursor resource uploaded using UploadCursor().
  */
 void ReleaseCursor(int cursorID);
+
+/**
+ * The struct definition for the function below.
+ */
+typedef struct
+{
+	int     windowID;
+	int     flags;
+	char   *titleOut;
+	size_t  titleOutSize; // The size of the 'titleOut' buffer. 
+	int     iconID;
+}
+WindowQuery;
+
+/**
+ * Query a list of windows.
+ */
+void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows);
+
+
 
 #endif//_WINDOW_H
