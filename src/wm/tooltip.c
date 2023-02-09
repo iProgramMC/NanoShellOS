@@ -26,10 +26,10 @@ void TooltipDraw()
 	
 	VidSetVBEData (&g_mainScreenVBEData);
 	
-	VidFillRect(WINDOW_TEXT_COLOR_LIGHT, g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
-	VidDrawRect(WINDOW_TEXT_COLOR,       g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
+	VidFillRect(TOOLTIP_BACKGD_COLOR, g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
+	VidDrawRect(TOOLTIP_TEXT_COLOR,   g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
 	
-	VidTextOut(g_tooltip.m_text, g_tooltip.m_rect.left + 3, g_tooltip.m_rect.top + 3, WINDOW_TEXT_COLOR, TRANSPARENT);
+	VidTextOut(g_tooltip.m_text, g_tooltip.m_rect.left + 3, g_tooltip.m_rect.top + 3, TOOLTIP_TEXT_COLOR, TRANSPARENT);
 	
 	VidSetVBEData (pBackup);
 }

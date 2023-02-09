@@ -18,7 +18,7 @@ static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int ho
 	if (hovered) midd = BUTTONMIDD;
 	if (pressed) dark = BUTTONLITE, light = BUTTONDARK;
 	
-	RenderButtonShapeSmallBorder(rectBtn, 0x00000000, dark, light, midd);
+	RenderButtonShapeSmallBorder(rectBtn, BUTTON_XSHADOW_COLOR, dark, light, midd);
 	
 	// draw the icon
 	int rectWidth = (rectBtn.right - rectBtn.left);
@@ -36,7 +36,10 @@ static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int ho
 	if (pressed)
 		iconX++, iconY++;
 	
-	RenderIconForceSize(icon, iconX, iconY, iconSize);
+	if (icon != ICON_MAXIMIZE && icon != ICON_MINIMIZE && icon != ICON_CLOSE)
+		RenderIconForceSize(icon, iconX, iconY, iconSize);
+	else
+		RenderIconForceSizeOutline(icon, iconX, iconY, iconSize, CAPTION_BUTTON_ICON_COLOR);
 }
 
 void WindowTitleLayout(
@@ -328,10 +331,10 @@ void WmRepaintBorder(Window* pWindow)
 	{
 		Rectangle margins = GetWindowMargins(pWindow);
 		
-		VidFillRect(BUTTONMIDD, rect.left, rect.top, rect.left + margins.left - 1, rect.bottom - 1);
-		VidFillRect(BUTTONMIDD, rect.right - margins.right, rect.top, rect.right - 1, rect.bottom - 1);
-		VidFillRect(BUTTONMIDD, rect.left + margins.left, rect.top, rect.right - margins.right, rect.top + margins.top - 1);
-		VidFillRect(BUTTONMIDD, rect.left + margins.left, rect.bottom - margins.bottom, rect.right - margins.right, rect.bottom - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left, rect.top, rect.left + margins.left - 1, rect.bottom - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.right - margins.right, rect.top, rect.right - 1, rect.bottom - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left + margins.left, rect.top, rect.right - margins.right, rect.top + margins.top - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left + margins.left, rect.bottom - margins.bottom, rect.right - margins.right, rect.bottom - 1);
 	}
 	
 	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);

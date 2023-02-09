@@ -108,8 +108,8 @@ void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorL
 	rectb.right++;
 	rectb.bottom++;
 	
-	VidDrawHLine(WINDOW_TEXT_COLOR, rectb.left, rectb.right-1,  rectb.bottom-1);
-	VidDrawVLine(WINDOW_TEXT_COLOR, rectb.top,  rectb.bottom-1, rectb.right-1);
+	VidDrawHLine(BUTTON_XSHADOW_COLOR, rectb.left, rectb.right-1,  rectb.bottom-1);
+	VidDrawVLine(BUTTON_XSHADOW_COLOR, rectb.top,  rectb.bottom-1, rectb.right-1);
 	
 	VidDrawHLine(colorLight, rectb.left, rectb.right-1,  rectb.top);
 	VidDrawVLine(colorLight, rectb.top,  rectb.bottom-1, rectb.left);

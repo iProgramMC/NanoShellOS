@@ -60,7 +60,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			//RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
 			check_rect.right--;
 			//check_rect.bottom--;
-			RenderButtonShapeSmallInsideOut (check_rect, 0xBFBFBF, BUTTONDARK, this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT);
+			RenderButtonShapeSmallInsideOut (check_rect, WINDOW_BACKGD_COLOR, BUTTONDARK, this->m_checkBoxData.m_clicked ? TABLE_VIEW_ALT_ROW_COLOR : LIST_BACKGD_COLOR);
 			
 			//if checked, mark it as "checked"
 			if (this->m_checkBoxData.m_checked)
