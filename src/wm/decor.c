@@ -18,7 +18,7 @@ static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int ho
 	if (hovered) midd = BUTTONMIDD;
 	if (pressed) dark = BUTTONLITE, light = BUTTONDARK;
 	
-	RenderButtonShapeSmallBorder(rectBtn, 0x00000000, dark, light, midd);
+	RenderButtonShapeSmallBorder(rectBtn, BUTTON_XSHADOW_COLOR, dark, light, midd);
 	
 	// draw the icon
 	int rectWidth = (rectBtn.right - rectBtn.left);
@@ -36,7 +36,10 @@ static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int ho
 	if (pressed)
 		iconX++, iconY++;
 	
-	RenderIconForceSize(icon, iconX, iconY, iconSize);
+	if (icon != ICON_MAXIMIZE && icon != ICON_MINIMIZE && icon != ICON_CLOSE)
+		RenderIconForceSize(icon, iconX, iconY, iconSize);
+	else
+		RenderIconForceSizeOutline(icon, iconX, iconY, iconSize, CAPTION_BUTTON_ICON_COLOR);
 }
 
 void WindowTitleLayout(
@@ -67,10 +70,10 @@ void WindowTitleLayout(
 		}
 		else
 		{
-			rectb.left   += 2;
-			rectb.top    += 2;
-			rectb.right  -= 2;
-			rectb.bottom -= 2;
+			rectb.left   += BORDER_SIZE - 1;
+			rectb.top    += BORDER_SIZE - 1;
+			rectb.right  -= BORDER_SIZE - 1;
+			rectb.bottom -= BORDER_SIZE - 1;
 		}
 	}
 	if (!(flags & WF_NOTITLE))
@@ -165,7 +168,7 @@ void WindowTitleLayout(
 
 bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut)
 {
-	Rectangle rect = pWindow->m_rect;
+	Rectangle rect = pWindow->m_fullRect;
 	rect.right  -= rect.left;
 	rect.bottom -= rect.top;
 	rect.left    = rect.top = 0;
@@ -273,9 +276,9 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 #undef X
 }
 
-void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
+void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 {	
-	Rectangle recta = pWindow->m_rect;
+	Rectangle recta = pWindow->m_fullRect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
@@ -294,21 +297,54 @@ void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	VidTextOut(thing, 0, 0, 0xFFFFFF, 0x000000);*/
 }
 
-void PaintWindowBorder(Window* pWindow)
+void WmPaintWindowBorder(Window* pWindow)
 {
-	Rectangle recta = pWindow->m_rect;
+	Rectangle recta = pWindow->m_fullRect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
-	
-	//! X adjusts the size of the dropshadow on the window.
-	//recta.right  -= WINDOW_RIGHT_SIDE_THICKNESS+1;
-	//recta.bottom -= WINDOW_RIGHT_SIDE_THICKNESS+1;
 	
 	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
 	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
 }
 
-void PaintWindowBackgroundAndBorder(Window* pWindow)
+void WmRepaintBackground(Window* pWindow)
 {
-	PaintWindowBorder(pWindow);
+	Rectangle rect = GetWindowClientRect(pWindow, false);
+	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
 }
+
+void WmRepaintBorder(Window* pWindow)
+{
+	VBEData* bkp = VidSetVBEData(&pWindow->m_fullVbeData);
+	
+	Rectangle rect = pWindow->m_fullRect;
+	rect.right  -= rect.left;
+	rect.bottom -= rect.top;
+	rect.left = rect.top = 0;
+	
+	// repaint edges.
+	if (pWindow->m_flags & WF_FLATBORD)
+	{
+		VidDrawRect(WINDOW_TEXT_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+	}
+	else if (~pWindow->m_flags & WF_NOBORDER)
+	{
+		Rectangle margins = GetWindowMargins(pWindow);
+		
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left, rect.top, rect.left + margins.left - 1, rect.bottom - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.right - margins.right, rect.top, rect.right - 1, rect.bottom - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left + margins.left, rect.top, rect.right - margins.right, rect.top + margins.top - 1);
+		VidFillRect(WINDOW_BORDER_COLOR, rect.left + margins.left, rect.bottom - margins.bottom, rect.right - margins.right, rect.bottom - 1);
+	}
+	
+	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);
+	
+	VidSetVBEData(bkp);
+}
+
+void WmRepaintBorderAndBackground(Window* pWindow)
+{
+	WmRepaintBorder(pWindow);
+	WmRepaintBackground(pWindow);
+}
+

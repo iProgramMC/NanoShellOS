@@ -15,7 +15,7 @@
 //EXTERN FUNCTIONS//
 void NukeWindow (Window* pWindow);
 void SelectWindow (Window* pWindow);
-void PaintWindowBackgroundAndBorder (Window* pWindow);
+void WmRepaintBorder (Window* pWindow);
 
 //EXTERNS//
 extern Window  g_windows        [WINDOWS_MAX];
@@ -73,13 +73,13 @@ void AltTabProc(Window* pWindow, int messageType, int parm1, int parm2)
 			RECT(rect, 16, 16, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, rect, NULL, ALTTAB_ICON, ICON_ERROR, 0);
 			RECT(rect, 64, 16, ALT_TAB_WIDTH-96, 32);
-			AddControl(pWindow, CONTROL_TEXTCENTER, rect, "Text goes here.", ALTTAB_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED);
+			AddControl(pWindow, CONTROL_TEXTCENTER, rect, "Text goes here.", ALTTAB_TEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED | TEXTSTYLE_FORCEBGCOL);
 			
 			break;
 		}
 		case EVENT_PAINT:
 		{
-			PaintWindowBackgroundAndBorder(pWindow);
+			WmRepaintBorder(pWindow);
 			
 			//get info about the selected application:
 			Window* pSelWnd = NULL;

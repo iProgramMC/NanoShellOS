@@ -216,7 +216,7 @@ go_back:;
 		}
 		case EVENT_PAINT:
 		{
-			VidFillRectangle (0x7F7F7F, basic_rectangle);
+			VidFillRectangle (SCROLL_BAR_BACKGD_COLOR, basic_rectangle);
 		
 			if (this->m_scrollBarData.m_yMinButton)
 				RenderButtonShapeSmall (left_button,   BUTTONLITE, BUTTONDARK, BUTTONMIDC);
@@ -228,7 +228,7 @@ go_back:;
 			else
 				RenderButtonShapeSmall (right_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
-			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
+			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, this->m_scrollBarData.m_isBeingDragged ? BUTTON_HOVER_COLOR : BUTTON_MIDDLE_COLOR);
 			
 			left_button .left++; left_button .right++; left_button .bottom++; left_button .top++;
 			right_button.left++; right_button.right++; right_button.bottom++; right_button.top++;
@@ -351,7 +351,7 @@ go_back:;
 		}
 		case EVENT_PAINT:
 		{
-			VidFillRectangle (BUTTONDARK-0x111111, clickable_rect);
+			VidFillRectangle (SCROLL_BAR_BACKGD_COLOR, clickable_rect);
 			if (this->m_scrollBarData.m_yMinButton)
 				RenderButtonShapeSmall (top_button,     BUTTONLITE, BUTTONDARK, BUTTONMIDC);
 			else
@@ -362,7 +362,7 @@ go_back:;
 			else
 				RenderButtonShapeSmall (bottom_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			
-			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, BUTTONMIDD + this->m_scrollBarData.m_isBeingDragged * 0x222222); // Green
+			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, this->m_scrollBarData.m_isBeingDragged ? BUTTON_HOVER_COLOR : BUTTON_MIDDLE_COLOR); // Green
 			
 			top_button   .left++; top_button   .right++; top_button   .bottom++; top_button   .top++;
 			bottom_button.left++; bottom_button.right++; bottom_button.bottom++; bottom_button.top++;

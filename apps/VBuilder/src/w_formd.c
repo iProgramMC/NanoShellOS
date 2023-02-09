@@ -76,13 +76,13 @@ void VbAddControlToList(DesignerControl* pCtl)
 
 void VbDrawGrid(Rectangle* pWithinRect /*= NULL*/)
 {
-	int ox = 3, oy = TITLE_BAR_HEIGHT + 4;
+	int ox = 0, oy = 0;
 	int windowWid = GetWidth (&g_pFormDesignerWindow->m_rect);
 	int windowHei = GetHeight(&g_pFormDesignerWindow->m_rect);
 	
 	for (; ox <= windowWid; ox += GRID_WIDTH)
 	{
-		for (oy = TITLE_BAR_HEIGHT + 2; oy <= windowHei; oy += GRID_WIDTH)
+		for (oy = 0; oy <= windowHei; oy += GRID_WIDTH)
 		{
 			if (pWithinRect)
 			{
@@ -165,30 +165,21 @@ void FixUpCoords (int *L, int *T, int *R, int *B)
 	if (*T > *B) SWAPI(*T,*B);
 	
 	//Ensure
-	if (*L < 3)
-		*L = 3;
-	if (*T < 2 + TITLE_BAR_HEIGHT)
-		*T = 2 + TITLE_BAR_HEIGHT;
-	if (*R >= GetWidth (&g_pFormDesignerWindow->m_rect) - 3)
-		*R  = GetWidth (&g_pFormDesignerWindow->m_rect) - 3;
-	if (*B >= GetHeight(&g_pFormDesignerWindow->m_rect) - 3)
-		*B  = GetHeight(&g_pFormDesignerWindow->m_rect) - 3;
+	if (*L < 0)
+		*L = 0;
+	if (*T < 0)
+		*T = 0;
+	if (*R >= GetWidth (&g_pFormDesignerWindow->m_rect))
+		*R  = GetWidth (&g_pFormDesignerWindow->m_rect);
+	if (*B >= GetHeight(&g_pFormDesignerWindow->m_rect))
+		*B  = GetHeight(&g_pFormDesignerWindow->m_rect);
 	
 	// Round to the nearest GRID_WIDTH
-	*L -= 3;
-	*R -= 3;
-	*T -= TITLE_BAR_HEIGHT + 2;
-	*B -= 4;
 	
 	*L = (*L / GRID_WIDTH) * GRID_WIDTH;
 	*T = (*T / GRID_WIDTH) * GRID_WIDTH;
 	*R = ((*R + GRID_WIDTH - 1) / GRID_WIDTH) * GRID_WIDTH;
 	*B = ((*B + GRID_WIDTH - 1) / GRID_WIDTH) * GRID_WIDTH;
-	
-	*L += 3;
-	*R += 3;
-	*T += TITLE_BAR_HEIGHT + 2;
-	*B += 4;
 }
 
 int g_ctlNameNums[CONTROL_COUNT];
@@ -606,7 +597,7 @@ void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int p
 
 void VbCreateFormDesignerWindow()
 {
-	Window* pFormWindow  = CreateWindow ("Form Designer", 240 - D_OFFSET, 180 - D_OFFSET-18+TITLE_BAR_HEIGHT, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
+	Window* pFormWindow  = CreateWindow ("Form Designer", 240 - D_OFFSET, 180 - D_OFFSET, DEF_FDESIGN_WID, DEF_FDESIGN_HEI, PrgFormBldProc, WF_ALWRESIZ | WF_SYSPOPUP);
 	
 	if (!pFormWindow)
 	{

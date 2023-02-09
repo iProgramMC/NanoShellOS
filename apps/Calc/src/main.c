@@ -11,7 +11,7 @@
 #define VERSION_BUTTON_OK_COMBO 0x1000
 
 #define CALC_WIDTH   (200)
-#define CALC_HEIGHT  (204 + TITLE_BAR_HEIGHT)
+#define CALC_HEIGHT  (204)
 
 float Calculate(const char*pText, int *errorCode);//calculate.c
 const char* ErrorCodeToString (int ec);
@@ -87,7 +87,6 @@ void CopyTextBoxContents(Window* pWindow)
 }
 char syms[] = "0123456789=%*/+-C";
 #define WND_BORDER_SIZE 3
-#define TITLE_BAR_SIZE  TITLE_BAR_HEIGHT
 void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
@@ -98,9 +97,9 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			
 			Rectangle r;
 			//add each button, a terrible solution indeed
-			int bWidth = (pWindow->m_vbeData.m_width-WND_BORDER_SIZE*2)/4, bHeight = (pWindow->m_vbeData.m_height-4-4-TITLE_BAR_HEIGHT) / 5;
+			int bWidth = (pWindow->m_vbeData.m_width-WND_BORDER_SIZE*2)/4, bHeight = (pWindow->m_vbeData.m_height-4-4) / 5;
 			
-			RECT (r, 10, 10 + TITLE_BAR_HEIGHT, CALC_WIDTH - 20, 20);
+			RECT (r, 10, 10, CALC_WIDTH - 20, 20);
 			
 			AddControl (pWindow, CONTROL_TEXTINPUT, r, "", 100, 0, 0);
 			
@@ -108,14 +107,14 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			#define BUTTON(x,y,t)\
 				RECT(r,\
 				x * bWidth + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
-				y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE + BUTTON_GAP,\
+				y * bHeight + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
 				bWidth  - BUTTON_GAP*2,\
 				bHeight - BUTTON_GAP*2);\
 				AddControl (pWindow, CONTROL_BUTTON, r, #t, BUTTONID_CALC ## t, 0, 0);
 			#define BUTTON2(x,y,t,t2)\
 				RECT(r,\
 				x * bWidth + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
-				y * bHeight + 1 + TITLE_BAR_HEIGHT + WND_BORDER_SIZE + BUTTON_GAP,\
+				y * bHeight + 1 + WND_BORDER_SIZE + BUTTON_GAP,\
 				bWidth  - BUTTON_GAP*2,\
 				bHeight - BUTTON_GAP*2);\
 				AddControl (pWindow, CONTROL_BUTTON, r, t, BUTTONID_ ## t2, 0, 0);

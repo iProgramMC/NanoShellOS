@@ -62,9 +62,9 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			
 			// Add a scroll bar control
 			Rectangle r;
-			RECT(r, 10 + 3, 10 + 3 + TITLE_BAR_HEIGHT, CHART_WINDOW_WIDTH - 26, 1);
+			RECT(r, 10, 10, CHART_WINDOW_WIDTH - 26, 1);
 			AddControl (pWindow, CONTROL_TEXT, r, "Country name here", 0x101, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			RECT(r, 10 + 3, 10 + 3 + TITLE_BAR_HEIGHT + 20, CHART_WINDOW_WIDTH - 26, 1);
+			RECT(r, 10, 10 + 20, CHART_WINDOW_WIDTH - 26, 1);
 			AddControl (pWindow, CONTROL_HSCROLLBAR, r, NULL, 0x100, (0 << 16 | gSelectedCountryMax), (1 << 16) | 0x10);
 			
 			SetSelectedCountry(0x10);
@@ -84,7 +84,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 		case EVENT_PAINT:
 		{
 			// blit the image in question
-			VidBlitImage(&gWorldMap,  10 + 3, 10 + 3 + TITLE_BAR_HEIGHT + 40);
+			VidBlitImage(&gWorldMap,  10, 10 + 40);
 			break;
 		}
 		case EVENT_SCROLLDONE:
@@ -119,7 +119,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {
-	Window* pWindow = CreateWindow ("World map test", CW_AUTOPOSITION, CW_AUTOPOSITION, CHART_WINDOW_WIDTH + 6, CHART_WINDOW_HEIGHT  + 6+ TITLE_BAR_HEIGHT, WndProc, WF_NOMINIMZ);
+	Window* pWindow = CreateWindow ("World map test", CW_AUTOPOSITION, CW_AUTOPOSITION, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT, WndProc, WF_NOMINIMZ);
 	
 	if (!pWindow)
 		return 1;

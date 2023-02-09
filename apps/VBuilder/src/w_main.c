@@ -38,7 +38,7 @@ void VbSetEditedControl(DesignerControl* pControl)
 }
 
 #define SELECT_CTL_WIDTH  (150)
-#define SELECT_CTL_HEIGHT (200 + TITLE_BAR_HEIGHT)
+#define SELECT_CTL_HEIGHT (200)
 
 void CALLBACK PrgVbSelectCtlProc(Window* pWindow, int messageType, int parm1, int parm2)
 {
@@ -48,7 +48,7 @@ void CALLBACK PrgVbSelectCtlProc(Window* pWindow, int messageType, int parm1, in
 		{
 			Rectangle r;
 			
-			RECT(r, 10, TITLE_BAR_HEIGHT + 10, SELECT_CTL_WIDTH - 20, SELECT_CTL_HEIGHT - 50 - TITLE_BAR_HEIGHT);
+			RECT(r, 10, 10, SELECT_CTL_WIDTH - 20, SELECT_CTL_HEIGHT - 50);
 			
 			AddControl(pWindow, CONTROL_LISTVIEW, r, NULL, 1000, 0, 0);
 			
@@ -147,8 +147,8 @@ void CALLBACK PrgVbMainWndProc (Window* pWindow, int messageType, int parm1, int
 			AddMenuBarItem(pWindow, CO_MENU_BAR, 3, 8, "");
 			AddMenuBarItem(pWindow, CO_MENU_BAR, 3, 9, "Exit");
 			
-			//#define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT*2 + 6 + TEXT_BOX_HEIGHT + 6)
-			int thingY = TITLE_BAR_HEIGHT * 2 + 6;
+			//#define DEF_VBUILD_HEI (TITLE_BAR_HEIGHT + 6 + TEXT_BOX_HEIGHT + 6)
+			int thingY = TITLE_BAR_HEIGHT + 6;
 			
 			RECT(r, 10, thingY, 120, TEXT_BOX_HEIGHT);
 			

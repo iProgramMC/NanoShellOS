@@ -52,7 +52,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		cal += cal / 2;
 		//series: 2, 3, 4, 6, 9, 13, 19, 28, 42, ...
 		
-		SLogMsg("Expanding control array from %d to %d", pWindow->m_controlArrayLen, cal);
+		//SLogMsg("Expanding control array from %d to %d", pWindow->m_controlArrayLen, cal);
 		
 		Control* newCtlArray = MmReAllocateK(pWindow->m_pControlArray, sizeof(Control) * cal);
 		if (!newCtlArray)

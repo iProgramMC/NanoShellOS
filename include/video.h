@@ -130,6 +130,7 @@ enum
 {
 	VBEDATA_VERSION_1 = 1, //V1: The basics! I think this is all most of the OS needs.
 	VBEDATA_VERSION_2,     //V2: Dirty rect logging support
+	VBEDATA_VERSION_3,     //V2: Dirty rect logging with offset support
 };
 
 // The disjoint rect set, for tracking dirty rectangles
@@ -161,6 +162,9 @@ typedef struct
 	//    1 (Version 1, which does NOT support dirty rect logging), and finally, Version 2 (which does!)
 	//    Any other features of VBEData will be added later down the line as V3, V4...
 	DsjRectSet*    m_drs;
+	// Version 3.
+	int            m_offsetX;
+	int            m_offsetY;
 }
 VBEData;
 
@@ -187,7 +191,7 @@ Point GetMousePos(void);
  * Sets the current VBE data, or NULL for the mainscreen.
  * Also resets the clip rectangle.
  */
-void VidSetVBEData(VBEData* pData);
+VBEData* VidSetVBEData(VBEData* pData);
 
 /**
  * Gets the current VBE data;

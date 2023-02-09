@@ -960,14 +960,17 @@ void VidSetClipRect(Rectangle *pRect)
 	}
 }
 
-void VidSetVBEData(VBEData* pData)
+VBEData* VidSetVBEData(VBEData* pData)
 {
+	VBEData* old = g_vbeData;
 	if (pData)
 		g_vbeData = pData;
 	else
 		g_vbeData = &g_mainScreenVBEData;
 	
 	VidSetClipRect(NULL);
+	
+	return old;
 }
 
 VBEData* VidGetVBEData()
@@ -2031,10 +2034,17 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	if (!pSet) return;
 	//TODO FIXME: Fix this crap
 #ifdef DIRTY_RECT_TRACK
+	int ox = 0, oy = 0;
+	if (g_vbeData->m_version >= VBEDATA_VERSION_3)
+		ox = g_vbeData->m_offsetX, oy = g_vbeData->m_offsetY;
+	
 	if (rect.left < 0) rect.left = 0;
 	if (rect.top  < 0) rect.top  = 0;
 	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
 	if (rect.bottom >= GetScreenSizeY()) rect.bottom = GetScreenSizeY();
+	
+	rect.left += ox; rect.right += ox;
+	rect.top += oy; rect.bottom += oy;
 	
 	cli;
 	if (pSet->m_bIgnoreAndDrawAll)
@@ -2088,17 +2098,19 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	sti;
 #endif
 }
+
 // The function a vbedata will use to let us know of changes
 void DirtyRectLogger (int x, int y, int width, int height)
 {
 #ifdef DIRTY_RECT_TRACK
 	if (g_vbeData->m_version < VBEDATA_VERSION_2)
 		return;
-
+	
 	Rectangle rect = { x, y, x + width, y + height };
 	DisjointRectSetAdd(g_vbeData->m_drs, rect);
 #endif
 }
+
 void VidCorruptScreenForTesting()
 {
 	VBEData* backup = g_vbeData;

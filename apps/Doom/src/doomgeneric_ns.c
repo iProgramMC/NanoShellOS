@@ -297,7 +297,6 @@ void DG_SetWindowTitle(const char* title)
 	}
 }
 
-// screen offset: 3, 2 + TITLE_BAR_HEIGHT
 int g_nextUpdateIn, timer;
 Image image;
 bool gotHexE0 = false;
@@ -347,7 +346,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 				if (DG_ScreenBuffer)
 				{
 					//draw frame:
-					VidBlitImage(&image, 3, 3 + TITLE_BAR_HEIGHT);
+					VidBlitImage(&image, 0, 0);
 				}
 			}
 			drawFrameNow = false;
@@ -375,7 +374,7 @@ void WindowDeconstruct()//called AtExit
 
 bool WindowInit()
 {
-	Window* pWindow = CreateWindow ("doom", 150, 150, DOOMGENERIC_RESX + 6, DOOMGENERIC_RESY + 6 + TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow ("doom", 150, 150, DOOMGENERIC_RESX, DOOMGENERIC_RESY, WndProc, 0);
 	
 	if (!pWindow)
 	{

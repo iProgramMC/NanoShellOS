@@ -331,9 +331,9 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 		{
 			//paint the image
 			
-			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
+			int listview_y = PADDING_AROUND_LISTVIEW;
 			//int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2;
 			
 			int x = (pWindow->m_vbeData.m_width - (wnwidth - 20)) / 2;
 			int y = (pWindow->m_vbeData.m_height - wnheight) + listview_y + listview_height + 10;
@@ -368,9 +368,9 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			// Add a list view control.
 			
 			
-			int listview_y = PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT;
+			int listview_y = PADDING_AROUND_LISTVIEW;
 			int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT;
+			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2;
 			
 			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
 			Image *pImg = pInst->pImg;

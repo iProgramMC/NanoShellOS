@@ -96,14 +96,14 @@ void CrashReportWindow( int argument )
 	
 	//add some controls to the window before handing control
 	Rectangle r;
-	RECT(r, 10, 10 + TITLE_BAR_HEIGHT, 32, 32);
+	RECT(r, 10, 10, 32, 32);
 	AddControl (pWindow, CONTROL_ICON, r, NULL, 1, ICON_AMBULANCE, 0);
 	
-	RECT(r, 50, 10 + TITLE_BAR_HEIGHT, winwidth - 50, 100);
+	RECT(r, 50, 10, winwidth - 50, 100);
 	AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
 	SetHugeLabelText(pWindow, 2, otherString);
 	
-	int ylol = (winheight - TITLE_BAR_HEIGHT) / 4 + TITLE_BAR_HEIGHT;
+	int ylol = (winheight) / 4;
 	RECT(r, 50, ylol, winwidth - 60, (winheight-ylol-40));
 	AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 5, 0);
 	SetTextInputText(pWindow, 4, string);

@@ -14,6 +14,7 @@ typedef struct
 {
 	volatile bool  m_held;
 	volatile void* m_task_owning_it;
+	volatile void* m_return_addr;
 }
 SafeLock;
 void LockAcquire (SafeLock *pLock);

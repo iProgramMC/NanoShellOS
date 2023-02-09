@@ -40,11 +40,11 @@ void GenerateChartPoints()
 
 void RenderChart(uint32_t color)
 {
-	//VidFillRect(0xFFFFFF, 2, TITLE_BAR_HEIGHT+2+30, GetScreenSizeX()-2, GetScreenSizeY()-2);
+	//VidFillRect(0xFFFFFF, 2, 2+30, GetScreenSizeX()-2, GetScreenSizeY()-2);
 	for (uint32_t i = 0; i < ARRAY_COUNT(g_ChartPoints) - 1; i++)
 	{
-		int point1 = g_ChartPoints[i+0] + TITLE_BAR_HEIGHT + 30, 
-		    point2 = g_ChartPoints[i+1] + TITLE_BAR_HEIGHT + 30;
+		int point1 = g_ChartPoints[i+0] + 30, 
+		    point2 = g_ChartPoints[i+1] + 30;
 		VidDrawLine(color /*Green*/, 
 					3 + (i+0) * CHART_AREA_WIDTH / (ARRAY_COUNT(g_ChartPoints)-1), point1,
 					3 + (i+1) * CHART_AREA_WIDTH / (ARRAY_COUNT(g_ChartPoints)-1), point2);
@@ -58,7 +58,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 		case EVENT_CREATE:
 		{
 			Rectangle r;
-			RECT(r, 3, TITLE_BAR_HEIGHT + 3, CHART_WINDOW_WIDTH - 6, 25);
+			RECT(r, 0, 0, CHART_WINDOW_WIDTH, 25);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Randomize!", CHART_RANDOMIZE, 0, 0);
 			
 			GenerateChartPoints();
@@ -91,7 +91,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 int NsMain (int argc, char** argv)
 {
-	Window* pWindow = CreateWindow ("Chart Demo", 150, 150, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT + TITLE_BAR_HEIGHT, WndProc, 0);
+	Window* pWindow = CreateWindow ("Chart Demo", 150, 150, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT, WndProc, 0);
 	
 	if (!pWindow)
 		return 1;

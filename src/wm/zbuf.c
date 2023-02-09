@@ -128,7 +128,7 @@ Window* ShootRayAndGetWindow(int x, int y)
 		if (!g_windows[order].m_used)   continue;
 		if ( g_windows[order].m_hidden) continue;
 		
-		if (RectangleContains(&g_windows[order].m_rect, &p))
+		if (RectangleContains(&g_windows[order].m_fullRect, &p))
 		{
 			return &g_windows[order];
 		}
@@ -154,6 +154,18 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect);
 void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 {
 	KeVerifyInterruptsEnabled;
+	
+	if (!IsWindowManagerTask())
+	{
+		WindowAction act;
+		act.bInProgress = true;
+		act.nActionType = WACT_UNDRAW_RECT;
+		act.pWindow = pWindowToExclude;
+		act.rect    = rect;
+		ActionQueueAdd(act);
+		// TODO: maybe we should wait for it to complete?
+		return;
+	}
 	
 	// pWnd - the window that's being undrawn
 	VBEData* backup = g_vbeData;
@@ -184,7 +196,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		
 		Window* pWindow = &g_windows[drawOrder];
 		
-		if (RectangleOverlap (&pWindow->m_rect, &rect) && pWindow != pWindowToExclude)
+		if (RectangleOverlap (&pWindow->m_fullRect, &rect) && pWindow != pWindowToExclude)
 			windowDrawList[sz++] = pWindow;
 	}
 	
@@ -203,7 +215,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		}
 		else
 		{
-			Rectangle rint, *pWndRect = &windowDrawList[i]->m_rect;
+			Rectangle rint, *pWndRect = &windowDrawList[i]->m_fullRect;
 			if (!RectangleIntersect(&rint, &rect, pWndRect))
 				continue;
 			rint.left   -= pWndRect->left;

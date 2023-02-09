@@ -41,9 +41,14 @@
 #define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
 #define DEFAULT_SYSTEM_FONT                     FONT_BASIC
 #define DEFAULT_TITLE_BAR_HEIGHT                18
+#define DEFAULT_MENU_BAR_HEIGHT                 18
+#define DEFAULT_MENU_ITEM_HEIGHT                18
+#define DEFAULT_SCROLL_BAR_SIZE                 16
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
 #define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
 #define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE
+#define DEFAULT_BORDER_SIZE                     10
+#define DEFAULT_WINDOW_BORDER_COLOR             0x00B0B0B0
 
 //#define HARDCODE_EVERYTHING
 
@@ -64,8 +69,12 @@
 #define SELECTED_ITEM_COLOR             DEFAULT_SELECTED_ITEM_COLOR
 #define SELECTED_ITEM_COLOR_B           DEFAULT_SELECTED_ITEM_COLOR_B
 #define SYSTEM_FONT                     FONT_BASIC
-#define TITLE_BAR_HEIGHT 18
-#define TITLE_BAR_FONT   FONT_BASIC
+#define TITLE_BAR_HEIGHT                18
+#define MENU_BAR_HEIGHT                 18
+#define SCROLL_BAR_SIZE                 16
+#define TITLE_BAR_FONT                  FONT_BASIC
+#define BORDER_SIZE                     DEFAULT_BORDER_SIZE
+#define WINDOW_BORDER_COLOR             DEFAULT_WINDOW_BORDER_COLOR
 
 #else
 
@@ -74,7 +83,7 @@ P_BLACK,
 P_BACKGROUND_COLOR,
 P_BUTTON_MIDDLE_COLOR,
 P_WINDOW_BACKGD_COLOR,
-P_WINDOW_EDGE_COLOR,
+P_WINDOW_BORDER_COLOR,
 P_WINDOW_TITLE_ACTIVE_COLOR,
 P_WINDOW_TITLE_INACTIVE_COLOR,
 P_WINDOW_TITLE_ACTIVE_COLOR_B,
@@ -86,30 +95,73 @@ P_WINDOW_TEXT_COLOR_LIGHT,
 P_SYSTEM_FONT,
 P_TITLE_BAR_HEIGHT,
 P_TITLE_BAR_FONT,
+P_SELECTED_MENU_ITEM_COLOR,
+P_SELECTED_MENU_ITEM_COLOR_B,
+P_MENU_BAR_HEIGHT,
+P_BORDER_SIZE,
+P_BUTTON_HILITE_COLOR,
+P_BUTTON_SHADOW_COLOR,
+P_BUTTON_EDGE_COLOR,
+P_BUTTON_HOVER_COLOR,
+P_SCROLL_BAR_SIZE,
+P_MENU_BAR_SELECTION_COLOR,
 P_SELECTED_ITEM_COLOR,
-P_SELECTED_ITEM_COLOR_B,
+P_SELECTED_TEXT_COLOR,
+P_DESELECTED_TEXT_COLOR,
+P_LIST_BACKGD_COLOR,
+P_TOOLTIP_BACKGD_COLOR,
+P_TOOLTIP_TEXT_COLOR,
+P_SCROLL_BAR_BACKGD_COLOR,
+P_SELECTED_MENU_ITEM_TEXT_COLOR,
+P_DESELECTED_MENU_ITEM_TEXT_COLOR,
+P_TABLE_VIEW_ALT_ROW_COLOR,
+P_MENU_ITEM_HEIGHT,
+P_BUTTON_XSHADOW_COLOR,
+P_CAPTION_BUTTON_ICON_COLOR,
+
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
 void     SetThemingParameter(int type, uint32_t);
 
-#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR              ))
-#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR           ))
-#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR           ))
-#define WINDOW_EDGE_COLOR               (GetThemingParameter(P_WINDOW_EDGE_COLOR             ))
-#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     ))
-#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   ))
-#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   ))
-#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B ))
-#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW))
-#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
-#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
-#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
-#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT              ))
-#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT         ))
-#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
-#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR           ))
-#define SELECTED_ITEM_COLOR_B           (GetThemingParameter(P_SELECTED_ITEM_COLOR_B         ))
+#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR                ))
+#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR             ))
+#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR             ))
+#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR       ))
+#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR     ))
+#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B     ))
+#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B   ))
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW  ))
+#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR         ))
+#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR               ))
+#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT         ))
+#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT                ))
+#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT           ))
+#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT             ))
+#define SELECTED_MENU_ITEM_COLOR        (GetThemingParameter(P_SELECTED_MENU_ITEM_COLOR        ))
+#define SELECTED_MENU_ITEM_COLOR_B      (GetThemingParameter(P_SELECTED_MENU_ITEM_COLOR_B      ))
+#define WINDOW_BORDER_COLOR             (GetThemingParameter(P_WINDOW_BORDER_COLOR             ))
+#define MENU_BAR_HEIGHT                 ((int)GetThemingParameter(P_MENU_BAR_HEIGHT            ))
+#define MENU_ITEM_HEIGHT                ((int)GetThemingParameter(P_MENU_ITEM_HEIGHT           ))
+#define BORDER_SIZE                     ((int)GetThemingParameter(P_BORDER_SIZE                ))
+#define BUTTON_HILITE_COLOR             (GetThemingParameter(P_BUTTON_HILITE_COLOR             ))
+#define BUTTON_SHADOW_COLOR             (GetThemingParameter(P_BUTTON_SHADOW_COLOR             ))
+#define BUTTON_EDGE_COLOR               (GetThemingParameter(P_BUTTON_EDGE_COLOR               ))
+#define BUTTON_HOVER_COLOR              (GetThemingParameter(P_BUTTON_HOVER_COLOR              ))
+#define SCROLL_BAR_SIZE                 ((int)GetThemingParameter(P_SCROLL_BAR_SIZE            ))
+#define MENU_BAR_SELECTION_COLOR        (GetThemingParameter(P_MENU_BAR_SELECTION_COLOR        ))
+#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR             ))
+#define SELECTED_TEXT_COLOR             (GetThemingParameter(P_SELECTED_TEXT_COLOR             ))
+#define DESELECTED_TEXT_COLOR           (GetThemingParameter(P_DESELECTED_TEXT_COLOR           ))
+#define LIST_BACKGD_COLOR               (GetThemingParameter(P_LIST_BACKGD_COLOR               ))
+#define TOOLTIP_BACKGD_COLOR            (GetThemingParameter(P_TOOLTIP_BACKGD_COLOR            ))
+#define TOOLTIP_TEXT_COLOR              (GetThemingParameter(P_TOOLTIP_TEXT_COLOR              ))
+#define SCROLL_BAR_BACKGD_COLOR         (GetThemingParameter(P_SCROLL_BAR_BACKGD_COLOR         ))
+#define SELECTED_MENU_ITEM_TEXT_COLOR   (GetThemingParameter(P_SELECTED_MENU_ITEM_TEXT_COLOR   ))
+#define DESELECTED_MENU_ITEM_TEXT_COLOR (GetThemingParameter(P_DESELECTED_MENU_ITEM_TEXT_COLOR ))
+#define TABLE_VIEW_ALT_ROW_COLOR        (GetThemingParameter(P_TABLE_VIEW_ALT_ROW_COLOR        ))
+#define BUTTON_XSHADOW_COLOR            (GetThemingParameter(P_BUTTON_XSHADOW_COLOR            ))
+#define CAPTION_BUTTON_ICON_COLOR       (GetThemingParameter(P_CAPTION_BUTTON_ICON_COLOR       ))
 
 #endif
 
@@ -164,6 +216,8 @@ enum {
 	EVENT_SET_WINDOW_TITLE_PRIVATE,
 	EVENT_REPAINT_BORDER_PRIVATE,
 	EVENT_SHOW_MENU_PRIVATE,
+	EVENT_REQUEST_RESIZE_PRIVATE,
+	EVENT_BORDER_SIZE_UPDATE_PRIVATE,
 	
 	EVENT_USER = 0x1000,
 };
@@ -364,13 +418,6 @@ MenuBarData;
 
 typedef struct
 {
-	bool m_clicked[WINDOWS_MAX];
-	bool m_hovered[WINDOWS_MAX];
-}
-TaskListData;
-
-typedef struct
-{
 	Image    *pImage;
 	uint32_t  nCurrentColor;
 	//if parm2 flag IMAGECTL_PAN  is set, this has an effect.  By default it is 0
@@ -470,7 +517,6 @@ typedef struct ControlStruct
 		TextInputData m_textInputData;
 		CheckBoxData  m_checkBoxData;
 		ImageCtlData  m_imageCtlData;
-		TaskListData  m_taskListData;
 		TableViewData m_tableViewData;
 	};
 	
@@ -558,6 +604,7 @@ typedef struct WindowStruct
 	WindowProc m_callback;
 	Rectangle  m_rect;
 	Rectangle  m_rectBackup;
+	// Now only includes the client area of the window.
 	VBEData    m_vbeData;
 	
 	int        m_iconID;
@@ -629,7 +676,18 @@ typedef struct WindowStruct
 	
 	// Private flags. These aren't modifiable by the window's controller.
 	uint32_t   m_privFlags;
-} Window;
+	
+	// Includes everything, including window decorations and stuff.
+	VBEData    m_fullVbeData;
+	
+	// The full rectangle. For backwards compatibility, the m_rect will now refer only
+	// to the client rect offset by the position of the top-leftmost pixel of said area.
+	Rectangle  m_fullRect;
+	
+	// The known border size. This is used in ResizeWindow when the border size changes.
+	int        m_knownBorderSize;
+}
+Window;
 
 /**
  * Define that does nothing... yet.
@@ -646,11 +704,12 @@ typedef Window* PWINDOW;
 //For internal use only - actions that may not be safe to perform outside the main window manager task
 enum {
 	WACT_NONE,
-	WACT_RESIZE,
+	WACT_UNDRAW_RECT,
 	WACT_HIDE,
 	WACT_SHOW,
 	WACT_DESTROY,
 	WACT_SELECT,
+	WACT_UPDATEALL,
 };
 
 typedef struct
@@ -882,5 +941,25 @@ int UploadCursor(Image * pImage, int xOff, int yOff);
  * Release a cursor resource uploaded using UploadCursor().
  */
 void ReleaseCursor(int cursorID);
+
+/**
+ * The struct definition for the function below.
+ */
+typedef struct
+{
+	int     windowID;
+	int     flags;
+	char   *titleOut;
+	size_t  titleOutSize; // The size of the 'titleOut' buffer. 
+	int     iconID;
+}
+WindowQuery;
+
+/**
+ * Query a list of windows.
+ */
+void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows);
+
+
 
 #endif//_WINDOW_H

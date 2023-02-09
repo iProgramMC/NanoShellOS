@@ -26,19 +26,56 @@ bool g_TaskListCompact = false;
 
 extern bool g_GlowOnHover;
 
+typedef struct
+{
+	bool m_clicked[WINDOWS_MAX];
+	bool m_hovered[WINDOWS_MAX];
+	WindowQuery queries[WINDOWS_MAX];
+	char titles[WINDOWS_MAX][256];
+}
+TaskListData;
+
 bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
+		case EVENT_CREATE:
+		{
+			TaskListData* pData = MmAllocate(sizeof(TaskListData));
+			memset(pData, 0, sizeof *pData);
+			this->m_dataPtr = pData;
+			
+			if (!pData) break;
+			
+			for (int i = 0; i < WINDOWS_MAX; i++)
+			{
+				pData->titles[i][0] = 0;
+				
+				WindowQuery* pQuery = &pData->queries[i];
+				pQuery->titleOut     = pData->titles[i];
+				pQuery->titleOutSize = sizeof (pData->titles[i]);
+			}
+			
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			MmFree(this->m_dataPtr);
+			break;
+		}
 		case EVENT_PAINT:
 		{
+			TaskListData* pData = (TaskListData*)this->m_dataPtr;
+			
+			size_t nWindowsSt = 0;
+			QueryWindows(pData->queries, ARRAY_COUNT(pData->queries), &nWindowsSt);
 			VidFillRectangle (WINDOW_BACKGD_COLOR, this->m_rect);
 			
 			int nWindows = 0;
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			for (size_t i = 0; i < nWindowsSt; i++)
 			{
-				if (!g_windows[i].m_used) continue;
-				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				WindowQuery* pQuery = &pData->queries[i];
+				if (pQuery->flags & WF_SYSPOPUP) continue;
 				nWindows++;
 			}
 			
@@ -53,18 +90,16 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			
 			int btn_x = this->m_rect.left;
 			
-			
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			for (size_t i = 0; i < nWindowsSt; i++)
 			{
-				if (!g_windows[i].m_used) continue;
-				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
-				
+				WindowQuery* pQuery = &pData->queries[i];
+				if (pQuery->flags & WF_SYSPOPUP) continue;
 				
 				Rectangle r;
 				RECT (r, btn_x, this->m_rect.top, btn_width - 4, GetHeight(&this->m_rect));
 				
-				bool clicked = this->m_taskListData.m_clicked[i];
-				bool hovered = this->m_taskListData.m_hovered[i];
+				bool clicked = pData->m_clicked[pQuery->windowID];
+				bool hovered = pData->m_hovered[pQuery->windowID];
 				
 				uint32_t flgs = 0;
 				if (g_windows[i].m_isSelected)
@@ -79,24 +114,19 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				}
 				else if (hovered)
 				{
-					uint32_t bm = BUTTONMIDD;
-					if (bm > 0xDFDFDF)//avoid overflow
-						bm = 0xDFDFDF;
-					bm += 0x202020;
-					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, bm);
+					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
 				}
 				else
-					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+					RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTON_MIDDLE_COLOR);
 				
-				g_windows[i].m_taskbarRect = r;
-				
-				Window *pWnd = &g_windows[i];
+				// hmm.
+				g_windows[pQuery->windowID].m_taskbarRect = r;
 				
 				int textX = btn_x + 4;
 				// if this window has an icon:
-				if (pWnd->m_iconID)
+				if (pQuery->iconID)
 				{
-					RenderIconForceSize(pWnd->m_iconID, textX + clicked, this->m_rect.top + 3 + (((this->m_rect.bottom - this->m_rect.top - 6) - 16) / 2) + clicked, 16);
+					RenderIconForceSize(pQuery->iconID, textX + clicked, this->m_rect.top + 3 + (((this->m_rect.bottom - this->m_rect.top - 6) - 16) / 2) + clicked, 16);
 					textX += 22; 
 				}
 				
@@ -108,7 +138,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 					
 					RECT(r, textX + clicked, this->m_rect.top + 2 + clicked, btn_x + btn_width - textX - 2, GetHeight(&this->m_rect) - 4);
 					
-					VidDrawText (pWnd->m_title, r, TEXTSTYLE_VCENTERED, FLAGS_TOO(flgs, WINDOW_TEXT_COLOR), TRANSPARENT);
+					VidDrawText (pQuery->titleOut, r, TEXTSTYLE_VCENTERED, FLAGS_TOO(flgs, WINDOW_TEXT_COLOR), TRANSPARENT);
 					
 					VidSetClipRect (NULL);
 				}
@@ -123,12 +153,16 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 		case EVENT_MOVECURSOR:
 		{
 			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			TaskListData* pData = (TaskListData*)this->m_dataPtr;
+			
+			size_t nWindowsSt = 0;
+			QueryWindows(pData->queries, ARRAY_COUNT(pData->queries), &nWindowsSt);
 			
 			int nWindows = 0;
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			for (size_t i = 0; i < nWindowsSt; i++)
 			{
-				if (!g_windows[i].m_used) continue;
-				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				WindowQuery* pQuery = &pData->queries[i];
+				if (pQuery->flags & WF_SYSPOPUP) continue;
 				nWindows++;
 			}
 			
@@ -143,12 +177,12 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			
 			int btn_x = this->m_rect.left;
 			
-			for (int i = 0; i < WINDOWS_MAX; i++)
+			for (size_t i = 0; i < nWindowsSt; i++)
 			{
-				if (!g_windows[i].m_used) continue;
-				if (g_windows[i].m_flags & WF_SYSPOPUP) continue;
+				WindowQuery* pQuery = &pData->queries[i];
+				if (pQuery->flags & WF_SYSPOPUP) continue;
 				
-				this->m_taskListData.m_hovered[i] = false;
+				pData->m_hovered[pQuery->windowID] = false;
 				
 				Rectangle r;
 				RECT (r, btn_x, this->m_rect.top, btn_width - 4, GetHeight(&this->m_rect));
@@ -157,22 +191,22 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				{
 					if (eventType == EVENT_MOVECURSOR)
 					{
-						this->m_taskListData.m_hovered[i] = true;
+						pData->m_hovered[pQuery->windowID] = true;
 					}
 					else if (eventType == EVENT_CLICKCURSOR)
 					{
-						this->m_taskListData.m_clicked[i] = true;
+						pData->m_clicked[pQuery->windowID] = true;
 					}
-					else if (this->m_taskListData.m_clicked[i]) // EVENT_RELEASECURSOR
+					else if (pData->m_clicked[pQuery->windowID]) // EVENT_RELEASECURSOR
 					{
 						// switch to this window
 						for (int j = 0; j < WINDOWS_MAX; j++)
-							this->m_taskListData.m_clicked[j] = false;
+							pData->m_clicked[j] = false;
 						
-						Window* pWindow = &g_windows[i];
+						//hmm??
+						Window* pWindow = &g_windows[pQuery->windowID];
 						if (pWindow->m_hidden && pWindow->m_minimized) //TODO
 						{
-							SLogMsg("Unminimize from task bar");
 							//Unhide and unminimize
 							WindowRegisterEvent (pWindow, EVENT_UNMINIMIZE, 0, 0);
 							//TODO: wait for the animation to finish :)

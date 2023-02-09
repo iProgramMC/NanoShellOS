@@ -21,7 +21,7 @@ void CloseAnyOpenMenusOutside(int posX, int posY)
 		// this is a menu item.
 		Point p = { posX, posY };
 		
-		if (!RectangleContains(&pWnd->m_rect, &p))
+		if (!RectangleContains(&pWnd->m_fullRect, &p))
 		{
 			WindowAddEventToMasterQueue(pWnd, EVENT_KILLFOCUS, 0, 0);
 		}
@@ -101,7 +101,7 @@ void WindowCheckButtons(Window* pWindow, int eventType, int x, int y)
 	uint32_t flags = pWindow->m_flags;
 	if (flags & WF_NOTITLE) return;
 	
-	Rectangle rectb = pWindow->m_rect;
+	Rectangle rectb = pWindow->m_fullRect;
 	rectb.right  -= rectb.left;
 	rectb.bottom -= rectb.top;
 	rectb.top     = rectb.left = 0;
@@ -149,27 +149,28 @@ void OnUILeftClick (int mouseX, int mouseY)
 			Rectangle recta;
 			bool hasTitle = GetWindowTitleRect(window, &recta);
 			
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			Point mousePoint = {x, y};
 			
 			bool t = hasTitle ? RectangleContains(&recta, &mousePoint) : false;
 			
+			Rectangle margins = GetWindowMargins(window);
+			int offsX = -margins.left, offsY = -margins.top;
+			
 			if (!window->m_maximized && (t || window->m_minimized))
 			{
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 1);
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
 			else if (!window->m_minimized)
 			{
-				int x = mouseX - window->m_rect.left;
-				int y = mouseY - window->m_rect.top;
+				int x = mouseX - window->m_fullRect.left;
+				int y = mouseY - window->m_fullRect.top;
 				
 				window->m_clickedInside = true;
 				
-				//WindowRegisterEvent (window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
-				
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
 		}
@@ -203,10 +204,10 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 		{
 			//are we in the title bar region?
 			Rectangle recta;
-			bool hasTitle = GetWindowTitleRect(window, &recta);
+			UNUSED bool hasTitle = GetWindowTitleRect(window, &recta);
 			
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			Point mousePoint = {x, y};
 			
 			if (!window->m_maximized && (RectangleContains(&recta, &mousePoint) || window->m_minimized))
@@ -224,8 +225,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					Image* p = GetIconImage(window->m_iconID, 32);
 					g_windowDragCursor.width    = p->width;
 					g_windowDragCursor.height   = p->height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
 					g_windowDragCursor.bitmap   = p->framebuffer;
 					g_windowDragCursor.m_transparency = true;
 					g_windowDragCursor.m_resizeMode   = false;
@@ -236,29 +237,29 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				}
 				else if (g_heldAlt && (window->m_flags & WF_ALWRESIZ))
 				{
-					g_windowDragCursor.width    = window->m_vbeData.m_width;
-					g_windowDragCursor.height   = window->m_vbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
+					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = true;
-					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
 					g_windowDragCursor.mouseLockX = mouseX;
 					g_windowDragCursor.mouseLockY = mouseY;
 				}
 				else
 				{
-					g_windowDragCursor.width    = window->m_vbeData.m_width;
-					g_windowDragCursor.height   = window->m_vbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_rect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_rect.top;
-					g_windowDragCursor.bitmap   = window->m_vbeData.m_framebuffer32;
+					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
+					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
+					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
 					g_windowDragCursor.m_transparency = false;
 					g_windowDragCursor.m_resizeMode   = false;
-					g_windowDragCursor.boundsWidth  = window->m_vbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_vbeData.m_height;
+					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
 					g_windowDragCursor.mouseLockX = -1;
 					g_windowDragCursor.mouseLockY = -1;
 				}
@@ -269,7 +270,10 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			{
 				window->m_clickedInside = true;
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (x, y), 0);
+				
+				Rectangle margins = GetWindowMargins(window);
+				int offsX = -margins.left, offsY = -margins.top;
+				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 			}
 		}
 	}
@@ -303,7 +307,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
 			
 			//note that we resize the window this way here because we're running inside the wm task
-			ResizeWindowInternal (pWindow, -1, -1, newWidth, newHeight);
+			//ResizeWindowInternal (pWindow, -1, -1, newWidth, newHeight);
+			ResizeWindow(pWindow, -1, -1, newWidth, newHeight);
 		}
 		else
 		{
@@ -312,13 +317,14 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 			newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
 			if (newWndRect.top < 0)
 				newWndRect.top = 0;
-			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_rect);
-			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_rect);
-			pWindow->m_rect = newWndRect;
+			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_fullRect);
+			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_fullRect);
+			pWindow->m_fullRect = newWndRect;
+			WmRecalculateClientRect(pWindow);
 		}
 		
 		//WindowRegisterEvent(window, EVENT_PAINT, 0, 0);
-		pWindow->m_vbeData.m_dirty = true;
+		pWindow->m_fullVbeData.m_dirty = true;
 		pWindow->m_renderFinished = false;
 		pWindow->m_isBeingDragged = false;
 		ShowWindow(pWindow);
@@ -331,19 +337,21 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	
 	if (pWindow->m_minimized) return;
 	
-	int x = mouseX - pWindow->m_rect.left;
-	int y = mouseY - pWindow->m_rect.top;
+	int x = mouseX - pWindow->m_fullRect.left;
+	int y = mouseY - pWindow->m_fullRect.top;
 	
+	Rectangle margins = GetWindowMargins(pWindow);
+	int offsX = -margins.left, offsY = -margins.top;
 	if (pWindow->m_clickedInside)
 	{
 		pWindow->m_clickedInside = false;
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 0);
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 	}
 	else
 	{
 		WindowCheckButtons(pWindow, EVENT_RELEASECURSOR, x, y);
-		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (x, y), 1);
+		WindowAddEventToMasterQueue(pWindow, EVENT_RELEASECURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 	}
 	//FREE_LOCK(g_windowLock);
 }
@@ -360,8 +368,8 @@ void OnUIRightClick (int mouseX, int mouseY)
 	{
 		if (!window->m_minimized)
 		{
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
 		}
 	}
@@ -386,8 +394,8 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 		}
 		else
 		{
-			int x = mouseX - window->m_rect.left;
-			int y = mouseY - window->m_rect.top;
+			int x = mouseX - window->m_fullRect.left;
+			int y = mouseY - window->m_fullRect.top;
 			
 			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
 		}

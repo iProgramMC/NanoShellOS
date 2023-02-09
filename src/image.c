@@ -10,6 +10,10 @@
 #include <image.h>
 #include <memory.h>
 
+//Note: As a specification, the image loader family of functions
+//returns the framebuffer as part of the image block, so that a
+//single MmFree(pImage) is enough.
+
 //Allocates an image on the heap and returns a pointer to it.
 //It reads data from a Windows BMP-format data block.
 Image *LoadBitmap (void* pBmpData, int *error)
@@ -113,7 +117,10 @@ Image *LoadTarga (void* pTgaData, int *error)
 {
 	TgaHeaderStruct* pStruct = (TgaHeaderStruct*)pTgaData;
 	
-	if (pStruct->width < 1 || pStruct->height < 1) return NULL;
+	if (pStruct->width < 1 || pStruct->height < 1)
+	{
+		return NULL;
+	}
 	
 	Image* pImage = (Image*)MmAllocate(sizeof(Image) + pStruct->width * pStruct->height *sizeof(uint32_t));
 	if (!pImage)
@@ -146,11 +153,32 @@ Image *LoadTarga (void* pTgaData, int *error)
 				int lineOffset = (pStruct->y ? y : (pStruct->height - y - 1)) * pStruct->width * (pStruct->imageBpp >> 3);
 				for (int x = 0; x < pStruct->width; x++)
 				{
-					fb[i++] = ((pStruct->imageBpp == 32 ? dataPtr[lineOffset + 3] : 0xFF) << 24) + 
+					fb[i++] = ((pStruct->imageBpp == 32 ? (255 - dataPtr[lineOffset + 3]) : 0x00) << 24) + 
 							  (dataPtr[lineOffset + 2] << 16) + 
 							  (dataPtr[lineOffset + 1] << 8) +
 							  (dataPtr[lineOffset]);
 					lineOffset += pStruct->imageBpp >> 3;
+				}
+			}
+			
+			break;
+		}
+		case TGA_UNCOMPRESSED_GRAYSCALE: // 3
+		{
+			if (pStruct->imageBpp != 8)
+			{
+				*error = BMPERR_BAD_BPP;
+				MmFree(pImage);
+				return NULL;
+			}
+			for (int i = 0, y = 0; y < pStruct->height; y++)
+			{
+				int lineOffset = (pStruct->y ? y : (pStruct->height - y - 1)) * pStruct->width;
+				for (int x = 0; x < pStruct->width; x++)
+				{
+					const uint8_t b = dataPtr[lineOffset];
+					fb[i++] = (b << 16) | (b << 8) | b;
+					lineOffset++;
 				}
 			}
 			
@@ -215,6 +243,7 @@ Image *LoadTarga (void* pTgaData, int *error)
 		}
 		default:
 		{
+			SLogMsg("Unknown targa encoding scheme %d", pStruct->encoding);
 			*error = BMPERR_BAD_COLOR_PLANES;
 			MmFree(pImage);
 			return NULL;
@@ -248,7 +277,7 @@ Image* LoadImageFile(void *pImageData, int *pErrorOut)
 		Image* pImg = LoadTarga(pImageData, pErrorOut);
 		if (pImg) return pImg;
 		
-		*pErrorOut = BMPERR_UNKNOWN_FORMAT;
+		//*pErrorOut = BMPERR_UNKNOWN_FORMAT;
 		return NULL;
 	}
 	

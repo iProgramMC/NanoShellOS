@@ -22,6 +22,7 @@
 #include <image.h>
 #include <config.h>
 
+//#define BORDER_SIZE (15)
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
 #define WINDOW_ACTION_MENU_ORIG_CID (0x12345678)
 #define C_ACTION_BUTTON_WIDTH (TITLE_BAR_HEIGHT)
@@ -141,6 +142,16 @@ void WmSplitRectangle(Rectangle ogRect, const Window* pExcept, Rectangle** pStar
 void WmTakeOverWindow(Window* pWindow);
 void WmDeleteMenuBar(MenuBarData* pData);
 bool WmMenuTryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comboID_as, const char* text);
+void WmRepaintBorder(Window* pWindow);
+void WmRepaintBorderAndBackground(Window* pWindow);
+void WmRepaintWindowBorder(Window* pWindow);
+void WmRecalculateClientRect(Window* pWindow);
+void WmOnChangedBorderParms(Window* pWindow);
+void WmOnChangedBorderSize();
+Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize);
+Rectangle GetMarginsWindowFlags(uint32_t flags);
+Rectangle GetWindowMargins(Window* pWindow);
+Rectangle GetWindowClientRect(Window* pWindow, bool offset);
 MenuBarData* WmCreateMenuBar();
 
 #endif//INT_WI_H

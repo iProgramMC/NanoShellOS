@@ -69,9 +69,8 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 int GetMenuHeight (WindowMenu* pMenu)
 {
 	int haute = (MENU_ITEM_HEIGHT + (pMenu->bHasIcons ? 4 : 0));
-	return 3 + 
-	       pMenu->nMenuEntries * haute - 
-		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT);
+	return pMenu->nMenuEntries * haute - 
+		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT) - 1;
 }
 
 #define MENU_ITEM_COMBOID (1000000)
@@ -121,18 +120,18 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				
 				//Add some controls
 				Rectangle r;
-				int height = (MENU_ITEM_HEIGHT + (pData->bHasIcons ? 4 : 0)), y = 2;
+				int height = (MENU_ITEM_HEIGHT + (pData->bHasIcons ? 4 : 0)), y = 0;
 				for (int i = 0; i < pData->nMenuEntries; i++)
 				{
 					if (pData->pMenuEntries[i].sText[0] == 0)
 					{
-						RECT(r, 2, y, GetMenuWidth(pData)-5, MENU_SEPA_HEIGHT);
+						RECT(r, 0, y, GetMenuWidth(pData), MENU_SEPA_HEIGHT);
 						AddControl (pWindow, CONTROL_SIMPLE_HLINE, r, NULL, MENU_ITEM_COMBOID+i, 0, 0);
 						y += MENU_SEPA_HEIGHT;
 					}
 					else
 					{
-						RECT(r, 2, y, GetMenuWidth(pData)-5, height - 2);
+						RECT(r, 0, y, GetMenuWidth(pData), height - 2);
 						char buffer[110];
 						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
 						
@@ -156,11 +155,6 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 				re.right  -= re.left;
 				re.bottom -= re.top;
 				re.left = re.top = 0;
-				
-				re.left += 2;
-				re.top  += 2;
-				re.right  -= 3;
-				re.bottom -= 3;
 				
 				int offs = 16;
 				if (pData->bHasIcons) offs += 8;
@@ -275,7 +269,10 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			DefaultWindowProc(pWindow, eventType, parm1, parm2);
 			
 			if (pParentWindow)
+			{
+				SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
 				SelectWindow(pParentWindow);
+			}
 			if (pWindow->m_data)
 			{
 				WindowMenu* pData = (WindowMenu*)pWindow->m_data;
@@ -354,8 +351,8 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 void OnRightClickShowMenu(Window* pWindow, int parm1)
 {
 	Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-	p.x += pWindow->m_rect.left;
-	p.y += pWindow->m_rect.top;
+	p.x += pWindow->m_fullRect.left;
+	p.y += pWindow->m_fullRect.top;
 	
 	int MenuWidth = 100;
 	
@@ -368,6 +365,7 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	maximizeEnt = &table[2];
 	spacerEnt   = &table[3];
 	closeEnt    = &table[4];
+	strcpy(rootEnt.sText, "Menu");
 	rootEnt.pMenuEntries = table;
 	rootEnt.nMenuEntries = (int)ARRAY_COUNT(table);
 	rootEnt.bPrivate     = true;

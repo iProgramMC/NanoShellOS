@@ -17,6 +17,29 @@ void RenderCursor(void);
 int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
 int g_TaskbarHeight = 0;
 
+void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows)
+{
+	cli;
+	*numWindows = 0;
+	
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (!g_windows[i].m_used) continue;
+		
+		Window* pWindow = &g_windows[i];
+		WindowQuery* pQuery = &table[(*numWindows)++];
+		pQuery->windowID = i;
+		pQuery->flags    = pWindow->m_flags;
+		pQuery->iconID   = pWindow->m_iconID;
+		strncpy(pQuery->titleOut, pWindow->m_title, pQuery->titleOutSize);
+		pQuery->titleOut[pQuery->titleOutSize - 1] = 0;
+		
+		if (*numWindows == tableSize) break;
+	}
+	
+	sti;
+}
+
 void UpdateFPSCounter()
 {
 	if (g_FPSLastCounted + 1000 <= GetTickCount())
@@ -265,6 +288,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			
 			switch (pFront->nActionType)
 			{
+				case WACT_UPDATEALL:
+					//WmOnChangedBorderSize();
+					break;
 				case WACT_DESTROY:
 					NukeWindow(pFront->pWindow);
 					break;
@@ -277,8 +303,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				case WACT_SELECT:
 					SelectWindow(pFront->pWindow);
 					break;
-				case WACT_RESIZE:
-					ResizeWindow(pFront->pWindow, pFront->rect.left, pFront->rect.top, GetWidth(&pFront->rect), GetHeight(&pFront->rect));
+				case WACT_UNDRAW_RECT:
+					RefreshRectangle(pFront->rect, pFront->pWindow);
 					break;
 			}
 			
@@ -304,23 +330,25 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			if (pWindow->m_isSelected || (pWindow->m_flags & WF_SYSPOPUP))
 			{
 				//Also send an EVENT_MOVECURSOR
-				int posX = g_mouseX - pWindow->m_rect.left;
-				int posY = g_mouseY - pWindow->m_rect.top;
-				if (g_oldMouseX - pWindow->m_rect.left != posX || g_oldMouseY - pWindow->m_rect.top != posY)
+				int posX = g_mouseX - pWindow->m_fullRect.left;
+				int posY = g_mouseY - pWindow->m_fullRect.top;
+				if (g_oldMouseX - pWindow->m_fullRect.left != posX || g_oldMouseY - pWindow->m_fullRect.top != posY)
 				{
 					if (posX < 0) posX = 0;
 					if (posY < 0) posY = 0;
-					if (posX >= (int)pWindow->m_vbeData.m_width)  posX = (int)pWindow->m_vbeData.m_width  - 1;
-					if (posY >= (int)pWindow->m_vbeData.m_height) posY = (int)pWindow->m_vbeData.m_height - 1;
+					if (posX >= (int)pWindow->m_fullVbeData.m_width)  posX = (int)pWindow->m_fullVbeData.m_width  - 1;
+					if (posY >= (int)pWindow->m_fullVbeData.m_height) posY = (int)pWindow->m_fullVbeData.m_height - 1;
 					
+					Rectangle margins = GetWindowMargins(pWindow);
+					int offsX = -margins.left, offsY = -margins.top;
 					if (g_GlowOnHover)
 					{
 						WindowCheckButtons(pWindow, EVENT_MOVECURSOR, posX, posY);
-						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(offsX + posX, offsY + posY), 0);
 					}
-					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_vbeData.m_width && posY < (int)pWindow->m_vbeData.m_height)
+					else if (posX >= 0 && posY >= 0 && posX < (int)pWindow->m_fullVbeData.m_width && posY < (int)pWindow->m_fullVbeData.m_height)
 					{
-						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(posX, posY), 0);
+						WindowAddEventToMasterQueue(pWindow, EVENT_MOVECURSOR, MAKE_MOUSE_PARM(offsX + posX, offsY + posY), 0);
 					}
 				}
 			}
@@ -350,10 +378,10 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					//FREE_LOCK(g_backgdLock);
 					
 					Point p = { g_mouseX, g_mouseY };
-					if (RectangleContains(&pWindow->m_rect, &p))
+					if (RectangleContains(&pWindow->m_fullRect, &p))
 						RenderCursor();
 					
-					if (RectangleOverlap(&pWindow->m_rect, &g_tooltip.m_rect))
+					if (RectangleOverlap(&pWindow->m_fullRect, &g_tooltip.m_rect))
 						TooltipDraw();
 				}
 			}

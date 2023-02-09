@@ -9,7 +9,7 @@
 #include <note.h>
 
 #define NOTE_WIDTH 240
-#define NOTE_HEIGHT 180 + TITLE_BAR_HEIGHT
+#define NOTE_HEIGHT 180
 
 extern NOTE g_notes[64];
 
@@ -54,9 +54,9 @@ void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 			#define TOP_PADDING             2
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_TEXTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+				/*Y Coord*/ PADDING_AROUND_TEXTVIEW + 20 + TOP_PADDING, 
 				/*X Size */ NOTE_WIDTH - PADDING_AROUND_TEXTVIEW * 2, 
-				/*Y Size */ NOTE_HEIGHT- PADDING_AROUND_TEXTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+				/*Y Size */ NOTE_HEIGHT- PADDING_AROUND_TEXTVIEW * 2 - 20 - TOP_PADDING
 			);
 			
 			AddControlEx (pWindow, CONTROL_TEXTINPUT, 
@@ -71,13 +71,11 @@ void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 			}
 			
 			// Add a button right next to the close button
+			// TODO this should be re-done
 			r.right  = pWindow->m_vbeData.m_width - 3 - 1;
 			r.left   = r.right - 18 + 2;
 			r.top    = 2;
-			r.bottom = r.top + TITLE_BAR_HEIGHT - 4;
-			
-			r.left  -= 18;
-			r.right -= 18;
+			r.bottom = r.top + 20 - 4;
 			
 			AddControlEx (pWindow, CONTROL_BUTTON_EVENT, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT, r, "\x13", N_MAINMENU_BTN, EVENT_MAIN_MENU_THING, 0);
 			

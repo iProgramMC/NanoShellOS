@@ -12,7 +12,7 @@
 Window* g_pMainWindow = NULL;
 
 #define WINDOW_WIDTH 320
-#define WINDOW_HEIGHT 320+TITLE_BAR_HEIGHT
+#define WINDOW_HEIGHT 320
 
 NOTE g_notes[64];
 int  g_noteCount = 0;
@@ -80,9 +80,9 @@ void CALLBACK MainWindowProc (Window* pWindow, int msg, int parm1, int parm2)
 			#define TOP_PADDING             8
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TOP_PADDING, 
 				/*X Size */ WINDOW_WIDTH - PADDING_AROUND_LISTVIEW * 2, 
-				/*Y Size */ WINDOW_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+				/*Y Size */ WINDOW_HEIGHT- PADDING_AROUND_LISTVIEW * 2 - TOP_PADDING
 			);
 			
 			AddControlEx (pWindow, CONTROL_ICONVIEW, 

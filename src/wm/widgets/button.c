@@ -122,11 +122,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				uint32_t bm = BUTTONMIDD;
-				if (bm > 0xDFDFDF)//avoid overflow
-					bm = 0xDFDFDF;
-				bm += 0x202020;
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, bm);
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
@@ -295,7 +291,7 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 		}
 		case EVENT_PAINT:
 		{
-			uint32_t blue = SELECTED_ITEM_COLOR_B;
+			uint32_t blue = SELECTED_MENU_ITEM_COLOR_B;
 			
 			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
 			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
@@ -305,15 +301,15 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			if (this->m_buttonData.m_clicked)
 			{
-				VidFillRectangle(SELECTED_ITEM_COLOR_B, this->m_rect);
-				VidDrawRectangle(SELECTED_ITEM_COLOR,   this->m_rect);
+				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, this->m_rect);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   this->m_rect);
 				
 				x++, y++;
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				VidFillRectangle(SELECTED_ITEM_COLOR_B, this->m_rect);
-				VidDrawRectangle(SELECTED_ITEM_COLOR,   this->m_rect);
+				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, this->m_rect);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   this->m_rect);
 				
 				x--, y--;
 				bRenderOutlineToo = true;
@@ -447,8 +443,8 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			else if (this->m_buttonData.m_clicked)
 			{
 				//draw the button as slightly pushed in
-				VidFillRectangle(SELECTED_ITEM_COLOR_B, r);
-				VidDrawRectangle(SELECTED_ITEM_COLOR,   r);
+				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, r);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   r);
 				
 				r.top += 1;
 				r.bottom += 1;
@@ -465,9 +461,9 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				uint32_t col = SELECTED_ITEM_COLOR_B;
+				uint32_t col = SELECTED_MENU_ITEM_COLOR_B;
 				VidFillRectangle(col, r);
-				VidDrawRectangle(SELECTED_ITEM_COLOR, r);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR, r);
 				
 				r.left += offs;
 				r.top += 1;

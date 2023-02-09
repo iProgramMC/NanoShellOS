@@ -16,14 +16,14 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
+extern void WmRepaintBorder(Window* pWindow);
 extern void SelectWindow(Window* pWindow);
 extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
 //Null but all 0xffffffff's. Useful
 #define FNULL ((void*)0xffffffff)
 #define POPUP_WIDTH  (400)
-#define POPUP_HEIGHT (120-18+TITLE_BAR_HEIGHT)
+#define POPUP_HEIGHT (120)
 void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	if (messageType == EVENT_COMMAND)
@@ -51,13 +51,13 @@ void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int p
 	}
 	else if (messageType == EVENT_CREATE)
 	{
-		pWindow->m_vbeData.m_dirty = 1;
+		pWindow->m_fullVbeData.m_dirty = 1;
 		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 	}
 	else if (messageType == EVENT_PAINT || messageType == EVENT_SETFOCUS || messageType == EVENT_KILLFOCUS ||
 			 messageType == EVENT_CLICKCURSOR || messageType == EVENT_RELEASECURSOR)
 	{
-		pWindow->m_vbeData.m_dirty = 1;
+		pWindow->m_fullVbeData.m_dirty = 1;
 		pWindow->m_renderFinished  = 1;
 		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 	}
@@ -106,7 +106,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			PaintWindowBorderNoBackgroundOverpaint (pWindow);
+			WmRepaintBorder (pWindow);
 		}
 	}
 	
@@ -132,13 +132,13 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	// Add the basic controls required.
 	Rectangle rect;
 	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT;
+	rect.top    = 12;
 	rect.right  = POPUP_WIDTH - 20;
 	rect.bottom = 50;
 	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, 0, WINDOW_BACKGD_COLOR);
 	
 	rect.left   = 10;
-	rect.top    = 12 + TITLE_BAR_HEIGHT + 20;
+	rect.top    = 12 + 20;
 	rect.right  = POPUP_WIDTH - 20;
 	rect.bottom = 20;
 	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100000, 0, 0);
@@ -188,7 +188,7 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		PaintWindowBorderNoBackgroundOverpaint (pWindow);
+		WmRepaintBorder (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

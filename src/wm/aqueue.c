@@ -20,7 +20,7 @@ bool ActionQueueWouldOverflow()
 {
 	if (s_internal_action_queue_tail == 0)
 		return s_internal_action_queue_head == 4095;
-	return s_internal_action_queue_tail == s_internal_action_queue_head - 1;
+	return s_internal_action_queue_head == s_internal_action_queue_tail - 1;
 }
 
 WindowAction* ActionQueueAdd(WindowAction action)

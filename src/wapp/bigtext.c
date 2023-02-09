@@ -308,7 +308,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			
 			#define PADDING_AROUND_TEXTVIEW 8
-			#define TOP_PADDING             TITLE_BAR_HEIGHT + COOLBAR_BUTTON_HEIGHT + 5
+			#define TOP_PADDING             COOLBAR_BUTTON_HEIGHT + 5
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_TEXTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
@@ -372,14 +372,14 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 					continue; // none
 				if (button_icons[i] == -1)
 				{
-					RECT(r, x_pos, PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT * 2, 5, COOLBAR_BUTTON_HEIGHT);
+					RECT(r, x_pos, PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT, 5, COOLBAR_BUTTON_HEIGHT);
 					//add a simple vertical line
 					AddControl(pWindow, CONTROL_SIMPLE_VLINE, r, NULL, 0, 0, 0);
 					x_pos += 5;
 				}
 				else
 				{
-					RECT(r, x_pos, PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT * 2, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
+					RECT(r, x_pos, PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
 					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
 					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);

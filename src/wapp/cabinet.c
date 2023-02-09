@@ -16,7 +16,7 @@
 #define CABINET_HEIGHT 400
 
 #define CABINET_PROPS_WIDTH  (250)
-#define CABINET_PROPS_HEIGHT (300 - 18 + TITLE_BAR_HEIGHT)
+#define CABINET_PROPS_HEIGHT (300)
 
 enum
 {
@@ -42,7 +42,7 @@ enum
 
 IconType CabGetIconBasedOnName(const char *pName, int pType);
 
-#define RECTA(r, x, y, w, h) RECT(r, x, y + TITLE_BAR_HEIGHT, w, h)
+#define RECTA(r, x, y, w, h) RECT(r, x, y, w, h)
 
 static void FormatSize(uint32_t size, char* size_buf)
 {
@@ -467,8 +467,11 @@ reset:
 	//SetWindowIcon (pWindow, icon);
 	//SetWindowTitle(pWindow, pFolderNode->m_name);
 	pWindow->m_iconID = icon;
-	strcpy (pWindow->m_title, "Cabinet - ");
-	strcat (pWindow->m_title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	
+	char* title = MmAllocate(WINDOW_TITLE_MAX);
+	strcpy (title, "Cabinet - ");
+	strcat (title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
+	SetWindowTitle(pWindow, title);
 	RequestTaskbarUpdate();
 	
 	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);
@@ -509,18 +512,18 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 		{
 			Rectangle r;
 			
-			RECT(r, 10, 10 + TITLE_BAR_HEIGHT, 32, 32);
+			RECT(r, 10, 10, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, r, NULL, 1, ICON_CABINET_COMBINE, 0);
 			
-			RECT(r, 50, 15 + TITLE_BAR_HEIGHT, 150, 32);
+			RECT(r, 50, 15, 150, 32);
 			AddControl(pWindow, CONTROL_TEXT, r, "Type in the file name of a drive you want to mount.", 3, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECT(r, 450 - 80, 10 + TITLE_BAR_HEIGHT, 70, 20);
+			RECT(r, 450 - 80, 10, 70, 20);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Mount", 2, 0, 0);
-			RECT(r, 450 - 80, 40 + TITLE_BAR_HEIGHT, 70, 20);
+			RECT(r, 450 - 80, 40, 70, 20);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", 5, 0, 0);
 			
-			RECT(r, 50, 30 + TITLE_BAR_HEIGHT,300, 20);
+			RECT(r, 50, 30,300, 20);
 			AddControl(pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 0, 0);
 			
 			break;
@@ -553,7 +556,7 @@ void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm
 
 void PopupUserMountWindow(Window* pWindow)
 {
-	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90-18+TITLE_BAR_HEIGHT, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
+	PopupWindow(pWindow, "Mount a RAM drive", pWindow->m_rect.left + 50, pWindow->m_rect.top + 50, 450, 90, CabinetMountWindowProc, WF_NOCLOSE | WF_NOMINIMZ);
 }
 
 void CabinetDetermineResourceLaunchFailure(Window* pWindow, RESOURCE_STATUS status, const char* context, const char* filename)
@@ -600,8 +603,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		case EVENT_PAINT:
 		{
 			/*
-			VidTextOut (g_cbntOldCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut (g_cabinetCWD, 8, 10 + TITLE_BAR_HEIGHT*2 + 28,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cbntOldCWD, 8, 10 + TITLE_BAR_HEIGHT + 28, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
+			VidTextOut (g_cabinetCWD, 8, 10 + TITLE_BAR_HEIGHT + 28,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
 			strcpy(g_cbntOldCWD, g_cabinetCWD);
 			*/
 			break;
@@ -859,7 +862,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			// Add a list view control.
 			
 			#define PADDING_AROUND_LISTVIEW 8
-			#define TOP_PADDING             (TITLE_BAR_HEIGHT+18+COOLBAR_BUTTON_HEIGHT)
+			#define TOP_PADDING             (TITLE_BAR_HEIGHT+COOLBAR_BUTTON_HEIGHT)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
@@ -934,14 +937,14 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					continue; // none
 				if (button_icons[i] == -1)
 				{
-					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, 5, COOLBAR_BUTTON_HEIGHT);
+					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT, 5, COOLBAR_BUTTON_HEIGHT);
 					//add a simple vertical line
 					AddControl(pWindow, CONTROL_SIMPLE_VLINE, r, NULL, 0, 0, 0);
 					x_pos += 5;
 				}
 				else
 				{
-					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT * 2, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
+					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
 					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
 					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);

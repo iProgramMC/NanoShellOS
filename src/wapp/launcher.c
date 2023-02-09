@@ -423,17 +423,17 @@ void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int
 			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,12,17, "The lonely button...");
 			AddMenuBarItem (pWindow, LAUNCHER_MENUBAR,12,18, "...has a friend!");
 			
-			RECT(r, START_X, TITLE_BAR_HEIGHT * 2 + 15, 200, 20);
+			RECT(r, START_X, 15, 200, 20);
 			AddControl(pWindow, CONTROL_TEXT, r, "Welcome to NanoShell!", LAUNCHER_LABEL1, 0, TRANSPARENT);
 			
 			// Add a icon list view.
 			#define PADDING_AROUND_LISTVIEW 4
-			#define TOP_PADDING             (TITLE_BAR_HEIGHT + TITLE_BAR_HEIGHT + 15)
+			#define TOP_PADDING             (TITLE_BAR_HEIGHT + 15)
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
-				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
+				/*Y Coord*/ PADDING_AROUND_LISTVIEW + TOP_PADDING, 
 				/*X Size */ 400 - PADDING_AROUND_LISTVIEW * 2, 
-				/*Y Size */ 270 - PADDING_AROUND_LISTVIEW * 2 - TITLE_BAR_HEIGHT - TOP_PADDING
+				/*Y Size */ 270 - PADDING_AROUND_LISTVIEW * 2 - TOP_PADDING
 			);
 			AddControlEx(pWindow, CONTROL_ICONVIEW, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_RIGHT_TO_RIGHT, r, NULL, LAUNCHER_LISTVIEW, 0, 0);
 			
@@ -665,18 +665,18 @@ void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int par
 			
 			Rectangle r;
 			
-			RECT(r, 10, 30, 32, 32);
+			RECT(r, 10, 30-18, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, r, NULL, 1, ICON_RUN, 0);
-			RECT(r, 64, 35, 300, 32);
+			RECT(r, 64, 35-18, 300, 32);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "Type the name of a program, folder, document, or resource, and NanoShell will open it for you.", 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
-			RECT(r, 10, 70, 54, 22);
+			RECT(r, 10, 70-18, 54, 22);
 			AddControl(pWindow, CONTROL_TEXTCENTER, r, "Open:", 3, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
-			RECT(r, 64, 70, 300, 1);
+			RECT(r, 64, 70-18, 300, 1);
 			AddControl(pWindow, CONTROL_TEXTINPUT,  r, "", 4, 0, 0);
 			
-			RECT(r, (400-160-10)/2, 120, 80, 20);
+			RECT(r, (400-160-10)/2, 120-18, 80, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "OK", 5, 0, 0);
-			RECT(r, (400-160-10)/2+90, 120, 80, 20);
+			RECT(r, (400-160-10)/2+90, 120-18, 80, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "Cancel", 6, 0, 0);
 			
 			break;
@@ -708,7 +708,7 @@ void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int par
 void RunPopupEntry(__attribute__((unused)) int arg)
 {
 	// create ourself a window:
-	int ww = 400, wh = 150;//, sh = GetScreenHeight();
+	int ww = 400, wh = 150-18;//, sh = GetScreenHeight();
 	int wx = 20, wy = (GetScreenHeight() - wh - 20);//(sh - wh)+2;
 	
 	Window* pWindow = CreateWindow ("Run", wx, wy, ww, wh, RunPopupProc, 0);
