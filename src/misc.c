@@ -496,19 +496,36 @@ extern uint32_t g_cpuidLastLeaf;
 extern char g_cpuidNameEBX[];
 extern char g_cpuidBrandingInfo[];
 extern CPUIDFeatureBits g_cpuidFeatureBits;
+extern uint32_t g_cpuidFeatureBits2;
+
+extern void KeCPUIDAsm();
 
 const char* GetCPUType()
 {
 	return g_cpuidNameEBX;
 }
+
 const char* GetCPUName()
 {
 	return g_cpuidBrandingInfo;
 }
+
 CPUIDFeatureBits GetCPUFeatureBits()
 {
 	return g_cpuidFeatureBits;
 }
+
+void KeCPUID()
+{
+	KeCPUIDAsm();
+	
+	if (g_cpuidFeatureBits2 < 0x80000004)
+	{
+		SLogMsg("CPUID doesn't support branding info, making up one of our own");
+		snprintf(g_cpuidBrandingInfo, 49, "%s Fam %d Mod %d Step %d", g_cpuidNameEBX, g_cpuidFeatureBits.m_familyID, g_cpuidFeatureBits.m_model, g_cpuidFeatureBits.m_steppingID);
+	}
+}
+
 #endif
 
 // Time Formatting

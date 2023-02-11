@@ -68,6 +68,7 @@ NO_RETURN
 void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 {
 	CoKickOff();
+	SLogMsg("NanoShell is starting up...");
 	MbSetup(check, mbaddr);
 	WindowCallInit();
 	MbReadCmdLine();
