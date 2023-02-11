@@ -99,7 +99,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			if (!pData->m_root.m_childrenArray) break;
 			
 			// if we already have a menu open, don't open another
-			if (pWindow->m_flags & WI_OPENMENU) break;
+			if (pWindow->m_privFlags & WPF_OPENMENU) break;
 			
 			int  current_x = 8;
 			bool needsUpdate = false;
@@ -133,7 +133,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						WindowMenu menu;
 						ConvertMenuBarToWindowMenu(&menu, pChild, this->m_comboID);
 						SpawnMenu(pWindow, &menu, pWindow->m_rect.left + rect.left, pWindow->m_rect.top + rect.top + MENU_BAR_HEIGHT);
-						pWindow->m_flags |= WI_OPENMENU;
+						pWindow->m_privFlags |= WPF_OPENMENU;
 						MenuRecursivelyFreeEntries (&menu);
 					}
 					else
@@ -167,7 +167,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 		{
 			if (!pData) break;
 			
-			pWindow->m_flags &= ~WI_OPENMENU;
+			pWindow->m_privFlags &= ~WPF_OPENMENU;
 			
 			if (parm1 == this->m_comboID)
 			{

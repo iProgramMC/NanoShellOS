@@ -296,7 +296,7 @@ void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
-	if (pWindow->m_flags & WI_HUNGWIND)
+	if (pWindow->m_privFlags & WPF_HUNGWIND)
 	{
 		char windowtitle_copy[WINDOW_TITLE_MAX + 100];
 		strcpy (windowtitle_copy, pWindow->m_title);

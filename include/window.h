@@ -555,6 +555,12 @@ enum CURSORTYPE
 #define WPF_MAXIMIZECLICKED 0x00000020
 #define WPF_CLOSEBTNCLICKED 0x00000040
 #define WPF_ICONBUTNCLICKED 0x00000080
+#define WPF_OPENMENU        0x00000100//Internal flag: A menu is open from this window's menu bar -- don't open another.
+#define WPF_NOHIDDEN        0x00000200//Internal flag: This window wasn't hidden at the time of resizing.
+#define WPF_FROZENRM        0x00000400//Internal flag: Remove the 'frozen' flag when the window is no longer hung
+#define WPF_HUNGWIND        0x00000800//Internal flag: The window is hung (won't respond to events)
+#define WPF_INITGOOD        0x00001000//If the initialization process succeeded
+#define WPF_FLBRDFRC        0x00002000//Internal flag: Remove the flat border when removing maximization
 
 //m_flags
 #define WF_NOCLOSE  0x00000001//Disable close button
@@ -572,19 +578,13 @@ enum CURSORTYPE
 #define WF_MAXIMIZE 0x00001000//The window is maximized.
 #define WF_MINIMIZE 0x00002000//The window is minimized.
 #define WF_NOIFOCUS 0x00004000//The window won't be focused on creation.
+#define WF_SYSPOPUP 0x00008000//Internal flag: System Popup (omit from taskbar)
+#define WF_MENUITEM 0x00010000//Internal flag: Menu Item
+#define WI_NEVERSEL 0x00020000//Internal flag: Never select this window.
+#define WI_MESSGBOX 0x00040000//Internal flag: This is a message box. Wait for it
 
-#define WI_OPENMENU 0x00400000//Internal flag: A menu is open from this window's menu bar -- don't open another.
-#define WI_NEVERSEL 0x00800000//Internal flag: Never select this window.
-#define WI_NOHIDDEN 0x01000000//Internal flag: This window wasn't hidden at the time of resizing.
-#define WI_MESSGBOX 0x02000000//Internal flag: This is a message box. Wait for it
-#define WI_FROZENRM 0x04000000//Internal flag: Remove the 'frozen' flag when the window is no longer hung
-#define WI_HUNGWIND 0x08000000//Internal flag: The window is hung (won't respond to events)
-#define WF_SYSPOPUP 0x10000000//Internal flag: System Popup (omit from taskbar)
-#define WF_MENUITEM 0x20000000//Internal flag: Menu Item
-#define WI_INITGOOD 0x40000000//If the initialization process succeeded
-#define WF_FLBRDFRC 0x80000000//Internal flag: Remove the flat border when removing maximization
 
-#define WI_INTEMASK 0xCD400000//Internal flag mask that CreateWindow will filter
+#define WI_INTEMASK 0x00000000//Internal flag mask that CreateWindow will filter
 
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 

@@ -17,14 +17,14 @@ void OnWindowHung(Window *pWindow)
 		return;
 	
 	//don't hang twice
-	if (pWindow->m_flags & WI_HUNGWIND)
+	if (pWindow->m_privFlags & WPF_HUNGWIND)
 		return;
 	
 	SLogMsg("Window with address %x (title: %s) is being marked as hung...", pWindow, pWindow->m_title);
 	
-	pWindow->m_flags |= WI_HUNGWIND;
+	pWindow->m_privFlags |= WPF_HUNGWIND;
 	if (!(pWindow->m_flags & WF_FROZEN))
-		pWindow->m_flags |= WI_FROZENRM;
+		pWindow->m_privFlags |= WPF_FROZENRM;
 	
 	// draw the window title bar and say that it's not responding
 	if (!(pWindow->m_flags & WF_NOBORDER))
@@ -298,13 +298,13 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	pWindow->m_fullVbeData.m_dirty = 0;
 	//pWindow->m_renderFinished = false;
 	
-	if (pWindow->m_flags & WI_HUNGWIND)
+	if (pWindow->m_privFlags & WPF_HUNGWIND)
 	{
-		SLogMsg("Window %s no longer frozen!", pWindow->m_title);
+		//SLogMsg("Window %s no longer frozen!", pWindow->m_title);
 		// Window no longer frozen
-		pWindow->m_flags &= ~WI_HUNGWIND;
+		pWindow->m_privFlags &= ~WPF_HUNGWIND;
 		
-		if (pWindow->m_flags &  WI_FROZENRM)
+		if (pWindow->m_privFlags & WPF_FROZENRM)
 			pWindow->m_flags &= ~WF_FROZEN;
 		
 		// Un-hang the window
@@ -398,7 +398,10 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pWindow->m_flags |= WF_MAXIMIZE;
 		
 		if (!(pWindow->m_flags & WF_FLATBORD))
-			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
+		{
+			pWindow->m_flags |= WF_FLATBORD;
+			pWindow->m_privFlags |= WPF_FLBRDFRC;
+		}
 		
 		//WmOnChangedBorderParms(pWindow);
 		
@@ -434,9 +437,10 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		pWindow->m_flags &= ~WF_MAXIMIZE;
 		
-		if (pWindow->m_flags & WF_FLBRDFRC)
+		if (pWindow->m_privFlags & WPF_FLBRDFRC)
 		{
-			pWindow->m_flags &= ~(WF_FLBRDFRC | WF_FLATBORD);
+			pWindow->m_flags &= ~WF_FLATBORD;
+			pWindow->m_privFlags &= ~WPF_FLBRDFRC;
 		}
 		
 		pWindow->m_renderFinished = true;
@@ -654,9 +658,9 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		}
 		case EVENT_CREATE:
 		{
-			if (pWindow->m_flags & WI_INITGOOD) break;
+			if (pWindow->m_privFlags & WPF_INITGOOD) break;
 			
-			pWindow->m_flags |= WI_INITGOOD;
+			pWindow->m_privFlags |= WPF_INITGOOD;
 			
 			break;
 		}

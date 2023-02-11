@@ -698,7 +698,10 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		clientYSize = ySize - margins.top - margins.bottom;
 		
 		if (!(pWnd->m_flags & WF_FLATBORD))
-			pWnd->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
+		{
+			pWnd->m_privFlags |= WPF_FLBRDFRC;
+			pWnd->m_flags |= WF_FLATBORD;
+		}
 	}
 	
 	if (pWnd->m_flags & WF_MINIMIZE)
