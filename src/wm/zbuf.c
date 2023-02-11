@@ -209,7 +209,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		if (windowDrawList[i]->m_hidden) continue;
 		// Hrm... we should probably use the new VidBitBlit for this
 		
-		if (windowDrawList[i]->m_minimized)
+		if (windowDrawList[i]->m_flags & WF_MINIMIZE)
 		{
 			//TODO?
 		}

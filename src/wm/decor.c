@@ -46,7 +46,6 @@ void WindowTitleLayout(
 	Rectangle windowRect,
 	uint32_t flags,
 	uint32_t iconID,
-	uint32_t maximized,
 	bool      *bTitleHas3dShape,
 	Rectangle *pTitleRect,
 	Rectangle *pTitleGradientRect,
@@ -56,6 +55,8 @@ void WindowTitleLayout(
 	Rectangle *pIconButtonRect
 )
 {
+	bool maximized = flags & WF_MAXIMIZE;
+	
 	Rectangle rectb = windowRect;
 	
 	if (!(flags & WF_NOBORDER))
@@ -121,7 +122,7 @@ void WindowTitleLayout(
 			rectb.bottom -= 3;
 		}
 		
-		if (flags & WF_FLATBORD)
+		if ((flags & (WF_FLATBORD | WF_MAXIMIZE)) == WF_FLATBORD)
 			rectb.top--, rectb.bottom++;
 		
 		if (!*bTitleHas3dShape)
@@ -129,7 +130,7 @@ void WindowTitleLayout(
 		
 		*pTitleGradientRect = rectb;
 		
-		if (flags & WF_FLATBORD)
+		if ((flags & (WF_FLATBORD | WF_MAXIMIZE)) == WF_FLATBORD)
 			rectb.top++, rectb.bottom--;
 		
 		if (maximized)
@@ -182,7 +183,8 @@ bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut)
 	rect.right  -= rect.left;
 	rect.bottom -= rect.top;
 	rect.left    = rect.top = 0;
-	if (pWindow->m_minimized)
+	
+	if (pWindow->m_flags & WF_MINIMIZE)
 	{
 		*pRectOut = rect;
 		return true;
@@ -192,22 +194,24 @@ bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut)
 	
 	Rectangle uselessGarbage[10]; bool moreUselessness = false;
 	
-	WindowTitleLayout(rect, pWindow->m_flags, pWindow->m_iconID, pWindow->m_maximized, &moreUselessness, pRectOut, uselessGarbage, uselessGarbage+1, uselessGarbage+2, uselessGarbage+3, uselessGarbage+4);
+	WindowTitleLayout(rect, pWindow->m_flags, pWindow->m_iconID, &moreUselessness, pRectOut, uselessGarbage, uselessGarbage+1, uselessGarbage+2, uselessGarbage+3, uselessGarbage+4);
 
 	return true;
 }
 
-void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected, bool maximized)
+void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected)
 {
 	Rectangle titleRect, titleGradRect, minimBtnRect, maximBtnRect, closeBtnRect, iconBtnRect;
 	bool bTitleHas3dShape;
-	WindowTitleLayout(windowRect, flags, iconID, maximized, &bTitleHas3dShape, &titleRect, &titleGradRect, &minimBtnRect, &maximBtnRect, &closeBtnRect, &iconBtnRect);
+	WindowTitleLayout(windowRect, flags, iconID, &bTitleHas3dShape, &titleRect, &titleGradRect, &minimBtnRect, &maximBtnRect, &closeBtnRect, &iconBtnRect);
 	
-	if (!(flags & WF_NOBORDER))
+	bool maximized = flags & WF_MAXIMIZE;
+	
+	if (~flags & WF_NOBORDER)
 	{
 		if (flags & WF_FLATBORD)
 		{
-			if (!maximized)
+			if (~flags & WF_MAXIMIZE)
 			{
 				Rectangle rectb = windowRect;
 				VidDrawRect(WINDOW_TEXT_COLOR, rectb.left, rectb.top, rectb.right - 1, rectb.bottom - 1);
@@ -297,10 +301,10 @@ void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		char windowtitle_copy[WINDOW_TITLE_MAX + 100];
 		strcpy (windowtitle_copy, pWindow->m_title);
 		strcat (windowtitle_copy, " (not responding)");
-		PaintWindowBorderStandard(recta, windowtitle_copy, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+		PaintWindowBorderStandard(recta, windowtitle_copy, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
 	}
 	else
-		PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+		PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
 	
 	/*char thing[32];
 	sprintf(thing, "ID : %d", (int)(pWindow - g_windows));
@@ -314,7 +318,7 @@ void WmPaintWindowBorder(Window* pWindow)
 	recta.bottom -= recta.top;  recta.top  = 0;
 	
 	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
-	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, pWindow->m_maximized);
+	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
 }
 
 void WmRepaintBackground(Window* pWindow)
@@ -333,7 +337,10 @@ void WmRepaintBorder(Window* pWindow)
 	rect.left = rect.top = 0;
 	
 	// repaint edges.
-	if (pWindow->m_flags & WF_FLATBORD)
+	if (pWindow->m_flags & WF_MAXIMIZE)
+	{
+	}
+	else if (pWindow->m_flags & WF_FLATBORD)
 	{
 		VidDrawRect(WINDOW_TEXT_COLOR, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
 	}

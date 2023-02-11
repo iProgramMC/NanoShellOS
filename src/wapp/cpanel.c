@@ -98,7 +98,7 @@ void RedrawEverything();
 	void SetDarkTheme   ();
 	#define DESKTOP_POPUP_WIDTH 600
 	#define DESKTOP_POPUP_HEITE 400
-	void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected, bool maximized);
+	void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected);
 	void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 	void WmOnChangedBorderSize();
 	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
@@ -114,19 +114,19 @@ void RedrawEverything();
 				RECT (r, DESKTOP_POPUP_WIDTH/2+20, 3+20, 250-1, 100-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
-				PaintWindowBorderStandard            (r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, false, false);
+				PaintWindowBorderStandard            (r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, false);
 				
 				RECT (r, DESKTOP_POPUP_WIDTH/2+30, 3+50, 250-1, 100-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
 				
-				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, true, false);
+				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, true);
 				
 				RECT (r, DESKTOP_POPUP_WIDTH/2+40, 3+75, 180-1, 70-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 				r.right++, r.bottom++;
 				
-				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, 0, ICON_APP_DEMO, true, false);
+				PaintWindowBorderStandard            (r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, 0, ICON_APP_DEMO, true);
 				break;
 			}
 			case EVENT_CREATE:

@@ -64,7 +64,7 @@ void WindowCheckButton(Window* pWindow, int eventType, int x, int y, int btnInde
 		pWindow->m_privFlags &= ~(hoveredMask | clickedMask);
 		
 		int evt = s_ClickEvent[btnIndex], parm1 = 0;
-		if (evt == EVENT_MAXIMIZE && pWindow->m_maximized)
+		if (evt == EVENT_MAXIMIZE && (pWindow->m_flags & WF_MAXIMIZE))
 			evt =  EVENT_UNMAXIMIZE;
 		if (evt == EVENT_SHOW_MENU_PRIVATE)
 			parm1 = MAKE_MOUSE_PARM(rect.left, rect.bottom);
@@ -86,7 +86,6 @@ void WindowTitleLayout(
 	Rectangle windowRect,
 	uint32_t flags,
 	uint32_t iconID,
-	uint32_t maximized,
 	bool      *bTitleHas3dShape,
 	Rectangle *pTitleRect,
 	Rectangle *pTitleGradientRect,
@@ -108,7 +107,7 @@ void WindowCheckButtons(Window* pWindow, int eventType, int x, int y)
 	
 	Rectangle titleRect, titleGradRect, minimBtnRect, maximBtnRect, closeBtnRect, iconBtnRect;
 	bool bTitleHas3dShape;
-	WindowTitleLayout(rectb, flags, pWindow->m_iconID, pWindow->m_maximized, &bTitleHas3dShape, &titleRect, &titleGradRect, &minimBtnRect, &maximBtnRect, &closeBtnRect, &iconBtnRect);
+	WindowTitleLayout(rectb, flags, pWindow->m_iconID, &bTitleHas3dShape, &titleRect, &titleGradRect, &minimBtnRect, &maximBtnRect, &closeBtnRect, &iconBtnRect);
 	
 	if (pWindow->m_iconID != ICON_NULL)
 	{
@@ -158,12 +157,12 @@ void OnUILeftClick (int mouseX, int mouseY)
 			Rectangle margins = GetWindowMargins(window);
 			int offsX = -margins.left, offsY = -margins.top;
 			
-			if (!window->m_maximized && (t || window->m_minimized))
+			if (!(window->m_flags & WF_MAXIMIZE) && (t || (window->m_flags & WF_MINIMIZE)))
 			{
 				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 1);
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			}
-			else if (!window->m_minimized)
+			else if (!(window->m_flags & WF_MINIMIZE))
 			{
 				int x = mouseX - window->m_fullRect.left;
 				int y = mouseY - window->m_fullRect.top;
@@ -198,7 +197,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	Window* window = g_currentlyClickedWindow;
 	
 	// if we're not frozen AND we have a title to drag on
-	if (window->m_minimized || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
+	if ((window->m_flags & WF_MINIMIZE) || !(window->m_flags & (WF_FROZEN | WF_NOTITLE)))
 	{
 		if (!window->m_isBeingDragged)
 		{
@@ -210,7 +209,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			int y = mouseY - window->m_fullRect.top;
 			Point mousePoint = {x, y};
 			
-			if (!window->m_maximized && (RectangleContains(&recta, &mousePoint) || window->m_minimized))
+			if (!(window->m_flags & WF_MAXIMIZE) && (RectangleContains(&recta, &mousePoint) || (window->m_flags & WF_MINIMIZE)))
 			{
 				window->m_isBeingDragged = true;
 				
@@ -220,7 +219,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				}
 				
 				//change cursor:
-				if (window->m_minimized)
+				if (window->m_flags & WF_MINIMIZE)
 				{
 					Image* p = GetIconImage(window->m_iconID, 32);
 					g_windowDragCursor.width    = p->width;
@@ -266,7 +265,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 				
 				SetCursor (&g_windowDragCursor);
 			}
-			if (!window->m_minimized && !window->m_isBeingDragged)
+			if (!(window->m_flags & WF_MINIMIZE) && !window->m_isBeingDragged)
 			{
 				window->m_clickedInside = true;
 				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
@@ -335,7 +334,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 		}
 	}
 	
-	if (pWindow->m_minimized) return;
+	if (pWindow->m_flags & WF_MINIMIZE) return;
 	
 	int x = mouseX - pWindow->m_fullRect.left;
 	int y = mouseY - pWindow->m_fullRect.top;
@@ -366,7 +365,7 @@ void OnUIRightClick (int mouseX, int mouseY)
 	
 	if (window)
 	{
-		if (!window->m_minimized)
+		if (!(window->m_flags & WF_MINIMIZE))
 		{
 			int x = mouseX - window->m_fullRect.left;
 			int y = mouseY - window->m_fullRect.top;
@@ -388,7 +387,7 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 	
 	if (window)
 	{
-		if (window->m_minimized)
+		if (window->m_flags & WF_MINIMIZE)
 		{
 			WindowRegisterEvent (window, EVENT_UNMINIMIZE, 0, 0);
 		}

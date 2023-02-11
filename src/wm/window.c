@@ -36,7 +36,10 @@ Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize)
 	}
 	
 	// If the window has a flat border.
-	if (flags & WF_FLATBORD)
+	if (flags & WF_MAXIMIZE)
+	{
+	}
+	else if (flags & WF_FLATBORD)
 	{
 		rect.left  ++;
 		rect.top   ++;
@@ -217,7 +220,7 @@ static void ShowWindowUnsafe (Window* pWindow)
 	pWindow->m_hidden = false;
 	
 	// Render it to the vbeData:
-	if (pWindow->m_minimized)
+	if (pWindow->m_flags & WF_MINIMIZE)
 	{
 		//TODO?
 	}
@@ -565,6 +568,8 @@ void* WmCAllocateIntsDis(size_t sz)
 	return pMem;
 }
 
+extern int g_TaskbarHeight;
+
 Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySize, WindowProc proc, int flags)
 {
 	flags &= ~WI_INTEMASK;
@@ -579,6 +584,14 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	}
 	
 	LockAcquire (&g_CreateLock);
+	
+	if (flags & WF_MAXIMIZE)
+	{
+		xPos = 0;
+		yPos = g_TaskbarHeight;
+		xSize = GetScreenWidth();
+		ySize = GetScreenHeight() - g_TaskbarHeight;
+	}
 	
 	Rectangle margins = GetMarginsWindowFlags(flags);
 	
@@ -664,8 +677,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_hidden         = true;//false;
 	pWnd->m_isBeingDragged = false;
 	pWnd->m_isSelected     = false;
-	pWnd->m_minimized      = false;
-	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_flags          = pWnd->m_lastWindowFlags = flags;// | WF_FLATBORD;
 	
@@ -839,7 +850,7 @@ void RenderWindow (Window* pWindow)
 		SLogMsg("Return Address: %p, Task: %p", __builtin_return_address(0), KeGetRunningTask());
 	}
 	
-	if (pWindow->m_minimized)
+	if (pWindow->m_flags & WF_MINIMIZE)
 	{
 		// Draw as icon
 		RenderIconForceSize(pWindow->m_iconID, pWindow->m_fullRect.left, pWindow->m_fullRect.top, 32);

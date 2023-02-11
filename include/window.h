@@ -569,6 +569,8 @@ enum CURSORTYPE
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 #define WF_BACKGRND 0x00000400//The window is on a separate 'background' layer, behind normal windows.
 #define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
+#define WF_MAXIMIZE 0x00001000//The window is maximized.
+#define WF_MINIMIZE 0x00002000//The window is minimized.
 
 #define WI_OPENMENU 0x00400000//Internal flag: A menu is open from this window's menu bar -- don't open another.
 #define WI_NEVERSEL 0x00800000//Internal flag: Never select this window.
@@ -591,7 +593,7 @@ enum CURSORTYPE
 typedef struct WindowStruct
 {
 	bool       m_used;
-	bool       m_minimized;
+	bool       m_reserved0;
 	bool       m_hidden;
 	bool       m_isBeingDragged;
 	bool       m_isSelected;
@@ -637,7 +639,7 @@ typedef struct WindowStruct
 	
 	int        m_cursorID;
 	
-	bool       m_maximized;
+	bool       m_reserved1;
 	
 	// Raw input buffer.
 	char*      m_inputBuffer;

@@ -205,7 +205,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 						
 						//hmm??
 						Window* pWindow = &g_windows[pQuery->windowID];
-						if (pWindow->m_hidden && pWindow->m_minimized) //TODO
+						if (pWindow->m_hidden && (pWindow->m_flags & WF_MINIMIZE)) //TODO
 						{
 							//Unhide and unminimize
 							WindowRegisterEvent (pWindow, EVENT_UNMINIMIZE, 0, 0);

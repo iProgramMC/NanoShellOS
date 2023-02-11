@@ -321,9 +321,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		VidSetVBEData (NULL);
 		HideWindow (pWindow);
-		if (!pWindow->m_minimized)
+		if (~pWindow->m_flags & WF_MINIMIZE)
 		{
-			pWindow->m_minimized   = true;
+			pWindow->m_flags      |= WF_MINIMIZE;
 			pWindow->m_rectBackup  = pWindow->m_rect;
 			
 			pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
@@ -357,7 +357,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		VidSetVBEData (NULL);
 		HideWindow (pWindow);
 		
-		pWindow->m_minimized   = false;
+		pWindow->m_flags &= ~WF_MINIMIZE;
 		pWindow->m_rect = pWindow->m_rectBackup;
 		
 		ShowWindow (pWindow);
@@ -392,22 +392,22 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			old_title_rect = newRect;
 		}
 		
-		if (!pWindow->m_maximized)
+		if (~pWindow->m_flags & WF_MAXIMIZE)
 			pWindow->m_rectBackup = pWindow->m_fullRect;
 		
-		pWindow->m_maximized  = true;
+		pWindow->m_flags |= WF_MAXIMIZE;
 		
 		if (!(pWindow->m_flags & WF_FLATBORD))
 			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
 		
-		WmOnChangedBorderParms(pWindow);
+		//WmOnChangedBorderParms(pWindow);
 		
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
 		
 		if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
 		
-		//ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
+		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
 		
 		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		
@@ -423,7 +423,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		Rectangle new_title_rect = { pWindow->m_rectBackup.left + 3, pWindow->m_rectBackup.top + 3, pWindow->m_rectBackup.right - 3, pWindow->m_rectBackup.top + 3 + TITLE_BAR_HEIGHT };
 		
-		if (pWindow->m_maximized)
+		if (pWindow->m_flags & WF_MAXIMIZE)
 		{
 			if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
 			
@@ -432,7 +432,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		}
 		
-		pWindow->m_maximized = false;
+		pWindow->m_flags &= ~WF_MAXIMIZE;
 		
 		if (pWindow->m_flags & WF_FLBRDFRC)
 		{
@@ -475,7 +475,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	// Perform operations after calling into the user application.
 	
-	if (!pWindow->m_minimized)
+	if (~pWindow->m_flags & WF_MINIMIZE)
 	{
 		if (pWindow->m_vbeData.m_dirty)
 		{
