@@ -687,6 +687,9 @@ typedef struct WindowStruct
 	
 	// The known border size. This is used in ResizeWindow when the border size changes.
 	int        m_knownBorderSize;
+	
+	// The last window flags, before a border size recalculation
+	int        m_lastWindowFlags;
 }
 Window;
 

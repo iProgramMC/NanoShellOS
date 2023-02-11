@@ -67,6 +67,10 @@ void WindowTitleLayout(
 				rectb.right++;
 				rectb.left --;
 			}
+			else
+			{
+				rectb.top++;
+			}
 		}
 		else
 		{
@@ -117,10 +121,16 @@ void WindowTitleLayout(
 			rectb.bottom -= 3;
 		}
 		
+		if (flags & WF_FLATBORD)
+			rectb.top--, rectb.bottom++;
+		
 		if (!*bTitleHas3dShape)
 			*pTitleRect = rectb;
 		
 		*pTitleGradientRect = rectb;
+		
+		if (flags & WF_FLATBORD)
+			rectb.top++, rectb.bottom--;
 		
 		if (maximized)
 		{
@@ -253,7 +263,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		
 		int offset = (titleGradRect.right - titleGradRect.left - textwidth) / 2;
 		
-		int textOffset = (TITLE_BAR_HEIGHT - height) / 2 + maximized;
+		int textOffset = (TITLE_BAR_HEIGHT - height) / 2 + maximized + ((flags & WF_FLATBORD) != 0);
 		
 		VidTextOut(pTitle, titleGradRect.left + offset + 1, titleGradRect.top - 0 + textOffset, FLAGS_TOO(uflags, WINDOW_TITLE_TEXT_COLOR_SHADOW), TRANSPARENT);
 		VidTextOut(pTitle, titleGradRect.left + offset + 0, titleGradRect.top - 1 + textOffset, FLAGS_TOO(uflags, WINDOW_TITLE_TEXT_COLOR       ), TRANSPARENT);

@@ -394,20 +394,20 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		if (!pWindow->m_maximized)
 			pWindow->m_rectBackup = pWindow->m_fullRect;
-		pWindow->m_maximized  = true;
 		
-		pWindow->m_rect.left = 0;
-		pWindow->m_rect.top  = g_TaskbarHeight - 1;
+		pWindow->m_maximized  = true;
 		
 		if (!(pWindow->m_flags & WF_FLATBORD))
 			pWindow->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
+		
+		WmOnChangedBorderParms(pWindow);
 		
 		int e = g_TaskbarHeight - 1;
 		if (e < 0) e = 0;
 		
 		if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
 		
-		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
+		//ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
 		
 		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		

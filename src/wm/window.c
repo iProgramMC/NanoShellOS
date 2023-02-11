@@ -62,7 +62,7 @@ Rectangle GetMarginsWindowFlags(uint32_t flags)
 
 Rectangle GetWindowMargins(Window* pWindow)
 {
-	return GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, pWindow->m_knownBorderSize);
+	return GetMarginsWindowFlagsAndBorderSize(pWindow->m_lastWindowFlags, pWindow->m_knownBorderSize);
 }
 
 Rectangle GetWindowClientRect(Window* pWindow, bool offset)
@@ -85,11 +85,15 @@ void WmOnChangedBorderParms(Window* pWindow)
 	int clientAreaWidth  = ca.right  - ca.left;
 	int clientAreaHeight = ca.bottom - ca.top;
 	
+	SLogMsg("Client area width: %d  height: %d",clientAreaWidth,clientAreaHeight);
+	
 	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, BORDER_SIZE);
 	
 	int newX = ca.left - margins.left, newY = ca.top - margins.top;
 	int newW = clientAreaWidth + margins.left + margins.right;
 	int newH = clientAreaHeight + margins.top + margins.bottom;
+	
+	SLogMsg("New dimensions: X:%d Y:%d W:%d H:%d",newX,newY,newW,newH);
 	
 	if (pWindow->m_rect.left == newX && pWindow->m_rect.top == newY && pWindow->m_rect.right == newX + newW && pWindow->m_rect.bottom == newY + newH)
 		return;
@@ -327,6 +331,7 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	
 	Rectangle oldMarg = GetWindowMargins(pWindow);
 	pWindow->m_knownBorderSize = BORDER_SIZE;
+	pWindow->m_lastWindowFlags = pWindow->m_flags;
 	Rectangle margins = GetWindowMargins(pWindow);
 	
 	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * margins.top + margins.left];
@@ -662,7 +667,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_minimized      = false;
 	pWnd->m_maximized      = false;
 	pWnd->m_clickedInside  = false;
-	pWnd->m_flags          = flags;// | WF_FLATBORD;
+	pWnd->m_flags          = pWnd->m_lastWindowFlags = flags;// | WF_FLATBORD;
 	
 	pWnd->m_EventQueueLock.m_held = false;
 	pWnd->m_EventQueueLock.m_task_owning_it = NULL;
