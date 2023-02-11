@@ -15,6 +15,8 @@
 
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
 
+void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
+
 typedef enum
 {
 	DIR_UP,
@@ -80,7 +82,7 @@ static int TextInput_GetLineHeight()
 	return ch;
 }
 
-static int TextInput_GetCharWidth(char c)
+UNUSED static int TextInput_GetCharWidth(char c)
 {
 	unsigned old = VidSetFont(TEXT_EDIT_FONT);
 	int ch = GetCharWidth(c);

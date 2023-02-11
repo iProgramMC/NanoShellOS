@@ -6,6 +6,7 @@
 ******************************************/
 #include <wterm.h>
 #include <icon.h>
+#include <config.h>
 #include <wbuiltin.h>
 #include <misc.h>
 

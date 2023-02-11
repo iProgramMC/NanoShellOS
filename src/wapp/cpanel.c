@@ -197,7 +197,7 @@ void RedrawEverything();
 					
 					ApplyTheme(parm1 - DESKTOP_THEME_DEFAULT);
 					
-					if ((uint32_t)borderSize != BORDER_SIZE)
+					if (borderSize != BORDER_SIZE)
 					{
 						WmOnChangedBorderSize();
 					}

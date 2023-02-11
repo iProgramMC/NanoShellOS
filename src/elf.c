@@ -337,7 +337,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		for (int i = 0; i < pHeader->m_shNum; i++)
 		{
 			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
-			void *addr = (void*)pSectHeader->m_addr;
+			//void *addr = (void*)pSectHeader->m_addr;
 			if (pSectHeader->m_type == SHT_NOBITS)
 			{
 				//clear

@@ -41,7 +41,7 @@
 #define DEFAULT_WINDOW_TEXT_COLOR_LIGHT         0x00FFFFFF
 #define DEFAULT_SYSTEM_FONT                     FONT_BASIC
 #define DEFAULT_TITLE_BAR_HEIGHT                18
-#define DEFAULT_MENU_BAR_HEIGHT                 18
+#define DEFAULT_MENU_BAR_HEIGHT                 15
 #define DEFAULT_MENU_ITEM_HEIGHT                18
 #define DEFAULT_SCROLL_BAR_SIZE                 16
 #define DEFAULT_TITLE_BAR_FONT                  FONT_BASIC
@@ -963,10 +963,18 @@ typedef struct
 WindowQuery;
 
 /**
- * Query a list of windows.
+ * Get a list of the windows on the system in `table`.
  */
 void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows);
 
+/**
+ * Set the title of a window.
+ */
+void SetWindowTitle(Window* pWindow, const char* pText);
 
+/**
+ * Set the icon of a window.
+ */
+void SetWindowIcon(Window* pWindow, int icon);
 
 #endif//_WINDOW_H

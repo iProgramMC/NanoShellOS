@@ -932,3 +932,26 @@ void RenderWindow (Window* pWindow)
 	}
 #endif
 }
+
+void SetWindowIcon (Window* pWindow, int icon)
+{
+	pWindow->m_iconID = icon;
+}
+
+void SetWindowTitle(Window* pWindow, const char* pTitle)
+{
+	size_t sz = strlen(pTitle);
+	if (sz < WINDOW_TITLE_MAX-1)
+		sz = WINDOW_TITLE_MAX-1;
+	
+	char* str_dupl = MmAllocate(sz + 1);
+	if (!str_dupl)
+		return;
+	
+	memcpy(str_dupl, pTitle, sz);
+	str_dupl[sz] = 0;
+	
+	// Warning: If something crashes but this event isn't handled, 4k of memory will be leaked.
+	// TODO  Free any buffers passed through such events.
+	WindowAddEventToMasterQueue(pWindow, EVENT_SET_WINDOW_TITLE_PRIVATE, (int)str_dupl, 0);
+}

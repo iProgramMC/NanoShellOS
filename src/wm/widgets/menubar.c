@@ -16,12 +16,8 @@
 // Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
 // in parm1, and the menu item's comboID in parm2.
 
-#define MENU_BAR_HEIGHT TITLE_BAR_HEIGHT - 3
-
 bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
-	bool has3dBorder = !(pWindow->m_flags & WF_FLATBORD);
-	
 	Rectangle menu_bar_rect;
 	menu_bar_rect.left   = 0;
 	menu_bar_rect.top    = 0;
