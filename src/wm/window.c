@@ -585,14 +585,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	LockAcquire (&g_CreateLock);
 	
-	if (flags & WF_MAXIMIZE)
-	{
-		xPos = 0;
-		yPos = g_TaskbarHeight;
-		xSize = GetScreenWidth();
-		ySize = GetScreenHeight() - g_TaskbarHeight;
-	}
-	
 	Rectangle margins = GetMarginsWindowFlags(flags);
 	
 	xSize += margins.left + margins.right;
@@ -687,6 +679,28 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_fullRect.top  = yPos;
 	pWnd->m_fullRect.right  = xPos + xSize;
 	pWnd->m_fullRect.bottom = yPos + ySize;
+	
+	if (pWnd->m_flags & WF_MAXIMIZE)
+	{
+		pWnd->m_rectBackup = pWnd->m_fullRect;
+		
+		pWnd->m_fullRect.left   = 0;
+		pWnd->m_fullRect.top    = g_TaskbarHeight;
+		pWnd->m_fullRect.right  = GetScreenWidth();
+		pWnd->m_fullRect.bottom = GetScreenHeight() - g_TaskbarHeight;
+		
+		xSize = GetWidth (&pWnd->m_fullRect);
+		ySize = GetHeight(&pWnd->m_fullRect);
+		xPos = pWnd->m_fullRect.left;
+		yPos = pWnd->m_fullRect.top;
+		
+		clientXSize = xSize - margins.left - margins.right;
+		clientYSize = ySize - margins.top - margins.bottom;
+		
+		if (!(pWnd->m_flags & WF_FLATBORD))
+			pWnd->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
+	}
+	
 	pWnd->m_eventQueueSize = 0;
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 
