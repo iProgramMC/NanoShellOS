@@ -388,6 +388,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			
 			
 			SetTextInputText (pWindow, NOTEP_TEXTVIEW, "");
+			TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
 			
 			NOTEPDATA(pWindow)->m_untitled = true;
 			NOTEPDATA(pWindow)->m_filename[0] = 0;
@@ -401,6 +402,8 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			
 			// Assign the focus to the new text input control.
 			SetFocusedControl(pWindow, NOTEP_TEXTVIEW);
+			
+			NotepadUpdateTitle(pWindow);
 			
 			break;
 		}

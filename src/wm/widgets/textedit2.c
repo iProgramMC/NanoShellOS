@@ -157,6 +157,8 @@ static void TextInput_Clear(Control* this)
 	pData->m_scrollY = 0;
 	pData->m_maxScrollX = 0;
 	pData->m_maxScrollY = 0;
+	
+	pData->m_dirty = true;
 }
 
 TextLine* TextInput_AddLine(Control* ctl)
@@ -169,6 +171,8 @@ TextLine* TextInput_AddLine(Control* ctl)
 		this->m_lines_capacity += (4096 / sizeof(TextLine));
 		this->m_lines = MmReAllocate(this->m_lines, sizeof(TextLine) * this->m_lines_capacity);
 	}
+	
+	this->m_dirty = true;
 	
 	return &this->m_lines[this->m_num_lines++];
 }
@@ -284,12 +288,16 @@ static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
 	TextInput_CalculateLinePixelWidth(pCtl, pLine);
 	
 	TextInput_RepaintLine(pCtl, lineNum);
+	
+	pData->m_dirty = true;
 }
 
 static void TextInput_AppendText(Control* this, Window* pWindow, int line, int pos, const char* pText)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	TextLine* pLine = &pData->m_lines[line];
+	
+	pData->m_dirty = true;
 	
 	size_t sLen = strlen(pText);
 	
@@ -354,6 +362,8 @@ static void TextInput_EraseChars(Control* this, Window* pWindow, int line, int p
 	TextInputDataEx* pData = TextInput_GetData(this);
 	TextLine* pLine = &pData->m_lines[line];
 	
+	pData->m_dirty = true;
+	
 	// Ensure that the pos and sLen parms are valid.
 	
 	if (pos < 0)
@@ -368,21 +378,6 @@ static void TextInput_EraseChars(Control* this, Window* pWindow, int line, int p
 	if (pos + sLen >= (int)pLine->m_length)
 	{
 		sLen = (int)pLine->m_length - pos;
-	}
-	
-	if (pLine->m_length + sLen + 1 >= pLine->m_capacity)
-	{
-		// resize the thing
-		pLine->m_capacity += sLen;
-		void *pNewMem = MmReAllocate(pLine->m_text, pLine->m_capacity);
-		if (!pNewMem)
-		{
-			pLine->m_capacity -= sLen;
-			SLogMsg("TextInput_AppendText failed due to running out of virtual memory");
-			return;
-		}
-		
-		pLine->m_text = pNewMem;
 	}
 	
 	// memmove it away
@@ -408,6 +403,8 @@ static void TextInput_EraseChars(Control* this, Window* pWindow, int line, int p
 static void TextInput_InsertNewLines(Control* this, Window* pWindow, int linePos, int lineCount)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	pData->m_dirty = true;
 	
 	// If we can't fit 'lineCount' lines, make some space
 	if (pData->m_lines_capacity < pData->m_num_lines + lineCount)
@@ -482,6 +479,8 @@ static void TextInput_SplitLines(Control* this, Window* pWindow, int line, int s
 static void TextInput_EraseConsecutiveLines(Control* this, Window* pWindow, int lineStart, int lineCount)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	pData->m_dirty = true;
 	
 	// Make sure that the lineStart and lineCount are within bounds.
 	if (lineStart < 0)
@@ -593,7 +592,22 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 	int lineX = this->m_rect.left + 2 - scrollX;
 	int lineY = this->m_rect.top  + 2 - scrollY;
 	
-	for (size_t i = 0; i < pData->m_num_lines; i++)
+	int start = (pData->m_scrollY + rect.top - this->m_rect.top);
+	int end   = (start + (rect.bottom - rect.top) + GetLineHeight());
+	
+	start /= GetLineHeight();
+	start--;
+	end   /= GetLineHeight();
+	end++;
+	
+	if (start < 0) start = 0;
+	if (start >= (int)pData->m_num_lines) start = (int)pData->m_num_lines;
+	if (end < 0) end = 0;
+	if (end >= (int)pData->m_num_lines) end = (int)pData->m_num_lines;
+	
+	lineY += start * GetLineHeight();
+	
+	for (size_t i = start; i < (size_t)end; i++)
 	{
 		//VidTextOut(pData->m_lines[i].m_text, lineX, lineY, WINDOW_TEXT_COLOR, WINDOW_TEXT_COLOR_LIGHT);
 		int charX = lineX;
