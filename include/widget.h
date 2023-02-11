@@ -176,7 +176,7 @@ const char* TextInputGetRawText(Window* pWindow, int comboID);
  * TEXTEDIT_STYLING:   Enables NanoShell styling of the text.  It uses non-typable characters to format text.
  * TEXTEDIT_SYNTHILT:  Enables syntax highlighting for C.
  */
-void CtlTextInputUpdateMode (Control *pControl); //internal
+void CtlTextInputUpdateMode (Control *pControl, Window* pWindow); //internal
 void TextInputSetMode (Window *pWindow, int comboID, int mode);
 
 /**

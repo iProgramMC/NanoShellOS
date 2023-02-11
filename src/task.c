@@ -36,12 +36,14 @@ static VBEData*       g_kernelVBEContext = NULL;
 static UserHeap*      g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
 static const uint8_t* g_kernelFontContext = NULL;
+static uint32_t       g_kernelFontIDContext = 0;
 static char           g_kernelCwd[PATH_MAX+2];
 static uint32_t       g_kernelSysCallNum; //honestly, kind of useless since the kernel task will never be an ELF trying to call into the system :^)
 
 extern UserHeap*      g_pCurrentUserHeap;
 extern Console*       g_currentConsole; //logmsg
 extern const uint8_t* g_pCurrentFont;
+extern uint32_t       g_nCurrentFontID;
 extern char           g_cwd[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
@@ -763,6 +765,7 @@ void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 		pTask->m_pCurrentHeap    = g_pCurrentUserHeap;
 		pTask->m_pConsoleContext = g_currentConsole;
 		pTask->m_pFontContext    = g_pCurrentFont;
+		pTask->m_pFontIDContext  = g_nCurrentFontID;
 		pTask->m_sysCallNum      = *pSysCallNum;
 	}
 	else
@@ -774,6 +777,7 @@ void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 		g_kernelHeapContext    = g_pCurrentUserHeap;
 		g_kernelConsoleContext = g_currentConsole;
 		g_kernelFontContext    = g_pCurrentFont;
+		g_kernelFontIDContext  = g_nCurrentFontID;
 		g_kernelSysCallNum     = *pSysCallNum;
 	}
 	
@@ -795,6 +799,7 @@ void KeRestoreTaskInternalContext()
 		g_vbeData        = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
 		g_pCurrentFont   = pNewTask->m_pFontContext;
+		g_nCurrentFontID = pNewTask->m_pFontIDContext;
 		*pSysCallNum     = pNewTask->m_sysCallNum;
 		g_pProcess = (Process*)pNewTask->m_pProcess;
 		MuiUseHeap (pNewTask->m_pCurrentHeap);
@@ -805,7 +810,8 @@ void KeRestoreTaskInternalContext()
 		memcpy (g_cwd, g_kernelCwd, sizeof (g_cwd));
 		g_vbeData = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
-		g_pCurrentFont = g_kernelFontContext;
+		g_pCurrentFont   = g_kernelFontContext;
+		g_nCurrentFontID = g_kernelFontIDContext;
 		*pSysCallNum     = g_kernelSysCallNum;
 		g_pProcess = NULL;
 		MuiUseHeap (g_kernelHeapContext);

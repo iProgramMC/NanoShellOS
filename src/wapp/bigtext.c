@@ -399,6 +399,9 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 				MmFree((void*)pOldData);
 			}
 			
+			// Assign the focus to the new text input control.
+			SetFocusedControl(pWindow, NOTEP_TEXTVIEW);
+			
 			break;
 		}
 		case EVENT_COMMAND:

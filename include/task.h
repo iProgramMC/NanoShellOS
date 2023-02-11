@@ -128,6 +128,7 @@ typedef struct
 	UserHeap *     m_pCurrentHeap;
 	Console*       m_pConsoleContext;
 	const uint8_t* m_pFontContext;
+	uint32_t       m_pFontIDContext;
 	
 	char 		   m_tag[33];
 	void *         m_pProcess;

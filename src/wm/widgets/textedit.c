@@ -16,6 +16,8 @@
 #include <wmenu.h>
 #include <string.h>
 
+#if 0
+
 #define TAB_WIDTH 4
 
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
@@ -1036,3 +1038,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 	}
 	return false;
 }
+
+#endif
+
+

@@ -280,7 +280,7 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2);
 /**
  * Sets the current screen font.
  */
-void VidSetFont(unsigned fontType);
+unsigned VidSetFont(unsigned fontType);
 
 /**
  * Draws a character in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).
@@ -479,6 +479,11 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
  * Kills a CreateFont() created font.  Other fonts cannot be killed.
  */
 void KillFont (int fontID);
+
+/**
+ * Scrolls a rectangle by a certain amount. Drawing over the leftover parts is to be done by the user.
+ */
+void ScrollRect(Rectangle* pRect, int amountX, int amountY);
 
 
 #endif//_VIDEO_H

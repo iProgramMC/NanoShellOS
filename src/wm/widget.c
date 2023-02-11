@@ -221,13 +221,14 @@ bool WidgetCheckbox_OnEvent     (C_PARMS);
 bool WidgetTaskList_OnEvent     (C_PARMS);
 bool WidgetTableView_OnEvent    (C_PARMS);
 bool WidgetButtonIconChk_OnEvent(C_PARMS);
+bool WidgetTextEditView2_OnEvent(C_PARMS);
 
 WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetNone_OnEvent,
 	WidgetText_OnEvent,
 	WidgetIcon_OnEvent,
 	WidgetButton_OnEvent,
-	WidgetTextEditView_OnEvent,
+	WidgetTextEditView2_OnEvent,
 	WidgetCheckbox_OnEvent,
 	WidgetClickLabel_OnEvent,
 	WidgetTextCenter_OnEvent,

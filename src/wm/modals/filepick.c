@@ -44,6 +44,7 @@ void FilePickerUpdate (Window *pWindow)
 	
 	if (!FsOpenDir(pFolderNode))
 	{
+		SLogMsg("Failed to load cwd: '%s'", pCwd);
 		MessageBox(pWindow, "Could not load directory.", "File picker", ICON_ERROR | ICON_WARNING << 16);
 		return;
 	}

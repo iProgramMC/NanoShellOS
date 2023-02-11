@@ -115,11 +115,6 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		if (pControl->m_scrollBarData.m_pos >= pControl->m_scrollBarData.m_max)
 			pControl->m_scrollBarData.m_pos =  pControl->m_scrollBarData.m_max - 1;
 	}
-	else if (type == CONTROL_TEXTINPUT)
-	{
-		//by default you have single line
-		CtlTextInputUpdateMode (pControl);
-	}
 	else if (type == CONTROL_CHECKBOX)
 	{
 		//by default you have single line

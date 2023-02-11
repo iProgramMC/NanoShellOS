@@ -208,6 +208,7 @@ enum {
 	EVENT_CHECKBOX,
 	EVENT_SCROLLDONE,
 	EVENT_BGREPAINT,
+	EVENT_CTL_REPAINT,//parm1 represents the comboID of the control to repaint.
 	EVENT_MAX,
 	
 	EVENT_PRIVATE_START = 0xF00,

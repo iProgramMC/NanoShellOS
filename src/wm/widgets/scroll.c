@@ -137,6 +137,11 @@ go_back:;
 	
 	switch (eventType)
 	{
+		case EVENT_CTL_REPAINT:
+		{
+			WidgetHScrollBar_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
 		case EVENT_CLICKCURSOR:
 		{
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
@@ -272,6 +277,11 @@ go_back:;
 	
 	switch (eventType)
 	{
+		case EVENT_CTL_REPAINT:
+		{
+			WidgetVScrollBar_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+			break;
+		}
 		case EVENT_RELEASECURSOR:
 		{
 			if (this->m_scrollBarData.m_isBeingDragged || this->m_scrollBarData.m_yMinButton || this->m_scrollBarData.m_yMaxButton)

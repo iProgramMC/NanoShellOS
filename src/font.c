@@ -64,6 +64,8 @@ BitmapFont;
 	};
 	
 	const unsigned char* g_pCurrentFont = NULL;
+	
+	uint32_t g_nCurrentFontID = 0;
 #endif
 
 // Pixel plotting
@@ -296,7 +298,7 @@ void KillFont (int fontID)
 		return g_pCurrentFont[1];
 	}
 	
-	void VidSetFont(unsigned fontType)
+	unsigned VidSetFont(unsigned fontType)
 	{
 		if (fontType >= FONT_LAST)
 		{
@@ -304,6 +306,7 @@ void KillFont (int fontID)
 			if (fontType2 < 0 || fontType2 > (int)ARRAY_COUNT(g_pLoadedFontsPool))
 			{
 				SLogMsg("Can't set the font to that! (%d)", fontType);
+				return VidSetFont(FONT_TAMSYN_BOLD);
 			}
 			else if (g_pLoadedFontsPool [fontType2])
 			{
@@ -313,12 +316,19 @@ void KillFont (int fontID)
 			else
 			{
 				SLogMsg("Tried to set font to disposed of/non available font?! Can't do that, sorry. Switching to a basic font");
-				VidSetFont(FONT_TAMSYN_BOLD);
+				return VidSetFont(FONT_TAMSYN_BOLD);
 			}
-			return;
+			
+			g_nCurrentFontID = fontType;
 		}
-		g_pCurrentFont  = g_pBasicFontData[fontType];
-		g_uses8by16Font = (g_pCurrentFont[1] != 8);
+		else
+		{
+			g_pCurrentFont  = g_pBasicFontData[fontType];
+			g_uses8by16Font = (g_pCurrentFont[1] != 8);
+		}
+		unsigned old = g_nCurrentFontID;
+		g_nCurrentFontID = fontType;
+		return old;
 	}
 	
 	const char* VidGetFontName(unsigned fontType)

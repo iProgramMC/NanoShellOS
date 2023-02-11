@@ -2043,6 +2043,8 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	if (rect.right  >= GetScreenSizeX()) rect.right  = GetScreenSizeX();
 	if (rect.bottom >= GetScreenSizeY()) rect.bottom = GetScreenSizeY();
 	
+	if (rect.left >= rect.right || rect.top >= rect.bottom) return;
+	
 	rect.left += ox; rect.right += ox;
 	rect.top += oy; rect.bottom += oy;
 	

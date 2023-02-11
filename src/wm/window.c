@@ -763,6 +763,8 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	memset(pWnd->m_pControlArray, 0, controlArraySize);
 	AddWindowToDrawOrder (freeArea);
 	
+	pWnd->m_lastHandledMessagesWhen = GetTickCount();
+	
 	WindowRegisterEvent(pWnd, EVENT_CREATE, 0, 0);
 	WindowRegisterEvent(pWnd, EVENT_PAINT, 0, 0);
 	
