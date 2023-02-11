@@ -571,6 +571,7 @@ enum CURSORTYPE
 #define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
 #define WF_MAXIMIZE 0x00001000//The window is maximized.
 #define WF_MINIMIZE 0x00002000//The window is minimized.
+#define WF_NOIFOCUS 0x00004000//The window won't be focused on creation.
 
 #define WI_OPENMENU 0x00400000//Internal flag: A menu is open from this window's menu bar -- don't open another.
 #define WI_NEVERSEL 0x00800000//Internal flag: Never select this window.

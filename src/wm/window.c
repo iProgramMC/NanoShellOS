@@ -701,6 +701,13 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 			pWnd->m_flags |= WF_FLBRDFRC | WF_FLATBORD;
 	}
 	
+	if (pWnd->m_flags & WF_MINIMIZE)
+	{
+		pWnd->m_rectBackup = pWnd->m_fullRect;
+		
+		pWnd->m_hidden = true;
+	}
+	
 	pWnd->m_eventQueueSize = 0;
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 

@@ -501,8 +501,14 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_CREATE)
 	{
-		ShowWindow(pWindow);
-		SelectWindow(pWindow);
+		// If the window isn't minimized
+		if (~pWindow->m_flags & WF_MINIMIZE)
+		{
+			ShowWindow(pWindow);
+			
+			if (~pWindow->m_flags & WF_NOIFOCUS)
+				SelectWindow(pWindow);
+		}
 	}
 	else if (eventType == EVENT_DESTROY)
 	{
