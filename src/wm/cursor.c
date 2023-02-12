@@ -18,6 +18,11 @@ Cursor* const g_CursorLUT[] =
 	&g_iBeamCursor,
 	&g_crossCursor,
 	&g_pencilCursor,
+	&g_resizeNSCursor,
+	&g_resizeWECursor,
+	&g_resizeNWSECursor,
+	&g_resizeNESWCursor,
+	&g_resizeAllCursor,
 };
 
 typedef struct

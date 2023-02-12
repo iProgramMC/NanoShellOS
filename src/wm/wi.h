@@ -45,7 +45,8 @@ typedef struct Tooltip
 Tooltip;
 
 extern Cursor   g_windowDragCursor;
-extern Cursor*  g_currentCursor, g_defaultCursor, g_waitCursor, g_iBeamCursor, g_crossCursor, g_pencilCursor;
+extern Cursor*  g_currentCursor, g_defaultCursor, g_waitCursor, g_iBeamCursor, g_crossCursor, g_pencilCursor, g_resizeNSCursor,
+                g_resizeWECursor, g_resizeNESWCursor, g_resizeNWSECursor, g_resizeAllCursor;
 extern Window   g_windows [WINDOWS_MAX];
 extern Window*  g_focusedOnWindow;
 extern Window*  g_pShutdownMessage;

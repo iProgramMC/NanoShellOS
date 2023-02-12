@@ -177,3 +177,139 @@ Cursor g_pencilCursor = {
 	false, 21, 21, -1, -1
 };
 
+uint32_t ImageResizeWECursor[] = {
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o o B B B o o o o B B B o o o
+	o o B B X B o o o o B X B B o o
+	o B B X X B o o o o B X X B B o
+	B B X X X B B B B B B X X X B B
+	B X X X X X X X X X X X X X X B
+	B X X X X X X X X X X X X X X B
+	B B X X X B B B B B B X X X B B
+	o B B X X B o o o o B X X B B o
+	o o B B X B o o o o B X B B o o
+	o o o B B B o o o o B B B o o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+};
+
+uint32_t ImageResizeNSCursor[] = {
+	o o o o o o B B B B o o o o o o
+	o o o o o B B X X B B o o o o o
+	o o o o B B X X X X B B o o o o
+	o o o B B X X X X X X B B o o o
+	o o o B X X X X X X X X B o o o
+	o o o B B B B X X B B B B o o o
+	o o o o o o B X X B o o o o o o
+	o o o o o o B X X B o o o o o o
+	o o o o o o B X X B o o o o o o
+	o o o o o o B X X B o o o o o o
+	o o o B B B B X X B B B B o o o
+	o o o B X X X X X X X X B o o o
+	o o o B B X X X X X X B B o o o
+	o o o o B B X X X X B B o o o o
+	o o o o o B B X X B B o o o o o
+	o o o o o o B B B B o o o o o o
+};
+
+uint32_t ImageResizeNWSECursor[] = {
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o B B B B B B B B o o o o o o
+	o o B X X X X X X B o o o o o o
+	o o B X X X X X B B o o o o o o
+	o o B X X X X B B o o o o o o o
+	o o B X X X X X B B o B B B o o
+	o o B X X B X X X B B B X B o o
+	o o B X B B B X X X B X X B o o
+	o o B B B o B B X X X X X B o o
+	o o o o o o o B B X X X X B o o
+	o o o o o o B B X X X X X B o o
+	o o o o o o B X X X X X X B o o
+	o o o o o o B B B B B B B B o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+};
+
+uint32_t ImageResizeNESWCursor[] = {
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o B B B B B B B B o o
+	o o o o o o B X X X X X X B o o
+	o o o o o o B B X X X X X B o o
+	o o o o o o o B B X X X X B o o
+	o o B B B o B B X X X X X B o o
+	o o B X B B B X X X B X X B o o
+	o o B X X B X X X B B B X B o o
+	o o B X X X X X B B o B B B o o
+	o o B X X X X B B o o o o o o o
+	o o B X X X X X B B o o o o o o
+	o o B X X X X X X B o o o o o o
+	o o B B B B B B B B o o o o o o
+	o o o o o o o o o o o o o o o o
+	o o o o o o o o o o o o o o o o
+};
+
+uint32_t ImageResizeAllCursor[] = {
+	o o o o o o o o o B B B B o o o o o o o o o
+	o o o o o o o o B B X X B B o o o o o o o o
+	o o o o o o o B B X X X X B B o o o o o o o
+	o o o o o o B B X X X X X X B B o o o o o o
+	o o o o o o B X X X X X X X X B o o o o o o
+	o o o o o o B B B B X X B B B B o o o o o o
+	o o o B B B o o o B X X B o o o B B B o o o
+	o o B B X B o o o B X X B o o o B X B B o o
+	o B B X X B o o o B X X B o o o B X X B B o
+	B B X X X B B B B B X X B B B B B X X X B B
+	B X X X X X X X X X X X X X X X X X X X X B
+	B X X X X X X X X X X X X X X X X X X X X B
+	B B X X X B B B B B X X B B B B B X X X B B
+	o B B X X B o o o B X X B o o o B X X B B o
+	o o B B X B o o o B X X B o o o B X B B o o
+	o o o B B B o o o B X X B o o o B B B o o o
+	o o o o o o B B B B X X B B B B o o o o o o
+	o o o o o o B X X X X X X X X B o o o o o o
+	o o o o o o B B X X X X X X B B o o o o o o
+	o o o o o o o B B X X X X B B o o o o o o o
+	o o o o o o o o B B X X B B o o o o o o o o
+	o o o o o o o o o B B B B o o o o o o o o o
+};
+
+Cursor g_resizeNSCursor = {
+	16, 16, 8, 8, 
+	ImageResizeNSCursor,
+	true,
+	false, 16, 16, -1, -1
+};
+
+Cursor g_resizeWECursor = {
+	16, 16, 8, 8, 
+	ImageResizeWECursor,
+	true,
+	false, 16, 16, -1, -1
+};
+
+Cursor g_resizeNESWCursor = {
+	16, 16, 8, 8, 
+	ImageResizeNESWCursor,
+	true,
+	false, 16, 16, -1, -1
+};
+
+Cursor g_resizeNWSECursor = {
+	16, 16, 8, 8, 
+	ImageResizeNWSECursor,
+	true,
+	false, 16, 16, -1, -1
+};
+
+Cursor g_resizeAllCursor = {
+	22, 22, 10, 10, 
+	ImageResizeAllCursor,
+	true,
+	false, 22, 22, -1, -1
+};
+

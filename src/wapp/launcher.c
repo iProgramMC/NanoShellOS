@@ -931,7 +931,7 @@ void RequestTaskbarUpdate()
 {
 	if (!g_pTaskBarWindow) return;
 	
-	WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE, 0, 0);
+	WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE, 0, 0);
 }
 void TaskbarEntry(__attribute__((unused)) int arg)
 {

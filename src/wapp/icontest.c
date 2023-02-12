@@ -62,6 +62,7 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 			//pWindow->m_data = (void*)id;
 			
 			//ChangeCursor(pWindow, id);
+			ChangeCursor(pWindow, CURSOR_SIZE_ALL);
 			
 			break;
 		}
