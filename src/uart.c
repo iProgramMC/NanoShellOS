@@ -95,7 +95,7 @@ bool UartIsTransmitEmpty(uint8_t comNum)
 bool UartIsReceiveEmpty(uint8_t comNum)
 {
 	short Port = g_uart_port_bases[comNum];
-	return((ReadPort(Port + 5) & 0x01) != 0);
+	return((ReadPort(Port + 5) & 0x01) == 0);
 }
 
 void UartOnInterrupt(uint8_t com_num)

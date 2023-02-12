@@ -1117,7 +1117,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			if (inChar == '\n' && (~this->m_parm1 & TEXTEDIT_MULTILINE))
 				break;
 			
-			if ((char)parm1 == '\b')
+			if ((char)parm1 == '\x7F')
 			{
 				if (pData->m_cursorX == 0)
 				{
@@ -1133,7 +1133,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					TextInput_OnNavPressed(this, DIR_LEFT);
 				}
 			}
-			else if (parm1 == '\n')
+			else if (parm1 == '\r' || parm1 == '\n')
 			{
 				TextInput_SplitLines(this, pData->m_cursorY, pData->m_cursorX);
 				TextInput_OnNavPressed(this, DIR_RIGHT);

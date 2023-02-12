@@ -642,6 +642,12 @@ bool CoVisComPrnChrInt (Console* this, char c, bool bDontUpdateCursor)
 					this->curX = this->width - 1;
 					if (--this->curY < 0) this->curY = 0;
 				}
+				break;
+			case '\x7F':
+				if (--this->curX < 0) {
+					this->curX = this->width - 1;
+					if (--this->curY < 0) this->curY = 0;
+				}
 				CoPlotChar(this, this->curX, this->curY, 0);
 				break;
 			case '\r': 

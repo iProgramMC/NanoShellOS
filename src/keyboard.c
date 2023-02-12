@@ -29,8 +29,8 @@ const unsigned char KeyboardMap[256] =
 {
 	// shift not pressed.
     0,  27, '1', '2',  '3',  '4', '5', '6',  '7', '8',
-  '9', '0', '-', '=', '\b', '\t', 'q', 'w',  'e', 'r',
-  't', 'y', 'u', 'i',  'o',  'p', '[', ']', '\n',   0,
+  '9', '0', '-', '=', '\x7F', '\t', 'q', 'w',  'e', 'r',
+  't', 'y', 'u', 'i',  'o',  'p', '[', ']', '\r',   0,
   'a', 's', 'd', 'f',  'g',  'h', 'j', 'k',  'l', ';',
  '\'', '`',   0,'\\',  'z',  'x', 'c', 'v',  'b', 'n',
   'm', ',', '.', '/',   0,   '*',
@@ -56,10 +56,10 @@ const unsigned char KeyboardMap[256] =
 	
 	// shift pressed.
 	0,  0, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
-  '(', ')', '_', '+', '\b',	/* Backspace */
+  '(', ')', '_', '+', '\x7F',	/* Backspace */
   '\t',			/* Tab */
   'Q', 'W', 'E', 'R',	/* 19 */
-  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',	/* Enter key */
+  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\r',	/* Enter key */
     0,			/* 29   - Control */
   'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',	/* 39 */
  '"', '~',   0,		/* Left shift */
@@ -89,10 +89,10 @@ const unsigned char KeyboardMap[256] =
 const unsigned char PrintableChars[256] =
 {
     0,  0, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-  '9', '0', '-', '=', '\b',	/* Backspace */
+  '9', '0', '-', '=', '\x7F',	/* Backspace */
   '\t',			/* Tab */
   'q', 'w', 'e', 'r',	/* 19 */
-  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
+  't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\r',	/* Enter key */
     0,			/* 29   - Control */
   'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
  '\'', '`',   0,		/* Left shift */
@@ -117,10 +117,10 @@ const unsigned char PrintableChars[256] =
   '+',
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0,  0, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
-  '(', ')', '_', '+', '\b',	/* Backspace */
+  '(', ')', '_', '+', '\x7F',	/* Backspace */
   '\t',			/* Tab */
   'Q', 'W', 'E', 'R',	/* 19 */
-  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',	/* Enter key */
+  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\r',	/* Enter key */
     0,			/* 29   - Control */
   'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',	/* 39 */
  '"', '~',   0,		/* Left shift */
@@ -237,14 +237,14 @@ void KbGetString(char* buffer, int max_size)
 	{
 		//! has to stall
 		char k = KbWaitForKeyAndGet();
-		if (k == '\n')
+		if (k == '\r' || k == '\n')
 		{
 			//return:
-			LogMsgNoCr("%c", k);
+			LogMsg("");
 			buffer[index++] = 0;
 			return;
 		}
-		else if (k == '\b')
+		else if (k == '\x7F')
 		{
 			if (index > 0)
 			{

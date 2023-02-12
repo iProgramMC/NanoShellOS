@@ -808,7 +808,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			if (this->m_textInputData.m_readOnly) break;
 			if ((char)parm1 == '\n' && this->m_textInputData.m_onlyOneLine)
 				break;
-			if ((char)parm1 == '\b')
+			if ((char)parm1 == '\x7F')
 			{
 				CtlRemoveCharFromAnywhere(this, pWindow, --this->m_textInputData.m_textCursorIndex);
 				CtlTextEditRecalcCurXY(this);

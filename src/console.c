@@ -46,14 +46,14 @@ void CoGetString(char* buffer, int max_size)
 	{
 		//! has to stall
 		char k = CoGetChar();
-		if (k == '\n')
+		if (k == '\r' || k == '\n')
 		{
 			//return:
-			LogMsgNoCr("%c", k);
+			LogMsg("");
 			buffer[index++] = 0;
 			return;
 		}
-		else if (k == '\b')
+		else if (k == '\x7F')
 		{
 			if (index > 0)
 			{

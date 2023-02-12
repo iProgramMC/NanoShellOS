@@ -112,6 +112,81 @@ extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
 uint64_t ReadTSC();
 
+void ShellMinicom(const char* pFile)
+{
+	if (strcmp(pFile, "--help") == 0)
+	{
+		LogMsg("mc help");
+		LogMsg("Usage: mc <device file name>");
+		LogMsg("To exit, press Ctrl-A, then Ctrl-D.");
+		LogMsg("Functionality:");
+		LogMsg("   MC is a terminal simulator. It allows both input and output through "
+		       "character devices, such as serial ports.");
+	}
+	
+	StatResult sr;
+	int ec = FiStat(pFile, &sr);
+	if (ec < 0)
+	{
+		LogMsg("mc: cannot stat '%s': %s", pFile, GetErrNoString(ec));
+		return;
+	}
+	
+	if (sr.m_type != FILE_TYPE_CHAR_DEVICE)
+	{
+		LogMsg("mc: '%s' is not a character device");
+		return;
+	}
+	
+	int fd = FiOpen(pFile, O_RDWR | O_NONBLOCK);
+	if (fd < 0)
+	{
+		LogMsg("mc: cannot open '%s': %s", pFile, GetErrNoString(ec));
+		return;
+	}
+	
+	// clear the screen
+	LogMsg(ANSI_CLEAR_SCREEN);
+	
+	bool ctrl_a = false;
+	
+	while (true)
+	{
+		char buffer[256];
+		size_t read = FiRead(fd, buffer, sizeof buffer);
+		if ((int)read < 0) break;
+		
+		if (read == 0)
+		{
+			WaitMS(10);
+		}
+		
+		for (size_t i = 0; i < read; i++)
+		{
+			CoPrintChar(GetCurrentConsole(), buffer[i]);
+			//LogMsgNoCr("%b ",buffer[i]);
+		}
+		
+		if (CoAnythingOnInputQueue(GetCurrentConsole()))
+		{
+			char chr = CoGetChar();
+			
+			// check if the user hit ctrl+A and then ctrl+D
+			if (chr == '\1') // Ctrl-A
+				ctrl_a = true;
+			else if (chr == '\4' && ctrl_a) // Ctrl-D
+				break;
+			else
+				ctrl_a = false;
+			
+			// not sure if we should echo.. probably not
+			FiWrite(fd, &chr, sizeof chr);
+		}
+	}
+	
+	FiClose(fd);
+}
+
 void ShellExecuteFile(const char* fileName, const char* arguments)
 {
 	if (!fileName)
@@ -765,6 +840,16 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			FiClose (fd);
 			LogMsg("Done");
 		}
+	}
+	else if (strcmp (token, "mc") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+			LogMsg("mc: expected filename");
+		else if (*fileName == 0)
+			LogMsg("mc: expected filename");
+		else
+			ShellMinicom(fileName);
 	}
 	else if (strcmp (token, "lr") == 0)
 	{
