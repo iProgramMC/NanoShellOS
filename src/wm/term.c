@@ -104,7 +104,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 				VidSetFont(g_TerminalFont);//we like this font right here
 				int charWidth = GetCharWidth('W'), charHeite = GetLineHeight();
 				VidSetFont(SYSTEM_FONT);
-				RECT (r, 3, 3 + TITLE_BAR_HEIGHT, pConsole->width * charWidth + 3, pConsole->height * charHeite + 4);
+				RECT (r, 0, 0, pConsole->width * charWidth + 3, pConsole->height * charHeite + 4);
 				
 				RenderButtonShapeSmallInsideOut (r, 0xBFBFBF, 0x808080, TRANSPARENT);
 			}
@@ -224,8 +224,8 @@ void TerminalHostTask(int arg)
 	Window *pWindow = CreateWindow(
 		hookDebugConsole ? "NanoShell debug console" : "NanoShell Terminal", 
 		array[0], array[1], 
-		array[2] *  charWidth + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS, 
-		array[3] *  charHeite + 6 + 4 + WINDOW_RIGHT_SIDE_THICKNESS + TITLE_BAR_HEIGHT, 
+		array[2] *  charWidth + 4, 
+		array[3] *  charHeite + 4, 
 		TerminalHostProc,
 		0);
 	if (!pWindow)
@@ -249,8 +249,8 @@ void TerminalHostTask(int arg)
 	basic_console.width  = array[2];
 	basic_console.height = array[3];
 	basic_console.font = g_TerminalFont;
-	basic_console.offX = 3 + 2;
-	basic_console.offY = 3 + 2 + TITLE_BAR_HEIGHT;
+	basic_console.offX = 2;
+	basic_console.offY = 2;
 	basic_console.color = DefaultConsoleColor;//green background
 	basic_console.curX = basic_console.curY = 0;
 	basic_console.pushOrWrap = 0; //wrap for now
