@@ -246,6 +246,51 @@ void WmTimerTick(Window* pWindow)
 	}
 }
 
+static const int g_ResizeCursorTable[] =
+{
+	CURSOR_DEFAULT, CURSOR_SIZE_NS, CURSOR_SIZE_WE, CURSOR_SIZE_NESW, CURSOR_SIZE_NWSE, CURSOR_SIZE_ALL
+};
+
+static const int g_ResizeCursorIndices[] =
+{
+	// horizontal: none, left, right, left+right
+	// vertical:   none, up, down, up+down
+	
+	0, 2, 2, 0,
+	1, 4, 3, 0,
+	1, 3, 4, 0,
+	0, 0, 0, 0,
+};
+
+Cursor* GetWindowCursor(Window* pWindow, int x, int y)
+{
+	int width  = GetWidth (&pWindow->m_fullRect);
+	int height = GetHeight(&pWindow->m_fullRect);
+	
+	int cursorID = pWindow->m_cursorID;
+	
+	if ((pWindow->m_flags & (WF_NOBORDER | WF_ALWRESIZ | WF_MAXIMIZE)) == WF_ALWRESIZ)
+	{
+		int borderSize = (pWindow->m_flags & WF_FLATBORD) ? (1) : (BORDER_SIZE);
+		
+		int left, up, down, right;
+		
+		left  = x < borderSize;
+		right = x >= width - borderSize;
+		up    = y < borderSize;
+		down  = y >= height - borderSize;
+		
+		int index = left | right << 1 | up << 2 | down << 3;
+		
+		int result = g_ResizeCursorTable[g_ResizeCursorIndices[index]];
+		
+		if (result != CURSOR_DEFAULT)
+			cursorID = result;
+	}
+	
+	return GetCursorBasedOnID(cursorID, pWindow);
+}
+
 void WindowCheckButtons(Window* pWindow, int eventType, int x, int y);
 
 int g_oldMouseX = -1, g_oldMouseY = -1;
@@ -412,7 +457,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		if (pWindowOver)
 		{
-			Cursor* pCur = GetCursorBasedOnID(pWindowOver->m_cursorID, pWindowOver);
+			Cursor* pCur = GetWindowCursor(pWindowOver, g_mouseX - pWindowOver->m_fullRect.left, g_mouseY - pWindowOver->m_fullRect.top);
 			if (g_currentCursor != &g_windowDragCursor && g_currentCursor != pCur)
 			{
 				SetCursor(pCur);

@@ -108,20 +108,39 @@ bool RefreshMouse()
 	{
 		QueueMouseUpdateTo.updated = false;
 		
-		if (g_currentCursor->m_resizeMode)
+		if (g_currentCursor->m_flags & CUR_RESIZE)
 		{
 			VBEData* backup = g_vbeData;
 			g_vbeData = &g_mainScreenVBEData;
 			
 			RedrawOldPixels(g_mouseX, g_mouseY);
 			
-			g_currentCursor->boundsWidth  += QueueMouseUpdateTo.newX;
-			g_currentCursor->boundsHeight += QueueMouseUpdateTo.newY;
+			int newX = QueueMouseUpdateTo.newX;
+			int newY = QueueMouseUpdateTo.newY;
+			
+			if (~g_currentCursor->m_flags & CUR_LOCK_X)
+			{
+				g_mouseX += newX;
+				if (g_currentCursor->m_flags & CUR_RESIZE_MOVE_X)
+					g_currentCursor->boundsWidth -= newX;
+				else
+					g_currentCursor->boundsWidth += newX, g_currentCursor->leftOffs += newX;
+			}
+			if (~g_currentCursor->m_flags & CUR_LOCK_Y)
+			{
+				g_mouseY += newY;
+				if (g_currentCursor->m_flags & CUR_RESIZE_MOVE_Y)
+					g_currentCursor->boundsHeight -= newY;
+				else
+					g_currentCursor->boundsHeight += newY, g_currentCursor->topOffs += newY;
+			}
+			
+			const int minHeight = 50;//TODO: BORDER_SIZE * 2 + TITLE_BAR_HEIGHT + 1;
 			
 			if (g_currentCursor->boundsWidth  < 200)
 				g_currentCursor->boundsWidth  = 200;
-			if (g_currentCursor->boundsHeight < 20)
-				g_currentCursor->boundsHeight = 20;
+			if (g_currentCursor->boundsHeight < minHeight)
+				g_currentCursor->boundsHeight = minHeight;
 			if (g_currentCursor->boundsWidth  >= GetScreenSizeX())
 				g_currentCursor->boundsWidth   = GetScreenSizeX();
 			if (g_currentCursor->boundsHeight >= GetScreenSizeY())
@@ -296,7 +315,7 @@ void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor)
 	//undraw the old cursor:
 	if (g_currentCursor && bUndrawOldCursor)
 	{
-		if (g_currentCursor->m_resizeMode)
+		if (g_currentCursor->m_flags & CUR_RESIZE)
 		{
 			if (g_currentCursor->width > g_currentCursor->boundsWidth || g_currentCursor->height > g_currentCursor->boundsHeight)
 			{
@@ -1427,7 +1446,7 @@ void RenderCursor(void)
 	
 	if (g_currentCursor->m_transparency)
 		RenderCursorTransparent();
-	else if (g_currentCursor->m_resizeMode)
+	else if (g_currentCursor->m_flags & CUR_RESIZE)
 		RenderCursorStretchy();
 	else
 		RenderCursorOpaque();
@@ -1746,7 +1765,7 @@ void RedrawOldPixels(int oldX, int oldY)
 {
 	if (g_currentCursor->m_transparency)
 		RedrawOldPixelsTransparent(oldX, oldY);
-	else if (g_currentCursor->m_resizeMode)
+	else if (g_currentCursor->m_flags & CUR_RESIZE)
 		RedrawOldPixelsStretchy   (oldX, oldY);
 	else
 		RedrawOldPixelsOpaque     (oldX, oldY);

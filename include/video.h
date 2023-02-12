@@ -78,6 +78,13 @@ enum
 #define TRANSPARENT 0xFFFFFFFF
 
 #define CLICK_INFO_MAX 256
+
+#define CUR_RESIZE        (0x01)
+#define CUR_RESIZE_MOVE_X (0x02)
+#define CUR_RESIZE_MOVE_Y (0x04)
+#define CUR_LOCK_X        (0x08)
+#define CUR_LOCK_Y        (0x10)
+
 typedef struct
 {
 	uint16_t width, height;
@@ -85,7 +92,7 @@ typedef struct
 	const uint32_t* bitmap;
 	bool m_transparency;//optimization
 	
-	bool m_resizeMode;
+	uint8_t m_flags;
 	uint16_t boundsWidth, boundsHeight;
 	uint16_t mouseLockX, mouseLockY;
 }

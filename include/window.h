@@ -219,6 +219,8 @@ enum {
 	EVENT_SHOW_MENU_PRIVATE,
 	EVENT_REQUEST_RESIZE_PRIVATE,
 	EVENT_BORDER_SIZE_UPDATE_PRIVATE,
+	EVENT_HIDE_WINDOW_PRIVATE,
+	EVENT_SHOW_WINDOW_PRIVATE,
 	
 	EVENT_USER = 0x1000,
 };
@@ -599,7 +601,7 @@ enum CURSORTYPE
 typedef struct WindowStruct
 {
 	bool       m_used;
-	bool       m_reserved0;
+	uint8_t    m_resize_flags;
 	bool       m_hidden;
 	bool       m_isBeingDragged;
 	bool       m_isSelected;

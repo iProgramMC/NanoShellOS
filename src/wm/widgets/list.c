@@ -757,7 +757,7 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					pWindow->m_customCursor.topOffs  = ICON_ITEM_HEIGHT / 2;
 					pWindow->m_customCursor.bitmap   = pImg->framebuffer;
 					pWindow->m_customCursor.m_transparency = true;
-					pWindow->m_customCursor.m_resizeMode = false;
+					pWindow->m_customCursor.m_flags  = 0;
 					
 					ChangeCursor (pWindow, CURSOR_CUSTOM); // for testing
 					

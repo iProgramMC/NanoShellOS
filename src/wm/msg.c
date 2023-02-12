@@ -648,7 +648,18 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			int h = GET_Y_PARM(parm2);
 			
 			ResizeWindowInternal(pWindow, x, y, w, h);
+			ShowWindow(pWindow);
 			
+			break;
+		}
+		case EVENT_HIDE_WINDOW_PRIVATE:
+		{
+			HideWindow(pWindow);
+			break;
+		}
+		case EVENT_SHOW_WINDOW_PRIVATE:
+		{
+			ShowWindow(pWindow);
 			break;
 		}
 		case EVENT_BORDER_SIZE_UPDATE_PRIVATE:
