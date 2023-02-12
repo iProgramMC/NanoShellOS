@@ -156,7 +156,7 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 	VidSetFont (FONT_TAMSYN_BOLD);
 	
 	//If we're running a task:
-	if (false && KeGetRunningTask() != NULL)
+	if (KeGetRunningTask() != NULL)
 	{
 		if (!g_hasAlreadyThrownException1)
 		{
