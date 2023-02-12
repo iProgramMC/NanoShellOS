@@ -117,17 +117,42 @@ void RedrawBackground (Rectangle rect)
 	//  and call RedrawBackground on them)
 	int rlc = rect.left / g_background->width,  rrc = (rect.right  - 1) / g_background->width;
 	int rtc = rect.top  / g_background->height, rbc = (rect.bottom - 1) / g_background->height;
+	
+	VBEData data;
+	data.m_bitdepth = 2;
+	data.m_width    = data.m_pitch32 = g_background->width;
+	data.m_height   = g_background->height;
+	data.m_framebuffer32 = (uint32_t*)g_background->framebuffer;
+	
+	for (int y = rtc; y <= rbc; y++)
+	{
+		for (int x = rlc; x <= rrc; x++)
+		{
+			Rectangle thisTileRect;
+			thisTileRect.left = x * g_background->width;
+			thisTileRect.top  = y * g_background->height;
+			thisTileRect.right  = thisTileRect.left + g_background->width;
+			thisTileRect.bottom = thisTileRect.top  + g_background->height;
+			
+			Rectangle r;
+			if (!RectangleIntersect(&r, &rect, &thisTileRect)) continue;
+			
+			VidBitBlit(g_vbeData,
+				r.left, r.top,
+				r.right  - r.left,
+				r.bottom - r.top,
+				&data,
+				r.left - thisTileRect.left, r.top - thisTileRect.top,
+				BOP_SRCCOPY
+			);
+		}
+	}
+	
 	if (rlc == rrc && rtc == rbc && rlc == 0 && rtc == 0)
 	{
 		//just draw the clipped portion
 		
 		// TODO: More complete fill-in of the VBEData structure
-		VBEData data;
-		data.m_bitdepth = 2;
-		data.m_width    = data.m_pitch32 = g_background->width;
-		data.m_height   = g_background->height;
-		data.m_framebuffer32 = (uint32_t*)g_background->framebuffer;
-		
 		VidBitBlit(g_vbeData,
 			rect.left, rect.top,
 			rect.right  - rect.left,
@@ -140,51 +165,8 @@ void RedrawBackground (Rectangle rect)
 		return;
 	}
 	
-	// Fill in the grid pattern ...
-	int grid_left  = (rect.left  - 1 + g_background->width)  / g_background->width;
-	int grid_right = (rect.right + 1 - g_background->width)  / g_background->width;
-	int grid_top   = (rect.top   - 1 + g_background->height) / g_background->height;
-	int grid_bottom= (rect.bottom+ 1 - g_background->height) / g_background->height;
 	
-	for (int y = grid_top, yi = grid_top * g_background->height; y <= grid_bottom; y++, yi += g_background->height)
-	{
-		for (int x = grid_left, xi = grid_left * g_background->width; x <= grid_right; x++, xi += g_background->width)
-		{
-			VidBlitImageForceOpaque (g_background, xi, yi);
-		}
-	}
 	
-	// Then fill in the edges.
-	int xl = grid_left  * g_background->width;
-	int xr = grid_right * g_background->width;
-	int yt = grid_top   * g_background->height;
-	int yb = grid_bottom* g_background->height;
-	
-	rect.bottom++, rect.right++;
-	for (int y = rect.top; y != rect.bottom; y++)
-	{
-		int ymod = (y % g_background->height);
-		for (int x = rect.left, xa = rect.left % g_background->width; x != rect.right; x++, xa++)
-		{
-			if (y >= yt && y < yb)
-			{
-				if (x == xl) 
-				{
-					x = xr;
-					xa = x % g_background->width;
-				}
-				else if (x >= xr)
-					xa = xa % g_background->width;
-			}
-			else
-				xa = xa % g_background->width;
-			
-			VidPlotPixelInlineRF (x, y, g_background->framebuffer[xa + g_background->width * ymod]);
-		}
-	}
-	
-	//simple background:
-	/*VidFillRectangle (BACKGROUND_COLOR, rect);*/
 }
 
 void RefreshScreen()

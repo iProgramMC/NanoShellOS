@@ -181,6 +181,19 @@ bool RectangleOverlap(Rectangle *r1, Rectangle *r2)
 	return (r1->left <= r2->right && r1->right >= r2->left && r1->top <= r2->bottom && r1->bottom >= r2->top);
 }
 
+bool RectangleIntersect(Rectangle* r, const Rectangle* r1, const Rectangle* r2)
+{
+	#define MIN(a,b) ((a)<(b)?(a):(b))
+	#define MAX(a,b) ((a)>(b)?(a):(b))
+	r->left   = MAX(r1->left,  r2->left);
+	r->top    = MAX(r1->top,   r2->top);
+	r->right  = MIN(r1->right, r2->right);
+	r->bottom = MIN(r1->bottom,r2->bottom);
+	return !(r->left > r->right || r->top > r->bottom);
+	#undef MIN
+	#undef MAX
+}
+
 void AddClickInfoToQueue(const ClickInfo* info)
 {
 	if (g_clickQueueSize >= CLICK_INFO_MAX)

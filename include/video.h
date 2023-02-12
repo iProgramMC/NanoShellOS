@@ -492,5 +492,12 @@ void KillFont (int fontID);
  */
 void ScrollRect(Rectangle* pRect, int amountX, int amountY);
 
+/**
+ * Gets the rectangle intersection of two rectangles. The function returns
+ * true if a valid rectangle is placed inside 'pRectOut' (i.e. the rectangles
+ * overlap), and false, if the rectangles don't overlap.
+ */
+bool RectangleIntersect(Rectangle* pRectOut, const Rectangle* r1, const Rectangle* r2);
+
 
 #endif//_VIDEO_H

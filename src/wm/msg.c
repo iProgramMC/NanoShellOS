@@ -396,6 +396,13 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			Rectangle newRect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 			old_title_rect = newRect;
 		}
+		else
+		{
+			old_title_rect.left   += pWindow->m_fullRect.left;
+			old_title_rect.top    += pWindow->m_fullRect.top;
+			old_title_rect.right  += pWindow->m_fullRect.left;
+			old_title_rect.bottom += pWindow->m_fullRect.top;
+		}
 		
 		if (~pWindow->m_flags & WF_MAXIMIZE)
 			pWindow->m_rectBackup = pWindow->m_fullRect;

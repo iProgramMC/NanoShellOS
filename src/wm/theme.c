@@ -91,8 +91,8 @@ const Theme g_themes[] = {
 			0x808080, // Edge Color
 			0x404040,
 			DEFAULT_SCROLL_BAR_SIZE,
-			0x00003F,
-			0x00003F,
+			0x00007F,
+			0x00007F,
 			0xFFFFFF,
 			0xFFFFFF,
 			0x000000,

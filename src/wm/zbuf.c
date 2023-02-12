@@ -137,19 +137,6 @@ Window* ShootRayAndGetWindow(int x, int y)
 	return NULL;
 }
 
-bool RectangleIntersect(Rectangle* r, Rectangle* r1, Rectangle* r2)
-{
-	#define MIN(a,b) ((a)<(b)?(a):(b))
-	#define MAX(a,b) ((a)>(b)?(a):(b))
-	r->left   = MAX(r1->left,  r2->left);
-	r->top    = MAX(r1->top,   r2->top);
-	r->right  = MIN(r1->right, r2->right);
-	r->bottom = MIN(r1->bottom,r2->bottom);
-	return !(r->left > r->right || r->top > r->bottom);
-	#undef MIN
-	#undef MAX
-}
-
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect);
 void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 {

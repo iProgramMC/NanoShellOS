@@ -33,12 +33,16 @@ void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int 
 			return;
 		}
 	}
-	
-	//if hasn't responded in 5 seconds:
-	if (pWindow->m_lastHandledMessagesWhen + 5000 <= GetTickCount())
+	else
 	{
-		OnWindowHung(pWindow);
+		//if hasn't responded in 5 seconds:
+		if (pWindow->m_lastHandledMessagesWhen + 5000 <= GetTickCount())
+		{
+			OnWindowHung(pWindow);
+		}
 	}
+	
+	// TODO: Check for queue overflow.
 	
     WindowEventQueueItem item;
     item.m_destWindow = pWindow;

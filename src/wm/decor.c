@@ -36,10 +36,7 @@ static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int ho
 	if (pressed)
 		iconX++, iconY++;
 	
-	if (icon != ICON_MAXIMIZE && icon != ICON_MINIMIZE && icon != ICON_CLOSE)
-		RenderIconForceSize(icon, iconX, iconY, iconSize);
-	else
-		RenderIconForceSizeOutline(icon, iconX, iconY, iconSize, CAPTION_BUTTON_ICON_COLOR);
+	RenderIconForceSize(icon, iconX, iconY, iconSize);
 }
 
 void WindowTitleLayout(

@@ -126,6 +126,8 @@ void WindowCheckButtons(Window* pWindow, int eventType, int x, int y)
 
 // note: these are called from the window manager task
 
+bool g_bFirstDrag = false;
+
 void OnUILeftClick (int mouseX, int mouseY)
 {
 	if (!IsWindowManagerRunning()) return;
@@ -135,6 +137,8 @@ void OnUILeftClick (int mouseX, int mouseY)
 	//ACQUIRE_LOCK (g_windowLock); -- NOTE: No need to lock anymore.  We're 'cli'ing anyway.
 	
 	Window* window = ShootRayAndGetWindow(mouseX, mouseY);
+	
+	g_bFirstDrag = true;
 	
 	if (window)
 	{
@@ -207,7 +211,6 @@ static const int g_ResizeFlagsIndices[] =
 	4, 7, 8, 0,
 	0, 0, 0, 0,
 };
-
 
 void OnUILeftClickDrag (int mouseX, int mouseY)
 {
@@ -301,7 +304,7 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			}
 		}
 		
-		if ((window->m_flags & (WF_NOBORDER | WF_ALWRESIZ | WF_MAXIMIZE)) == WF_ALWRESIZ)
+		if ((window->m_flags & (WF_NOBORDER | WF_ALWRESIZ | WF_MAXIMIZE)) == WF_ALWRESIZ && g_bFirstDrag)
 		{
 			const int width  = GetWidth (&window->m_fullRect);
 			const int height = GetHeight(&window->m_fullRect);
@@ -347,6 +350,8 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 		}
 	}
 	
+	g_bFirstDrag = false;
+	
 	//FREE_LOCK(g_windowLock);
 }
 
@@ -362,6 +367,8 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
+	
+	g_bFirstDrag = false;
 	
 	Window* pWindow = g_currentlyClickedWindow;
 	if (pWindow->m_isBeingDragged)

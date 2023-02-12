@@ -6,6 +6,7 @@
 ******************************************/
 #include <icon.h>
 #include <misc.h>
+#include <window.h>
 
 #define C_TRANSPAR TRANSPARENT
 
@@ -571,18 +572,38 @@ void RenderIconOutline(IconType type, int x, int y, uint32_t color)
 	VidBlitImageOutline(p, x, y, color);
 }
 void RenderThumbClock(int x, int y, int size);
+
+bool IsMonochromeIcon(IconType type)
+{
+	switch (type)
+	{
+		case ICON_MINIMIZE:
+		case ICON_MAXIMIZE:
+		case ICON_CLOSE:
+		case ICON_RESTORE:
+		return true;
+	}
+	return false;
+}
+
 void RenderIconForceSize(IconType type, int x, int y, int size)
 {
 	Image *p = GetIconImage(type, size);
 	if (p)
 	{
-		VidBlitImageResize(p, x, y, size, size);
+		if (IsMonochromeIcon(type))
+			VidBlitImageResizeOutline(p, x, y, size, size, CAPTION_BUTTON_ICON_COLOR);
+		else
+			VidBlitImageResize(p, x, y, size, size);
+		
 		if (type == ICON_CLOCK_EMPTY)
 		{
 			RenderThumbClock(x, y, size);
 		}
 	}
 }
+
+
 void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t color)
 {
 	Image *p = GetIconImage(type, size);
