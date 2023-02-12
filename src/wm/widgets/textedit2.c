@@ -13,6 +13,8 @@
 #define TEXT_EDIT_FONT   (FONT_TAMSYN_MED_REGULAR)
 //#define TEXT_EDIT_FONT   (SYSTEM_FONT)
 
+#define MIN_CAPACITY     (4096)
+
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
 
 void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
@@ -52,6 +54,7 @@ TextLine;
 
 typedef struct
 {
+	Window*   m_pWindow;
 	TextLine* m_lines;
 	size_t    m_num_lines;
 	size_t    m_lines_capacity;
@@ -66,6 +69,8 @@ typedef struct
 	char*     m_cachedData; // every time you call TextInput_GetRawText, this gets updated.
 	bool      m_bShiftHeld;
 	bool      m_dirty;
+	int       m_knownScrollBarX;
+	int       m_knownScrollBarY;
 }
 TextInputDataEx;
 
@@ -131,9 +136,9 @@ static const char* TextInput_GetRawText(Control* this)
 	return pData->m_cachedData;
 }
 
-static void TextInput_RequestRepaint(Control* this, Window* pWindow)
+static void TextInput_RequestRepaint(Control* this)
 {
-	WindowAddEventToMasterQueue(pWindow, EVENT_CTL_REPAINT, this->m_comboID, 0);
+	WindowAddEventToMasterQueue(TextInput_GetData(this)->m_pWindow, EVENT_CTL_REPAINT, this->m_comboID, 0);
 }
 
 static void TextInput_Clear(Control* this)
@@ -177,9 +182,10 @@ TextLine* TextInput_AddLine(Control* ctl)
 	return &this->m_lines[this->m_num_lines++];
 }
 
-static void TextInput_UpdateScrollBars(Control* this, Window* pWindow)
+static void TextInput_UpdateScrollBars(Control* this)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
+	Window* pWindow = pData->m_pWindow;
 	
 	int scrollMax;
 	
@@ -244,7 +250,7 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	// Append a new line.
 	TextLine* line = TextInput_AddLine(this);
 	
-	size_t cap = ROUND_TO_PO2(sz + 1, 4096);
+	size_t cap = ROUND_TO_PO2(sz + 1, MIN_CAPACITY);
 	
 	line->m_text     = MmAllocate(cap);
 	line->m_capacity = cap;
@@ -259,6 +265,8 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 		pData->m_maxScrollX = line->m_lengthPixels;
 	
 	pData->m_maxScrollY += TextInput_GetLineHeight();
+	
+	TextInput_UpdateScrollBars(this);
 	
 	return pText + sz + 1;
 }
@@ -292,7 +300,7 @@ static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
 	pData->m_dirty = true;
 }
 
-static void TextInput_AppendText(Control* this, Window* pWindow, int line, int pos, const char* pText)
+static void TextInput_AppendText(Control* this, int line, int pos, const char* pText)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	TextLine* pLine = &pData->m_lines[line];
@@ -307,10 +315,11 @@ static void TextInput_AppendText(Control* this, Window* pWindow, int line, int p
 	if (pos >= (int)pLine->m_length)
 		pos  = (int)pLine->m_length;
 	
-	if (pLine->m_length + sLen + 1 >= pLine->m_capacity)
+	if (pLine->m_length + sLen + 2 >= pLine->m_capacity)
 	{
 		// resize the thing
-		pLine->m_capacity += sLen;
+		pLine->m_capacity += sLen + 2;
+		//pLine->m_capacity = ROUND_TO_PO2(pLine->m_capacity, MIN_CAPACITY);
 		void *pNewMem = MmReAllocate(pLine->m_text, pLine->m_capacity);
 		if (!pNewMem)
 		{
@@ -351,13 +360,13 @@ static void TextInput_AppendText(Control* this, Window* pWindow, int line, int p
 	if (pData->m_maxScrollX < pLine->m_lengthPixels)
 	{
 		pData->m_maxScrollX = pLine->m_lengthPixels;
-		TextInput_UpdateScrollBars(this, pWindow);
+		TextInput_UpdateScrollBars(this);
 	}
 	
 	TextInput_RepaintLine(this, line);
 }
 
-static void TextInput_EraseChars(Control* this, Window* pWindow, int line, int pos, int sLen)
+static void TextInput_EraseChars(Control* this, int line, int pos, int sLen)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	TextLine* pLine = &pData->m_lines[line];
@@ -394,13 +403,13 @@ static void TextInput_EraseChars(Control* this, Window* pWindow, int line, int p
 	TextInput_RecalcMaxScroll(this);
 	
 	// Update the scroll bars.
-	TextInput_UpdateScrollBars(this, pWindow);
+	TextInput_UpdateScrollBars(this);
 	
 	// Repaint the line.
 	TextInput_RepaintLine(this, line);
 }
 
-static void TextInput_InsertNewLines(Control* this, Window* pWindow, int linePos, int lineCount)
+static void TextInput_InsertNewLines(Control* this, int linePos, int lineCount)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
@@ -432,35 +441,34 @@ static void TextInput_InsertNewLines(Control* this, Window* pWindow, int linePos
 		TextLine* pLine = &pData->m_lines[i];
 		memset(pLine, 0, sizeof *pLine);
 		
-		pLine->m_text    = MmAllocate(4096);
+		pLine->m_text    = MmAllocate(MIN_CAPACITY);
 		pLine->m_text[0] = 0;
-		pLine->m_capacity = 4096;
+		pLine->m_capacity = MIN_CAPACITY;
 	}
 	
 	pData->m_maxScrollY += TextInput_GetLineHeight() * lineCount;
 	
-	TextInput_UpdateScrollBars(this, pWindow);
-	
+	TextInput_UpdateScrollBars(this);
 	TextInput_RepaintLineAndBelow(this, linePos);
 }
 
-static void TextInput_InsertNewLine(Control* this, Window* pWindow, int linePos)
+static void TextInput_InsertNewLine(Control* this, int linePos)
 {
-	TextInput_InsertNewLines(this, pWindow, linePos, 1);
+	TextInput_InsertNewLines(this, linePos, 1);
 }
 
-static void TextInput_SplitLines(Control* this, Window* pWindow, int line, int splitAt)
+static void TextInput_SplitLines(Control* this, int line, int splitAt)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
 	// Create a new line.
 	if (splitAt == 0)
 	{
-		TextInput_InsertNewLine(this, pWindow, line);
+		TextInput_InsertNewLine(this, line);
 		return;
 	}
 	
-	TextInput_InsertNewLine(this, pWindow, line + 1);
+	TextInput_InsertNewLine(this, line + 1);
 	
 	// Set said line's text to the current line's text at `splitAt` offset.
 	TextLine* pSrcLine = &pData->m_lines[line];
@@ -476,7 +484,7 @@ static void TextInput_SplitLines(Control* this, Window* pWindow, int line, int s
 	TextInput_RepaintLine(this, line);
 }
 
-static void TextInput_EraseConsecutiveLines(Control* this, Window* pWindow, int lineStart, int lineCount)
+static void TextInput_EraseConsecutiveLines(Control* this, int lineStart, int lineCount)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
@@ -507,30 +515,29 @@ static void TextInput_EraseConsecutiveLines(Control* this, Window* pWindow, int 
 	pData->m_num_lines  -= lineCount;
 	pData->m_maxScrollY -= lineCount * TextInput_GetLineHeight();
 	
-	TextInput_UpdateScrollBars(this, pWindow);
-	
+	TextInput_UpdateScrollBars(this);
 	TextInput_RepaintLineAndBelow(this, lineStart);
 }
 
-static void TextInput_EraseLine(Control* this, Window* pWindow, int line)
+static void TextInput_EraseLine(Control* this, int line)
 {
-	TextInput_EraseConsecutiveLines(this, pWindow, line, 1);
+	TextInput_EraseConsecutiveLines(this, line, 1);
 }
 
-static void TextInput_AppendChar(Control* this, Window* pWindow, int line, int pos, char c)
+static void TextInput_AppendChar(Control* this, int line, int pos, char c)
 {
 	char str[2];
 	str[0] = c;
 	str[1] = 0;
-	return TextInput_AppendText(this, pWindow, line, pos, str);
+	return TextInput_AppendText(this, line, pos, str);
 }
 
-static void TextInput_EraseChar(Control* this, Window* pWindow, int line, int pos)
+static void TextInput_EraseChar(Control* this, int line, int pos)
 {
-	return TextInput_EraseChars(this, pWindow, line, pos, 1);
+	return TextInput_EraseChars(this, line, pos, 1);
 }
 
-static void TextInput_SetText(Control* this, Window* pWindow, const char* pText, bool bRepaint)
+static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 {
 	TextInput_Clear(this);
 	
@@ -548,29 +555,29 @@ static void TextInput_SetText(Control* this, Window* pWindow, const char* pText,
 		}
 	}
 	
-	TextInput_UpdateScrollBars(this, pWindow);
+	TextInput_UpdateScrollBars(this);
 	
 	if (bRepaint)
 	{
-		TextInput_RequestRepaint(this, pWindow);
+		TextInput_RequestRepaint(this);
 	}
 }
 
 // This concatenates 'lineSrc' to the end of 'lineDst'.
-static void TextInput_JoinLines(Control* pCtl, Window* pWindow, int lineDst, int lineSrc)
+static void TextInput_JoinLines(Control* pCtl, int lineDst, int lineSrc)
 {
 	TextInputDataEx* pData = TextInput_GetData(pCtl);
 	
 	if (lineSrc < 0 || lineSrc >= (int)pData->m_num_lines) return;
 	if (lineDst < 0 || lineDst >= (int)pData->m_num_lines) return;
 	
-	TextInput_AppendText(pCtl, pWindow, lineDst, (int)pData->m_lines[lineDst].m_length, pData->m_lines[lineSrc].m_text);
-	TextInput_EraseLine(pCtl, pWindow, lineSrc);
+	TextInput_AppendText(pCtl, lineDst, (int)pData->m_lines[lineDst].m_length, pData->m_lines[lineSrc].m_text);
+	TextInput_EraseLine(pCtl, lineSrc);
 }
 
-static void TextInput_UpdateMode(Control* this, Window* pWindow)
+static void TextInput_UpdateMode(Control* this)
 {
-	TextInput_RequestRepaint(this, pWindow);
+	TextInput_RequestRepaint(this);
 }
 
 static void TextInput_PartialDraw(Control* this, Rectangle rect)
@@ -703,6 +710,8 @@ static void TextInput_OnScrollDone(Control* pCtl)
 	
 	if (redraw2.left < redraw2.right && redraw2.top < redraw2.bottom)
 		TextInput_PartialDraw(pCtl, redraw2);
+	
+	TextInput_UpdateScrollBars(pCtl);
 }
 
 static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum)
@@ -959,6 +968,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 		}
 	}
 	
+	TextInput_UpdateScrollBars(this);
 	TextInput_ClampCursorWithinScrollBounds(this);
 	
 	VidSetFont(oldFont);
@@ -973,6 +983,8 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			TextInputDataEx* pData = MmAllocate(sizeof(TextInputDataEx));
 			memset(pData, 0, sizeof *pData);
 			this->m_dataPtr = pData;
+			
+			pData->m_pWindow = pWindow;
 			
 			// Create two scroll bars.
 			if (this->m_parm1 & TEXTEDIT_MULTILINE)
@@ -1016,7 +1028,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 				this->m_rect.bottom = this->m_rect.top + 6 + TextInput_GetLineHeight();
 			}
 			
-			TextInput_SetText(this, pWindow, "", false);
+			TextInput_SetText(this, "", false);
 			
 			break;
 		}
@@ -1024,9 +1036,17 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 		case EVENT_SCROLLDONE:
 		{
 			TextInputDataEx* pData = TextInput_GetData(this);
-			pData->m_scrollX = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID));
-			pData->m_scrollY = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID));
-			TextInput_OnScrollDone(this);
+			int lkX = pData->m_knownScrollBarX;
+			int lkY = pData->m_knownScrollBarY;
+			pData->m_knownScrollBarX = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID));
+			pData->m_knownScrollBarY = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID));
+			
+			if (lkX != pData->m_knownScrollBarX || lkY != pData->m_knownScrollBarY)
+			{
+				pData->m_scrollX = pData->m_knownScrollBarX;
+				pData->m_scrollY = pData->m_knownScrollBarY;
+				TextInput_OnScrollDone(this);
+			}
 			break;
 		}
 		case EVENT_DESTROY:
@@ -1104,23 +1124,23 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					if (pData->m_cursorY > 0)
 					{
 						TextInput_OnNavPressed(this, DIR_LEFT);
-						TextInput_JoinLines(this, pWindow, pData->m_cursorY, pData->m_cursorY + 1);
+						TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
 					}
 				}
 				else
 				{
-					TextInput_EraseChar(this, pWindow, pData->m_cursorY, pData->m_cursorX - 1);
+					TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX - 1);
 					TextInput_OnNavPressed(this, DIR_LEFT);
 				}
 			}
 			else if (parm1 == '\n')
 			{
-				TextInput_SplitLines(this, pWindow, pData->m_cursorY, pData->m_cursorX);
+				TextInput_SplitLines(this, pData->m_cursorY, pData->m_cursorX);
 				TextInput_OnNavPressed(this, DIR_RIGHT);
 			}
 			else
 			{
-				TextInput_AppendChar(this, pWindow, pData->m_cursorY, pData->m_cursorX, parm1);
+				TextInput_AppendChar(this, pData->m_cursorY, pData->m_cursorX, parm1);
 				TextInput_OnNavPressed(this, DIR_RIGHT);
 			}
 			
@@ -1151,11 +1171,11 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					TextLine* pCurrentLine = &pData->m_lines[pData->m_cursorY];
 					if (pData->m_cursorX == (int)pCurrentLine->m_length)
 					{
-						TextInput_JoinLines(this, pWindow, pData->m_cursorY, pData->m_cursorY + 1);
+						TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
 					}
 					else
 					{
-						TextInput_EraseChar(this, pWindow, pData->m_cursorY, pData->m_cursorX);
+						TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX);
 					}
 					
 					break;
@@ -1221,7 +1241,7 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			TextInput_SetText(&pWindow->m_pControlArray[i], pWindow, pText, true);
+			TextInput_SetText(&pWindow->m_pControlArray[i], pText, true);
 			return;
 		}
 	}
@@ -1272,7 +1292,7 @@ void TextInputSetMode (Window *pWindow, int comboID, int mode)
 			Control *p = &pWindow->m_pControlArray[i];
 			
 			p->m_parm1 = mode;
-			TextInput_UpdateMode(p, pWindow);
+			TextInput_UpdateMode(p);
 		}
 	}
 }
