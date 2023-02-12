@@ -19,6 +19,8 @@ int g_TaskbarHeight = 0;
 
 void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows)
 {
+	LockAcquire(&g_CreateLock);
+	
 	cli;
 	*numWindows = 0;
 	
@@ -38,6 +40,8 @@ void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows)
 	}
 	
 	sti;
+	
+	LockFree(&g_CreateLock);
 }
 
 void UpdateFPSCounter()

@@ -395,6 +395,8 @@ void FreeWindow(Window* pWindow)
 
 void NukeWindowUnsafe (Window* pWindow)
 {
+	LockAcquire(&g_CreateLock);
+	
 	HideWindowUnsafe (pWindow);
 	
 	RemoveWindowFromDrawOrder(pWindow - g_windows);
@@ -429,6 +431,7 @@ void NukeWindowUnsafe (Window* pWindow)
 			continue;
 
 		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		LockFree(&g_CreateLock);
 		return;
 	}
 
@@ -439,8 +442,11 @@ void NukeWindowUnsafe (Window* pWindow)
 			continue;
 
 		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+		LockFree(&g_CreateLock);
 		return;
 	}
+	
+	LockFree(&g_CreateLock);
 	
 	RequestTaskbarUpdate();
 }

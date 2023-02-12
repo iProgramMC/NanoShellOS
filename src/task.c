@@ -906,7 +906,7 @@ void LockAcquire (SafeLock *pLock) // An attempt at a safe lock
 		
 		if (tries == 10000)
 		{
-			SLogMsg("Tried to acquire a lock 10000 times. Is something wrong?");
+			SLogMsg("Tried to acquire a lock 10000 times. Is something wrong?  Task Owner: %p", pLock->m_return_addr);
 			PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		}
 		
