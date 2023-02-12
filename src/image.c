@@ -285,6 +285,29 @@ Image* LoadImageFile(void *pImageData, int *pErrorOut)
 	return NULL;
 }
 
+Image *BitmapDuplicate(Image* pSourceImage)
+{
+	int width  = pSourceImage->width;
+	int height = pSourceImage->height;
+	
+	uint32_t fb_size = width * height * sizeof (uint32_t);
+	
+	uint32_t to_size = fb_size + sizeof (Image);
+	
+	Image *pImage = MmAllocate(to_size);
+	if (!pImage)
+		return NULL;
+	
+	pImage->framebuffer = (const uint32_t*)((uint8_t*)pImage + sizeof *pImage);
+	pImage->width       = width;
+	pImage->height      = height;
+	
+	// Initialize to white
+	memcpy_ints ((uint32_t*)pImage->framebuffer, pSourceImage->framebuffer, width * height);
+	
+	return pImage;
+}
+
 Image *BitmapAllocate(int width, int height, uint32_t default_color)
 {
 	uint32_t fb_size = width * height * sizeof (uint32_t);

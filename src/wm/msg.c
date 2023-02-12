@@ -382,6 +382,11 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		// Update controls based on their anchoring modes.
 		UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
 	}
+	else if (eventType == EVENT_REPAINT_PRIVATE)
+	{
+		WmRepaintBorderAndBackground(pWindow);
+		DirtyRectInvalidateAll();
+	}
 	else if (eventType == EVENT_MAXIMIZE)
 	{
 		Rectangle old_title_rect;
@@ -495,13 +500,14 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	//if (pWindow->m_vbeData.m_dirty && !pWindow->m_hidden)
 	//	RenderWindow(pWindow);
 	
-	if (eventType == EVENT_SIZE)
+	if (eventType == EVENT_SIZE || eventType == EVENT_REPAINT_PRIVATE)
 	{
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
 		
 		pWindow->m_renderFinished = true;
 		
-		ShowWindow (pWindow);
+		if (!pWindow->m_hidden)
+			ShowWindow (pWindow);
 	}
 	else if (eventType == EVENT_CREATE)
 	{

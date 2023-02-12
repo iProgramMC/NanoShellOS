@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <storabs.h>
 #include <misc.h>
+#include <config.h>
 
 #define AHCI_DEBUG
 #ifdef AHCI_DEBUG
@@ -690,6 +691,14 @@ void StAhciInit()
 		SLogMsg("No AHCI controllers found.");
 		return;
 	}
+	
+	// Use the cmdline for this.
+	ConfigEntry* pEntry = CfgGetEntry("ahci");
+	if (pEntry)
+	{
+		if (strcmp(pEntry->value, "on")) return;
+	}
+	
 	ILogMsg("Initializing AHCI controllers...");
 	for (int i = 0; i < g_ahciControllerNum; i++)
 	{

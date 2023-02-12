@@ -19,7 +19,8 @@ extern void PaintWindowBorderNoBackgroundOverpaint(Window* pWindow);
 extern bool     g_BackgroundSolidColorActive, g_RenderWindowContents;
 extern uint32_t g_BackgroundSolidColor;
 
-void RedrawEverything();
+void RefreshScreen();
+void RefreshEverything();
 //POPUP WINDOWS: Set `pWindow->m_data` to anything to exit.
 #define MOUSE_POPUP_WINDOW 1//stubbed out for now because it's buggy as hell
 #define KEYBD_POPUP_WINDOW 1
@@ -186,7 +187,7 @@ void RedrawEverything();
 					if (data != TRANSPARENT)
 					{
 						SetThemingParameter(P_BACKGROUND_COLOR, data & 0xffffff);
-						RedrawEverything();
+						RefreshScreen();
 					}
 					break;
 				}
@@ -202,7 +203,7 @@ void RedrawEverything();
 						WmOnChangedBorderSize();
 					}
 					
-					RedrawEverything();
+					RefreshEverything();
 					break;
 				}
 				else if (parm1 == DESKTOP_APPLY_CHANGES)
@@ -211,7 +212,7 @@ void RedrawEverything();
 					g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);
 					g_GlowOnHover                = CheckboxGetChecked(pWindow, DESKTOP_GLOW_ON_HOVER);
 					g_TaskListCompact            = CheckboxGetChecked(pWindow, DESKTOP_TASKBAR_COMPACT);
-					RedrawEverything();
+					RefreshScreen();
 				}
 				DestroyWindow(pWindow);
 				break;

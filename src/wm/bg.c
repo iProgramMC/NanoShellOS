@@ -10,51 +10,57 @@
 //uint32_t g_BackgroundSolidColor = BACKGROUND_COLOR;
 bool     g_BackgroundSolidColorActive = true;
 
-#define CHECKER_PATTERN
-#ifdef CHECKER_PATTERN
-	#define B 0x000000,
-	#define X 0xFFFFFF,
-	#define o 0x7F0000,
-	const uint32_t g_placeholderBackground[] = {
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
-	o B X X X X X X X X X B o o
-	o B X X X X X X X X X B o o
-	o B X X B X B X B X X B o o
-	o B X X X B X B X X X B o o
-	o B B X X X B X X X B B o o
-	o o B B X X X X X B B o o o
-	o o o B B X B X B B o o o o
-	o o o o B B X B B o o o o o
-	o o o o B B X B B o o o o o
-	o o o B B X X X B B o o o o
-	o o B B X X B X X B B o o o
-	o B B X X X X X X X B B o o
-	o B X X X X B X X X X B o o
-	o B X X X B X B X X X B o o
-	o B X X B X B X B X X B o o
-	o B X B X B X B X B X B o o
-	B B B B B B B B B B B B B o
-	B B X X X X X X X X X B B o
-	B B B B B B B B B B B B B o
-	};
-	#undef B
-	#undef X
-	#undef o
-	
-	Image* g_background, g_defaultBackground = {
-		14, 22, g_placeholderBackground
-	};
-#else
-	const uint32_t g_placeholderBackground[] = {
-		BACKGROUND_COLOR,
-	};
-	
-	Image* g_background, g_defaultBackground = {
-		1, 1, g_placeholderBackground
-	};
-#endif
+extern int g_DefaultCursorID;
+
+typedef void (*DisposeBackgroundFunc)(Image* pImg);
+
+#define B 0x000000,
+#define X 0xFFFFFF,
+#define o 0x7F0000,
+const uint32_t g_placeholderBackground[] = {
+B B B B B B B B B B B B B o
+B B X X X X X X X X X B B o
+B B B B B B B B B B B B B o
+o B X X X X X X X X X B o o
+o B X X X X X X X X X B o o
+o B X X B X B X B X X B o o
+o B X X X B X B X X X B o o
+o B B X X X B X X X B B o o
+o o B B X X X X X B B o o o
+o o o B B X B X B B o o o o
+o o o o B B X B B o o o o o
+o o o o B B X B B o o o o o
+o o o B B X X X B B o o o o
+o o B B X X B X X B B o o o
+o B B X X X X X X X B B o o
+o B X X X X B X X X X B o o
+o B X X X B X B X X X B o o
+o B X X B X B X B X X B o o
+o B X B X B X B X B X B o o
+B B B B B B B B B B B B B o
+B B X X X X X X X X X B B o
+B B B B B B B B B B B B B o
+};
+#undef B
+#undef X
+#undef o
+
+Image* g_background, g_defaultBackground = {
+	14, 22, g_placeholderBackground
+};
+
+// If you use the `g_defaultBackground`, you must use this.
+void WmDisposeDefaultBackground(UNUSED Image* pImg)
+{
+}
+
+// Note: The image MUST be created with BitmapDuplicate!
+void WmDisposeImageBackground(Image* pImg)
+{
+	MmFree(pImg);
+}
+
+DisposeBackgroundFunc g_DisposeBackground = WmDisposeDefaultBackground;
 
 __attribute__((always_inline))
 inline void VidPlotPixelToCopyInlineUnsafeRF(unsigned x, unsigned y, unsigned color)
@@ -181,6 +187,79 @@ void RedrawBackground (Rectangle rect)
 	/*VidFillRectangle (BACKGROUND_COLOR, rect);*/
 }
 
+void RefreshScreen()
+{
+	Rectangle rect = { 0, 0, GetScreenWidth(), GetScreenHeight() };
+	RefreshRectangle(rect, NULL);
+}
+
+void RefreshEverything()
+{
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		if (!g_windows[i].m_used) continue;
+		if (g_windows[i].m_hidden) continue;
+		
+		WindowAddEventToMasterQueue(&g_windows[i], EVENT_REPAINT_PRIVATE, 0, 0);
+	}
+	
+	Rectangle rect = { 0, 0, GetScreenWidth(), GetScreenHeight() };
+	RefreshRectangle(rect, NULL);
+}
+
+void SetBackgroundSolidColor()
+{
+	LockAcquire(&g_BackgdLock);
+	g_BackgroundSolidColorActive = true;
+	
+	g_DisposeBackground(g_background);
+	g_background = &g_defaultBackground;
+	g_DisposeBackground = WmDisposeDefaultBackground;
+	
+	LockFree(&g_BackgdLock);
+	RefreshScreen();
+}
+
+// A safe function to set the background image.
+void SetBackgroundImage(Image* pImage)
+{
+	if (!pImage)
+	{
+		SetBackgroundSolidColor();
+		g_DefaultCursorID = CURSOR_DEFAULT;
+		return;
+	}
+	
+	LockAcquire(&g_BackgdLock);
+	
+	g_BackgroundSolidColorActive = true;
+	
+	Image* pOldBG = g_background;
+	g_background = BitmapDuplicate(pImage);
+	
+	// we couldn't duplicate the bitmap? fine
+	if (!g_background)
+	{
+		g_background = pOldBG;
+		LockFree(&g_BackgdLock);
+		return;
+	}
+	
+	// Dispose of the old background
+	g_DisposeBackground(pOldBG);
+	
+	// Set the new dispose function.
+	g_DisposeBackground = WmDisposeImageBackground;
+	
+	g_BackgroundSolidColorActive = false;
+	
+	LockFree(&g_BackgdLock);
+	
+	RefreshScreen();
+	
+	g_DefaultCursorID = CURSOR_DEFAULT;
+}
+
 void VidPrintTestingPattern2(uint32_t or_mask, uint32_t y_shift)
 {
 	for (int y = 0, z = 0; y < GetScreenSizeY(); y++, z += g_vbeData->m_pitch32) 
@@ -206,8 +285,7 @@ void GenerateBackground()
 	
 	if (!pImage)
 	{
-		SLogMsg("Could not allocate background big enough");
-		g_BackgroundSolidColorActive = true;
+		SetBackgroundSolidColor();
 	}
 	else
 	{
@@ -218,16 +296,14 @@ void GenerateBackground()
 		VidPrintTestingPattern2(0x0000FF, 8);
 		VidSetVBEData (NULL);
 		
-		g_background = pImage;
-		g_BackgroundSolidColorActive = false;
+		SetBackgroundImage(pImage);
 	}
+	
+	MmFree(pImage);
 }
 
-void SetDefaultBackground()
+void WmBackgroundLoaderThread(UNUSED int parameter)
 {
-	SLogMsg("Loading Wallpaper...");
-	g_background = &g_defaultBackground;
-	
 	ConfigEntry *pEntry = CfgGetEntry ("Theming::BackgroundFile");
 	const char *pFileName = NULL;	
 	if (pEntry)
@@ -243,22 +319,22 @@ void SetDefaultBackground()
 		return;
 	}
 	
-	
 	int fd = FiOpen(pFileName, O_RDONLY);
 	if (fd < 0)
 	{
-		SLogMsg("Could not open wallpaper. Using default one!");
+		SLogMsg("Could not open wallpaper file '%s'. Using default one!", pFileName);
 		GenerateBackground();
 		return;
 	}
 	
 	int size = FiTellSize(fd);
 	
-	uint8_t*pData=MmAllocate(size);
+	uint8_t* pData = MmAllocate(size);
 	if (!pData)
 	{
 		SLogMsg("Could not allocate %d bytes for wallpaper data... Using default wallpaper!", pData);
 		GenerateBackground();
+		FiClose(fd);
 		return;
 	}
 	
@@ -272,12 +348,21 @@ void SetDefaultBackground()
 	
 	if (pImage)
 	{
-		g_background = pImage;
-		g_BackgroundSolidColorActive = false;
+		SetBackgroundImage(pImage);
+		MmFree(pImage);
 	}
 	else
 	{
 		SLogMsg("Could not load wallpaper data (errorcode: %d). Using default one!", errorCode);
 		GenerateBackground();
 	}
+}
+
+void SetDefaultBackground()
+{
+	g_background = &g_defaultBackground;
+	
+	UNUSED int errorCode = 0;
+	Task* task = KeStartTask(WmBackgroundLoaderThread, 0, &errorCode);
+	KeUnsuspendTask(task);
 }

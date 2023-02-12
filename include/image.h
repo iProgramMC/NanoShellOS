@@ -100,6 +100,7 @@ Image *LoadTarga (void* pTgaData, int *pErrorOut);
 // to load any image file
 Image* LoadImageFile(void *pImageData, int *pErrorOut);
 
+Image *BitmapDuplicate(Image* pSourceImage);
 Image *BitmapAllocate(int width, int height, uint32_t default_color);
 void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage);
 

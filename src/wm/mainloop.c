@@ -14,6 +14,8 @@ int g_WmLockMS = 16;
 bool RefreshMouse(void);
 void RenderCursor(void);
 
+int g_DefaultCursorID = CURSOR_DEFAULT;
+
 int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
 int g_TaskbarHeight = 0;
 
@@ -77,6 +79,8 @@ bool IsWindowManagerRunning()
 void SetupWindowManager()
 {
 	LogMsg("Please wait...");
+	
+	g_DefaultCursorID = CURSOR_WAIT;
 	
 	memset (&g_windows, 0, sizeof (g_windows));
 	
@@ -452,6 +456,8 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		RunOneEffectFrame ();
 		
+		Cursor* pDefaultCursor = GetCursorBasedOnID(g_DefaultCursorID, NULL);
+		
 		// Get the window we're over:
 		Window* pWindowOver = ShootRayAndGetWindow(g_mouseX, g_mouseY);
 		
@@ -463,9 +469,9 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 				SetCursor(pCur);
 			}
 		}
-		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != &g_defaultCursor)
+		else if (g_currentCursor != &g_windowDragCursor && g_currentCursor != pDefaultCursor)
 		{
-			SetCursor(&g_defaultCursor);
+			SetCursor(pDefaultCursor);
 		}
 		
 		if (!handled)

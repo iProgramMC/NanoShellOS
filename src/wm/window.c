@@ -822,29 +822,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 }
 
 // Main loop thread.
-void RedrawEverything()
-{
-	VBEData* pBkp = g_vbeData;
-	VidSetVBEData(NULL);
-	
-	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
-	RedrawBackground (r);
-	
-	//for each window, send it a EVENT_PAINT:
-	for (int p = 0; p < WINDOWS_MAX; p++)
-	{
-		Window* pWindow = &g_windows [p];
-		if (!pWindow->m_used) continue;
-		
-		int prm = MAKE_MOUSE_PARM(pWindow->m_fullRect.right - pWindow->m_fullRect.left, pWindow->m_fullRect.bottom - pWindow->m_fullRect.top);
-		WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,  prm, prm);
-		WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0,   0);
-		//WindowRegisterEvent (pWindow, EVENT_PAINT, 0, 0);
-		pWindow->m_renderFinished = true;
-	}
-	VidSetVBEData(pBkp);
-}
-
 void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 {
 	//WmSplitRectangle
