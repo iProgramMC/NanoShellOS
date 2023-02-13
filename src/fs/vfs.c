@@ -292,7 +292,7 @@ void FiDebugDump()
 	LogMsg("Done");
 }
 
-static int FiFindFreeFileDescriptor(const char* reqPath)
+static int FrFindFreeFileDescriptor(const char* reqPath)
 {
 	if (reqPath && *reqPath)
 	{
@@ -313,79 +313,35 @@ static int FiFindFreeFileDescriptor(const char* reqPath)
 	return -ENFILE;
 }
 
-static int FiFindFreeDirDescriptor(UNUSED const char* reqPath)
+static int FrFindFreeDirDescriptor(UNUSED const char* reqPath)
 {
-	/*for (int i = 0; i < FD_MAX; i++)
-	{
-		if (g_DirNodeToDescriptor[i].m_bOpen)
-			if (strcmp (g_DirNodeToDescriptor[i].m_sPath, reqPath) == 0)
-				return -EAGAIN;
-	}*/
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (!g_DirNodeToDescriptor[i].m_bOpen)
 			return i;
 	}
+	
 	return -ENFILE;
 }
 
-//TODO: improve MT
-SafeLock g_FileSystemLock;
-
-void FiReleaseResourcesFromTask(void * task)
-{
-	// check if we actually crashed during a file system operation...
-	cli;
-	if (g_FileSystemLock.m_task_owning_it == task)
-	{
-		SLogMsg("!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!");
-		SLogMsg("An I/O operation has failed within the task that crashed.");
-		SLogMsg("This message is supposed to look pompous like this to be easily");
-		SLogMsg("noticeable within the peripheral vision of the user, if they're");
-		SLogMsg("running this in QEMU.");
-		SLogMsg("NOTE: The lock will be unlocked, but the file system may be left");
-		SLogMsg("in a state we can't really recover from!");
-		
-		g_FileSystemLock.m_held           = false;
-		g_FileSystemLock.m_task_owning_it = NULL;
-	}
-	sti;
-	
-	// ok, the lock is now free, we should start closing files.
-	for (int i = 0; i < (int)ARRAY_COUNT(g_FileNodeToDescriptor); i++)
-	{
-		if (g_FileNodeToDescriptor[i].m_ownerTask == task)
-			FiClose(i);
-	}
-	for (int i = 0; i < (int)ARRAY_COUNT(g_DirNodeToDescriptor); i++)
-	{
-		if (g_DirNodeToDescriptor[i].m_ownerTask == task)
-			FiCloseDir(i);
-	}
-}
-
-bool FiIsValidDescriptor(int fd)
+bool FrIsValidDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
 	return g_FileNodeToDescriptor[fd].m_bOpen;
 }
 
-bool FiIsValidDirDescriptor(int fd)
+bool FrIsValidDirDescriptor(int fd)
 {
 	if (fd < 0 || fd >= FD_MAX) return false;
 	return g_DirNodeToDescriptor[fd].m_bOpen;
 }
 
-static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
+int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
-	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
-	int fd = FiFindFreeFileDescriptor(pFileName);
+	int fd = FrFindFreeFileDescriptor(pFileName);
 	if (fd < 0)
-	{
-		LockFree (&g_FileSystemLock);
 		return fd;
-	}
 	
 	//find the node:
 	bool hasClearedAlready = false;
@@ -425,18 +381,14 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 				FileNode* pDir = FsResolvePath(fileName);
 				if (!pDir)
 				{
-					SLogMsg("Couldn't even find parent dir '%s' ('%s')", fileName, pFileName);
+					SLogMsg("Warning: Couldn't even find parent dir '%s' ('%s')", fileName, pFileName);
 					//couldn't even find parent dir
-					LockFree (&g_FileSystemLock);
 					return -ENOENT;
 				}
 				
 				// Try creating a file
 				if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
-				{
-					LockFree (&g_FileSystemLock);
 					return -ENOSPC;
-				}
 				
 				pFile = FsFindDir(pDir, fileNameSimple);
 				
@@ -445,15 +397,11 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 				hasClearedAlready = true;
 				
 				if (!pFile)
-				{
-					LockFree (&g_FileSystemLock);
 					return -ENOSPC;
-				}
 			}
 			else
 			{
 				//Can't append to/read from a missing file!
-				LockFree (&g_FileSystemLock);
 				return -ENOENT;
 			}
 		}
@@ -461,28 +409,18 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 	
 	//if we are trying to read, but we can't:
 	if ((oflag & O_RDONLY) && !(pFile->m_perms & PERM_READ))
-	{
-		LockFree (&g_FileSystemLock);
 		return -EACCES;
-	}
+	
 	//if we are trying to write, but we can't:
 	if ((oflag & O_WRONLY) && !(pFile->m_perms & PERM_WRITE))
-	{
-		LockFree (&g_FileSystemLock);
 		return -EACCES;
-	}
+	
 	//if we are trying to execute, but we can't:
 	if ((oflag & O_EXEC) && !(pFile->m_perms & PERM_EXEC))
-	{
-		LockFree (&g_FileSystemLock);
 		return -EACCES;
-	}
 	
 	if (pFile->m_type & FILE_TYPE_DIRECTORY)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EISDIR;
-	}
 	
 	//If we have should truncate the file:
 	if ((oflag & O_WRONLY) && (oflag & O_TRUNC))
@@ -496,10 +434,7 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 	
 	//open it:
 	if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
-	{
-		LockFree (&g_FileSystemLock);
 		return -EIO;
-	}
 	
 	//we have all the perms, let's write the filenode there:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
@@ -526,8 +461,6 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 		FsAddReference(pFile);
 	}
 	
-	LockFree (&g_FileSystemLock);
-	
 	if ((oflag & O_APPEND) && (oflag & O_WRONLY))
 	{
 		// Automatically seek to the end
@@ -537,37 +470,10 @@ static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag,
 	return fd;
 }
 
-int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
+int FrClose (int fd)
 {
-	// if the file path isn't absolute, make it
-	if (*pFileName == '/')
-	{
-		return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
-	}
-	else
-	{
-		char path[PATH_MAX * 2];
-		strcpy(path, g_cwd);
-		if (g_cwd[1] != 0) // not just '/'
-			strcat(path, "/");
-		strcat(path, pFileName);
-		return FiOpenInternal(path, NULL, oflag, srcFile, srcLine);
-	}
-}
-
-int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
-{
-	return FiOpenInternal(NULL, pFileNode, oflag, srcFile, srcLine);
-}
-
-int FiClose (int fd)
-{
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
 	
 	//closes the file:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
@@ -582,44 +488,33 @@ int FiClose (int fd)
 	pDesc->m_nStreamOffset = 0;
 	pDesc->m_ownerTask = NULL;
 	
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
+int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 {
-	LockAcquire (&g_FileSystemLock);
 	// find a free fd to open:
-	int dd = FiFindFreeDirDescriptor(pFileName);
+	int dd = FrFindFreeDirDescriptor(pFileName);
 	if (dd < 0)
-	{
-		LockFree (&g_FileSystemLock);
 		return dd;
-	}
+	
 	FileNode* pDir = FsResolvePath(pFileName);
 	if (!pDir)
-	{
 		// No File
-		LockFree (&g_FileSystemLock);
 		return -ENOENT;
-	}
 	
 	if (!(pDir->m_type & FILE_TYPE_DIRECTORY))
 	{
 		FsReleaseReference(pDir);
 		
 		// Not a Directory
-		LockFree (&g_FileSystemLock);
 		return -ENOTDIR;
 	}
 	
 	// Try to open the Directory
 	bool result = FsOpenDir (pDir);
 	if (!result)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EIO; // Cannot open the directory
-	}
 	
 	//we have all the perms, let's write the filenode there:
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
@@ -631,19 +526,13 @@ int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	pDesc->m_nStreamOffset 	= 0;
 	pDesc->m_ownerTask      = KeGetRunningTask();
 	
-	LockFree (&g_FileSystemLock);
-	
 	return dd;
 }
 
-int FiCloseDir (int dd)
+int FrCloseDir (int dd)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDirDescriptor(dd))
 		return -EBADF;
-	}
 	
 	//closes the file:
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
@@ -658,91 +547,55 @@ int FiCloseDir (int dd)
 	pDesc->m_nStreamOffset = 0;
 	pDesc->m_ownerTask     = NULL;
 	
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-DirEnt* FiReadDir (int dd)
+DirEnt* FrReadDir(int dd)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDirDescriptor(dd))
 		return NULL;
-	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	
 	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, &pDesc->m_nStreamOffset, &pDesc->m_sCurDirEnt);
 	if (!pDirEnt)
-	{
-		LockFree (&g_FileSystemLock);
 		return NULL;
-	}
-	
-	LockFree (&g_FileSystemLock);
 	
 	return &pDesc->m_sCurDirEnt;
 }
 
-int FiSeekDir (int dd, int loc)
+int FrSeekDir (int dd, int loc)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDirDescriptor(dd))
 		return -EBADF;
-	}
 	
 	if (loc < 0)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EOVERFLOW;
-	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	pDesc->m_nStreamOffset = loc;
 	
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-int FiRewindDir (int dd)
+int FrTellDir (int dd)
 {
-	return FiSeekDir (dd, 0);
-}
-
-int FiTellDir (int dd)
-{
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDirDescriptor(dd))
 		return -EBADF;
-	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
-	
-	LockFree (&g_FileSystemLock);
 	return pDesc->m_nStreamOffset;
 }
 
-int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
+int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDirDescriptor(dd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDirDescriptor(dd))
 		return -EBADF;
-	}
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	FileNode *pNode = FsFindDir(pDesc->m_pNode, pFileName);
 	if (!pNode)
-	{
-		LockFree (&g_FileSystemLock);
 		return -ENOENT;
-	}
 	
 	pOut->m_type       = pNode->m_type;
 	pOut->m_size       = pNode->m_length;
@@ -753,21 +606,14 @@ int FiStatAt (int dd, const char *pFileName, StatResult* pOut)
 	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
 	FsReleaseReference(pNode);
-	
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-int FiStat (const char *pFileName, StatResult* pOut)
+int FrStat (const char *pFileName, StatResult* pOut)
 {
-	LockAcquire (&g_FileSystemLock);
-	
 	FileNode *pNode = FsResolvePath(pFileName);
 	if (!pNode)
-	{
-		LockFree (&g_FileSystemLock);
 		return -ENOENT;
-	}
 	
 	pOut->m_type       = pNode->m_type;
 	pOut->m_size       = pNode->m_length;
@@ -778,101 +624,62 @@ int FiStat (const char *pFileName, StatResult* pOut)
 	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
 	
 	FsReleaseReference(pNode);
-	
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-size_t FiRead (int fd, void *pBuf, int nBytes)
+size_t FrRead (int fd, void *pBuf, int nBytes)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
 	
 	if (nBytes < 0)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EINVAL;
-	}
 	
 	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
 	if (rv < 0) 
-	{
-		LockFree (&g_FileSystemLock);
 		return rv;
-	}
+	
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
-	LockFree (&g_FileSystemLock);
 	return rv;
 }
 
-//TODO
-size_t FiWrite (int fd, void *pBuf, int nBytes)
+size_t FrWrite (int fd, void *pBuf, int nBytes)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
 	
 	if (nBytes < 0)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EINVAL;
-	}
 	
 	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
-	if (rv < 0) 
-	{
-		LockFree (&g_FileSystemLock);
+	if (rv < 0)
 		return rv;
-	}
+	
 	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
-	LockFree (&g_FileSystemLock);
 	return rv;
 }
 
-int FiIoControl(int fd, unsigned long request, void * argp)
+int FrIoControl(int fd, unsigned long request, void * argp)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
 	
-	int rv = FsIoControl(g_FileNodeToDescriptor[fd].m_pNode, request, argp);
-	
-	LockFree (&g_FileSystemLock);
-	return rv;
+	return FsIoControl(g_FileNodeToDescriptor[fd].m_pNode, request, argp);
 }
 
-int FiSeek (int fd, int offset, int whence)
+int FrSeek (int fd, int offset, int whence)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
 	
 	if (g_FileNodeToDescriptor[fd].m_bIsFIFO)
-	{
-		LockFree (&g_FileSystemLock);
 		return -ESPIPE;
-	}
 	
 	if (whence < 0 || whence > SEEK_END)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EINVAL;
-	}
 	
 	int realOffset = offset;
+	
 	switch (whence)
 	{
 		case SEEK_CUR:
@@ -882,227 +689,79 @@ int FiSeek (int fd, int offset, int whence)
 			realOffset += g_FileNodeToDescriptor[fd].m_nFileEnd;
 			break;
 	}
+	
 	if (realOffset > g_FileNodeToDescriptor[fd].m_nFileEnd)
-	{
-		LockFree (&g_FileSystemLock);
 		return -EOVERFLOW;
-	}
 	
 	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
-	LockFree (&g_FileSystemLock);
 	return -ENOTHING;
 }
 
-int FiTell (int fd)
+int FrTell (int fd)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
-	int rv = g_FileNodeToDescriptor[fd].m_nStreamOffset;
-	LockFree (&g_FileSystemLock);
-	return rv;
+	
+	return g_FileNodeToDescriptor[fd].m_nStreamOffset;
 }
 
-int FiTellSize (int fd)
+int FrTellSize (int fd)
 {
-	LockAcquire (&g_FileSystemLock);
-	if (!FiIsValidDescriptor(fd))
-	{
-		LockFree (&g_FileSystemLock);
+	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
-	}
-	int rv = g_FileNodeToDescriptor[fd].m_nFileEnd;
-	LockFree (&g_FileSystemLock);
-	return rv;
+	
+	return g_FileNodeToDescriptor[fd].m_nFileEnd;
 }
 
 extern char g_cwd[PATH_MAX+2];
 
-int FiUnlinkFile (const char *pfn)
+int FrUnlinkInDir(const char* pDirName, const char* pFileName)
 {
-	char buffer[PATH_MAX];
-	if (strlen (pfn) >= PATH_MAX - 1) return -ENAMETOOLONG;
-	
-	// is this a relative path?
-	if (*pfn != '/')
-	{
-		// append the relative path
-		if (strlen (pfn) + strlen (g_cwd) >= PATH_MAX - 2) return -EOVERFLOW;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfn);
-		
-		return FiUnlinkFile(buffer);
-	}
-	
-	// copy up until the last /
-	char* r = strrchr(pfn, '/');
-	
-	const char* ptr = pfn;
-	char *head = buffer;
-	
-	while (ptr != r) *head++ = *ptr++;
-	
-	// add the null terminator
-	*head = 0;
-	
-	if (buffer[0] == 0)
-		buffer[0] = '/', buffer[1] = 0;
-	
-	LockAcquire(&g_FileSystemLock);
-	
-	FileNode *pDir = FsResolvePath (buffer);
+	FileNode *pDir = FsResolvePath (pDirName);
 	if (!pDir)
-	{
-		LockFree(&g_FileSystemLock);
 		return -ENOENT;
-	}
 	
 	// note: The file node is as valid as there is a reference to it.
 	// FsResolvePath adds a reference to the node, so it will only be invalid
 	// when we release the reference.
-	int errorCode = FsUnlinkFile (pDir, r + 1);
-	
+	int errorCode = FsUnlinkFile (pDir, pFileName);
 	FsReleaseReference(pDir);
-	LockFree(&g_FileSystemLock);
-	
 	return errorCode;
 }
 
-int FiChangeDir (const char *pfn)
+int FrChangeDir(const char *pfn)
 {
-	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
-	
-	int slen = strlen (pfn);
-	if (slen >= PATH_MAX) return -EOVERFLOW;
-	
-	if (pfn[0] == '/')
-	{
-		LockAcquire(&g_FileSystemLock);
-		
-		// Absolute Path
-		FileNode *pNode = FsResolvePath (pfn);
-		if (!pNode) return -EEXIST;
-		
-		if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
-		{
-			FsReleaseReference(pNode);
-			LockFree(&g_FileSystemLock);
-			return -ENOTDIR;
-		}
-		
-		FsReleaseReference(pNode);
-		
-		//this should work!
-		strcpy (g_cwd, pfn);
-		
-		LockFree(&g_FileSystemLock);
-		
-		return -ENOTHING;
-	}
-	
-	if (strcmp (pfn, PATH_THISDIR) == 0) return -ENOTHING;
-	
-	char cwd_work [sizeof (g_cwd)];
-	memset (cwd_work, 0, sizeof cwd_work);
-	strcpy (cwd_work, g_cwd);
-	
-	//TODO FIXME: make composite paths like "../../test/file" work -- Partially works, but only because ext2 is generous enough to give us . and .. entries
-	
-	if (strcmp (pfn, PATH_PARENTDIR) == 0)
-	{
-		for (int i = PATH_MAX - 1; i >= 0; i--)
-		{
-			//get rid of the last segment
-			if (cwd_work[i] == PATH_SEP)
-			{
-				cwd_work[i + (i == 0)] = 0;
-				break;
-			}
-		}
-	}
-	else
-	{
-		if (strlen (cwd_work) + slen + 5 >= PATH_MAX)
-			return -EOVERFLOW;//path would be too large
-		
-		if (cwd_work[1] != 0) //i.e. not just a '/'
-		{
-			strcat (cwd_work, "/");
-		}
-		strcat (cwd_work, pfn);
-	}
-	
-	LockAcquire(&g_FileSystemLock);
-	
-	//resolve the path
-	FileNode *pNode = FsResolvePath (cwd_work);
-	
-	if (!pNode)
-	{
-		LockFree(&g_FileSystemLock);
-		
-		return -ENOENT; //does not exist
-	}
+	FileNode *pNode = FsResolvePath (pfn);
+	if (!pNode) return -ENOENT;
 	
 	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
 	{
 		FsReleaseReference(pNode);
-		LockFree(&g_FileSystemLock);
-		return -ENOTDIR; //not a directory
+		return -ENOTDIR;
 	}
 	
 	FsReleaseReference(pNode);
 	
 	//this should work!
-	strcpy (g_cwd, cwd_work);
-	
-	LockFree(&g_FileSystemLock);
+	strcpy (g_cwd, pfn);
 	
 	return -ENOTHING;
 }
 
 //note: This only works with absolute paths that have been checked for length.
-int FiRenameSub(const char* pfnOld, const char* pfnNew)
+int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, const char* pNameNew)
 {
-	char bufferOld[PATH_MAX], bufferNew[PATH_MAX];
-	
-	strcpy(bufferOld, pfnOld);
-	strcpy(bufferNew, pfnNew);
-	
-	char *pSlashOld, *pSlashNew;
-	pSlashOld = strrchr(bufferOld, '/');
-	pSlashNew = strrchr(bufferNew, '/');
-	
-	//well, these SHOULD be paths with at least one slash inside.
-	ASSERT(pSlashOld && pSlashNew);
-	
-	*pSlashOld = *pSlashNew = 0;
-	
-	char* pDirOld = bufferOld, *pDirNew = bufferNew, *pNameOld = pSlashOld + 1, *pNameNew = pSlashNew + 1;
-	
-	LockAcquire(&g_FileSystemLock);
-	
 	// resolve the directories
 	FileNode* pDirNodeOld = FsResolvePath(pDirOld);
 	
 	if (!pDirNodeOld)
-	{
-		LockFree(&g_FileSystemLock);
 		return -ENOENT;
-	}
 	
 	FileNode* pDirNodeNew = FsResolvePath(pDirNew);
 	
 	if (!pDirNodeNew)
 	{
 		FsReleaseReference(pDirNodeOld);
-		LockFree(&g_FileSystemLock);
 		return -ENOENT;
 	}
 	
@@ -1111,7 +770,6 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 		// No cross file system action allowed. Must use manual copy / delete combo.
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
-		LockFree(&g_FileSystemLock);
 		return -EXDEV;
 	}
 	
@@ -1119,7 +777,6 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	{
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
-		LockFree(&g_FileSystemLock);
 		return -ENOTDIR;
 	}
 	
@@ -1127,7 +784,6 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	{
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);
-		LockFree(&g_FileSystemLock);
 		return -ENOTSUP;
 	}
 	
@@ -1149,7 +805,6 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 		{
 			FsReleaseReference(pDirNodeOld);
 			FsReleaseReference(pDirNodeNew);
-			LockFree(&g_FileSystemLock);
 			return result;
 		}
 		
@@ -1161,119 +816,44 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	
 	FsReleaseReference(pDirNodeOld);
 	FsReleaseReference(pDirNodeNew);
-	LockFree(&g_FileSystemLock);
-	
 	return result;
 }
 
-int FiRename(const char* pfnOld, const char* pfnNew)
+int FrMakeDir(const char* pDirName, const char* pFileName)
 {
-	// not a relative path
-	if (pfnOld[0] != '/')
-	{
-		char buffer[PATH_MAX];
-		if (strlen(pfnOld) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfnOld);
-		
-		return FiRename(buffer, pfnNew);
-	}
-	
-	if (pfnNew[0] != '/')
-	{
-		char buffer[PATH_MAX];
-		if (strlen(pfnNew) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfnNew);
-		
-		return FiRename(pfnOld, buffer);
-	}
-	
-	if (strlen(pfnOld) >= PATH_MAX) return -ENAMETOOLONG;
-	if (strlen(pfnNew) >= PATH_MAX) return -ENAMETOOLONG;
-	
-	// If they're the same file, just don't do anything
-	if (strcmp(pfnOld, pfnNew) == 0) return -ENOTHING;
-	
-	return FiRenameSub(pfnOld, pfnNew);
-}
-
-static int FiMakeDirSub(char* pPath)
-{
-	char* pSlashPtr = strrchr(pPath, '/');
-	ASSERT(pSlashPtr);
-	
-	*pSlashPtr = 0;
-	
-	char* pDirName = pPath, *pFileName = pSlashPtr + 1;
-	
 	FileNode *pNode = FsResolvePath(pDirName);
 	if (!pNode) return -ENOENT;
 	
 	int status = FsCreateDir(pNode, pFileName);
 	
 	FsReleaseReference(pNode);
-	
 	return status;
 }
 
-int FiMakeDir(const char* pPath)
+int FrRemoveDir(const char* pPath)
 {
-	if (*pPath == 0) return -ENOENT;
-	
-	char buf[PATH_MAX];
-	
-	if (*pPath == '/')
-	{
-		if (strlen (pPath) >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy( buf, pPath );
-	}
-	else
-	{
-		if (strlen (pPath) + strlen (g_cwd) + 1 >= PATH_MAX - 2) return -ENAMETOOLONG;
-		
-		strcpy( buf, g_cwd );
-		if (strcmp( g_cwd, "/" ))
-			strcat( buf, "/" );
-		strcat( buf, pPath );
-	}
-	
-	LockAcquire(&g_FileSystemLock);
-	
-	int status = FiMakeDirSub(buf);
-	
-	LockFree(&g_FileSystemLock);
-	
-	return status;
-}
-
-int FiRemoveDir(const char* pPath)
-{
-	if (*pPath == 0) return -EBUSY;
-	
-	LockAcquire(&g_FileSystemLock);
-	
 	FileNode* pNode = FsResolvePath(pPath);
-	
 	if (!pNode->RemoveDir)
-	{
-		LockFree(&g_FileSystemLock);
 		return -ENOTSUP;
-	}
 	
 	int status = pNode->RemoveDir(pNode);
-	
 	FsReleaseReference(pNode);
-	LockFree(&g_FileSystemLock);
-	
 	return status;
+}
+
+void FrCloseAllFilesFromTask(void* task)
+{
+	// ok, the lock is now free, we should start closing files.
+	for (int i = 0; i < (int)ARRAY_COUNT(g_FileNodeToDescriptor); i++)
+	{
+		if (g_FileNodeToDescriptor[i].m_ownerTask == task)
+			FrClose(i);
+	}
+	for (int i = 0; i < (int)ARRAY_COUNT(g_DirNodeToDescriptor); i++)
+	{
+		if (g_DirNodeToDescriptor[i].m_ownerTask == task)
+			FrCloseDir(i);
+	}
 }
 
 #endif
