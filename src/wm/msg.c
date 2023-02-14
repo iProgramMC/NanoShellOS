@@ -638,6 +638,7 @@ bool HandleMessages(Window* pWindow)
 }
 
 void ResizeWindowInternal(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight);
+void DirtyRectLogger (int x, int y, int width, int height);
 
 void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
 {
@@ -699,8 +700,11 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		case EVENT_SETFOCUS:
 		case EVENT_KILLFOCUS:
 		case EVENT_REPAINT_BORDER_PRIVATE:
+		{
 			WmRepaintBorder(pWindow);
+			pWindow->m_vbeData.m_dirty = true;
 			break;
+		}
 			
 		case EVENT_CLOSE:
 			DestroyWindow(pWindow);
