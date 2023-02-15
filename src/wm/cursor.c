@@ -8,7 +8,7 @@
 #include "wi.h"
 
 #define C_MAX_CURSOR_SLOTS (1024)
-#define C_BUILTIN_CURSOR_COUNT ((int)ARRAY_COUNT(g_CursorLUT))
+#define C_BUILTIN_CURSOR_COUNT (CURSOR_CUSTOM + 1)
 
 // Built-in cursors.
 Cursor* const g_CursorLUT[] =

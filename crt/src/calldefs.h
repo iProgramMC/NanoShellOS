@@ -512,3 +512,14 @@ CALL_END
 CALL(ChangeTimer, WIN_CHANGE_TIMER, void, Window* pWindow, int timerID, int newFreq, int newEvent)
 	SARGS(pWindow, timerID, newFreq, newEvent)
 CALL_END
+
+// Calls V2.3
+CALL(UploadCursor, WIN_UPLOAD_CURSOR, int, Image * pImage, int xOff, int yOff)
+	RARGS(pImage, xOff, yOff)
+CALL_END
+CALL(ReleaseCursor, WIN_UPLOAD_CURSOR, void, int cursorID)
+	SARGS(cursorID)
+CALL_END
+
+
+

@@ -109,6 +109,8 @@ void        SetWindowFlags(Window * pWindow, int flags);
 int         AddTimer(Window* pWindow, int frequencyMs, int eventFired);
 void        DisarmTimer(Window* pWindow, int timerID);
 void        ChangeTimer(Window* pWindow, int newFrequencyMs /* = -1 */, int newEventFired /* = -1 */);
+int         UploadCursor(Image* pImage, int xOff, int yOff);
+void        ReleaseCursor(int cursorID);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

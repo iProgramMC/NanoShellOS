@@ -68,16 +68,6 @@ void UserRequestRepaintNew(Window* pWindow)
 	RequestRepaintNew(pWindow);
 }
 
-void UserWindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2)
-{
-	WindowRegisterEvent(pWindow, eventType, parm1, parm2);
-}
-
-void UserWindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
-{
-	WindowRegisterEventUnsafe(pWindow, eventType, parm1, parm2);
-}
-
 void * UserMmAllocateDebug(size_t sz, UNUSED const char* a, UNUSED int b)
 {
 	return MmAllocate(sz);
@@ -368,9 +358,11 @@ enum
 		WIN_ADD_TIMER,
 		WIN_DISARM_TIMER,
 		WIN_CHANGE_TIMER,
+		
+	// System Calls V2.3
 		WIN_UPLOAD_CURSOR,
 		WIN_RELEASE_CURSOR,
-		VID_UPLOAD_ICON,
+		VID_UPLOAD_ICON,    // todo
 		VID_RELEASE_ICON,
 };
 
@@ -439,8 +431,8 @@ const void *WindowCall[] = {
 		SetTextInputText,
 		SetWindowIcon,
 		SetWindowTitle,
-		UserWindowRegisterEvent,
-		UserWindowRegisterEventUnsafe,
+		WindowAddEventToMasterQueue,
+		WindowAddEventToMasterQueue,
 		
 		GetTickCount,
 		TmReadTime,
@@ -571,6 +563,10 @@ const void *WindowCall[] = {
 		AddTimer,
 		DisarmTimer,
 		ChangeTimer,
+		
+	// System Calls V2.3 - 14/02/2023
+		UploadCursor,
+		ReleaseCursor,
 };
 
 
