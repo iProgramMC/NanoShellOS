@@ -15,7 +15,8 @@ add_item|121|1|System monitor|shell:sysmon
 add_item|118|0|Magnifier|shell:magnify
 
 // Pre-packaged applications that aren't built into the kernel
-add_item|93|1|Codename V-Builder|exwindow:/Bin/VBuilder.nse
+add_item|2|1|Chess|exwindow:/Bin/Chess.nse
+add_item|93|0|Codename V-Builder|exwindow:/Bin/VBuilder.nse
 add_item|38|0|Minesweeper|exwindow:/Bin/Minesweeper.nse
 add_item|65|0|Clock|exwindow:/Bin/Clock.nse
 add_item|72|0|Calculator|exwindow:/Bin/Calc.nse

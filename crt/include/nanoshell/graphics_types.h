@@ -11,12 +11,6 @@
 #define TEXT_RENDER_TRANSPARENT 0xFFFFFFFF
 #define TEXT_RENDER_BOLD        0x01000000
 
-#define TEXTSTYLE_HCENTERED   (1)
-#define TEXTSTYLE_VCENTERED   (2)
-#define TEXTSTYLE_WORDWRAPPED (4)
-#define TEXTSTYLE_RJUSTIFY    (8)
-#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
-
 #define RECT(rect,x,y,w,h) do {\
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
