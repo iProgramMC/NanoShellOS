@@ -26,8 +26,6 @@ void CoWndPlotChar (Console *this, int x, int y, char c)
 	if (x < 0 || y < 0 || x >= this->width || y >= this->height) return;
 	this->m_dirty = true;
 	
-	g_vbeData = this->m_vbeData;
-	
 	uint16_t chr = TextModeMakeChar (this->color, c);
 	this->textBuffer [x + y * this->width] = chr;
 }
