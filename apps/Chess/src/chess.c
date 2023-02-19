@@ -180,6 +180,9 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 	rows[2] = row - 1, cols[2] = col - 1;
 	rows[3] = row - 1, cols[3] = col + 1;
 	
+	const static int deltaBishopRow[] = {  1,  1, -1, -1 };
+	const static int deltaBishopCol[] = { -1, +1, -1,  1 };
+	
 	for (int x = 0; x < BOARD_SIZE; x++)
 	{
 		for (int i = 0; i < 4; i++)
@@ -193,6 +196,12 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 			// we hit a piece, so stop "shooting a ray" here.
 			if (pcs[i]->piece != PIECE_NONE)
 				rows[i] = cols[i] = -1;
+			
+			if (rows[i] != -1 || cols[i] != -1)
+			{
+				rows[i] += deltaBishopRow[i];
+				cols[i] += deltaBishopCol[i];
+			}
 		}
 	}
 	
@@ -201,6 +210,9 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 	rows[1] = row, cols[1] = col + 1;
 	rows[2] = row - 1, cols[2] = col;
 	rows[3] = row + 1, cols[3] = col;
+	
+	const static int deltaRookRow[] = {  1,  1, -1, -1 };
+	const static int deltaRookCol[] = { -1, +1, -1,  1 };
 	
 	for (int x = 0; x < BOARD_SIZE; x++)
 	{
@@ -211,6 +223,16 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 			// this is a different-color rook or queen. In check
 			if ((pcs[i]->piece == PIECE_ROOK || pcs[i]->piece == PIECE_QUEEN) && pcs[i]->color != color)
 				return true;
+			
+			// we hit a piece, so stop "shooting a ray" here.
+			if (pcs[i]->piece != PIECE_NONE)
+				rows[i] = cols[i] = -1;
+			
+			if (rows[i] != -1 || cols[i] != -1)
+			{
+				rows[i] += deltaRookRow[i];
+				cols[i] += deltaRookCol[i];
+			}
 		}
 	}
 	
@@ -250,12 +272,19 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 		BoardPiece pcSrcT = *pcSrc;
 		BoardPiece pcDstT = *pcDst;
 		
-		eColor colr = pcSrc->color;
+		eColor colr  = pcSrc->color;
+		ePiece piece = pcSrc->piece;
 		
 		*pcDst = pcSrcT;
 		SetPiece(rowSrc, colSrc, PIECE_NONE, BLACK);
 		
 		BoardPos pos = g_KingPositions[colr];
+		// If we're moving the king, see if _THAT_ position puts us in check
+		if (piece == PIECE_KING)
+		{
+			BoardPos pos2 = { rowDst, colDst };
+			pos = pos2;
+		}
 		bool wouldPutUsInCheck = ChessIsKingInCheck(pos.row, pos.col, colr, -1, -1);
 		
 		*pcSrc = pcSrcT;
