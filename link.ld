@@ -7,7 +7,7 @@ OUTPUT_ARCH(i386)
 OUTPUT_FORMAT(elf32-i386)
 OUTPUT_ARCH(i386)
 
-ENTRY (KeEntry)
+ENTRY (KeIPLEntry)
 
 /* Here is where all of the sections of the kernel are defined. */
 SECTIONS
@@ -20,14 +20,14 @@ SECTIONS
 	/* start blocking out writes from here */
 	l_code_and_rodata_start = 0xC0100000;
 
-	.multibootdata :
+	.ipldata :
 	{
-		*(.multibootdata .multibootdata.*)
+		*(.ipldata .ipldata.*)
 	}
 
-	.multiboottext :
+	.ipltext :
 	{
-		*(.multiboottext .multiboottext.*)
+		*(.ipltext .ipltext.*)
 	}
 	
 	. += 0xC0000000;
