@@ -146,32 +146,52 @@ BoardPiece* GetPieceIgnore(int row, int col, int rowIgn, int colIgn)
 }
 
 // row, col - The position of a king
-bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
+bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles)
 {
-	LogMsg("ChessIsKingInCheck(%d,%d,%d)",row,col,color);
+	bool bFinalResult = false;
 	
-	int rows[4], cols[4];
+	int rows[8], cols[8];
 	rows[0] = row + 1, cols[0] = col - 1;
 	rows[1] = row + 1, cols[1] = col + 1;
 	rows[2] = row - 1, cols[2] = col - 1;
 	rows[3] = row - 1, cols[3] = col + 1;
 	
 	// Check for attacking pawns
-	BoardPiece* pcs[4];
+	BoardPiece* pcs[8];
 	for (int i = 0; i < 4; i++)
 		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
 	
 	// king is white, so check for black pawns above
 	if (color == WHITE)
 	{
-		if (pcs[0]->piece == PIECE_PAWN && pcs[0]->color == BLACK) return true;
-		if (pcs[1]->piece == PIECE_PAWN && pcs[1]->color == BLACK) return true;
+		if (pcs[0]->piece == PIECE_PAWN && pcs[0]->color == BLACK)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[0], cols[0]);
+			bFinalResult = true;
+		}
+		if (pcs[1]->piece == PIECE_PAWN && pcs[1]->color == BLACK)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[1], cols[1]);
+			bFinalResult = true;
+		}
 	}
 	// king is black, so check for white pawns above
 	else if (color == BLACK)
 	{
-		if (pcs[2]->piece == PIECE_PAWN && pcs[2]->color == WHITE) return true;
-		if (pcs[3]->piece == PIECE_PAWN && pcs[3]->color == WHITE) return true;
+		if (pcs[2]->piece == PIECE_PAWN && pcs[2]->color == WHITE)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[2], cols[2]);
+			bFinalResult = true;
+		}
+		if (pcs[3]->piece == PIECE_PAWN && pcs[3]->color == WHITE)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[3], cols[3]);
+			bFinalResult = true;
+		}
 	}
 	
 	// Check for attacking bishops or queen diagonals
@@ -191,7 +211,11 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 			
 			// this is a different-color bishop or queen. In check
 			if ((pcs[i]->piece == PIECE_BISHOP || pcs[i]->piece == PIECE_QUEEN) && pcs[i]->color != color)
-				return true;
+			{
+				if (bFlashTiles)
+					FlashTile(rows[i], cols[i]);
+				bFinalResult = true;
+			}
 			
 			// we hit a piece, so stop "shooting a ray" here.
 			if (pcs[i]->piece != PIECE_NONE)
@@ -211,8 +235,8 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 	rows[2] = row - 1, cols[2] = col;
 	rows[3] = row + 1, cols[3] = col;
 	
-	const static int deltaRookRow[] = {  1,  1, -1, -1 };
-	const static int deltaRookCol[] = { -1, +1, -1,  1 };
+	const static int deltaRookRow[] = {  0,  0, -1, +1 };
+	const static int deltaRookCol[] = { -1, +1,  0,  0 };
 	
 	for (int x = 0; x < BOARD_SIZE; x++)
 	{
@@ -222,7 +246,11 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 			
 			// this is a different-color rook or queen. In check
 			if ((pcs[i]->piece == PIECE_ROOK || pcs[i]->piece == PIECE_QUEEN) && pcs[i]->color != color)
-				return true;
+			{
+				if (bFlashTiles)
+					FlashTile(rows[i], cols[i]);
+				bFinalResult = true;
+			}
 			
 			// we hit a piece, so stop "shooting a ray" here.
 			if (pcs[i]->piece != PIECE_NONE)
@@ -236,8 +264,29 @@ bool ChessIsKingInCheck(int row, int col, eColor color, int rowIgn, int colIgn)
 		}
 	}
 	
+	// Check for attacking knights.
+	rows[0] = row - 1, cols[0] = col + 2;
+	rows[1] = row + 1, cols[1] = col + 2;
+	rows[2] = row - 2, cols[2] = col + 1;
+	rows[3] = row + 2, cols[3] = col + 1;
+	rows[4] = row - 1, cols[4] = col - 2;
+	rows[5] = row + 1, cols[5] = col - 2;
+	rows[6] = row - 2, cols[6] = col - 1;
+	rows[7] = row + 2, cols[7] = col - 1;
+	for (int i = 0; i < 8; i++)
+	{
+		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+		
+		if (pcs[i]->piece == PIECE_KNIGHT && pcs[i]->color != color)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[i], cols[i]);
+			bFinalResult = true;
+		}
+	}
+	
 	// no checks found. We're good
-	return false;
+	return bFinalResult;
 }
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
@@ -285,7 +334,13 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 			BoardPos pos2 = { rowDst, colDst };
 			pos = pos2;
 		}
-		bool wouldPutUsInCheck = ChessIsKingInCheck(pos.row, pos.col, colr, -1, -1);
+		bool wouldPutUsInCheck = ChessIsKingInCheck(pos.row, pos.col, colr, -1, -1, piece == PIECE_KING);
+		
+		if (piece != PIECE_KING && wouldPutUsInCheck)
+		{
+			// flash the king, since it's in check
+			FlashTile(pos.row, pos.col);
+		}
 		
 		*pcSrc = pcSrcT;
 		*pcDst = pcDstT;
@@ -307,7 +362,7 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	for (int i = FIRST_PLAYER; i < NPLAYERS; i++)
 	{
 		BoardPos pos = g_KingPositions[i];
-		g_bIsKingInCheck[i] = ChessIsKingInCheck(pos.row, pos.col, i, -1, -1);
+		g_bIsKingInCheck[i] = ChessIsKingInCheck(pos.row, pos.col, i, -1, -1, false);
 		
 		if (g_bIsKingInCheck[i])
 		{

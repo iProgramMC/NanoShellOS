@@ -9,6 +9,10 @@
 #define TOP_BAR_HEIGHT  (50)
 #define MOVE_LIST_WIDTH (50)
 
+#define TILE_FLASH_COUNT (9)
+
+#define BOARD_THICKNESS (2)
+
 typedef enum
 {
 	PIECE_NONE,
@@ -64,6 +68,8 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst);
 void PaintTile(int row, int column);
 void SetPiece(int row, int column, ePiece pc, eColor col);
 BoardPiece* GetPiece(int row, int column);
+
+void FlashTile(int row, int column);
 
 eColor GetNextPlayer(eColor curPlr);
 

@@ -34,23 +34,44 @@
 
 //#define TITLE_BAR_HEIGHT 18
 
-#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR              ))
-#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR           ))
-#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR           ))
-#define WINDOW_EDGE_COLOR               (GetThemingParameter(P_WINDOW_EDGE_COLOR             ))
-#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR     ))
-#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR   ))
-#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B   ))
-#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B ))
-#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW))
-#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR       ))
-#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR             ))
-#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT       ))
-#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT              ))
-#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT         ))
-#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT           ))
-#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR           ))
-#define SELECTED_ITEM_COLOR_B           (GetThemingParameter(P_SELECTED_ITEM_COLOR_B         ))
+#define BACKGROUND_COLOR               	(GetThemingParameter(P_BACKGROUND_COLOR                ))
+#define BUTTON_MIDDLE_COLOR             (GetThemingParameter(P_BUTTON_MIDDLE_COLOR             ))
+#define WINDOW_BACKGD_COLOR             (GetThemingParameter(P_WINDOW_BACKGD_COLOR             ))
+#define WINDOW_TITLE_ACTIVE_COLOR       (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR       ))
+#define WINDOW_TITLE_INACTIVE_COLOR     (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR     ))
+#define WINDOW_TITLE_ACTIVE_COLOR_B     (GetThemingParameter(P_WINDOW_TITLE_ACTIVE_COLOR_B     ))
+#define WINDOW_TITLE_INACTIVE_COLOR_B   (GetThemingParameter(P_WINDOW_TITLE_INACTIVE_COLOR_B   ))
+#define WINDOW_TITLE_TEXT_COLOR_SHADOW  (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR_SHADOW  ))
+#define WINDOW_TITLE_TEXT_COLOR         (GetThemingParameter(P_WINDOW_TITLE_TEXT_COLOR         ))
+#define WINDOW_TEXT_COLOR               (GetThemingParameter(P_WINDOW_TEXT_COLOR               ))
+#define WINDOW_TEXT_COLOR_LIGHT         (GetThemingParameter(P_WINDOW_TEXT_COLOR_LIGHT         ))
+#define SYSTEM_FONT                     ((int)GetThemingParameter(P_SYSTEM_FONT                ))
+#define TITLE_BAR_HEIGHT                ((int)GetThemingParameter(P_TITLE_BAR_HEIGHT           ))
+#define TITLE_BAR_FONT                  ((int)GetThemingParameter(P_TITLE_BAR_FONT             ))
+#define SELECTED_MENU_ITEM_COLOR        (GetThemingParameter(P_SELECTED_MENU_ITEM_COLOR        ))
+#define SELECTED_MENU_ITEM_COLOR_B      (GetThemingParameter(P_SELECTED_MENU_ITEM_COLOR_B      ))
+#define WINDOW_BORDER_COLOR             (GetThemingParameter(P_WINDOW_BORDER_COLOR             ))
+#define MENU_BAR_HEIGHT                 ((int)GetThemingParameter(P_MENU_BAR_HEIGHT            ))
+#define MENU_ITEM_HEIGHT                ((int)GetThemingParameter(P_MENU_ITEM_HEIGHT           ))
+#define BORDER_SIZE                     ((int)GetThemingParameter(P_BORDER_SIZE                ))
+#define BUTTON_HILITE_COLOR             (GetThemingParameter(P_BUTTON_HILITE_COLOR             ))
+#define BUTTON_SHADOW_COLOR             (GetThemingParameter(P_BUTTON_SHADOW_COLOR             ))
+#define BUTTON_EDGE_COLOR               (GetThemingParameter(P_BUTTON_EDGE_COLOR               ))
+#define BUTTON_HOVER_COLOR              (GetThemingParameter(P_BUTTON_HOVER_COLOR              ))
+#define SCROLL_BAR_SIZE                 ((int)GetThemingParameter(P_SCROLL_BAR_SIZE            ))
+#define MENU_BAR_SELECTION_COLOR        (GetThemingParameter(P_MENU_BAR_SELECTION_COLOR        ))
+#define SELECTED_ITEM_COLOR             (GetThemingParameter(P_SELECTED_ITEM_COLOR             ))
+#define SELECTED_TEXT_COLOR             (GetThemingParameter(P_SELECTED_TEXT_COLOR             ))
+#define DESELECTED_TEXT_COLOR           (GetThemingParameter(P_DESELECTED_TEXT_COLOR           ))
+#define LIST_BACKGD_COLOR               (GetThemingParameter(P_LIST_BACKGD_COLOR               ))
+#define TOOLTIP_BACKGD_COLOR            (GetThemingParameter(P_TOOLTIP_BACKGD_COLOR            ))
+#define TOOLTIP_TEXT_COLOR              (GetThemingParameter(P_TOOLTIP_TEXT_COLOR              ))
+#define SCROLL_BAR_BACKGD_COLOR         (GetThemingParameter(P_SCROLL_BAR_BACKGD_COLOR         ))
+#define SELECTED_MENU_ITEM_TEXT_COLOR   (GetThemingParameter(P_SELECTED_MENU_ITEM_TEXT_COLOR   ))
+#define DESELECTED_MENU_ITEM_TEXT_COLOR (GetThemingParameter(P_DESELECTED_MENU_ITEM_TEXT_COLOR ))
+#define TABLE_VIEW_ALT_ROW_COLOR        (GetThemingParameter(P_TABLE_VIEW_ALT_ROW_COLOR        ))
+#define BUTTON_XSHADOW_COLOR            (GetThemingParameter(P_BUTTON_XSHADOW_COLOR            ))
+#define CAPTION_BUTTON_ICON_COLOR       (GetThemingParameter(P_CAPTION_BUTTON_ICON_COLOR       ))
 
 // Mark your system callbacks with this anyway!!!
 #define CALLBACK
@@ -277,7 +298,7 @@ enum {
 	P_BACKGROUND_COLOR,
 	P_BUTTON_MIDDLE_COLOR,
 	P_WINDOW_BACKGD_COLOR,
-	P_WINDOW_EDGE_COLOR,
+	P_WINDOW_BORDER_COLOR,
 	P_WINDOW_TITLE_ACTIVE_COLOR,
 	P_WINDOW_TITLE_INACTIVE_COLOR,
 	P_WINDOW_TITLE_ACTIVE_COLOR_B,
@@ -289,7 +310,29 @@ enum {
 	P_SYSTEM_FONT,
 	P_TITLE_BAR_HEIGHT,
 	P_TITLE_BAR_FONT,
-	P_THEME_PARM_COUNT
+	P_SELECTED_MENU_ITEM_COLOR,
+	P_SELECTED_MENU_ITEM_COLOR_B,
+	P_MENU_BAR_HEIGHT,
+	P_BORDER_SIZE,
+	P_BUTTON_HILITE_COLOR,
+	P_BUTTON_SHADOW_COLOR,
+	P_BUTTON_EDGE_COLOR,
+	P_BUTTON_HOVER_COLOR,
+	P_SCROLL_BAR_SIZE,
+	P_MENU_BAR_SELECTION_COLOR,
+	P_SELECTED_ITEM_COLOR,
+	P_SELECTED_TEXT_COLOR,
+	P_DESELECTED_TEXT_COLOR,
+	P_LIST_BACKGD_COLOR,
+	P_TOOLTIP_BACKGD_COLOR,
+	P_TOOLTIP_TEXT_COLOR,
+	P_SCROLL_BAR_BACKGD_COLOR,
+	P_SELECTED_MENU_ITEM_TEXT_COLOR,
+	P_DESELECTED_MENU_ITEM_TEXT_COLOR,
+	P_TABLE_VIEW_ALT_ROW_COLOR,
+	P_MENU_ITEM_HEIGHT,
+	P_BUTTON_XSHADOW_COLOR,
+	P_CAPTION_BUTTON_ICON_COLOR,
 };
 
 enum

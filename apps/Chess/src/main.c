@@ -7,8 +7,8 @@
 ******************************************/
 #include "chess.h"
 
-#define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH)
-#define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT)
+#define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH + 20)
+#define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT + 20)
 
 // Include the game icons.
 #include "../icons/black_pawn.h"
@@ -53,6 +53,23 @@ enum
 	
 };
 
+void DrawFrameAroundBoard()
+{
+	Rectangle rect = { g_BoardX, g_BoardY, g_BoardX + BOARD_SIZE * PIECE_SIZE - 1, g_BoardY + BOARD_SIZE * PIECE_SIZE - 1 };
+	for (int i = 0; i < BOARD_THICKNESS; i++)
+	{
+		rect.left--;
+		rect.top--;
+		rect.right++;
+		rect.bottom++;
+		
+		VidDrawHLine(BUTTON_SHADOW_COLOR, rect.left, rect.right, rect.top);
+		VidDrawHLine(BUTTON_HILITE_COLOR, rect.left, rect.right, rect.bottom);
+		VidDrawVLine(BUTTON_SHADOW_COLOR, rect.top, rect.bottom, rect.left);
+		VidDrawVLine(BUTTON_HILITE_COLOR, rect.top, rect.bottom, rect.right);
+	}
+}
+
 // white gets the first turn every time
 eColor g_playingPlayer = WHITE;
 
@@ -66,6 +83,14 @@ void GetBoardCoords(int mouseX, int mouseY, int * boardRow, int * boardCol)
 }
 
 int g_CursorIDs[PIECE_MAX * 2];
+
+int g_FlashingTiles[BOARD_SIZE][BOARD_SIZE];
+
+void FlashTile(int row, int col)
+{
+	g_FlashingTiles[row][col] = TILE_FLASH_COUNT;
+	PaintTile(row, col);
+}
 
 Image* GetPieceImage(ePiece piece, eColor color)
 {
@@ -102,6 +127,7 @@ eColor GetNextPlayer(eColor curPlr)
 }
 
 const uint32_t g_boardColors[] = { 0xCBAC8B, 0x7D5834 };
+const uint32_t g_boardFlashColors[] = { 0xFF0000, 0xAF0000 };
 
 BoardPiece g_DraggedPiece;
 int g_DraggedPieceRow = -1, g_DraggedPieceCol = -1;
@@ -114,8 +140,12 @@ void PaintTile(int row, int column)
 	int y = g_BoardY + (BOARD_SIZE - 1 - row) * PIECE_SIZE;
 	
 	// Fill the rectangle.
-	VidFillRect(g_boardColors[color], x, y,
-		x + PIECE_SIZE - 1, y + PIECE_SIZE - 1);
+	uint32_t bc = g_boardColors[color];
+	
+	if (g_FlashingTiles[row][column] % 2)
+		bc = g_boardFlashColors[color];
+	
+	VidFillRect(bc, x, y, x + PIECE_SIZE - 1, y + PIECE_SIZE - 1);
 	
 	BoardPiece* pPiece = GetPiece(row, column);
 	
@@ -272,14 +302,36 @@ void UpdatePlayerTurn()
 	CallControlCallback(g_pWindow, CHESS_TURN_LABEL, EVENT_PAINT, 0, 0);
 }
 
+void UpdateFlashingTiles()
+{
+	for (int row = 0; row < BOARD_SIZE; row++)
+	{
+		for (int col = 0; col < BOARD_SIZE; col++)
+		{
+			int oldFlashingTiles = g_FlashingTiles[row][col];
+			if (g_FlashingTiles[row][col] > 0)
+				g_FlashingTiles[row][col]--;
+			
+			if (oldFlashingTiles % 2 != g_FlashingTiles[row][col] % 2)
+				PaintTile(row, col);
+		}
+	}
+}
+
+int g_FlashTimerID = -1;
+
 void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		case EVENT_USER:
+		{
+			UpdateFlashingTiles();
+			break;
+		}
 		case EVENT_CREATE:
 		{
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
-			SetupBoard();
 			
 			// Load the cursors.
 			for (int i = PIECE_PAWN; i < PIECE_MAX; i++)
@@ -290,7 +342,9 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			
 			// Create some controls letting the players know about their status in the game.
 			
-			g_BoardY = TOP_BAR_HEIGHT;
+			g_BoardY = TOP_BAR_HEIGHT + 10;
+			g_BoardX = 10;
+			SetupBoard();
 			
 			Rectangle rect;
 			RECT(rect, PIECE_SIZE * BOARD_SIZE + 10, 10, CHESS_WIDTH - PIECE_SIZE*BOARD_SIZE-10, 20);
@@ -298,11 +352,14 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			AddControl(pWindow, CONTROL_TEXTCENTER, rect, "", CHESS_TURN_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL | TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED);
 			UpdatePlayerTurn();
 			
+			g_FlashTimerID = AddTimer(pWindow, 250, EVENT_USER);
+			
 			break;
 		}
 		
 		case EVENT_PAINT:
 		{
+			DrawFrameAroundBoard();
 			PaintBoard();
 			break;
 		}
