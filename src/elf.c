@@ -332,16 +332,24 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			}
 		}
 		
-		EDLogMsg("(looking for NOBITS sections to zero out...)");
+		ElfSectHeader* pShStrTabHdr = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + pHeader->m_shStrNdx * pHeader->m_shEntSize);
 		
 		for (int i = 0; i < pHeader->m_shNum; i++)
 		{
 			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
-			//void *addr = (void*)pSectHeader->m_addr;
 			if (pSectHeader->m_type == SHT_NOBITS)
 			{
-				//clear
-				//ZeroMemory(addr, pSectHeader->m_shSize);
+				
+			}
+			if (pSectHeader->m_type == SHT_PROGBITS)
+			{
+				// check the header's name
+				const char* pName = (const char*)(pElfData + pShStrTabHdr->m_offset + pSectHeader->m_name);
+				
+				if (strcmp(pName, ".nanoshell") == 0)
+					ExSetProgramInfo((ProgramInfo*)pSectHeader->m_addr);
+				else if (strcmp(pName, ".nanoshell_resources") == 0)
+					ExLoadResourceTable((void*)pSectHeader->m_addr);
 			}
 			if (pSectHeader->m_type == SHT_SYMTAB)
 			{

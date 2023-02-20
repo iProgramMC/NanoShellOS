@@ -99,6 +99,93 @@ void ShellSetColor(uint8_t fgbg)
 	LogMsgNoCr(ansiCmd);
 }
 
+// pVirtAddr = the section's starting virtual address
+static const char* ShellExecutableInfo_NeutralizeOffset(const char* pAddr, const char* pVirtAddr, const char* pRealAddr, int nSectSize)
+{
+	const char* nothing = "(null)";
+	int off = pAddr - pVirtAddr;
+	if (off < 0 || off >= nSectSize) return nothing;
+	return pRealAddr + off;
+}
+
+void ShellExecutableInfo(const char* pFileName)
+{
+	int fd = FiOpen(pFileName, O_RDONLY);
+	if (fd < 0)
+	{
+		LogMsg("ei: %s: %s", pFileName, GetErrNoString(fd));
+		return;
+	}
+	
+	// read the header
+	ElfHeader hdr;
+	FiRead(fd, &hdr, sizeof hdr);
+	
+	// read the section headers
+	ElfSectHeader* pSectHeaders = MmAllocate(sizeof(ElfSectHeader) * hdr.m_shNum);
+	FiSeek(fd, hdr.m_shOffs, SEEK_SET);
+	for (int i = 0; i < hdr.m_shNum; i++)
+	{
+		FiRead(fd, &pSectHeaders[i], sizeof(ElfSectHeader));
+		
+		int diff = hdr.m_shEntSize - sizeof(ElfSectHeader);
+		if (diff > 0)
+			FiSeek(fd, diff, SEEK_CUR);
+	}
+	
+	// read the section string table
+	ElfSectHeader* pShStrTabHdr = &pSectHeaders[hdr.m_shStrNdx];
+	
+	char* pShStrTab = MmAllocate(pShStrTabHdr->m_shSize);
+	FiSeek(fd, pShStrTabHdr->m_offset, SEEK_SET);
+	FiRead(fd, pShStrTab, pShStrTabHdr->m_shSize);
+	
+	bool bFoundProgramInfo = false;
+	
+	// now go through each section header
+	for (int i = 0; i < hdr.m_shNum; i++)
+	{
+		const char* pSectionName = pShStrTab + pSectHeaders[i].m_name;
+		if (strcmp(pSectionName, ".nanoshell") == 0)
+		{
+			bFoundProgramInfo = true;
+			
+			// dump the program info we have
+			char* pProgramInfoSection = MmAllocate(pSectHeaders[i].m_shSize);
+			ProgramInfo* pinfo = (ProgramInfo*)pProgramInfoSection;
+			FiSeek(fd, pSectHeaders[i].m_offset, SEEK_SET);
+			FiRead(fd, pProgramInfoSection, pSectHeaders[i].m_shSize);
+			
+			// neutralize the addresses, since they're virtual.
+			
+			pinfo->m_AppName      = ShellExecutableInfo_NeutralizeOffset(pinfo->m_AppName,      (char*)pSectHeaders[i].m_addr, pProgramInfoSection, pSectHeaders[i].m_shSize);
+			pinfo->m_AppAuthor    = ShellExecutableInfo_NeutralizeOffset(pinfo->m_AppAuthor,    (char*)pSectHeaders[i].m_addr, pProgramInfoSection, pSectHeaders[i].m_shSize);
+			pinfo->m_AppCopyright = ShellExecutableInfo_NeutralizeOffset(pinfo->m_AppCopyright, (char*)pSectHeaders[i].m_addr, pProgramInfoSection, pSectHeaders[i].m_shSize);
+			pinfo->m_ProjName     = ShellExecutableInfo_NeutralizeOffset(pinfo->m_ProjName,     (char*)pSectHeaders[i].m_addr, pProgramInfoSection, pSectHeaders[i].m_shSize);
+			
+			LogMsg("%s Properties", pFileName);
+			LogMsg("Project Name: %s", pinfo->m_ProjName);
+			LogMsg("File Desc   : %s", pinfo->m_AppName);
+			LogMsg("Version     : %d.%d.%d", pinfo->m_Version.Major, pinfo->m_Version.Minor, pinfo->m_Version.BuildNum);
+			LogMsg("Author      : %s", pinfo->m_AppAuthor);
+			LogMsg("Copyright   : %s", pinfo->m_AppCopyright);
+			
+			MmFree(pProgramInfoSection);
+		}
+	}
+	
+	MmFree(pSectHeaders);
+	MmFree(pShStrTab);
+	pSectHeaders = NULL;
+	pShStrTab = NULL;
+	FiClose(fd);
+	
+	if (!bFoundProgramInfo)
+	{
+		LogMsg("ei: %s: The program does not contain information about itself.", pFileName);
+	}
+}
+
 int  g_nextTaskNum    = 0;
 bool g_ramDiskMounted = true;
 int  g_ramDiskID      = 0x00;//ATA: Prim Mas
@@ -388,6 +475,14 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
 		ShellExecuteFile(fileName, state.m_pContinuation);
+	}
+	else if (strcmp (token, "ei") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName || !*fileName)
+			LogMsg("ei: Expected file name");
+		else
+			ShellExecutableInfo(fileName);
 	}
 	else if (strcmp (token, "ec") == 0)
 	{

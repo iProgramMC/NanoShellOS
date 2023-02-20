@@ -232,3 +232,25 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	return pProc;
 }
 
+void ExSetProgramInfo(const ProgramInfo* pProgInfo)
+{
+	ExGetRunningProc()->pProgInfo = *pProgInfo;
+	
+	// dump the program info
+#if 1
+	
+	SLogMsg("ExSetProgramInfo has the following data (%p):", pProgInfo);
+	SLogMsg("Subsystem: %d", pProgInfo->m_subsystem);
+	SLogMsg("Version Number: %x", pProgInfo->m_Version.Data);
+	SLogMsg("App Name: %s", pProgInfo->m_AppName);
+	SLogMsg("App Auth: %s", pProgInfo->m_AppAuthor);
+	SLogMsg("App Copr: %s", pProgInfo->m_AppCopyright);
+	SLogMsg("Pro Name: %s", pProgInfo->m_ProjName);
+	
+#endif
+}
+
+void ExLoadResourceTable(void *pResourceTableData)
+{
+	// TODO
+}

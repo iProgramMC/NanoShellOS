@@ -1,3 +1,11 @@
+//  ***************************************************************
+//  process.h - Creation date: 10/04/2022
+//  -------------------------------------------------------------
+//  NanoShell Copyright (C) 2022-2023 - Licensed under GPL V3
+//
+//  ***************************************************************
+//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
+//  ***************************************************************
 #ifndef _PROCESS_H
 #define _PROCESS_H
 
@@ -5,6 +13,7 @@
 #include<memory.h>
 #include<task.h>
 #include<string.h>
+#include<rt.h>
 
 /**************************************************************
 
@@ -46,6 +55,9 @@ struct Proc
 	void* pSymTab, *pStrTab;
 	int   nSymTabEntries;
 	bool  bWaitingForCrashAck;
+	
+	ProgramInfo   pProgInfo;
+	ResourceTable sResourceTable;
 };
 typedef struct Proc Process;
 
@@ -60,5 +72,8 @@ void ExKillProcess(Process *pProc);
 Process* ExGetRunningProc();
 Process* ExGetProcessByRID(uint64_t rid);
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail);
+
+void ExSetProgramInfo(const ProgramInfo* pProgInfo);
+void ExLoadResourceTable(void *pResourceTableData);
 
 #endif//_PROCESS_H
