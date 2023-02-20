@@ -190,9 +190,14 @@ size_t strlen(const char* str)
 {
 	size_t len = 0;
 	while (str[len])
-	{
 		len++;
-	}
+	return len;
+}
+size_t strnlen(const char* str, size_t nchars) 
+{
+	size_t len = 0;
+	while (str[len])
+		len++, nchars--;
 	return len;
 }
 void* strcpy(const char* ds, const char* ss)
@@ -352,4 +357,13 @@ char * strncpy(char *dst, const char *src, size_t n)
 		while (--n != 0);
 	}
 	return (dst);
+}
+
+// Works like strncpy, except that the destination buffer will always contain a NULL terminator afterwards.
+char* SafeStringCopy(char *DestinationBuffer, size_t szDestinationBuffer, const char* Source)
+{
+	size_t len = strnlen(Source, szDestinationBuffer - 1);
+	memcpy(DestinationBuffer, Source, len);
+	DestinationBuffer[len] = 0;
+	return DestinationBuffer;
 }

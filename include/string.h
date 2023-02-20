@@ -19,9 +19,10 @@ void* fast_memset(void* bufptr, BYTE val, size_t size);
 
 // String functions
 size_t strgetlento(const char* str, char chr);
-int atoi(const char* str) ;
-int atoihex(const char* str) ;
-size_t strlen(const char* str) ;
+int atoi(const char* str);
+int atoihex(const char* str);
+size_t strlen(const char* str);
+size_t strnlen(const char* str, size_t nchars);
 void* strcpy(const char* ds, const char* ss);
 void strtolower(char* as);
 void strtoupper(char* as);
@@ -33,6 +34,8 @@ char* strdup (const char* pText);//! Make sure to free this.
 char* strncpy(char *dst, const char *src, size_t n);
 void fast_memcpy(void* restrict dest, const void* restrict src, int size);//aligns to 32 bytes!!
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
+// Works like strncpy, except that the destination buffer will always contain a NULL terminator afterwards.
+char* SafeStringCopy(char *DestinationBuffer, size_t szDestinationBuffer, const char* Source);
 
 void memcpy_128_byte_aligned(void* restrict dest, const void* restrict src, int num_bytes);//Source/Dest - 16-byte aligned, count- 128 byte aligned!
 void memcpy_16_byte_aligned(void* restrict dest, const void* restrict src, int num_bytes);//Everything is 16 byte aligned

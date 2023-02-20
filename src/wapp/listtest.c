@@ -21,8 +21,10 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			Rectangle r;
 			// Add a list view control.
 			
-			RECT(r, 8, 8, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16);
+			RECT(r, 8, 8, LISTTEST_WIDTH - 16, 40);
+			AddControlEx(pWindow, CONTROL_TAB_PICKER, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 2, 0, 0);
 			
+			RECT(r, 8, 8 + 40, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16 - 40);
 			AddControlEx(pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1, 0, 0);
 			
 			/*RECT (r, 20, 20, 1, 240-40);

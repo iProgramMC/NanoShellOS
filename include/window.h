@@ -209,6 +209,7 @@ enum {
 	EVENT_SCROLLDONE,
 	EVENT_BGREPAINT,
 	EVENT_CTL_REPAINT,//parm1 represents the comboID of the control to repaint.
+	EVENT_TABCHANGED,//CONTROL_TAB_PICKER
 	EVENT_MAX,
 	
 	EVENT_PRIVATE_START = 0xF00,
@@ -289,6 +290,8 @@ enum {
 	CONTROL_TABLEVIEW,
 	//Checkable icon button.
 	CONTROL_BUTTON_ICON_CHECKABLE,
+	//Tab picker control.
+	CONTROL_TAB_PICKER,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
