@@ -336,6 +336,8 @@ bool FrIsValidDirDescriptor(int fd)
 	return g_DirNodeToDescriptor[fd].m_bOpen;
 }
 
+int FrSeek (int fd, int offset, int whence);
+
 int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
 	// find a free fd to open:
@@ -464,7 +466,7 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 	if ((oflag & O_APPEND) && (oflag & O_WRONLY))
 	{
 		// Automatically seek to the end
-		FiSeek(fd, SEEK_END, 0);
+		FrSeek(fd, SEEK_END, 0);
 	}
 	
 	return fd;
