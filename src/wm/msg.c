@@ -118,88 +118,6 @@ void RequestRepaintNew (Window* pWindow)
 	CallWindowCallbackAndControls  (pWindow, EVENT_PAINT, 0, 0);
 }
 
-void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
-{
-	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
-	{
-		Control* p = &pWindow->m_pControlArray[i];
-		if (p->m_active  &&  p->m_comboID == comboID)
-		{
-			p->OnEvent(p, eventType, parm1, parm2, pWindow);
-		}
-	}
-}
-
-void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
-{
-	// Go backwards, because some controls might spawn other controls
-	// They may want to be checked AFTER their children controls, so
-	// we just go backwards.
-	
-	//Prioritise menu bar, as it's always at the top
-	Control* pMenuBar = NULL;
-	
-	WidgetEventHandler pHandler = GetWidgetOnEventFunction(CONTROL_MENUBAR);
-	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
-	{
-		if (pWindow->m_pControlArray[i].m_active)
-		{
-			Control* p = &pWindow->m_pControlArray[i];
-			if (p->OnEvent == pHandler)
-			{
-				pMenuBar = &pWindow->m_pControlArray[i];
-				break;
-			}
-		}
-	}
-	
-	if (eventType != EVENT_PAINT && eventType != EVENT_CLICKCURSOR)
-		if (pMenuBar)
-			if (pMenuBar->OnEvent)
-			{
-				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
-					return;
-				if (eventType == EVENT_CREATE)
-				{
-					// Let the control adjust itself
-					pMenuBar->m_triedRect = pMenuBar->m_rect;
-				}
-			}
-	
-	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
-	{
-		if (&pWindow->m_pControlArray[i] == pMenuBar) continue; // Skip over the menu bar.
-		
-		if (pWindow->m_pControlArray[i].m_active)
-		{
-			Control* p = &pWindow->m_pControlArray[i];
-			if (p->OnEvent)
-			{
-				if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
-					return;
-				if (eventType == EVENT_CREATE)
-				{
-					// Let the control adjust itself
-					p->m_triedRect = p->m_rect;
-				}
-			}
-		}
-	}
-	
-	if (eventType == EVENT_PAINT || eventType == EVENT_CLICKCURSOR)
-		if (pMenuBar)
-			if (pMenuBar->OnEvent)
-			{
-				if (pMenuBar->OnEvent(pMenuBar, eventType, parm1, parm2, pWindow))
-					return;
-				if (eventType == EVENT_CREATE)
-				{
-					// Let the control adjust itself
-					pMenuBar->m_triedRect = pMenuBar->m_rect;
-				}
-			}
-}
-
 bool IsEventDestinedForControlsToo(int type)
 {
 	switch (type)
@@ -221,6 +139,58 @@ bool IsEventDestinedForControlsToo(int type)
 			return false;
 	}
 	return true;
+}
+
+bool IsEventDestinedForInvisibleCtlsToo(int type)
+{
+	switch (type)
+	{
+		case EVENT_DESTROY:
+		case EVENT_MOVE:
+		case EVENT_SIZE:
+			return true;
+	}
+	return false;
+}
+
+void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* p = &pWindow->m_pControlArray[i];
+		if (!p->m_active || p->m_comboID != comboID) continue;
+		
+		if (p->m_bVisible || IsEventDestinedForInvisibleCtlsToo(eventType))
+			p->OnEvent(p, eventType, parm1, parm2, pWindow);
+		return;
+	}
+}
+
+void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
+{
+	// Go backwards, because some controls might spawn other controls
+	// They may want to be checked AFTER their children controls, so
+	// we just go backwards.
+	
+	for (int i = pWindow->m_controlArrayLen - 1; i != -1; i--)
+	{
+		if (!pWindow->m_pControlArray[i].m_active) continue;
+		
+		Control* p = &pWindow->m_pControlArray[i];
+		if (!p->OnEvent) continue;
+		
+		if (p->m_bVisible || IsEventDestinedForInvisibleCtlsToo(eventType))
+		{
+			if (p->OnEvent(p, eventType, parm1, parm2, pWindow))
+				return;
+		}
+		
+		if (eventType == EVENT_CREATE)
+		{
+			// Let the control adjust itself
+			p->m_triedRect = p->m_rect;
+		}
+	}
 }
 
 //ugly hax to make calling window callback not need to preserve edi, esi, ebx
@@ -687,6 +657,12 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			pWindow->m_privFlags |= WPF_INITGOOD;
 			
+			break;
+		}
+		
+		case EVENT_CTLREPAINT:
+		{
+			CallControlCallback(pWindow, parm1, EVENT_PAINT, 0, 0);
 			break;
 		}
 		

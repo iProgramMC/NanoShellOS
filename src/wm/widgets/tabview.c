@@ -198,7 +198,7 @@ bool WidgetTabPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, UNU
 			
 			VidSetClipRect(&this->m_rect);
 			
-			VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+			//VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
 			
 			for (int i = 0; i < pData->m_nTabs; i++)
 			{

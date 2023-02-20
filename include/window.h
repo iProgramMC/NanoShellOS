@@ -208,7 +208,7 @@ enum {
 	EVENT_CHECKBOX,
 	EVENT_SCROLLDONE,
 	EVENT_BGREPAINT,
-	EVENT_CTL_REPAINT,//parm1 represents the comboID of the control to repaint.
+	EVENT_CTLREPAINT,//parm1 represents the comboID of the control to repaint.
 	EVENT_TABCHANGED,//CONTROL_TAB_PICKER
 	EVENT_MAX,
 	
@@ -513,6 +513,7 @@ typedef struct ControlStruct
 	Rectangle m_rect;
 	bool      m_bMarkedForDeletion;
 	bool      m_bFocused;
+	bool      m_bVisible;
 	
 	//data for controls:
 	union
@@ -987,5 +988,15 @@ void SetWindowTitle(Window* pWindow, const char* pText);
  * Set the icon of a window.
  */
 void SetWindowIcon(Window* pWindow, int icon);
+
+/**
+ * Set the visibility of a control.
+ * 
+ * If a control is being hidden, the background behind it will be repainted, but the
+ * controls in front of this one won't - the window will have to repaint them by itself.
+ * 
+ * By default, controls are visible. That may be changeable in a future version.
+ */
+void SetControlVisibility(Window* pWindow, int comboID, bool bVisible);
 
 #endif//_WINDOW_H

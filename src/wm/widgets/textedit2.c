@@ -138,7 +138,7 @@ static const char* TextInput_GetRawText(Control* this)
 
 static void TextInput_RequestRepaint(Control* this)
 {
-	WindowAddEventToMasterQueue(TextInput_GetData(this)->m_pWindow, EVENT_CTL_REPAINT, this->m_comboID, 0);
+	WindowAddEventToMasterQueue(TextInput_GetData(this)->m_pWindow, EVENT_CTLREPAINT, this->m_comboID, 0);
 }
 
 static void TextInput_Clear(Control* this)
@@ -1080,11 +1080,6 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			TextInput_PartialDraw(this, rect);
 			
 			RenderButtonShapeSmallInsideOut (borderRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
-			break;
-		}
-		case EVENT_CTL_REPAINT:
-		{
-			WidgetTextEditView2_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_RELEASECURSOR:

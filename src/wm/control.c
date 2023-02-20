@@ -19,6 +19,33 @@ Control* GetControlByComboID(Window* pWindow, int comboID)
 	return NULL;
 }
 
+// note: This just covers the control's area by sending an event to repaint the window background.
+// If there are any controls that overlap, the owner should take care of them (why?)
+void WmSetControlVisibility(Window* pWindow, Control* pControl, bool bVisible)
+{
+	if (bVisible == pControl->m_bVisible) return;
+	
+	pControl->m_bVisible = bVisible;
+
+	if (!bVisible)
+		WindowAddEventToMasterQueue(pWindow, EVENT_BGREPAINT, MAKE_MOUSE_PARM(pControl->m_rect.left, pControl->m_rect.top), MAKE_MOUSE_PARM(pControl->m_rect.right, pControl->m_rect.bottom));
+	else
+		WindowAddEventToMasterQueue(pWindow, EVENT_CTLREPAINT, pControl->m_comboID, 0);
+}
+
+void SetControlVisibility(Window* pWindow, int comboID, bool bVisible)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (!pWindow->m_pControlArray[i].m_active) continue;
+		
+		if (pWindow->m_pControlArray[i].m_comboID != comboID) continue;
+		
+		WmSetControlVisibility(pWindow, &pWindow->m_pControlArray[i], bVisible);
+		return;
+	}
+}
+
 //Returns an index, because we might want to relocate the m_pControlArray later.
 int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
 {
@@ -92,6 +119,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	pControl->m_parm2   = p2;
 	pControl->m_bMarkedForDeletion = false;
 	pControl->m_anchorMode = anchoringMode;
+	pControl->m_bVisible = true;
 	
 	if (text)
 		strcpy (pControl->m_text, text);

@@ -45,6 +45,17 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			
 			break;
 		}
+		case EVENT_TABCHANGED:
+		{
+			int diff = GET_Y_PARM(parm2);
+			
+			if (diff == 0)
+				SetControlVisibility(pWindow, 1, true);
+			else
+				SetControlVisibility(pWindow, 1, false);
+			
+			break;
+		}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
