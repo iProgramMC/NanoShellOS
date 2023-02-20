@@ -71,7 +71,7 @@ IrqTaskA:
 	
 	call KeOnExitInterrupt
 	
-	add esp, 4 ; get rid of what we had on the stack
+	add esp, 8 ; get rid of what we had on the stack
 	
 	; Restore the seg registers
 	pop eax
@@ -147,7 +147,7 @@ IrqTaskB:
 	call KeOnEnterInterrupt
 	call KeSwitchTask
 	call KeOnExitInterrupt
-	add esp, 4 ; get rid of what we had on the stack
+	add esp, 8 ; get rid of what we had on the stack
 	
 	; Restore the seg registers
 	pop eax
