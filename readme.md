@@ -131,6 +131,15 @@ make image
 
 In the `build` directory, you should now have an `image.iso` that you can mount into your favorite x86 emulator and run.
 
+#### Building NanoShell applications
+
+Should you wish to build NanoShell applications as well, you will also have to do the following command:
+```
+make -C tools
+```
+
+Afterwards, you can `cd apps/<whatever>` and simply type `make`. You will have to copy the resulting \*.nse over by yourself, though.
+
 ### Windows:
 
 It may or may not come back soon.

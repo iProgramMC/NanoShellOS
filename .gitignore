@@ -8,7 +8,6 @@ src/extra/testb.h
 limine
 build/*
 keep/*
-tools/*
 
 apps/**/build/*
 apps/**/*.nse
