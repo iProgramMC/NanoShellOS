@@ -516,6 +516,11 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			
 			break;
 		}
+		case EVENT_CTLUPDATEVISIBLE:
+		{
+			SetControlVisibility(pWindow, -this->m_comboID, this->m_bVisible);
+			break;
+		}
 		case EVENT_CLICKCURSOR:
 		case EVENT_SCROLLDONE:
 		{
@@ -554,6 +559,9 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			columnBar.right = columnBar.left - 1;
 			
 			int defaultStartX = 22;
+			if (this->m_parm2 & TABLEVIEW_NOICONCOLUMN)
+				defaultStartX = 0;
+			
 			int topOffset = (TABLE_ITEM_HEIGHT - GetLineHeight()) / 2;
 			
 			if (!table->m_pColumnData) return false;

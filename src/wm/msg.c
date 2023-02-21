@@ -148,6 +148,7 @@ bool IsEventDestinedForInvisibleCtlsToo(int type)
 		case EVENT_DESTROY:
 		case EVENT_MOVE:
 		case EVENT_SIZE:
+		case EVENT_CTLUPDATEVISIBLE:
 			return true;
 	}
 	return false;

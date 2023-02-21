@@ -28,6 +28,45 @@ typedef struct
 }
 ElfProcess;
 
+const char* ElfGetArchitectureString(uint16_t machine, uint8_t word_size)
+{
+	switch (machine)
+	{
+		case 3:
+			if (word_size == 2)
+				return "x86 (64-bit)";
+			else
+				return "i686";
+		case 0: return "Unspecified";
+		case 2: return "SPARC";
+		case 4: return "Motorola 68000";
+		case 5: return "Motorola 88000";
+		case 8: return "MIPS";
+		case 0x28: return "ARM";
+		case 0x32: return "Intel Itanium (IA-64)";
+		case 0x3E: return "AMD64";
+	}
+	
+	return "Unknown Architecture";
+}
+
+const char* ElfGetOSABIString(uint8_t abi)
+{
+	switch (abi)
+	{
+		case 0: return "System V";
+		case 2: return "NetBSD";
+		case 3: return "Linux";
+		case 4: return "The GNU Hurd";
+		case 6: return "Solaris";
+		case 8: return "IRIX";
+		case 9: return "FreeBSD";
+		case 0xC: return "OpenBSD";
+	}
+	
+	return "Unknown System ABI";
+}
+
 bool ElfCheckHeader(ElfHeader* pHeader)
 {
 	if (!pHeader) return false;
@@ -38,6 +77,7 @@ bool ElfCheckHeader(ElfHeader* pHeader)
 	if (pHeader->m_ident[EI_MAG3] != ELFMAG3) return false;
 	return true;
 }
+
 int ElfIsSupported(ElfHeader* pHeader)
 {
 	if (!ElfCheckHeader(pHeader)) return ELF_HEADER_INCORRECT;

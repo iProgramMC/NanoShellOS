@@ -54,6 +54,7 @@ typedef struct
 }
 ResourceTable;
 
+// This represents the contents of the .nanoshell section.
 typedef struct
 {
 	eSubsystem m_subsystem;
@@ -75,8 +76,20 @@ typedef struct
 	const char *m_AppCopyright;// Copyright information
 	const char *m_ProjName;    // Project name (should this program be a part of a bigger project)
 }
+ProgramInfoBlock;
+
+typedef struct
+{
+	// These three shorts are defined by elf.h
+	uint16_t m_machine;    // Machine type. A value of 3 means 'i386'
+	uint8_t  m_word_size;  // Word size. 32 (1) or 64 bit (2)
+	uint8_t  m_byte_order; // Byte order.
+	uint8_t  m_os_abi;     // OS ABI. We're using System V ABI here.
+	ProgramInfoBlock m_info;
+}
 ProgramInfo;
 
 void RstFreeResource(Resource* pResource);
+ProgramInfo* RstRetrieveProgramInfoFromFile(const char* pFileName);
 
 #endif//_RT_H

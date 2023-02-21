@@ -28,9 +28,11 @@ void WmSetControlVisibility(Window* pWindow, Control* pControl, bool bVisible)
 	pControl->m_bVisible = bVisible;
 
 	if (!bVisible)
-		WindowAddEventToMasterQueue(pWindow, EVENT_BGREPAINT, MAKE_MOUSE_PARM(pControl->m_rect.left, pControl->m_rect.top), MAKE_MOUSE_PARM(pControl->m_rect.right, pControl->m_rect.bottom));
+		CallWindowCallback(pWindow, EVENT_BGREPAINT, MAKE_MOUSE_PARM(pControl->m_rect.left, pControl->m_rect.top), MAKE_MOUSE_PARM(pControl->m_rect.right, pControl->m_rect.bottom));
 	else
-		WindowAddEventToMasterQueue(pWindow, EVENT_CTLREPAINT, pControl->m_comboID, 0);
+		CallWindowCallback(pWindow, EVENT_CTLREPAINT, pControl->m_comboID, 0);
+	
+	CallWindowCallbackAndControls(pWindow, EVENT_CTLUPDATEVISIBLE, pControl->m_comboID, 0);
 }
 
 void SetControlVisibility(Window* pWindow, int comboID, bool bVisible)

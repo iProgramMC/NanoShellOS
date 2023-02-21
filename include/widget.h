@@ -20,6 +20,8 @@
 #define IMAGECTL_PEN  (4)
 #define IMAGECTL_FILL (8)
 
+#define TABLEVIEW_NOICONCOLUMN (1)
+
 #define BUTTONDARK BUTTON_SHADOW_COLOR
 #define BUTTONMIDD BUTTON_MIDDLE_COLOR
 #define BUTTONLITE BUTTON_HILITE_COLOR
@@ -36,6 +38,11 @@
  * Gets the OnEvent function corresponding to the widget type.
  */
 WidgetEventHandler GetWidgetOnEventFunction (int type);
+
+/**
+ * Gets a Control object from its combo ID.
+ */
+Control* GetControlByComboID(Window* pWindow, int comboID);
 
 /**
  * Sets the event handler of a control with a combo ID.
@@ -278,7 +285,34 @@ void SetScrollTable(Window* pWindow, int comboID, int scroll);
  */
 void ResetTable(Window* pWindow, int comboID);
 
+/**
+ * Adds a new tab to a tab widget.
+ */
+void TabViewAddTab(Window* pWindow, int comboID, int tabID, const char* pTabText, int tabWidth);
+
+/**
+ * Clears the tab list of a tab widget.
+ */
+void TabViewClearTabs(Window* pWindow, int comboID);
+
+/**
+ * Removes a tab with a specific tabID from the tab list of a tab widget.
+ */
+void TabViewRemoveTab(Window* pWindow, int comboID, int tabID);
+
+/**
+ * Sets a control's visibility.
+ */
+void SetControlVisibility(Window* pWindow, int comboID, bool bVisible);
+
+/**
+ * Draws the shape of a button.
+ */
 void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
+
+/**
+ * Draws the shape of a small button.
+ */
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 
 #endif//_WIDGET_H

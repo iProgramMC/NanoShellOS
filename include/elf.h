@@ -157,7 +157,9 @@ enum
 
 const char *ElfGetErrorMsg (int error_code);
 int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, UNUSED int nHeapSize, int *pElfErrorCodeOut);
-
 ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address);
+bool ElfCheckHeader(ElfHeader* pHeader);
+const char* ElfGetArchitectureString(uint16_t machine, uint8_t word_size);
+const char* ElfGetOSABIString(uint8_t abi);
 
 #endif//_ELF_H

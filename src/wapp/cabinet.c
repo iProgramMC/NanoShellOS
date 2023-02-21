@@ -15,12 +15,13 @@
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
 
-#define CABINET_PROPS_WIDTH  (250)
+#define CABINET_PROPS_WIDTH  (300)
 #define CABINET_PROPS_HEIGHT (300)
 
 enum
 {
 	PROPS_NOTHING,
+	PROPS_TABPICKER,
 	PROPS_BUTTON_OK,
 	PROPS_LABEL,
 	PROPS_ICON,
@@ -38,11 +39,16 @@ enum
 	PROPS_MODIFY_TIME,
 	PROPS_ATTRIBUTES,
 	PROPS_INODE,
+	PROPS_DETAILS_TABLE,
+};
+
+enum
+{
+	PROPS_TAB_GENERAL,
+	PROPS_TAB_DETAILS,
 };
 
 IconType CabGetIconBasedOnName(const char *pName, int pType);
-
-#define RECTA(r, x, y, w, h) RECT(r, x, y, w, h)
 
 static void FormatSize(uint32_t size, char* size_buf)
 {
@@ -63,6 +69,36 @@ static void FormatSizeDetailed(uint32_t size, char* size_buf)
 	strcat(size_buf, buffer2);
 }
 
+static const int s_CidsToHideGeneral[] = {
+	PROPS_ICON, PROPS_LABEL, PROPS_LABEL_ATTRIBUTES, PROPS_LABEL_CREATE_TIME, PROPS_LABEL_DISK_SIZE,
+	PROPS_LABEL_FILE_SIZE, PROPS_LABEL_INODE, PROPS_LABEL_LOCATION, PROPS_LABEL_MODIFY_TIME,
+	PROPS_LOCATION, PROPS_FILE_SIZE, PROPS_DISK_SIZE, PROPS_CREATE_TIME, PROPS_MODIFY_TIME,
+	PROPS_ATTRIBUTES, PROPS_INODE,
+};
+static const int s_CidsToHideDetails[] = { PROPS_DETAILS_TABLE };
+
+static void CabinetPropertiesSetTabVisible(Window* pWindow, int tabID, bool visible)
+{
+	const int *cidsToHide = NULL;
+	int nCidsToHide = 0;
+	switch (tabID)
+	{
+		case PROPS_TAB_GENERAL:
+			cidsToHide = s_CidsToHideGeneral, nCidsToHide = (int)ARRAY_COUNT(s_CidsToHideGeneral);
+			break;
+		case PROPS_TAB_DETAILS:
+			cidsToHide = s_CidsToHideDetails, nCidsToHide = (int)ARRAY_COUNT(s_CidsToHideDetails);
+			break;
+	}
+	
+	for (int i = 0; i < nCidsToHide; i++)
+	{
+		SetControlVisibility(pWindow, cidsToHide[i], visible);
+	}
+}
+
+#define RECTA(r, x, y, w, h) RECT(r, x, y + TITLE_BAR_HEIGHT, w, h)
+
 static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int parm1, int parm2)
 {
 	switch (eventType)
@@ -70,9 +106,13 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 		case EVENT_CREATE:
 		{
 			Rectangle r;
-			RECT(r, CABINET_PROPS_WIDTH - 70, CABINET_PROPS_HEIGHT - 30, 60, 20);
-			
+			RECT(r, CABINET_PROPS_WIDTH - 62, CABINET_PROPS_HEIGHT - 22, 60, 20);
 			AddControl(pWindow, CONTROL_BUTTON, r, "OK", PROPS_NOTHING, 0, 0);
+			
+			RECT(r, 2, 2, CABINET_PROPS_WIDTH - 4, CABINET_PROPS_HEIGHT - 32);
+			AddControl(pWindow, CONTROL_TAB_PICKER, r, NULL, PROPS_TABPICKER, 0, 0);
+			
+			TabViewAddTab(pWindow, PROPS_TABPICKER, PROPS_TAB_GENERAL, "General", 200);
 			
 			const char** ptrs = (const char**)pWindow->m_data;
 			const char* path     = ptrs[0];
@@ -111,6 +151,50 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 			
 			int icon = CabGetIconBasedOnName(justName, res.m_type);
 			
+			// *** Add other tabs based on the type of file this is.
+			
+			// If we are an executable.
+			if (icon == ICON_APPLICATION)
+			{
+				ProgramInfo* pPrgInfo = RstRetrieveProgramInfoFromFile(path);
+				if (pPrgInfo)
+				{
+					TabViewAddTab(pWindow, PROPS_TABPICKER, PROPS_TAB_DETAILS, "Details", 200);
+					
+					// add a table control, but hide it
+					RECTA(r, 10, 10, CABINET_PROPS_WIDTH - 20, CABINET_PROPS_HEIGHT - 50 - TITLE_BAR_HEIGHT);
+					AddControl(pWindow, CONTROL_TABLEVIEW, r, NULL, PROPS_DETAILS_TABLE, 0, TABLEVIEW_NOICONCOLUMN);
+					
+					AddTableColumn(pWindow, PROPS_DETAILS_TABLE, "Property", 70);
+					AddTableColumn(pWindow, PROPS_DETAILS_TABLE, "Value", CABINET_PROPS_WIDTH - 100 - 20);
+					
+					const char* text[] = {NULL, NULL};
+					
+					text[0] = "Project name";
+					text[1] = pPrgInfo->m_info.m_ProjName;
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					text[0] = "File description";
+					text[1] = pPrgInfo->m_info.m_AppName;
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					text[0] = "Author";
+					text[1] = pPrgInfo->m_info.m_AppAuthor;
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					text[0] = "Copyright";
+					text[1] = pPrgInfo->m_info.m_AppCopyright;
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					text[0] = "Architecture";
+					text[1] = ElfGetArchitectureString(pPrgInfo->m_machine, pPrgInfo->m_word_size);
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					text[0] = "Architecture";
+					text[1] = ElfGetOSABIString(pPrgInfo->m_os_abi);
+					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
+					
+					SetControlVisibility(pWindow, PROPS_DETAILS_TABLE, false);
+					
+					MmFree(pPrgInfo);
+				}
+			}
+			
 			RECTA(r, 10, 10, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, r, NULL, PROPS_ICON, icon, 0);
 			
@@ -121,15 +205,12 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 			
 			RECTA(r, 10, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 20, 32);
 			AddControl(pWindow, CONTROL_TEXT, r, "Location:", PROPS_LABEL_LOCATION, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
 			
 			RECTA(r, 10, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 20, 32);
 			AddControl(pWindow, CONTROL_TEXT, r, "Size:", PROPS_LABEL_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
 			
 			RECTA(r, 10, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 20, 32);
 			AddControl(pWindow, CONTROL_TEXT, r, "Size on disk:", PROPS_LABEL_DISK_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
-			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
 			
 			RECTA(r, 10, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 20, 32);
 			AddControl(pWindow, CONTROL_TEXT, r, "Created:", PROPS_LABEL_CREATE_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
@@ -152,7 +233,7 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 			
 			FormatSizeDetailed(res.m_blocks * 512, buf);
 			RECTA(r, 80, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 90, 32);
-			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_DISK_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			TimeStruct str;
 			GetHumanTimeFromEpoch(res.m_createTime, &str);
@@ -180,9 +261,17 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 		case EVENT_COMMAND:
 		{
 			if (parm1 == PROPS_NOTHING)
-			{
 				DestroyWindow(pWindow);
-			}
+			
+			break;
+		}
+		case EVENT_TABCHANGED:
+		{
+			if (parm1 != PROPS_TABPICKER) break;
+			UNUSED int oldTab = GET_X_PARM(parm2), newTab = GET_Y_PARM(parm2);
+			
+			CabinetPropertiesSetTabVisible(pWindow, oldTab, false);
+			CabinetPropertiesSetTabVisible(pWindow, newTab, true);
 			
 			break;
 		}

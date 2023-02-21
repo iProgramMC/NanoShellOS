@@ -68,6 +68,13 @@ void WidgetTabView_AddTab(Control* this, int id, const char* pTabText, int tabWi
 	pTab->m_xPos = x;
 }
 
+void TabViewAddTab(Window* this, int comboID, int tabID, const char* pTabText, int tabWidth)
+{
+	Control* pCtl = GetControlByComboID(this, comboID);
+	if (!pCtl) return;
+	WidgetTabView_AddTab(pCtl, tabID, pTabText, tabWidth);
+}
+
 Tab* WidgetTabView_GetTabByID(Control* this, int id)
 {
 	TabViewData* pData = WidgetTabView_GetData(this);
@@ -90,6 +97,13 @@ void WidgetTabView_ClearTabs(Control* this)
 	pData->m_nSelectedTab = 0;
 }
 
+void TabViewClearTabs(Window* this, int comboID)
+{
+	Control* pCtl = GetControlByComboID(this, comboID);
+	if (!pCtl) return;
+	WidgetTabView_ClearTabs(pCtl);
+}
+
 void WidgetTabView_RemoveTab(Control* this, int id)
 {
 	TabViewData* pData = WidgetTabView_GetData(this);
@@ -98,9 +112,14 @@ void WidgetTabView_RemoveTab(Control* this, int id)
 	{
 		if (pData->m_tabs[i].m_id == id)
 		{
+			int tabWidth = pData->m_tabs[i].m_nTabWidth;
+			
 			//get rid of it
 			pData->m_nTabs--;
 			memmove(&pData->m_tabs[i], &pData->m_tabs[i+1], sizeof(Tab) * (pData->m_nTabs - i));
+			
+			for (int x = i; x < pData->m_nTabs; x++)
+				pData->m_tabs[i].m_xPos -= tabWidth;
 			
 			Tab* pNewTabs = MmReAllocate(pData->m_tabs, pData->m_nTabs * sizeof(Tab));
 			if (!pNewTabs) return;
@@ -110,6 +129,13 @@ void WidgetTabView_RemoveTab(Control* this, int id)
 			return;
 		}
 	}
+}
+
+void TabViewRemoveTab(Window* this, int comboID, int tabID)
+{
+	Control* pCtl = GetControlByComboID(this, comboID);
+	if (!pCtl) return;
+	WidgetTabView_RemoveTab(pCtl, tabID);
 }
 
 void WidgetTabPicker_DrawTab(Control* this, Tab* tab, bool bIsSelected)
@@ -185,10 +211,6 @@ bool WidgetTabPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, UNU
 		{
 			this->m_dataPtr = MmAllocate(sizeof(TabViewData));
 			memset(this->m_dataPtr, 0, sizeof(TabViewData));
-			
-			WidgetTabView_AddTab(this, 1, "Tab Long 1", 100);
-			WidgetTabView_AddTab(this, 2, "Tab 2", -1);
-			WidgetTabView_AddTab(this, 3, "Tab Longer 3", 100);
 			
 			break;
 		}
