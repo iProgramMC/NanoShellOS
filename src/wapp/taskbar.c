@@ -283,10 +283,10 @@ void TaskbarSetMargins()
 			g_TaskbarMargins.bottom = TASKBAR_HEIGHT;
 			break;
 		case DOCK_LEFT:
-			g_TaskbarMargins.left = g_NanoShellButtonWidth + 12;
+			g_TaskbarMargins.left = g_NanoShellButtonWidth + 10;
 			break;
 		case DOCK_RIGHT:
-			g_TaskbarMargins.right = g_NanoShellButtonWidth + 12;
+			g_TaskbarMargins.right = g_NanoShellButtonWidth + 10;
 			break;
 		// TODO: left, right. Measure the NanoShell button's width, and use that as reference.
 	}
