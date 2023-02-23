@@ -88,17 +88,13 @@ void WmOnChangedBorderParms(Window* pWindow)
 	int clientAreaWidth  = ca.right  - ca.left;
 	int clientAreaHeight = ca.bottom - ca.top;
 	
-	SLogMsg("Client area width: %d  height: %d",clientAreaWidth,clientAreaHeight);
-	
 	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, BORDER_SIZE);
 	
 	int newX = ca.left - margins.left, newY = ca.top - margins.top;
 	int newW = clientAreaWidth + margins.left + margins.right;
 	int newH = clientAreaHeight + margins.top + margins.bottom;
 	
-	SLogMsg("New dimensions: X:%d Y:%d W:%d H:%d",newX,newY,newW,newH);
-	
-	if (pWindow->m_rect.left == newX && pWindow->m_rect.top == newY && pWindow->m_rect.right == newX + newW && pWindow->m_rect.bottom == newY + newH)
+	if (pWindow->m_fullRect.left == newX && pWindow->m_fullRect.top == newY && pWindow->m_fullRect.right == newX + newW && pWindow->m_fullRect.bottom == newY + newH)
 		return;
 	
 	ResizeWindow(pWindow, newX, newY, newW, newH);
@@ -333,8 +329,15 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_fullVbeData.m_height  = newHeight;
 	
 	Rectangle oldMarg = GetWindowMargins(pWindow);
+	
 	pWindow->m_knownBorderSize = BORDER_SIZE;
 	pWindow->m_lastWindowFlags = pWindow->m_flags;
+	
+	if (pWindow->m_flags & WF_FLATBORD)
+		pWindow->m_knownBorderSize = 1;
+	if (pWindow->m_flags & WF_NOBORDER)
+		pWindow->m_knownBorderSize = 0;
+	
 	Rectangle margins = GetWindowMargins(pWindow);
 	
 	pWindow->m_vbeData.m_framebuffer32 = &pNewFb[newWidth * margins.top + margins.left];
@@ -937,4 +940,21 @@ void SetWindowTitle(Window* pWindow, const char* pTitle)
 	// Warning: If something crashes but this event isn't handled, 4k of memory will be leaked.
 	// TODO  Free any buffers passed through such events.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SET_WINDOW_TITLE_PRIVATE, (int)str_dupl, 0);
+}
+
+int GetWindowFlags(Window* pWindow)
+{
+	return pWindow->m_flags;
+}
+
+void SetWindowFlags(Window* pWindow, int flags)
+{
+	int oldBorderFlags = pWindow->m_flags & WI_BORDMASK;
+	
+	pWindow->m_flags = flags;
+	
+	if (oldBorderFlags != (pWindow->m_flags & WI_BORDMASK))
+	{
+		WmOnChangedBorderParms(pWindow);
+	}
 }

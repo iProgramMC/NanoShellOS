@@ -166,7 +166,7 @@ void ShellAbout (const char *pText, int iconID)
 }
 
 #define STREQ(str1,str2) (!strcmp(str1,str2))
-void LaunchLauncher();
+RESOURCE_STATUS LaunchLauncher();
 RESOURCE_STATUS HelpOpenResource(const char* pResourceID);
 RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 {
@@ -180,7 +180,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	else if (STREQ(pResourceID, "notepad"))  return LaunchNotepad();
 	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
 	else if (STREQ(pResourceID, "magnify"))  return LaunchMagnifier();
-	else if (STREQ(pResourceID, "launcher")) { LaunchLauncher(); return RESOURCE_LAUNCH_SUCCESS; }
+	else if (STREQ(pResourceID, "launcher")) return LaunchLauncher();
 	else if (STREQ(pResourceID, "help"))     return HelpOpenResource("/Fat0/Help.md");//LaunchHelp();
 	else return RESOURCE_LAUNCH_NOT_FOUND;
 }
@@ -487,16 +487,19 @@ void LauncherEntry(__attribute__((unused)) int arg)
 #endif
 }
 
-void LaunchLauncher()
+RESOURCE_STATUS LaunchLauncher()
 {
-	int errorCode = 0;
+	UNUSED int errorCode = 0;
 	Task* pTask;
 	
 	//create the program manager task.
 	errorCode = 0;
 	pTask = KeStartTask(LauncherEntry, 0, &errorCode);
 	
+	if (!pTask)
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
 	KeUnsuspendTask(pTask);
 	
-	DebugLogMsg("Created launcher task. pointer returned:%x, errorcode:%x", pTask, errorCode);
+	return RESOURCE_LAUNCH_SUCCESS;
 }

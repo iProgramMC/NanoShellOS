@@ -449,7 +449,10 @@ void OnUIRightClick (int mouseX, int mouseY)
 		{
 			int x = mouseX - window->m_fullRect.left;
 			int y = mouseY - window->m_fullRect.top;
-			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (x, y), 0);
+			
+			Rectangle margins = GetWindowMargins(window);
+			int offsX = -margins.left, offsY = -margins.top;
+			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICK, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 		}
 	}
 	
@@ -476,7 +479,10 @@ void OnUIRightClickRelease (int mouseX, int mouseY)
 			int x = mouseX - window->m_fullRect.left;
 			int y = mouseY - window->m_fullRect.top;
 			
-			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (x, y), 0);
+			Rectangle margins = GetWindowMargins(window);
+			int offsX = -margins.left, offsY = -margins.top;
+			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE_PRIVATE, MAKE_MOUSE_PARM (x, y), 0);
+			WindowAddEventToMasterQueue (window, EVENT_RIGHTCLICKRELEASE, MAKE_MOUSE_PARM (offsX + x, y + offsY), 0);
 		}
 	}
 }

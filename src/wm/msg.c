@@ -436,10 +436,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		WmRepaintBorderAndBackground(pWindow);
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
 	}
-	else if (eventType == EVENT_RIGHTCLICKRELEASE)
-	{
-		DefaultWindowProc (pWindow, EVENT_RIGHTCLICKRELEASE_PRIVATE, parm1, parm2);
-	}
 	else if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
 	{
 		//WmRepaintBorder(pWindow);

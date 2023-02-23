@@ -129,16 +129,6 @@ void GetWindowRect(Window* pWindow, Rectangle * pRectOut)
 	*pRectOut = pWindow->m_rect;
 }
 
-int GetWindowFlags(Window* pWindow)
-{
-	return pWindow->m_flags;
-}
-
-void SetWindowFlags(Window* pWindow, int flags)
-{
-	pWindow->m_flags = flags;
-}
-
 int ShellExecute(const char *pCommand)
 {
 	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);

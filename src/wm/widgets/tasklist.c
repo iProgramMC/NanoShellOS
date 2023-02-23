@@ -38,7 +38,7 @@ typedef struct
 }
 TaskListData;
 
-static void WidgetTaskList_PaintButton(Control* this, Rectangle r, int windowID, int iconID, const char* titleOut)
+static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle r, int windowID, int iconID, const char* titleOut)
 {
 	TaskListData* pData = (TaskListData*)this->m_dataPtr;
 	
@@ -64,7 +64,12 @@ static void WidgetTaskList_PaintButton(Control* this, Rectangle r, int windowID,
 		RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTON_MIDDLE_COLOR);
 	
 	// hmm.
-	g_windows[windowID].m_taskbarRect = r;
+	Rectangle rt = r;
+	rt.left   += pWindow->m_rect.left;
+	rt.top    += pWindow->m_rect.top;
+	rt.right  += pWindow->m_rect.left;
+	rt.bottom += pWindow->m_rect.top;
+	g_windows[windowID].m_taskbarRect = rt;
 	
 	int textX = r.left + 4;
 	// if this window has an icon:
@@ -166,7 +171,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				Rectangle r;
 				RECT (r, btn_x, btn_y, btn_width - 4, btnHeight);
 				
-				WidgetTaskList_PaintButton(this, r, pQuery->windowID, pQuery->iconID, pQuery->titleOut);
+				WidgetTaskList_PaintButton(pWindow, this, r, pQuery->windowID, pQuery->iconID, pQuery->titleOut);
 				
 				btn_x += btn_width;
 				
@@ -272,7 +277,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 				if (eventType != EVENT_MOVECURSOR || g_GlowOnHover)
 				{
 					if (bWasHoveredBefore != bIsHovered || bWasClickedBefore != bIsClicked)
-						WidgetTaskList_PaintButton(this, r, pQuery->windowID, pQuery->iconID, pQuery->titleOut);
+						WidgetTaskList_PaintButton(pWindow, this, r, pQuery->windowID, pQuery->iconID, pQuery->titleOut);
 				}
 				
 				btn_x += btn_width;

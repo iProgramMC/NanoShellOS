@@ -30,6 +30,10 @@ extern int           g_nLauncherDVer;
 #define TASKBAR_DATE_THING_WIDTH 150
 
 WindowMenu g_taskbarMenu;
+WindowMenu g_taskbarRightClickMenu;
+
+#define TASKBAR_MENU_ORIGINAL_ID    (999)
+#define TASKBAR_RC_MENU_ORIGINAL_ID (998)
 
 extern int g_TaskbarHeight;
 
@@ -104,15 +108,14 @@ void UpdateTaskbar (Window* pWindow)
 	CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
 }
 
-__attribute__((always_inline))
-static inline void CreateEntry (Window* pWindow, WindowMenu* pMenu, const char* pString, int nComboID, int nIconID)
+static void TaskbarCreateMenuEntry (Window* pWindow, WindowMenu* pMenu, const char* pString, int occi, int nComboID, int nIconID)
 {
 	pMenu->pWindow = pWindow;
 	pMenu->pMenuEntries = NULL;
 	pMenu->nMenuEntries = 0;
 	pMenu->nIconID      = nIconID;
 	pMenu->nMenuComboID = nComboID;
-	pMenu->nOrigCtlComboID = 999;
+	pMenu->nOrigCtlComboID = occi;
 	pMenu->nWidth       = 200;
 	pMenu->bOpen        = false;
 	pMenu->pOpenWindow  = NULL;
@@ -233,35 +236,105 @@ void LaunchRun()
 }
 
 Window* g_pTaskBarWindow;
+
+int TaskbarGetFlags()
+{
+	if (g_bPopOutTaskBar)
+		return WF_NOCLOSE | WF_EXACTPOS | WF_SYSPOPUP | WF_NOMINIMZ | WF_NOMAXIMZ | WF_ALWRESIZ;
+	else
+		return WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WF_BACKGRND;
+}
+
+const char* TaskbarGetPopoutToggleText()
+{
+	return g_bPopOutTaskBar ? "Dock to top" : "Pop out";
+}
+
+void TaskbarPopOut()
+{
+	g_bPopOutTaskBar ^= 1;
+	
+	strcpy(g_taskbarRightClickMenu.pMenuEntries[0].sText, TaskbarGetPopoutToggleText());
+	
+	int x = 0, y = 0;
+	int width = TASKBAR_WIDTH, height = TASKBAR_HEIGHT;
+	
+	if (g_bPopOutTaskBar)
+	{
+		height = TASKBAR_HEIGHT + TITLE_BAR_HEIGHT + BORDER_SIZE * 2;
+		width = TASKBAR_WIDTH * 3 / 4;
+		x = CW_AUTOPOSITION;
+		y = CW_AUTOPOSITION;
+		
+		g_TaskbarHeight = 0;
+	}
+	else
+	{
+		g_TaskbarHeight = height;
+	}
+	
+	g_pTaskBarWindow->m_flags = TaskbarGetFlags();
+	ResizeWindow(g_pTaskBarWindow, x, y, width, height);
+}
+
 void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
 {
 	if (!g_taskbarMenu.nMenuEntries)
 	{
 		int nEntries = g_nLauncherItems + 2 + 2 + 2 + 3;
 		
-		g_taskbarMenu.nMenuEntries = nEntries;
-		g_taskbarMenu.pMenuEntries = MmAllocate(sizeof (WindowMenu) * nEntries);
-		memset (g_taskbarMenu.pMenuEntries, 0,  sizeof (WindowMenu) * nEntries);
+		WindowMenu* pMenu = &g_taskbarMenu;
+		
+		pMenu->nMenuEntries = nEntries;
+		pMenu->pMenuEntries = MmAllocate(sizeof (WindowMenu) * nEntries);
+		memset (pMenu->pMenuEntries, 0,  sizeof (WindowMenu) * nEntries);
 		
 		int index = 0;
+		
+	#define CI(text, id, icon) TaskbarCreateMenuEntry(pWindow, &pMenu->pMenuEntries[index++], text, TASKBAR_MENU_ORIGINAL_ID, id, icon);
 		// Add an "About" icon
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "About NanoShell...", 1, ICON_NANOSHELL);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 2, ICON_NULL); // Empty string = dash
+		CI("About NanoShell...", 1, ICON_NANOSHELL);
+		CI("", 2, ICON_NULL); // Empty string = dash
+		
 		for (int i = 0; i < g_nLauncherItems; i++)
-		{
-			CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], g_pLauncherItems[i].m_text, 2000 + i, g_pLauncherItems[i].m_icon); // Empty string = dash
-		}
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 7, ICON_NULL);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Old Launcher", 8, ICON_HOME);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Settings", 9, ICON_FOLDER_SETTINGS);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 3, ICON_NULL);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Run...", 4, ICON_RUN);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "", 5, ICON_NULL);
-		CreateEntry (pWindow, &g_taskbarMenu.pMenuEntries[index++], "Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
+			CI(g_pLauncherItems[i].m_text, 2000 + i, g_pLauncherItems[i].m_icon);
+		
+		CI("", 7, ICON_NULL);
+		CI("Old Launcher", 8, ICON_HOME);
+		CI("Settings", 9, ICON_FOLDER_SETTINGS);
+		CI("", 3, ICON_NULL);
+		CI("Run...", 4, ICON_RUN);
+		CI("", 5, ICON_NULL);
+		CI("Shut Down", 6, ICON_COMPUTER_SHUTDOWN);
+	#undef CI
+		
+		pMenu->nLineSeparators = 3;
+		pMenu->nWidth    = 200;
+		pMenu->bHasIcons = true;
 	}
-	g_taskbarMenu.nLineSeparators = 3;
-	g_taskbarMenu.nWidth    = 200;
-	g_taskbarMenu.bHasIcons = true;
+	
+	if (!g_taskbarRightClickMenu.nMenuEntries)
+	{
+		int nEntries = 3;
+		
+		WindowMenu* pMenu = &g_taskbarRightClickMenu;
+		
+		pMenu->nMenuEntries = nEntries;
+		pMenu->pMenuEntries = MmAllocate(sizeof (WindowMenu) * nEntries);
+		memset (pMenu->pMenuEntries, 0,  sizeof (WindowMenu) * nEntries);
+		
+		int index = 0;
+		
+	#define CI(text, id, icon) TaskbarCreateMenuEntry(pWindow, &pMenu->pMenuEntries[index++], text, TASKBAR_RC_MENU_ORIGINAL_ID, id, icon);
+		CI(TaskbarGetPopoutToggleText(), 1, ICON_NULL);
+		CI("", 2, ICON_NULL);
+		CI("Open System Monitor", 3, ICON_NULL);
+	#endif
+		
+		pMenu->nLineSeparators = 1;
+		pMenu->nWidth    = 150;
+		pMenu->bHasIcons = false;
+	}
 	
 	Rectangle rect = GetWindowClientRect(pWindow, true);
 	
@@ -327,8 +400,9 @@ void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs)
 	}
 }
 
-void LaunchLauncher();
-void LaunchControlPanel();
+RESOURCE_STATUS LaunchLauncher();
+RESOURCE_STATUS LaunchControlPanel();
+RESOURCE_STATUS LaunchSystem();
 
 void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
@@ -358,6 +432,26 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			UpdateTaskbar(pWindow);
 			break;
 		}
+		case EVENT_RIGHTCLICKRELEASE:
+		{
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			
+			Rectangle crect = GetWindowClientRect(pWindow, true);
+			
+			int taskbarWidth  = crect.right - crect.left;
+			int taskbarHeight = crect.bottom - crect.top;
+			
+			Rectangle rect;
+			RECT (rect, 0, 2, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
+			
+			if (!RectangleContains(&rect, &pt)) break;
+			
+			pt.x += pWindow->m_rect.left;
+			pt.y += pWindow->m_rect.top;
+			
+			SpawnMenu (pWindow, &g_taskbarRightClickMenu, pt.x, pt.y);
+			break;
+		}
 		case EVENT_PAINT:
 		{
 			
@@ -378,7 +472,20 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				//LaunchLauncher();
 				SpawnMenu (pWindow, &g_taskbarMenu, pWindow->m_rect.left + 4, pWindow->m_rect.bottom);
 			}
-			else if (parm1 == 999)
+			else if (parm1 == TASKBAR_RC_MENU_ORIGINAL_ID)
+			{
+				// check the menu
+				switch (parm2)
+				{
+					case 1://Popout
+						TaskbarPopOut();
+						break;
+					case 3://About
+						LaunchSystem();
+						break;
+				}
+			}
+			else if (parm1 == TASKBAR_MENU_ORIGINAL_ID)
 			{
 				// check the menu
 				switch (parm2)
@@ -455,7 +562,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	g_TaskbarHeight = TASKBAR_HEIGHT;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, flags);
+	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, TaskbarGetFlags());
 	
 	if (!pWindow)
 	{
@@ -471,7 +578,6 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	//ShowWindow(pWindow);
 	
 	// event loop:
-#if THREADING_ENABLED
 	int timeout = GetTickCount();
 	while (HandleMessages (pWindow))
 	{
@@ -482,10 +588,5 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 			timeout += 1000;
 		}
 	}
-#endif
 }
-
-
-#endif
-
 

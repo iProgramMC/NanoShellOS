@@ -599,6 +599,10 @@ enum CURSORTYPE
 
 #define WI_INTEMASK 0x00000000//Internal flag mask that CreateWindow will filter
 
+//Internal flag mask that SetWindowFlags will check for differences. If there are any found,
+//we will call `WmOnChangedBorderParms`.
+#define WI_BORDMASK (WF_NOBORDER | WF_ALWRESIZ | WF_FLATBORD | WF_NOTITLE)
+
 // (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
 #define WIN_KB_BUF_SIZE  4096
@@ -715,9 +719,9 @@ Window;
  */
 #define CALLBACK 
 
-#define MAKE_MOUSE_PARM(x, y) ((x)<<16|(y))
+#define MAKE_MOUSE_PARM(x, y) ((unsigned short)(x)<<16|(unsigned short)(y))
 #define GET_X_PARM(parm1)  (parm1>>16)
-#define GET_Y_PARM(parm1)  (parm1&0xFFFF)
+#define GET_Y_PARM(parm1)  ((short)(unsigned short)(parm1&0xFFFF))
 
 typedef Window* PWINDOW;
 
@@ -1011,5 +1015,17 @@ Rectangle GetWindowMargins(Window* pWindow);
  * bOffset = If the rectangle should be a screen coordinate, rather than a window coordinate.
  */
 Rectangle GetWindowClientRect(Window* pWindow, bool offset);
+
+/**
+ * Get the composition flags of a window.
+ */
+int GetWindowFlags(Window* pWindow);
+
+/**
+ * Set the composition flags of a window. If any border flags are modified (WF_NOBORDER for instance),
+ * the window will be automatically adjusted to fit the new border parameters, but without moving the
+ * client area of the window.
+ */
+void SetWindowFlags(Window* pWindow, int flags);
 
 #endif//_WINDOW_H
