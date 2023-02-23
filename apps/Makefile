@@ -1,6 +1,28 @@
 # NanoShell mass app make file. This allows me to make all the applications at once.
 
-PROJECTS := Calc Clock CrtDemo GameTest List Minesweeper Notepad NyanCat Raycaster StickyNotes Tiny WindowTest WorldMap
+PROJECTS :=         \
+	Calc            \
+	Chess           \
+	Clock           \
+	CrtDemo         \
+	Doom            \
+	Edit            \
+	Fireworks       \
+	GameTest        \
+	List            \
+	Minesweeper     \
+	NesEmu          \
+	Notepad         \
+	NyanCat         \
+	Raycaster       \
+	StickyNotes     \
+	Tcc             \
+	Tiny            \
+	VBuilder        \
+	WavePlayer      \
+	WindowTest      \
+	WorldMap        \
+	nsshell
 
 
 cleanup:

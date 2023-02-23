@@ -1,0 +1,8 @@
+// NanoShell Resource File
+SubSystem Gui
+Version   1 1 0
+
+AppName      "DOOM (1993) Video Game"
+AppAuthor    "id Software, iProgramInCpp"
+AppCopyright "Copyright (C) 1993 id Software."
+ProjectName  "The NanoShell(TM) OS Port Collection"

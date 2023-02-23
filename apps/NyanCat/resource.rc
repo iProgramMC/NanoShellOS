@@ -1,0 +1,8 @@
+// NanoShell Resource File
+SubSystem Gui
+Version   1 1 0
+
+AppName      "Nyancat in your terminal"
+AppAuthor    "klange"
+AppCopyright "Copyright (C) klange."
+ProjectName  "The NanoShell(TM) OS Port Collection"

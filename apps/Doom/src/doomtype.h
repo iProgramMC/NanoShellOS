@@ -33,7 +33,9 @@
 #else
 
 //#include <strings.h>
-#include <nsstandard.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
 int strcasecmp  (const char *s1, const char *s2);
 int strncasecmp (const char *s1, const char *s2, size_t n);
 

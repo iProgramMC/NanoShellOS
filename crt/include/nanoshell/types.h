@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 // Include other type files.
 #include <nanoshell/stdio_types.h>
@@ -20,7 +21,6 @@
 #include <nanoshell/mman_types.h>
 #include <nanoshell/graphics_types.h>
 #include <nanoshell/keyboard.h>
-#include <sys/types.h>
 
 #define false 0
 #define true 1

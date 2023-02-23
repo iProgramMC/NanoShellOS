@@ -1,0 +1,8 @@
+// NanoShell Resource File
+SubSystem Gui
+Version   1 1 0
+
+AppName      "Tiny C Compiler"
+AppAuthor    "Fabrice Bellard, iProgramInCpp"
+AppCopyright "Copyright (C) 2001-2004 Fabrice Bellard. Licensed under the GNU GPLv2."
+ProjectName  "The NanoShell(TM) OS Port Collection"

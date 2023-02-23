@@ -1,0 +1,8 @@
+// NanoShell Resource File
+SubSystem Gui
+Version   1 1 0
+
+AppName      "Wave File Player"
+AppAuthor    "iProgramInCpp"
+AppCopyright "Copyright (C) 2019-2023 iProgramInCpp. Licensed under the GNU GPLv3."
+ProjectName  "The NanoShell(TM) Operating System"
