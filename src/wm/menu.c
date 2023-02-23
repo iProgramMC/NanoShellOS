@@ -342,6 +342,16 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 	
 	KeVerifyInterruptsEnabled;
 	cli;
+	
+	if (!pMenuWnd)
+	{
+		sti;
+		MenuRecursivelyFreeEntries(pRoot);
+		MmFree(pRoot);
+		pRoot = NULL;
+		return NULL;
+	}
+	
 	pMenuWnd->m_bWindowManagerUpdated = true;
 	pMenuWnd->m_data = pRoot;
 	sti;

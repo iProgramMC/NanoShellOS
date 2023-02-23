@@ -1095,7 +1095,6 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;
 	int yPos = (GetScreenSizeY() - CABINET_HEIGHT) / 2;
 	Window* pWindow = CreateWindow ("Cabinet", xPos, yPos, CABINET_WIDTH, CABINET_HEIGHT, CabinetWindowProc, WF_ALWRESIZ);
-	pWindow->m_iconID = ICON_CABINET;
 	
 	if (!pWindow)
 	{
@@ -1103,6 +1102,8 @@ void CabinetEntry (__attribute__((unused)) int argument)
 		SLogMsg("The window could not be created");
 		return;
 	}
+	
+	pWindow->m_iconID = ICON_CABINET;
 	
 	pWindow->m_data = MmAllocate(sizeof(CabData));
 	

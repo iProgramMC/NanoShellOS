@@ -645,7 +645,12 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 			freeArea = i; break;
 		}
 	}
-	if (freeArea == -1) return NULL;//can't create the window.
+	
+	if (freeArea == -1)
+	{
+		LockFree(&g_CreateLock);
+		return NULL;//can't create the window.
+	}
 	
 	Window* pWnd = &g_windows[freeArea];
 	memset (pWnd, 0, sizeof *pWnd);

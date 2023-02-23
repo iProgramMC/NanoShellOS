@@ -46,7 +46,10 @@ enum
 	DOCK_RIGHT,
 };
 
-int g_taskbarDock = DOCK_TOP;
+const char *g_pNanoShellText = "\x05 NanoShell";
+int g_NanoShellButtonWidth = 0; // measured at startup
+//int g_taskbarDock = DOCK_TOP;
+int g_taskbarDock = DOCK_LEFT;
 
 enum {
 	TASKBAR_HELLO = 0x1,
@@ -101,14 +104,19 @@ void UpdateTaskbar (Window* pWindow)
 {
 	char buffer[1024];
 	
+	bool bVert = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
+	
 	// Time
 	TimeStruct* time = TmReadTime();
-	sprintf(buffer, g_bShowTimeSeconds ? "  %02d:%02d:%02d" : "  %02d:%02d", time->hours, time->minutes, time->seconds);
+	sprintf(buffer, g_bShowTimeSeconds ? "%s%02d:%02d:%02d" : "%s%02d:%02d", bVert ? "" : "  ", time->hours, time->minutes, time->seconds);
 	SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
 	
 	if (g_bShowDate)
 	{
-		sprintf(buffer, "    %s %d%s, %d", TaskbarGetMonthName(time->month), time->day, TaskbarGetNumeralEnding(time->day), time->year);
+		if (bVert)
+			sprintf(buffer, "%02d/%02d/%04d", time->day, time->month, time->year);
+		else
+			sprintf(buffer, "    %s %d%s, %04d", TaskbarGetMonthName(time->month), time->day, TaskbarGetNumeralEnding(time->day), time->year);
 		SetLabelText(pWindow, TASKBAR_DATE_TEXT, buffer);
 		CallControlCallback(pWindow, TASKBAR_DATE_TEXT,  EVENT_PAINT, 0, 0);
 	}
@@ -274,6 +282,12 @@ void TaskbarSetMargins()
 		case DOCK_BOTTOM:
 			g_TaskbarMargins.bottom = TASKBAR_HEIGHT;
 			break;
+		case DOCK_LEFT:
+			g_TaskbarMargins.left = g_NanoShellButtonWidth + 12;
+			break;
+		case DOCK_RIGHT:
+			g_TaskbarMargins.right = g_NanoShellButtonWidth + 12;
+			break;
 		// TODO: left, right. Measure the NanoShell button's width, and use that as reference.
 	}
 }
@@ -289,7 +303,6 @@ void TaskbarGetPosition(int* x, int* y, int* width, int* height)
 			*height = TASKBAR_HEIGHT + TITLE_BAR_HEIGHT + BORDER_SIZE * 2;
 			break;
 		case DOCK_TOP:
-		default: // DOCK_LEFT and DOCK_RIGHT are unimplemented right now
 			*x = 0;
 			*y = 0;
 			*width = TASKBAR_WIDTH;
@@ -300,6 +313,18 @@ void TaskbarGetPosition(int* x, int* y, int* width, int* height)
 			*y = GetScreenHeight() - TASKBAR_HEIGHT;
 			*width = TASKBAR_WIDTH;
 			*height = TASKBAR_HEIGHT;
+			break;
+		case DOCK_LEFT:
+			*x = 0;
+			*y = 0;
+			*width = g_NanoShellButtonWidth + 10;
+			*height = GetScreenHeight();
+			break;
+		case DOCK_RIGHT:
+			*x = GetScreenWidth() - g_NanoShellButtonWidth - 10;
+			*y = 0;
+			*width = g_NanoShellButtonWidth + 10;
+			*height = GetScreenHeight();
 			break;
 	}
 }
@@ -349,9 +374,6 @@ void TaskbarPopOut(int buttonID)
 	TaskbarGetPosition(&x, &y, &width, &height);
 	
 	//WmOnUpdateTaskbarMargins(); // -- this would loop through all maximized windows and resize them to fit the new taskbar margins
-	
-	TaskbarRemoveControls(g_pTaskBarWindow);
-	TaskbarCreateControls(g_pTaskBarWindow);
 	
 	g_pTaskBarWindow->m_flags = TaskbarGetFlags();
 	ResizeWindow(g_pTaskBarWindow, x, y, width, height);
@@ -430,42 +452,81 @@ void TaskbarCreateControls(Window* pWindow)
 	
 	Rectangle r;
 	
-	int wbutton, hbutton;
-	const char *pNanoShellText = "\x05 NanoShell";
-	VidTextOutInternal (pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
-	
-	int btn_width = TASKBAR_BUTTON_WIDTH;
-	if (btn_width < wbutton + 10)
-		btn_width = wbutton + 10;
-	
 	int yOffset = (g_taskbarDock == DOCK_BOTTOM);
 	
-	RECT (r, 4, 3 + yOffset, btn_width, TASKBAR_BUTTON_HEIGHT);
-	AddControl(pWindow, CONTROL_BUTTON, r, pNanoShellText, TASKBAR_HELLO, 0, 0);
+	RECT (r, 4, 3 + yOffset, g_NanoShellButtonWidth, TASKBAR_BUTTON_HEIGHT);
+	AddControl(pWindow, CONTROL_BUTTON, r, g_pNanoShellText, TASKBAR_HELLO, 0, 0);
 	
-	RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH, 3 + yOffset, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
-	AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
+	bool bIsVerticalLayout = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
+	
+	int hJustify = bIsVerticalLayout ? TEXTSTYLE_HCENTERED : TEXTSTYLE_RJUSTIFY;
+	
+	if (bIsVerticalLayout)
+		RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
+	else
+		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH, 3 + yOffset, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+	
+	AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | hJustify | TEXTSTYLE_FORCEBGCOL);
 	
 	if (g_bShowDate)
 	{
-		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3 + yOffset, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
-		AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_DATE_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
+		if (bIsVerticalLayout)
+			RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT * 2, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
+		else
+			RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3 + yOffset, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+		
+		AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_DATE_TEXT, 0, TEXTSTYLE_VCENTERED | hJustify | TEXTSTYLE_FORCEBGCOL);
+	}
+	int launcherItemPosX = 8 + g_NanoShellButtonWidth, launcherItemPosY = 2 + yOffset;
+	
+	if (bIsVerticalLayout)
+	{
+		launcherItemPosX = 4;
+		launcherItemPosY = 8 + TASKBAR_BUTTON_HEIGHT;
 	}
 	
-	int launcherItemPosX = 8 + btn_width;
+	bool bJustAdvanced = false;
+	
 	for (int i = 0; i < g_nLauncherItems; i++)
 	{
 		if (g_pLauncherItems[i].m_addToQuickLaunch)
 		{
-			RECT (r, launcherItemPosX, 2 + yOffset, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
+			bJustAdvanced = false;
+			RECT (r, launcherItemPosX, launcherItemPosY, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
 			
 			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
 			
 			launcherItemPosX += TASKBAR_BUTTON_HEIGHT + 2;
+			
+			if (launcherItemPosX + TASKBAR_BUTTON_HEIGHT + 2 > taskbarWidth - 4 && bIsVerticalLayout)
+			{
+				launcherItemPosX = 4;
+				launcherItemPosY += TASKBAR_BUTTON_HEIGHT + 2;
+				bJustAdvanced = true;
+			}
 		}
 	}
 	
-	RECT (r, launcherItemPosX, 2 + yOffset, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
+	if (bIsVerticalLayout)
+	{
+		int yPos = launcherItemPosY + (bJustAdvanced ? 0 : (TASKBAR_BUTTON_HEIGHT + 2));
+		RECT (r,
+			2,
+			yPos,
+			g_NanoShellButtonWidth + 10 - 4,
+			taskbarHeight - yPos - 4
+		);
+	}
+	else
+	{
+		RECT (r,
+			launcherItemPosX,
+			2 + yOffset,
+			taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX,
+			TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT)
+		);
+	}
+	
 	AddControlEx(pWindow, CONTROL_TASKLIST, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_RIGHT_TO_RIGHT, r, NULL, TASKBAR_START_TEXT, 0, 0);
 	
 	pWindow->m_data = (void*)(launcherItemPosX + 400);
@@ -537,9 +598,14 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			int taskbarWidth  = crect.right - crect.left;
 			int taskbarHeight = crect.bottom - crect.top;
+			bool bVert = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
 			
 			Rectangle rect;
-			RECT (rect, 0, 2, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
+			
+			if (bVert)
+				RECT (rect, TASKBAR_BUTTON_HEIGHT + 10, 2, taskbarWidth, taskbarHeight - TASKBAR_BUTTON_HEIGHT * 3 - 12);
+			else
+				RECT (rect, 0, 2, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
 			
 			if (!RectangleContains(&rect, &pt)) break;
 			
@@ -644,6 +710,11 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			}
 			break;
 		}
+		case EVENT_SIZE:
+		{
+			WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE_TASKBAR_CTLS, 0, 0);
+			break;
+		}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
@@ -657,6 +728,13 @@ void RequestTaskbarUpdate()
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	if (g_pTaskBarWindow) return;
+	
+	int wbutton, hbutton;
+	VidTextOutInternal (g_pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
+	
+	g_NanoShellButtonWidth = TASKBAR_BUTTON_WIDTH;
+	if (g_NanoShellButtonWidth < wbutton + 10)
+		g_NanoShellButtonWidth = wbutton + 10;
 	
 	int x = 0, y = 0, width = 0, height = 0;
 	
