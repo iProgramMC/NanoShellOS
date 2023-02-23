@@ -17,7 +17,7 @@ void RenderCursor(void);
 int g_DefaultCursorID = CURSOR_DEFAULT;
 
 int g_FPS, g_FPSThisSecond, g_FPSLastCounted;
-int g_TaskbarHeight = 0;
+Rectangle g_TaskbarMargins;
 
 void QueryWindows(WindowQuery* table, size_t tableSize, size_t* numWindows)
 {

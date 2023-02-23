@@ -54,6 +54,7 @@ typedef struct
 }
 LauncherItem;
 
+extern Rectangle g_TaskbarMargins;
 extern Cursor   g_windowDragCursor;
 extern Cursor*  g_currentCursor, g_defaultCursor, g_waitCursor, g_iBeamCursor, g_crossCursor, g_pencilCursor, g_resizeNSCursor,
                 g_resizeWECursor, g_resizeNESWCursor, g_resizeNWSECursor, g_resizeAllCursor;
@@ -64,7 +65,6 @@ extern Window*  g_currentlyClickedWindow;
 extern Tooltip  g_tooltip;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 extern SafeLock g_WindowLock, g_ScreenLock, g_BufferLock, g_CreateLock, g_BackgdLock; 
-extern int      g_TaskbarHeight;
 extern int      g_mouseX, g_mouseY;
 extern bool     g_RenderWindowContents;
 extern bool     g_GlowOnHover, g_heldAlt;

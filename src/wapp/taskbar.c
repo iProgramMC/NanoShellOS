@@ -35,7 +35,7 @@ WindowMenu g_taskbarRightClickMenu;
 #define TASKBAR_MENU_ORIGINAL_ID    (999)
 #define TASKBAR_RC_MENU_ORIGINAL_ID (998)
 
-extern int g_TaskbarHeight;
+extern Rectangle g_TaskbarMargins;
 
 bool g_bPopOutTaskBar = false;
 
@@ -259,19 +259,23 @@ void TaskbarPopOut()
 	int x = 0, y = 0;
 	int width = TASKBAR_WIDTH, height = TASKBAR_HEIGHT;
 	
+	g_TaskbarMargins.left   =
+	g_TaskbarMargins.top    =
+	g_TaskbarMargins.right  =
+	g_TaskbarMargins.bottom = 0;
 	if (g_bPopOutTaskBar)
 	{
 		height = TASKBAR_HEIGHT + TITLE_BAR_HEIGHT + BORDER_SIZE * 2;
 		width = TASKBAR_WIDTH * 3 / 4;
 		x = CW_AUTOPOSITION;
 		y = CW_AUTOPOSITION;
-		
-		g_TaskbarHeight = 0;
 	}
 	else
 	{
-		g_TaskbarHeight = height;
+		g_TaskbarMargins.top = height;
 	}
+	
+	//WmOnUpdateTaskbarMargins(); // -- this would loop through all maximized windows and resize them to fit the new taskbar margins
 	
 	g_pTaskBarWindow->m_flags = TaskbarGetFlags();
 	ResizeWindow(g_pTaskBarWindow, x, y, width, height);
@@ -560,9 +564,9 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 		flags = WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WF_BACKGRND;
 	}
 	
-	g_TaskbarHeight = TASKBAR_HEIGHT;
+	g_TaskbarMargins.top = TASKBAR_HEIGHT;
 	
-	Window* pWindow = CreateWindow ("Desktop", wx, wy, ww, wh, TaskbarProgramProc, TaskbarGetFlags());
+	Window* pWindow = CreateWindow ("Taskbar", wx, wy, ww, wh, TaskbarProgramProc, TaskbarGetFlags());
 	
 	if (!pWindow)
 	{

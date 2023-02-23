@@ -693,10 +693,10 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	{
 		pWnd->m_rectBackup = pWnd->m_fullRect;
 		
-		pWnd->m_fullRect.left   = 0;
-		pWnd->m_fullRect.top    = g_TaskbarHeight;
-		pWnd->m_fullRect.right  = GetScreenWidth();
-		pWnd->m_fullRect.bottom = GetScreenHeight() - g_TaskbarHeight;
+		pWnd->m_fullRect.left   = g_TaskbarMargins.left;
+		pWnd->m_fullRect.top    = g_TaskbarMargins.top;
+		pWnd->m_fullRect.right  = GetScreenWidth() - g_TaskbarMargins.right;
+		pWnd->m_fullRect.bottom = GetScreenHeight() - g_TaskbarMargins.bottom;
 		
 		xSize = GetWidth (&pWnd->m_fullRect);
 		ySize = GetHeight(&pWnd->m_fullRect);

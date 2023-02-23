@@ -386,20 +386,26 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			pWindow->m_privFlags |= WPF_FLBRDFRC;
 		}
 		
-		//WmOnChangedBorderParms(pWindow);
-		
-		int e = g_TaskbarHeight - 1;
-		if (e < 0) e = 0;
-		
 		if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
 		
-		ResizeWindow(pWindow, 0, e, GetScreenWidth(), GetScreenHeight() - g_TaskbarHeight + 1);
+		ResizeWindow(
+			pWindow,
+			g_TaskbarMargins.left,
+			g_TaskbarMargins.top,
+			GetScreenWidth() - g_TaskbarMargins.left - g_TaskbarMargins.right,
+			GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom
+		);
 		
 		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		
 		pWindow->m_renderFinished = true;
 		
-		Rectangle new_title_rect = { 0, g_TaskbarHeight, GetScreenWidth() - 1, g_TaskbarHeight - 1 + TITLE_BAR_HEIGHT };
+		Rectangle new_title_rect = {
+			g_TaskbarMargins.left,
+			g_TaskbarMargins.top,
+			GetScreenWidth() - g_TaskbarMargins.right - 1,
+			g_TaskbarMargins.top + TITLE_BAR_HEIGHT - 1
+		};
 		
 		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
