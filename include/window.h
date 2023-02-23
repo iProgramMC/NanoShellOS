@@ -1000,4 +1000,16 @@ void SetWindowIcon(Window* pWindow, int icon);
  */
 void SetControlVisibility(Window* pWindow, int comboID, bool bVisible);
 
+/**
+ * Get the margins of a window. This isn't an actual rectangle, but rather a quad of 4 offsets.
+ */
+Rectangle GetWindowMargins(Window* pWindow);
+
+/**
+ * Gets the client rectangle of the window.
+ *
+ * bOffset = If the rectangle should be a screen coordinate, rather than a window coordinate.
+ */
+Rectangle GetWindowClientRect(Window* pWindow, bool offset);
+
 #endif//_WINDOW_H

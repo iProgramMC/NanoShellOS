@@ -21,6 +21,7 @@
 #include <vfs.h>
 #include <image.h>
 #include <config.h>
+#include <wterm.h>
 
 //#define BORDER_SIZE (15)
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
@@ -43,6 +44,15 @@ typedef struct Tooltip
 	Rectangle m_rect;
 }
 Tooltip;
+
+typedef struct
+{
+	char m_text[61];
+	char m_resourceID[31];
+	int  m_icon;
+	bool m_addToQuickLaunch;
+}
+LauncherItem;
 
 extern Cursor   g_windowDragCursor;
 extern Cursor*  g_currentCursor, g_defaultCursor, g_waitCursor, g_iBeamCursor, g_crossCursor, g_pencilCursor, g_resizeNSCursor,
@@ -121,6 +131,7 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 void ResizeWindow(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight);
 int  CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
 int  CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
+int  ShutdownBox (Window *pWindow);
 void WinAddToInputQueue(Window* this, char input);
 bool WinAnythingOnInputQueue(Window* this);
 char WinReadFromInputQueue(Window* this);
@@ -149,6 +160,7 @@ void WmRepaintWindowBorder(Window* pWindow);
 void WmRecalculateClientRect(Window* pWindow);
 void WmOnChangedBorderParms(Window* pWindow);
 void WmOnChangedBorderSize();
+void WindowManagerShutdown(bool restart);
 Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize);
 Rectangle GetMarginsWindowFlags(uint32_t flags);
 Rectangle GetWindowMargins(Window* pWindow);

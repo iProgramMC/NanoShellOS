@@ -36,3 +36,4 @@ double FltCos (double x)
 {
 	return FltSin(x + M_PI / 2.0);
 }
+

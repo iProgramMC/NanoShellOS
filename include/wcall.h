@@ -4,12 +4,12 @@
 
   Window Manager Call Array module header
 ******************************************/
-#ifndef _WTERM_H
-#define _WTERM_H
+#ifndef _WCALL_H
+#define _WCALL_H
 
 #include <main.h>
 
 void WindowCallInit();
 void WindowCallDeinit();
 
-#endif//_WTERM_H
+#endif//_WCALL_H
