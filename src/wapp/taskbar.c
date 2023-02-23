@@ -37,7 +37,16 @@ WindowMenu g_taskbarRightClickMenu;
 
 extern Rectangle g_TaskbarMargins;
 
-bool g_bPopOutTaskBar = false;
+enum
+{
+	POP_OUT,
+	DOCK_TOP,
+	DOCK_BOTTOM,
+	DOCK_LEFT,   // TODO these
+	DOCK_RIGHT,
+};
+
+int g_taskbarDock = DOCK_TOP;
 
 enum {
 	TASKBAR_HELLO = 0x1,
@@ -239,7 +248,7 @@ Window* g_pTaskBarWindow;
 
 int TaskbarGetFlags()
 {
-	if (g_bPopOutTaskBar)
+	if (g_taskbarDock == POP_OUT)
 		return WF_NOCLOSE | WF_EXACTPOS | WF_SYSPOPUP | WF_NOMINIMZ | WF_NOMAXIMZ | WF_ALWRESIZ;
 	else
 		return WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WF_BACKGRND;
@@ -247,41 +256,108 @@ int TaskbarGetFlags()
 
 const char* TaskbarGetPopoutToggleText()
 {
-	return g_bPopOutTaskBar ? "Dock to top" : "Pop out";
+	return (g_taskbarDock == POP_OUT) ? "Dock to top" : "Pop out";
 }
 
-void TaskbarPopOut()
+void TaskbarSetMargins()
 {
-	g_bPopOutTaskBar ^= 1;
-	
-	strcpy(g_taskbarRightClickMenu.pMenuEntries[0].sText, TaskbarGetPopoutToggleText());
-	
-	int x = 0, y = 0;
-	int width = TASKBAR_WIDTH, height = TASKBAR_HEIGHT;
-	
 	g_TaskbarMargins.left   =
 	g_TaskbarMargins.top    =
 	g_TaskbarMargins.right  =
 	g_TaskbarMargins.bottom = 0;
-	if (g_bPopOutTaskBar)
+	
+	switch (g_taskbarDock)
 	{
-		height = TASKBAR_HEIGHT + TITLE_BAR_HEIGHT + BORDER_SIZE * 2;
-		width = TASKBAR_WIDTH * 3 / 4;
-		x = CW_AUTOPOSITION;
-		y = CW_AUTOPOSITION;
+		case DOCK_TOP:
+			g_TaskbarMargins.top = TASKBAR_HEIGHT;
+			break;
+		case DOCK_BOTTOM:
+			g_TaskbarMargins.bottom = TASKBAR_HEIGHT;
+			break;
+		// TODO: left, right. Measure the NanoShell button's width, and use that as reference.
+	}
+}
+
+void TaskbarGetPosition(int* x, int* y, int* width, int* height)
+{
+	switch (g_taskbarDock)
+	{
+		case POP_OUT:
+			*x = 0;
+			*y = 0;
+			*width = TASKBAR_WIDTH * 3 / 4;
+			*height = TASKBAR_HEIGHT + TITLE_BAR_HEIGHT + BORDER_SIZE * 2;
+			break;
+		case DOCK_TOP:
+		default: // DOCK_LEFT and DOCK_RIGHT are unimplemented right now
+			*x = 0;
+			*y = 0;
+			*width = TASKBAR_WIDTH;
+			*height = TASKBAR_HEIGHT;
+			break;
+		case DOCK_BOTTOM:
+			*x = 0;
+			*y = GetScreenHeight() - TASKBAR_HEIGHT;
+			*width = TASKBAR_WIDTH;
+			*height = TASKBAR_HEIGHT;
+			break;
+	}
+}
+
+void TaskbarCreateControls(Window* pWindow);
+void TaskbarRemoveControls(Window *pWindow);
+
+void TaskbarPopOut(int buttonID)
+{
+	// The idea behind this is something like this:
+	
+	// When the taskbar is docked, the menu will be like this, with the button IDs:
+	//   - Open System Monitor - (1)
+	//   ----------------------- (2)
+	//   - Pop the taskbar out - (3)
+	
+	// However, when the taskbar is popped out, it will list more than that:
+	//   - Open System Monitor - (1)
+	//   ----------------------- (2)
+	//   - Dock to top         - (3)
+	//   - Dock to bottom      - (4)
+	//   - Dock to left        - (5)
+	//   - Dock to right       - (6)
+	
+	// The ID for 'pop the taskbar out' will be reused for 'dock to top'.
+	
+	if (buttonID == 3)
+	{
+		g_taskbarDock = g_taskbarDock == POP_OUT ? DOCK_TOP : POP_OUT;
+		
+		if (g_taskbarDock == POP_OUT)
+			g_taskbarRightClickMenu.nMenuEntries = 6;
+		else
+			g_taskbarRightClickMenu.nMenuEntries = 3;
 	}
 	else
 	{
-		g_TaskbarMargins.top = height;
+		g_taskbarDock = buttonID - 3 + DOCK_TOP;
+		g_taskbarRightClickMenu.nMenuEntries = 3;
 	}
 	
+	strcpy(g_taskbarRightClickMenu.pMenuEntries[2].sText, TaskbarGetPopoutToggleText());
+	
+	int x = 0, y = 0, width = 0, height = 0;
+	
+	TaskbarSetMargins();
+	TaskbarGetPosition(&x, &y, &width, &height);
+	
 	//WmOnUpdateTaskbarMargins(); // -- this would loop through all maximized windows and resize them to fit the new taskbar margins
+	
+	TaskbarRemoveControls(g_pTaskBarWindow);
+	TaskbarCreateControls(g_pTaskBarWindow);
 	
 	g_pTaskBarWindow->m_flags = TaskbarGetFlags();
 	ResizeWindow(g_pTaskBarWindow, x, y, width, height);
 }
 
-void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
+void TaskbarCreateControls(Window* pWindow)
 {
 	if (!g_taskbarMenu.nMenuEntries)
 	{
@@ -319,7 +395,7 @@ void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
 	
 	if (!g_taskbarRightClickMenu.nMenuEntries)
 	{
-		int nEntries = 3;
+		int nEntries = 6;
 		
 		WindowMenu* pMenu = &g_taskbarRightClickMenu;
 		
@@ -330,14 +406,21 @@ void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
 		int index = 0;
 		
 	#define CI(text, id, icon) TaskbarCreateMenuEntry(pWindow, &pMenu->pMenuEntries[index++], text, TASKBAR_RC_MENU_ORIGINAL_ID, id, icon);
-		CI(TaskbarGetPopoutToggleText(), 1, ICON_NULL);
+		CI("Open System Monitor", 1, ICON_NULL);
 		CI("", 2, ICON_NULL);
-		CI("Open System Monitor", 3, ICON_NULL);
+		CI(TaskbarGetPopoutToggleText(), 3, ICON_NULL);
+		CI("Dock to bottom", 4, ICON_NULL);
+		CI("Dock to left",   5, ICON_NULL);
+		CI("Dock to right",  6, ICON_NULL);
 	#endif
 		
 		pMenu->nLineSeparators = 1;
 		pMenu->nWidth    = 150;
 		pMenu->bHasIcons = false;
+		
+		// Adjust the number of menu entries. By default, the task bar is docked to the top
+		// of the screen, so subtract by 3
+		pMenu->nMenuEntries -= 3;
 	}
 	
 	Rectangle rect = GetWindowClientRect(pWindow, true);
@@ -355,15 +438,17 @@ void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
 	if (btn_width < wbutton + 10)
 		btn_width = wbutton + 10;
 	
-	RECT (r, 4, 3, btn_width, TASKBAR_BUTTON_HEIGHT);
+	int yOffset = (g_taskbarDock == DOCK_BOTTOM);
+	
+	RECT (r, 4, 3 + yOffset, btn_width, TASKBAR_BUTTON_HEIGHT);
 	AddControl(pWindow, CONTROL_BUTTON, r, pNanoShellText, TASKBAR_HELLO, 0, 0);
 	
-	RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH, 3, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+	RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH, 3 + yOffset, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
 	AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
 	
 	if (g_bShowDate)
 	{
-		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3 + yOffset, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
 		AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_DATE_TEXT, 0, TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_FORCEBGCOL);
 	}
 	
@@ -372,15 +457,15 @@ void TaskbarCreateControls(Window* pWindow, bool bAlsoCreateQuickLaunchIcons)
 	{
 		if (g_pLauncherItems[i].m_addToQuickLaunch)
 		{
-			RECT (r, launcherItemPosX, 2, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
-			if (bAlsoCreateQuickLaunchIcons)
-				AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
+			RECT (r, launcherItemPosX, 2 + yOffset, TASKBAR_BUTTON_HEIGHT+1, TASKBAR_BUTTON_HEIGHT+1);
+			
+			AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, 1000+i, g_pLauncherItems[i].m_icon, 16);
 			
 			launcherItemPosX += TASKBAR_BUTTON_HEIGHT + 2;
 		}
 	}
 	
-	RECT (r, launcherItemPosX, 2, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
+	RECT (r, launcherItemPosX, 2 + yOffset, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX, TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT));
 	AddControlEx(pWindow, CONTROL_TASKLIST, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_RIGHT_TO_RIGHT, r, NULL, TASKBAR_START_TEXT, 0, 0);
 	
 	pWindow->m_data = (void*)(launcherItemPosX + 400);
@@ -392,6 +477,15 @@ void TaskbarRemoveControls(Window *pWindow)
 	RemoveControl (pWindow, TASKBAR_TIME_TEXT);
 	RemoveControl (pWindow, TASKBAR_START_TEXT);
 	RemoveControl (pWindow, TASKBAR_HELLO);
+	
+	// remove the quick launch icons
+	for (int i = 0; i < g_nLauncherItems; i++)
+	{
+		if (g_pLauncherItems[i].m_addToQuickLaunch)
+		{
+			RemoveControl(pWindow, 1000 + i);
+		}
+	}
 }
 
 void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs)
@@ -417,8 +511,7 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 		{
 			// Load config:
 			HomeMenu$LoadConfig(pWindow);
-			
-			TaskbarCreateControls(pWindow, true);
+			TaskbarCreateControls(pWindow);
 			
 			break;
 		}
@@ -430,7 +523,7 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 		case EVENT_UPDATE_TASKBAR_CTLS:
 		{
 			TaskbarRemoveControls(pWindow);
-			TaskbarCreateControls(pWindow, false);
+			TaskbarCreateControls(pWindow);
 			VidFillRect(WINDOW_BACKGD_COLOR, 0, 0, pWindow->m_vbeData.m_width, pWindow->m_vbeData.m_height);
 			RequestRepaintNew(pWindow);
 			UpdateTaskbar(pWindow);
@@ -461,10 +554,24 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			//VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR_B, pWindow->m_rect.left, pWindow->m_rect.right, 1);
 			
-			if (!g_bPopOutTaskBar)
+			switch (g_taskbarDock)
 			{
-				VidDrawHLine (WINDOW_TITLE_INACTIVE_COLOR, pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - pWindow->m_rect.top - 2);
-				VidDrawHLine (0x0000000000000000000000000, pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - pWindow->m_rect.top - 1);
+				case DOCK_TOP:
+					VidDrawHLine (BUTTON_SHADOW_COLOR, pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - pWindow->m_rect.top - 2);
+					VidDrawHLine (BUTTON_EDGE_COLOR,   pWindow->m_rect.left, pWindow->m_rect.right, pWindow->m_rect.bottom - pWindow->m_rect.top - 1);
+					break;
+				case DOCK_BOTTOM:
+					VidDrawHLine (BUTTON_HILITE_COLOR, pWindow->m_rect.left, pWindow->m_rect.right, 0);
+					VidDrawHLine (BUTTON_HOVER_COLOR,  pWindow->m_rect.left, pWindow->m_rect.right, 1);
+					break;
+				case DOCK_LEFT:
+					VidDrawVLine (BUTTON_SHADOW_COLOR, pWindow->m_rect.top, pWindow->m_rect.bottom, pWindow->m_rect.right - pWindow->m_rect.left - 2);
+					VidDrawVLine (BUTTON_EDGE_COLOR,   pWindow->m_rect.top, pWindow->m_rect.bottom, pWindow->m_rect.right - pWindow->m_rect.left - 1);
+					break;
+				case DOCK_RIGHT:
+					VidDrawVLine (BUTTON_HILITE_COLOR, pWindow->m_rect.top, pWindow->m_rect.bottom, 0);
+					VidDrawVLine (BUTTON_HOVER_COLOR,  pWindow->m_rect.top, pWindow->m_rect.bottom, 1);
+					break;
 			}
 			
 			break;
@@ -481,11 +588,14 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 				// check the menu
 				switch (parm2)
 				{
-					case 1://Popout
-						TaskbarPopOut();
-						break;
-					case 3://About
+					case 1://System Mon
 						LaunchSystem();
+						break;
+					case 3://Pop out / dock top
+					case 4://Dock bottom
+					case 5://Dock left
+					case 6://Dock right
+						TaskbarPopOut(parm2);
 						break;
 				}
 			}
@@ -548,25 +658,12 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	if (g_pTaskBarWindow) return;
 	
-	// create ourself a window:
-	int ww = TASKBAR_WIDTH, wh = TASKBAR_HEIGHT, wx, wy;
-	int flags;
+	int x = 0, y = 0, width = 0, height = 0;
 	
-	if (g_bPopOutTaskBar)
-	{
-		wx = CW_AUTOPOSITION;
-		wy = CW_AUTOPOSITION;
-		flags = WF_NOCLOSE | WF_EXACTPOS | WF_SYSPOPUP | WF_NOMINIMZ | WF_NOMAXIMZ | WF_ALWRESIZ;
-	}
-	else
-	{
-		wx = wy = 0;
-		flags = WF_NOCLOSE | WF_NOTITLE | WF_NOBORDER | WF_EXACTPOS | WF_SYSPOPUP | WF_BACKGRND;
-	}
+	TaskbarSetMargins();
+	TaskbarGetPosition(&x, &y, &width, &height);
 	
-	g_TaskbarMargins.top = TASKBAR_HEIGHT;
-	
-	Window* pWindow = CreateWindow ("Taskbar", wx, wy, ww, wh, TaskbarProgramProc, TaskbarGetFlags());
+	Window* pWindow = CreateWindow ("Taskbar", x, y, width, height, TaskbarProgramProc, TaskbarGetFlags());
 	
 	if (!pWindow)
 	{

@@ -361,10 +361,15 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	
 	ShowWindow(pWindow);
 	
+	SLogMsg("oldMarg: %d %d %d %d",oldMarg.left,oldMarg.right,oldMarg.top,oldMarg.bottom);
+	SLogMsg("OldWidth: %d OldHeight: %d",oldWidth,oldHeight);
+	SLogMsg("Margins: %d %d %d %d",margins.left,margins.right,margins.top,margins.bottom);
+	SLogMsg("newWidth: %d newHeight: %d",newWidth,newHeight);
+	
 	// Send window events: EVENT_SIZE, EVENT_PAINT.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
-		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.left - margins.right),
-		MAKE_MOUSE_PARM(oldWidth - oldMarg.left - oldMarg.right, oldHeight - oldMarg.left - oldMarg.right)
+		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.top - margins.bottom),
+		MAKE_MOUSE_PARM(oldWidth - oldMarg.left - oldMarg.right, oldHeight - oldMarg.top - oldMarg.bottom)
 	);
 }
 
