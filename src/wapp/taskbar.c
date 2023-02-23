@@ -646,8 +646,22 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 		restrt:
 			if (parm1 == TASKBAR_HELLO)
 			{
+				int x, y;
+				switch (g_taskbarDock)
+				{
+					case DOCK_TOP:
+					default:
+						 x = pWindow->m_rect.left + 4;
+						 y = pWindow->m_rect.top  + 3 + TASKBAR_BUTTON_HEIGHT;
+						 break;
+					case DOCK_BOTTOM:
+						 x = pWindow->m_rect.left + 4;
+						 y = pWindow->m_rect.top  + 3 + BORDER_SIZE - GetMenuHeight(&g_taskbarMenu);
+						 break;
+				}
+				
 				//LaunchLauncher();
-				SpawnMenu (pWindow, &g_taskbarMenu, pWindow->m_rect.left + 4, pWindow->m_rect.bottom);
+				SpawnMenu (pWindow, &g_taskbarMenu, x, y);
 			}
 			else if (parm1 == TASKBAR_RC_MENU_ORIGINAL_ID)
 			{
