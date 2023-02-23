@@ -34,9 +34,30 @@ clean:
 
 application: $(APP_TARGET)
 
-$(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES)
+# Build Resource File
+
+RC = ../../tools/rc
+
+RESOURCE=resource.rc
+RESOURCE_COMPILED=$(BLD_DIR)/rescomp.asm
+RESOURCE_COMP_OBJ=$(BLD_DIR)/rescomp.o
+
+ifeq ("$(wildcard $(RESOURCE))", "")
+RESOURCE_COMP_OBJ := 
+else
+$(RESOURCE_COMP_OBJ): $(RESOURCE_COMPILED)
+	@mkdir -p $(dir $@)
+	@echo "assembling resource file"
+	$(AS) $(ASFLAGS) -o $@ $^
+	
+$(RESOURCE_COMPILED): $(RESOURCE)
+	@mkdir -p $(dir $@)
+	$(RC) $< $@
+endif
+
+$(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)
 	@echo "linking: $@"
-	@echo $(APP_O_FILES) $(LIB_O_FILES)
+	@echo $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)
 	@$(LD) $(LDFLAGS) -o $@ $^
 	@$(STRIP) $@
 
@@ -61,3 +82,5 @@ $(BLD_DIR)/%.c.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo "compiling: $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
+
+

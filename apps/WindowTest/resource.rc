@@ -1,0 +1,13 @@
+// NanoShell Resource File
+SubSystem Gui
+Version   1 1 0
+
+
+AppName      "Chart Demo applet"
+AppAuthor    "iProgramInCpp"
+AppCopyright "Copyright (C) 2019-2023 iProgramInCpp. Licensed under the GNU GPLv3."
+ProjectName  "The NanoShell(TM) Operating System"
+
+Resource 100 String "Chart Demo"
+Resource 101 String "Randomize!"
+Resource 102 String "Test"
