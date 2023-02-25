@@ -124,6 +124,145 @@ void WindowCheckButtons(Window* pWindow, int eventType, int x, int y)
 		WindowCheckButton(pWindow, eventType, x, y, E_CLOSE, closeBtnRect);
 }
 
+void StartDragUnsafe(Window* window, int mouseX, int mouseY, int dragMode)
+{
+	if (dragMode == 0) // Not Resizing
+	{
+		window->m_isBeingDragged = true;
+		
+		if (g_RenderWindowContents)
+		{
+			HideWindow(window);
+		}
+		
+		if (window->m_flags & WF_MINIMIZE)
+		{
+			Image* p = GetIconImage(window->m_iconID, 32);
+			g_windowDragCursor.width    = p->width;
+			g_windowDragCursor.height   = p->height;
+			g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+			g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
+			g_windowDragCursor.bitmap   = p->framebuffer;
+			g_windowDragCursor.m_transparency = true;
+			g_windowDragCursor.m_flags  = 0;
+			g_windowDragCursor.boundsWidth  = p->width;
+			g_windowDragCursor.boundsHeight = p->height;
+			g_windowDragCursor.mouseLockX = -1;
+			g_windowDragCursor.mouseLockY = -1;
+		}
+		else
+		{
+			g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+			g_windowDragCursor.height   = window->m_fullVbeData.m_height;
+			g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+			g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
+			g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
+			g_windowDragCursor.m_transparency = false;
+			g_windowDragCursor.m_flags  = window->m_resize_flags = 0;
+			g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+			g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
+			g_windowDragCursor.mouseLockX = -1;
+			g_windowDragCursor.mouseLockY = -1;
+		}
+		
+		SetCursor (&g_windowDragCursor);
+	}
+	else
+	{
+		window->m_isBeingDragged = true;
+		
+		if (g_RenderWindowContents)
+		{
+			HideWindow(window);
+		}
+		
+		g_windowDragCursor.width    = window->m_fullVbeData.m_width;
+		g_windowDragCursor.height   = window->m_fullVbeData.m_height;
+		g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
+		g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
+		g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
+		g_windowDragCursor.m_transparency = false;
+		g_windowDragCursor.m_flags  = window->m_resize_flags = dragMode;
+		g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
+		g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
+		g_windowDragCursor.mouseLockX = mouseX;
+		g_windowDragCursor.mouseLockY = mouseY;
+		
+		SetCursor (&g_windowDragCursor);
+	}
+}
+
+void ReleaseDragUnsafe(int mouseX, int mouseY)
+{
+	Window* pWindow = g_currentlyClickedWindow;
+	if (!pWindow) return;
+	if (!pWindow->m_isBeingDragged) return;
+	
+	if (!g_RenderWindowContents)
+	{
+		HideWindow(pWindow);
+	}
+	
+	if (GetCurrentCursor()->m_flags & CUR_RESIZE)
+	{
+		int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
+		int newX = mouseX - g_windowDragCursor.leftOffs, newY = mouseY - g_windowDragCursor.topOffs;
+		
+		pWindow->m_resize_flags = 0;
+		
+		ResizeWindow(pWindow, newX, newY, newWidth, newHeight);
+		WindowAddEventToMasterQueue(pWindow, EVENT_SHOW_WINDOW_PRIVATE, 0, 0);
+		pWindow->m_isBeingDragged = false;
+	}
+	else
+	{
+		// simply move the window without a re-position
+		Rectangle newWndRect;
+		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
+		newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
+		if (newWndRect.top < 0)
+			newWndRect.top = 0;
+		newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_fullRect);
+		newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_fullRect);
+		pWindow->m_fullRect = newWndRect;
+		WmRecalculateClientRect(pWindow);
+		
+		pWindow->m_fullVbeData.m_dirty = true;
+		pWindow->m_renderFinished = false;
+		pWindow->m_isBeingDragged = false;
+		
+		ShowWindow(pWindow);
+	}
+	
+	if (GetCurrentCursor() == &g_windowDragCursor)
+	{
+		SetCursorInternal(NULL, false);
+	}
+}
+
+void StartDrag(Window* pWindow, int dragMode)
+{
+	if (IsWindowManagerTask())
+	{
+		ReleaseDragUnsafe(g_mouseX, g_mouseY);
+		StartDragUnsafe(pWindow, g_mouseX, g_mouseY, dragMode);
+		return;
+	}
+	
+	//TODO
+}
+
+void ReleaseDrag()
+{
+	if (IsWindowManagerTask())
+	{
+		ReleaseDrag();
+		return;
+	}
+	
+	//TODO
+}
+
 // note: these are called from the window manager task
 
 bool g_bFirstDrag = false;
@@ -131,6 +270,12 @@ bool g_bFirstDrag = false;
 void OnUILeftClick (int mouseX, int mouseY)
 {
 	if (!IsWindowManagerRunning()) return;
+	if (g_currentlyClickedWindow)
+	{
+		if (g_currentlyClickedWindow->m_isBeingDragged)
+			return;
+	}
+	
 	g_prevMouseX = (int)mouseX;
 	g_prevMouseY = (int)mouseY;
 	
@@ -239,60 +384,16 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			
 			if (!(window->m_flags & WF_MAXIMIZE) && (RectangleContains(&recta, &mousePoint) || (window->m_flags & WF_MINIMIZE)))
 			{
-				window->m_isBeingDragged = true;
-				
-				if (g_RenderWindowContents)
+				if (!(window->m_flags & WF_MINIMIZE) && g_heldAlt && (window->m_flags & WF_ALWRESIZ))
 				{
-					HideWindow(window);
-				}
-				
-				//change cursor:
-				if (window->m_flags & WF_MINIMIZE)
-				{
-					Image* p = GetIconImage(window->m_iconID, 32);
-					g_windowDragCursor.width    = p->width;
-					g_windowDragCursor.height   = p->height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
-					g_windowDragCursor.bitmap   = p->framebuffer;
-					g_windowDragCursor.m_transparency = true;
-					g_windowDragCursor.m_flags  = 0;
-					g_windowDragCursor.boundsWidth  = p->width;
-					g_windowDragCursor.boundsHeight = p->height;
-					g_windowDragCursor.mouseLockX = -1;
-					g_windowDragCursor.mouseLockY = -1;
-				}
-				else if (g_heldAlt && (window->m_flags & WF_ALWRESIZ))
-				{
-					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
-					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
-					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
-					g_windowDragCursor.m_transparency = false;
-					g_windowDragCursor.m_flags  = window->m_resize_flags = CUR_RESIZE;
-					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
-					g_windowDragCursor.mouseLockX = mouseX;
-					g_windowDragCursor.mouseLockY = mouseY;
+					StartDragUnsafe(window, mouseX, mouseY, CUR_RESIZE);
 				}
 				else
 				{
-					g_windowDragCursor.width    = window->m_fullVbeData.m_width;
-					g_windowDragCursor.height   = window->m_fullVbeData.m_height;
-					g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
-					g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
-					g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
-					g_windowDragCursor.m_transparency = false;
-					g_windowDragCursor.m_flags  = 0;
-					g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
-					g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
-					g_windowDragCursor.mouseLockX = -1;
-					g_windowDragCursor.mouseLockY = -1;
+					StartDragUnsafe(window, mouseX, mouseY, 0);
 				}
-				
-				SetCursor (&g_windowDragCursor);
 			}
+			
 			if (!(window->m_flags & WF_MINIMIZE) && !window->m_isBeingDragged)
 			{
 				window->m_clickedInside = true;
@@ -322,30 +423,10 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 			
 			int index = left | right << 1 | up << 2 | down << 3;
 			
-			int result = g_ResizeFlagsTable[g_ResizeFlagsIndices[index]];
-			if (result != 0)
+			int dragMode = g_ResizeFlagsTable[g_ResizeFlagsIndices[index]];
+			if (dragMode != 0)
 			{
-				window->m_isBeingDragged = true;
-				
-				if (g_RenderWindowContents)
-				{
-					HideWindow(window);
-				}
-				
-				window->m_resize_flags = result;
-				g_windowDragCursor.width    = window->m_fullVbeData.m_width;
-				g_windowDragCursor.height   = window->m_fullVbeData.m_height;
-				g_windowDragCursor.leftOffs = mouseX - window->m_fullRect.left;
-				g_windowDragCursor.topOffs  = mouseY - window->m_fullRect.top;
-				g_windowDragCursor.bitmap   = window->m_fullVbeData.m_framebuffer32;
-				g_windowDragCursor.m_transparency = false;
-				g_windowDragCursor.m_flags  = window->m_resize_flags = result;
-				g_windowDragCursor.boundsWidth  = window->m_fullVbeData.m_width;
-				g_windowDragCursor.boundsHeight = window->m_fullVbeData.m_height;
-				g_windowDragCursor.mouseLockX = mouseX;
-				g_windowDragCursor.mouseLockY = mouseY;
-				
-				SetCursor (&g_windowDragCursor);
+				StartDragUnsafe(window, mouseX, mouseY, dragMode);
 			}
 		}
 	}
@@ -371,48 +452,7 @@ void OnUILeftClickRelease (int mouseX, int mouseY)
 	g_bFirstDrag = false;
 	
 	Window* pWindow = g_currentlyClickedWindow;
-	if (pWindow->m_isBeingDragged)
-	{
-		if (!g_RenderWindowContents)
-		{
-			HideWindow(pWindow);
-		}
-		
-		if (GetCurrentCursor()->m_flags & CUR_RESIZE)
-		{
-			int newWidth = GetCurrentCursor()->boundsWidth, newHeight = GetCurrentCursor()->boundsHeight;
-			int newX = mouseX - g_windowDragCursor.leftOffs, newY = mouseY - g_windowDragCursor.topOffs;
-			
-			pWindow->m_resize_flags = 0;
-			
-			ResizeWindow(pWindow, newX, newY, newWidth, newHeight);
-			WindowAddEventToMasterQueue(pWindow, EVENT_SHOW_WINDOW_PRIVATE, 0, 0);
-			pWindow->m_isBeingDragged = false;
-		}
-		else
-		{
-			Rectangle newWndRect;
-			newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
-			newWndRect.top    = mouseY - g_windowDragCursor.topOffs;
-			if (newWndRect.top < 0)
-				newWndRect.top = 0;
-			newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_fullRect);
-			newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_fullRect);
-			pWindow->m_fullRect = newWndRect;
-			WmRecalculateClientRect(pWindow);
-			
-			pWindow->m_fullVbeData.m_dirty = true;
-			pWindow->m_renderFinished = false;
-			pWindow->m_isBeingDragged = false;
-			
-			ShowWindow(pWindow);
-		}
-		
-		if (GetCurrentCursor() == &g_windowDragCursor)
-		{
-			SetCursorInternal(NULL, false);
-		}
-	}
+	ReleaseDragUnsafe(mouseX, mouseY);
 	
 	if (pWindow->m_flags & WF_MINIMIZE) return;
 	

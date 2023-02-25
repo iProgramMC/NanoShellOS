@@ -148,7 +148,11 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			if (pData->m_nWindowsBefore != nWindows)
 			{
 				pData->m_nWindowsBefore = nWindows;
+				this->m_rect.right--;
+				this->m_rect.bottom--;
 				VidFillRectangle (WINDOW_BACKGD_COLOR, this->m_rect);
+				this->m_rect.right++;
+				this->m_rect.bottom++;
 			}
 			
 			if (!nWindows) break;

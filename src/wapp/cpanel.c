@@ -193,12 +193,12 @@ void RefreshEverything();
 				}
 				else if (parm1 >= DESKTOP_THEME_DEFAULT)
 				{
-					int borderSize = BORDER_SIZE;
+					int borderSize = BORDER_SIZE, titleBarHeight = TITLE_BAR_HEIGHT;
 					pWindow->m_data = (void*)borderSize;
 					
 					ApplyTheme(parm1 - DESKTOP_THEME_DEFAULT);
 					
-					if (borderSize != BORDER_SIZE)
+					if (borderSize != BORDER_SIZE || titleBarHeight != TITLE_BAR_HEIGHT)
 					{
 						WmOnChangedBorderSize();
 					}

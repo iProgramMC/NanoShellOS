@@ -52,9 +52,9 @@ void WindowTitleLayout(
 	Rectangle *pIconButtonRect
 )
 {
-	bool maximized = flags & WF_MAXIMIZE;
-	
 	Rectangle rectb = windowRect;
+	const bool maximized = flags & WF_MAXIMIZE;
+	const int borderSize = GetBorderSize(flags);
 	
 	if (!(flags & WF_NOBORDER))
 	{
@@ -72,10 +72,10 @@ void WindowTitleLayout(
 		}
 		else
 		{
-			rectb.left   += BORDER_SIZE - 1;
-			rectb.top    += BORDER_SIZE - 1;
-			rectb.right  -= BORDER_SIZE - 1;
-			rectb.bottom -= BORDER_SIZE - 1;
+			rectb.left   += borderSize - 1;
+			rectb.top    += borderSize - 1;
+			rectb.right  -= borderSize - 1;
+			rectb.bottom -= borderSize - 1;
 		}
 	}
 	if (!(flags & WF_NOTITLE))

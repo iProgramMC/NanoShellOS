@@ -58,14 +58,34 @@ Rectangle GetMarginsWindowFlagsAndBorderSize(uint32_t flags, int borderSize)
 	return rect;
 }
 
+int GetBorderSize(uint32_t flags)
+{
+	if (flags & WF_NOBORDER)
+		return 0;
+	
+	if (flags & WF_FLATBORD)
+		return 1;
+	
+	if (~flags & WF_ALWRESIZ)
+		return BORDER_SIZE_NORESIZE;
+	
+	return BORDER_SIZE;
+}
+
 Rectangle GetMarginsWindowFlags(uint32_t flags)
 {
-	return GetMarginsWindowFlagsAndBorderSize(flags, BORDER_SIZE);
+	const int bs = GetBorderSize(flags);
+	return GetMarginsWindowFlagsAndBorderSize(flags, bs);
 }
 
 Rectangle GetWindowMargins(Window* pWindow)
 {
 	return GetMarginsWindowFlagsAndBorderSize(pWindow->m_lastWindowFlags, pWindow->m_knownBorderSize);
+}
+
+int GetWindowBorderSize(Window* pWindow)
+{
+	return GetBorderSize(pWindow->m_lastWindowFlags);
 }
 
 Rectangle GetWindowClientRect(Window* pWindow, bool offset)
@@ -88,7 +108,7 @@ void WmOnChangedBorderParms(Window* pWindow)
 	int clientAreaWidth  = ca.right  - ca.left;
 	int clientAreaHeight = ca.bottom - ca.top;
 	
-	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, BORDER_SIZE);
+	Rectangle margins = GetMarginsWindowFlagsAndBorderSize(pWindow->m_flags, GetBorderSize(pWindow->m_flags));
 	
 	int newX = ca.left - margins.left, newY = ca.top - margins.top;
 	int newW = clientAreaWidth + margins.left + margins.right;
@@ -330,13 +350,8 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	
 	Rectangle oldMarg = GetWindowMargins(pWindow);
 	
-	pWindow->m_knownBorderSize = BORDER_SIZE;
+	pWindow->m_knownBorderSize = GetBorderSize(pWindow->m_flags);
 	pWindow->m_lastWindowFlags = pWindow->m_flags;
-	
-	if (pWindow->m_flags & WF_FLATBORD)
-		pWindow->m_knownBorderSize = 1;
-	if (pWindow->m_flags & WF_NOBORDER)
-		pWindow->m_knownBorderSize = 0;
 	
 	Rectangle margins = GetWindowMargins(pWindow);
 	
@@ -746,7 +761,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_fullVbeData.m_framebuffer32 = MmAllocatePhy (sizeof (uint32_t) * xSize * ySize, ALLOCATE_BUT_DONT_WRITE_PHYS);
 	pWnd->m_fullVbeData.m_drs = WmCAllocate(sizeof(DsjRectSet));
 	
-	pWnd->m_knownBorderSize = BORDER_SIZE;
+	pWnd->m_knownBorderSize = GetWindowBorderSize(pWnd);
 	
 	if (!pWnd->m_fullVbeData.m_framebuffer32 || !pWnd->m_fullVbeData.m_drs)
 	{

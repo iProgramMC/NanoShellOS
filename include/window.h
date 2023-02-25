@@ -48,6 +48,7 @@
 #define DEFAULT_SELECTED_ITEM_COLOR             0x00316AC5
 #define DEFAULT_SELECTED_ITEM_COLOR_B           0x00C1D2EE
 #define DEFAULT_BORDER_SIZE                     10
+#define DEFAULT_BORDER_SIZE_NORESIZE            3
 #define DEFAULT_WINDOW_BORDER_COLOR             0x00B0B0B0
 
 //#define HARDCODE_EVERYTHING
@@ -74,6 +75,7 @@
 #define SCROLL_BAR_SIZE                 16
 #define TITLE_BAR_FONT                  FONT_BASIC
 #define BORDER_SIZE                     DEFAULT_BORDER_SIZE
+#define BORDER_SIZE_NORESIZE            DEFAULT_BORDER_SIZE_NORESIZE
 #define WINDOW_BORDER_COLOR             DEFAULT_WINDOW_BORDER_COLOR
 
 #else
@@ -118,7 +120,7 @@ P_TABLE_VIEW_ALT_ROW_COLOR,
 P_MENU_ITEM_HEIGHT,
 P_BUTTON_XSHADOW_COLOR,
 P_CAPTION_BUTTON_ICON_COLOR,
-
+P_BORDER_SIZE_NORESIZE,
 P_THEME_PARM_COUNT
 };
 uint32_t GetThemingParameter(int type);
@@ -162,6 +164,7 @@ void     SetThemingParameter(int type, uint32_t);
 #define TABLE_VIEW_ALT_ROW_COLOR        (GetThemingParameter(P_TABLE_VIEW_ALT_ROW_COLOR        ))
 #define BUTTON_XSHADOW_COLOR            (GetThemingParameter(P_BUTTON_XSHADOW_COLOR            ))
 #define CAPTION_BUTTON_ICON_COLOR       (GetThemingParameter(P_CAPTION_BUTTON_ICON_COLOR       ))
+#define BORDER_SIZE_NORESIZE            ((int)GetThemingParameter(P_BORDER_SIZE_NORESIZE       ))
 
 #endif
 
@@ -734,6 +737,8 @@ enum {
 	WACT_DESTROY,
 	WACT_SELECT,
 	WACT_UPDATEALL,
+	WACT_STARTDRAG,
+	WACT_STOPDRAG,
 };
 
 typedef struct
@@ -1003,6 +1008,12 @@ void SetWindowIcon(Window* pWindow, int icon);
  * By default, controls are visible. That may be changeable in a future version.
  */
 void SetControlVisibility(Window* pWindow, int comboID, bool bVisible);
+
+/**
+ * Get the border size of a window, respectively a set of window flags.
+ */
+int GetWindowBorderSize(Window* pWindow);
+int GetBorderSize(uint32_t flags);
 
 /**
  * Get the margins of a window. This isn't an actual rectangle, but rather a quad of 4 offsets.

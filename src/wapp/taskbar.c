@@ -49,7 +49,7 @@ enum
 const char *g_pNanoShellText = "\x05 NanoShell";
 int g_NanoShellButtonWidth = 0; // measured at startup
 //int g_taskbarDock = DOCK_TOP;
-int g_taskbarDock = DOCK_LEFT;
+int g_taskbarDock = DOCK_BOTTOM;
 
 enum {
 	TASKBAR_HELLO = 0x1,
