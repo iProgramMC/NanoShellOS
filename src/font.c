@@ -523,14 +523,6 @@ void KillFont (int fontID)
 		}
 		else
 		{
-			if (c == 0x5)
-			{
-				RenderIcon(ICON_NANOSHELL16, ox, oy + (g_pCurrentFont->m_charHeight - 16) / 2);
-				
-				DirtyRectLogger(ox, oy, 16, 16);
-				return;
-			}
-			
 			for (int y = 0; y < height; y++)
 			{
 				for (int x = width - 1, bitmask = (1 << (8 - width)); x >= 0; x--, bitmask <<= 1)
