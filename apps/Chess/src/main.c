@@ -172,41 +172,7 @@ void PaintBoard()
 	}
 }
 
-void SetupBoard()
-{
-	for (int i = 0; i < BOARD_SIZE; i++)
-	{
-		// set a2..g2 and a7..g7 to pawns. a2..g2 has the color white, a7..g7 has the color black.
-		SetPiece(1, i, PIECE_PAWN, WHITE);
-		SetPiece(6, i, PIECE_PAWN, BLACK);
-	}
-	
-	// Rooks
-	SetPiece(0, 0, PIECE_ROOK, WHITE);
-	SetPiece(0, 7, PIECE_ROOK, WHITE);
-	SetPiece(7, 0, PIECE_ROOK, BLACK);
-	SetPiece(7, 7, PIECE_ROOK, BLACK);
-	
-	// Knights
-	SetPiece(0, 1, PIECE_KNIGHT, WHITE);
-	SetPiece(0, 6, PIECE_KNIGHT, WHITE);
-	SetPiece(7, 1, PIECE_KNIGHT, BLACK);
-	SetPiece(7, 6, PIECE_KNIGHT, BLACK);
-	
-	// Bishops
-	SetPiece(0, 2, PIECE_BISHOP, WHITE);
-	SetPiece(0, 5, PIECE_BISHOP, WHITE);
-	SetPiece(7, 2, PIECE_BISHOP, BLACK);
-	SetPiece(7, 5, PIECE_BISHOP, BLACK);
-	
-	// Queens
-	SetPiece(0, 3, PIECE_QUEEN, WHITE);
-	SetPiece(7, 3, PIECE_QUEEN, BLACK);
-	
-	// Kings
-	SetPiece(0, 4, PIECE_KING, WHITE);
-	SetPiece(7, 4, PIECE_KING, BLACK);
-}
+void SetupBoard();
 
 // Mouse.
 bool g_bDragging = false;
