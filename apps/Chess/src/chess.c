@@ -357,6 +357,24 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 		}
 	}
 	
+	const static int deltaKingRow[] = {  0,  0, -1, +1,  1,  1, -1, -1 };
+	const static int deltaKingCol[] = { -1, +1,  0,  0, -1, +1, -1,  1 };
+	for (int i = 0; i < 8; i++)
+	{
+		rows[i] = row + deltaKingRow[i];
+		cols[i] = col + deltaKingCol[i];
+		
+		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+		
+		// this is a different-color rook or queen. You can't move two kings right next to each other.
+		if (pcs[i]->piece == PIECE_KING && pcs[i]->color != color)
+		{
+			if (bFlashTiles)
+				FlashTile(rows[i], cols[i]);
+			bFinalResult = true;
+		}
+	}
+	
 	// Check for attacking knights.
 	rows[0] = row - 1, cols[0] = col + 2;
 	rows[1] = row + 1, cols[1] = col + 2;
