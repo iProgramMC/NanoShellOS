@@ -743,6 +743,8 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	if (g_pTaskBarWindow) return;
 	
+	VidSetFont(SYSTEM_FONT);
+	
 	int wbutton, hbutton;
 	VidTextOutInternal (g_pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
 	

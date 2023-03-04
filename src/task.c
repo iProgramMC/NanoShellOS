@@ -35,14 +35,14 @@ static int            g_kernelFPUState[128];
 static VBEData*       g_kernelVBEContext = NULL;
 static UserHeap*      g_kernelHeapContext = NULL;
 static Console*       g_kernelConsoleContext = NULL;
-static const uint8_t* g_kernelFontContext = NULL;
+static void*          g_kernelFontContext = NULL;
 static uint32_t       g_kernelFontIDContext = 0;
 static char           g_kernelCwd[PATH_MAX+2];
 static uint32_t       g_kernelSysCallNum; //honestly, kind of useless since the kernel task will never be an ELF trying to call into the system :^)
 
 extern UserHeap*      g_pCurrentUserHeap;
 extern Console*       g_currentConsole; //logmsg
-extern const uint8_t* g_pCurrentFont;
+extern void*          g_pCurrentFont;
 extern uint32_t       g_nCurrentFontID;
 extern char           g_cwd[PATH_MAX+2];
 

@@ -9,6 +9,7 @@
 
 #include <multiboot.h>
 #include <mouse.h>
+#include <font.h>
 
 #define DIRTY_RECT_TRACK
 
@@ -46,34 +47,6 @@
 #define VBE_DISPI_8BIT_DAC              0x20
 #define VBE_DISPI_LFB_ENABLED           0x40
 #define VBE_DISPI_NOCLEARMEM            0x80
-
-/**
- * An enum with the font types available.
- */
-enum {
-	FONT_TAMSYN_REGULAR,
-	FONT_TAMSYN_BOLD,
-	FONT_PAPERM,
-	FONT_FAMISANS,
-	FONT_BASIC,
-	FONT_GLCD,
-	FONT_TAMSYN_MED_REGULAR,
-	FONT_TAMSYN_MED_BOLD,
-	FONT_TAMSYN_SMALL_REGULAR,
-	FONT_TAMSYN_SMALL_BOLD,
-	//FONT_BIGTEST,
-	//FONT_BIGTEST2,
-	FONT_LAST,
-};
-
-enum
-{
-	FONTTYPE_MONOSPACE,
-	FONTTYPE_SMALL,//varying width
-	FONTTYPE_GLCD,
-	FONTTYPE_BIG,
-	FONTTYPE_BITMAP,
-};
 
 #define TRANSPARENT 0xFFFFFFFF
 

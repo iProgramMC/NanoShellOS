@@ -22,16 +22,15 @@ typedef struct
 	int xoffset, yoffset;//Rendering offset
 	int xadvance;        //The amount of X to advance
 }
-CharInfo;
+BitmapCharInfo;
 
 typedef struct
 {
-	uint8_t   m_width, m_height, m_type, m_bAlreadyBold;
-	CharInfo  m_charInfo[127-32];//include data for the ASCII printables only
-	uint8_t*  m_bitmap;          //bitmap data is grayscale 0-255
-	uint32_t  m_bmWidth, m_bmHeight;
+	uint8_t*   m_bitmap;          //bitmap data is grayscale 0-255
+	uint32_t   m_bmWidth, m_bmHeight;
+	ScreenFont m_font;
+	BitmapCharInfo m_charInfo[127 - 32];
 }
-__attribute__((packed))
 BitmapFont;
 
 #define MAX_FONTS 16//max amount of bmfonts to load at one time
@@ -44,26 +43,27 @@ BitmapFont;
 	extern uint32_t* g_framebufferCopy;
 	
 	// Font table
-	const unsigned char* g_pBasicFontData[] = {
-		g_TamsynRegu8x16,
-		g_TamsynBold8x16,
-		g_PaperMFont8x16,
-		g_FamiSans8x8,
-		g_BasicFontData,
-		g_GlcdData,
-		g_TamsynRegu7x14,
-		g_TamsynBold7x14,
-		g_TamsynRegu6x12,
-		g_TamsynBold6x12,
+	ScreenFont* const g_pBasicFontData[] = {
+		&g_TamsynRegu8x16,
+		&g_TamsynBold8x16,
+		&g_PaperMFont8x16,
+		&g_FamiSans8x8,
+		&g_BasicFontData,
+		&g_GlcdData,
+		&g_TamsynRegu7x14,
+		&g_TamsynBold7x14,
+		&g_TamsynRegu6x12,
+		&g_TamsynBold6x12,
 		//g_TestFont16x16,
 		//g_TestFont216x16,
 	};
 	
+	SafeLock g_LoadedFontsPoolLock;
 	BitmapFont* g_pLoadedFontsPool[MAX_FONTS] = {
 		NULL
 	};
 	
-	const unsigned char* g_pCurrentFont = NULL;
+	ScreenFont* g_pCurrentFont = NULL;
 	
 	uint32_t g_nCurrentFontID = 0;
 #endif
@@ -126,7 +126,7 @@ BitmapFont;
 //Returns a handle to a basic font.
 int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight)
 {
-	CharInfo chinfo [95];
+	BitmapCharInfo chinfo [95];
 	
 	char* pFileData = pFntFileData;
 	
@@ -159,8 +159,8 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 		
 		if (strcmp (insn, "char") == 0)
 		{
-			//Load a CharInfo
-			CharInfo info;
+			//Load a BitmapCharInfo
+			BitmapCharInfo info;
 			int info_id = 0;
 			
 			//Load its properties.
@@ -204,6 +204,8 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	}
 	while (1);
 	
+	LockAcquire(&g_LoadedFontsPoolLock);
+	
 	// Search for a free spot in the font pool
 	int freeSpot = -1;
 	for (size_t i = 0; i < ARRAY_COUNT(g_pLoadedFontsPool); i++)
@@ -214,10 +216,12 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 			break;
 		}
 	}
+	
 	if (freeSpot < 0)
 	{
 		//doing this makes CreateFont have a failsafe
 		SLogMsg("Could not initialize a font, resorting to a default one.");
+		LockFree(&g_LoadedFontsPoolLock);
 		return FONT_BASIC;//Use a basic font
 	}
 	
@@ -225,6 +229,11 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	BitmapFont *pFont = MmAllocate (sizeof (BitmapFont));
 	g_pLoadedFontsPool[freeSpot] = pFont;
 	
+	LockFree(&g_LoadedFontsPoolLock);
+	
+	memset (pFont, 0, sizeof *pFont);
+	
+	/*
 	pFont->m_bmWidth  = imwidth;
 	pFont->m_bmHeight = imheight;
 	pFont->m_bitmap   = bitmap;
@@ -232,6 +241,44 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	pFont->m_height   = chheight;
 	pFont->m_type     = FONTTYPE_BITMAP;
 	pFont->m_bAlreadyBold = true; // can't embolden further
+	for (int i = 0; i < 95; i++)
+		pFont->m_charInfo [i] = chinfo [i];
+	*/
+	
+	// Set up the ScreenFont structure.
+	ScreenFont *pSF  = &pFont->m_font;
+	pSF->m_fontType  = FONTTYPE_BITMAP;
+	pSF->m_pFontData = (const uint8_t*) pFont; // really, it's just a pointer
+	
+	// XXX: This should be fine, since GetCharWithInl only uses the local CharacterData's width field.
+	pSF->m_charWidth  = 255;
+	
+	pSF->m_charHeight   = chheight;
+	pSF->m_bAlreadyBold = true;  // can't embolden further
+	pSF->m_altFontID    = -1;    // we don't have a bold version
+	pSF->m_unicodeTableSize = 0; // TODO: We don't have unicode support right now
+	pSF->m_pUnicodeTable    = NULL;
+	
+	for (int i = 0x20; i < 0x7F; i++)
+	{
+		BitmapCharInfo* pCInfo = &chinfo[i - 0x20];
+		CharacterData* pData = &pSF->m_asciiData[i];
+		pData->m_width  = pCInfo->xadvance;
+		pData->m_offset = pCInfo->yoffset * pFont->m_bmWidth + pCInfo->xoffset;
+	}
+	
+	// Everything not printable is the replacement char with this type of font.
+	for (int i = 0; i < 0x20; i++)
+		pSF->m_asciiData[i] = pSF->m_replacementChar;
+	
+	for (int i = 0x7F; i < 0xFF; i++)
+		pSF->m_asciiData[i] = pSF->m_replacementChar;
+	
+	// Fill in the bitmap part of the BitmapFont structure.
+	pFont->m_bmWidth  = imwidth;
+	pFont->m_bmHeight = imheight;
+	pFont->m_bitmap   = bitmap;
+	
 	for (int i = 0; i < 95; i++)
 		pFont->m_charInfo [i] = chinfo [i];
 	
@@ -242,15 +289,20 @@ void KillFont (int fontID)
 {
 	if (fontID < 0xF000) return;
 	fontID -= 0xF000;
-	//a fontID<0 check would be redundant
-	if ((uint32_t)fontID >= ARRAY_COUNT(g_pLoadedFontsPool)) return;//Can't kill OOB fonts.
+	
+	// a fontID < 0 check would be redundant
+	if (fontID >= (int) ARRAY_COUNT(g_pLoadedFontsPool)) return;// can't kill fonts not in the pool..
+	
+	LockAcquire(&g_LoadedFontsPoolLock);
 	
 	MmFree(g_pLoadedFontsPool [fontID]);
 	
-	if (g_pCurrentFont == (const unsigned char*)g_pLoadedFontsPool [fontID])
+	if (g_pCurrentFont == &g_pLoadedFontsPool[fontID]->m_font)
 		VidSetFont(FONT_BASIC);//use a temporary font for now.
 	
 	g_pLoadedFontsPool[fontID] = NULL;
+	
+	LockFree(&g_LoadedFontsPoolLock);
 }
 
 #endif
@@ -260,42 +312,23 @@ void KillFont (int fontID)
 	__attribute__((always_inline))
 	static inline int GetCharWidthInl(char chr)
 	{
-		uint8_t c = (uint8_t) chr;
-		if (g_pCurrentFont[2] == FONTTYPE_BITMAP)
-		{
-			if (c > '~' || c < ' ') c = '?';
-			
-			BitmapFont* pFont = (BitmapFont*)g_pCurrentFont;
-			
-			int id = c - ' ';
-			return pFont->m_charInfo[id].xadvance;
-		}
-		else if (g_pCurrentFont[2] == FONTTYPE_SMALL)
-		{
-			if (c == 0x5)
-				return 16;
-			return g_pCurrentFont[4 + 256 * g_pCurrentFont[1] + c];
-		}
-		else if (g_pCurrentFont[2] == FONTTYPE_BIG)
-		{
-			if (c > '~' || c < ' ') c = '?';
-			return g_pCurrentFont[4 + g_pCurrentFont[1]*2 * (128-32) + c-32]+1;
-		}
-		else if (g_pCurrentFont[2] == FONTTYPE_MONOSPACE)
-		{
-			if (c == '\t')
-				return 4 * g_pCurrentFont[0];
-		}
+		uint8_t cx = (uint8_t)chr;
+		int charWidth = g_pCurrentFont->m_asciiData[cx].m_width;
 		
-		return g_pCurrentFont[0] + (g_pCurrentFont[2] == FONTTYPE_GLCD);
+		if (chr == '\t')
+			charWidth *= 4;
+		
+		return charWidth;
 	}
+	
 	int GetCharWidth(char c)
 	{
 		return GetCharWidthInl (c);
 	}
+	
 	int GetLineHeight()
 	{
-		return g_pCurrentFont[1];
+		return g_pCurrentFont->m_charHeight;
 	}
 	
 	unsigned VidSetFont(unsigned fontType)
@@ -308,9 +341,9 @@ void KillFont (int fontID)
 				SLogMsg("Can't set the font to that! (%d)", fontType);
 				return VidSetFont(FONT_TAMSYN_BOLD);
 			}
-			else if (g_pLoadedFontsPool [fontType2])
+			else if (g_pLoadedFontsPool[fontType2])
 			{
-				g_pCurrentFont  = (const unsigned char*) g_pLoadedFontsPool [fontType2];
+				g_pCurrentFont  = &g_pLoadedFontsPool[fontType2]->m_font;
 				g_uses8by16Font = true;
 			}
 			else
@@ -324,7 +357,7 @@ void KillFont (int fontID)
 		else
 		{
 			g_pCurrentFont  = g_pBasicFontData[fontType];
-			g_uses8by16Font = (g_pCurrentFont[1] != 8);
+			g_uses8by16Font = (g_pCurrentFont->m_charHeight != 8);
 		}
 		unsigned old = g_nCurrentFontID;
 		g_nCurrentFontID = fontType;
@@ -365,6 +398,16 @@ void KillFont (int fontID)
 		return "Unknown Font";
 	}
 	
+	CharacterData GetCharacterData(char character)
+	{
+		unsigned char chr = (unsigned char)character;
+		
+		//if (chr < 0 || chr > 255) // never true, but would be if `chr` becomes an int
+		//	return g_pCurrentFont->m_replacementChar;
+		
+		return g_pCurrentFont->m_asciiData[chr];
+	}
+	
 	void VidPlotChar (char chr, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
 	{
 		uint8_t c = (uint8_t) chr;
@@ -374,22 +417,29 @@ void KillFont (int fontID)
 		}
 		
 		bool bold = false;
-		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont->m_bAlreadyBold)
 		{
 			bold = true;
 		}
+		
 		colorFg &= 0xFFFFFF;
 		
 		bool trans = colorBg == TRANSPARENT;
 		
-		int width = g_pCurrentFont[0], height = g_pCurrentFont[1];
-		const unsigned char* test = g_pCurrentFont + 4;
-		if (g_pCurrentFont[2] == FONTTYPE_BITMAP)
+		CharacterData chrData = GetCharacterData(chr);
+		
+		int width  = chrData.m_width;
+		int height = g_pCurrentFont->m_charHeight;
+		
+		if (width > g_pCurrentFont->m_charWidth)
+			width = g_pCurrentFont->m_charWidth;
+		
+		const unsigned char * pCharBytes = &g_pCurrentFont->m_pFontData[chrData.m_offset];
+		
+		if (g_pCurrentFont->m_fontType == FONTTYPE_BITMAP)
 		{
+			BitmapFont* pFont = (BitmapFont*)g_pCurrentFont->m_pFontData;
 			if (c > '~' || c < ' ') c = '?';
-			
-			BitmapFont* pFont = (BitmapFont*)g_pCurrentFont;
-			
 			int id = c - ' ';
 			for (int y = 0, yi = pFont->m_charInfo[id].yoffset, ys = pFont->m_charInfo[id].y * pFont->m_bmHeight; y < pFont->m_charInfo[id].cheight; y++, yi++, ys += pFont->m_bmHeight)
 			{
@@ -424,16 +474,13 @@ void KillFont (int fontID)
 			
 			return;
 		}
-		else if (g_pCurrentFont[2] == FONTTYPE_BIG)
+		else if (g_pCurrentFont->m_fontType == FONTTYPE_BIG)
 		{
-			if (c > '~' || c < ' ') c = '?';
-			const unsigned char* testa = (const unsigned char*)(g_pCurrentFont + 4);
 			for (int y = 0; y < height; y++)
 			{
-				int to = ((c-' ') * height + y)*2;
-				unsigned short test1 = testa[to+1]|testa[to]<<8;
+				int to = y * 2;
+				unsigned short test1 = pCharBytes[to + 1] | pCharBytes[to] << 8;
 				
-				//for (int x = 0, bitmask = 1; x < width; x++, bitmask <<= 1)
 				for (int x = width - 1, bitmask = (1 << (width - 1)); x >= 0; x--, bitmask >>= 1)
 				{
 					if (test1 & bitmask)
@@ -448,15 +495,15 @@ void KillFont (int fontID)
 			
 			DirtyRectLogger(ox, oy, width, height);
 		}
-		else if (g_pCurrentFont[2] == FONTTYPE_GLCD)
+		else if (g_pCurrentFont->m_fontType == FONTTYPE_GLCD)
 		{
 			int x = 0;
-			//for (x = 0; x < width; x++)
-			for (x = width - 1; x >= 0; x--)
+			
+			for (x = g_pCurrentFont->m_charWidth - 1; x >= 0; x--)
 			{
 				for (int y = 0, bitmask = 1; y < height; y++, bitmask <<= 1)
 				{
-					if (test[c * width + x] & bitmask)
+					if (pCharBytes[x] & bitmask)
 					{
 						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
 						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
@@ -465,11 +512,12 @@ void KillFont (int fontID)
 						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
 				}
 			}
+			
 			if (colorBg != TRANSPARENT)
+			{
 				for (int y = 0; y < height; y++)
-				{
 					VidPlotPixelInlineF(ox + x, oy + y, colorBg);
-				}
+			}
 			
 			DirtyRectLogger(ox, oy, width, height);
 		}
@@ -477,17 +525,17 @@ void KillFont (int fontID)
 		{
 			if (c == 0x5)
 			{
-				RenderIcon(ICON_NANOSHELL16, ox, oy + (g_pCurrentFont[1] - 16) / 2);
+				RenderIcon(ICON_NANOSHELL16, ox, oy + (g_pCurrentFont->m_charHeight - 16) / 2);
 				
 				DirtyRectLogger(ox, oy, 16, 16);
 				return;
 			}
+			
 			for (int y = 0; y < height; y++)
 			{
-				//for (int x = 0, bitmask = /*(1 << (width - 1))*/ 1 << 7; x < width; x++, bitmask >>= 1)
 				for (int x = width - 1, bitmask = (1 << (8 - width)); x >= 0; x--, bitmask <<= 1)
 				{
-					if (test[c * height + y] & bitmask)
+					if (pCharBytes[y] & bitmask)
 					{
 						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
 						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
@@ -505,14 +553,14 @@ void KillFont (int fontID)
 	void VidTextOutInternalEx(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx, int limit)
 	{
 		int x = ox, y = oy;
-		int lineHeight = g_pCurrentFont[1];
+		int lineHeight = g_pCurrentFont->m_charHeight;
 		
 		int width = 0;
 		int cwidth = 0, height = lineHeight;
 		
 		bool bReachedLimit = limit == 0; // it counts as already having reached a limit if the limit is zero
 		bool bold = false;
-		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont->m_bAlreadyBold)
 		{
 			bold = true;
 		}
@@ -587,7 +635,7 @@ void KillFont (int fontID)
 	
 	static int MeasureTextUntilNewLineI (const char* pText, const char** pTextOut, uint32_t flags)
 	{
-		bool bold = ((flags & TEXT_RENDER_BOLD) && !g_pCurrentFont[3]);
+		bool bold = ((flags & TEXT_RENDER_BOLD) && !g_pCurrentFont->m_bAlreadyBold);
 		int w = 0;
 		while (1)
 		{
@@ -655,7 +703,7 @@ void KillFont (int fontID)
 		bool bReachedMaxSizeBeforeEnd = false;
 		char* pto = pTextOut;
 		const char* text2;
-		int lineHeight = g_pCurrentFont[1];
+		int lineHeight = g_pCurrentFont->m_charHeight;
 		int x = 0, y = lineHeight;
 		while (1)
 		{
@@ -702,13 +750,13 @@ void KillFont (int fontID)
 	
 	void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
 	{
-		int lineHeight = g_pCurrentFont[1];
+		int lineHeight = g_pCurrentFont->m_charHeight;
 		const char* text = pText, *text2 = pText;
 		int lines = CountLinesInText(pText);
 		int startY = rect.top;
 		
 		bool bold = false;
-		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont[3])
+		if ((colorFg & TEXT_RENDER_BOLD) && !g_pCurrentFont->m_bAlreadyBold)
 		{
 			bold = true;
 		}
