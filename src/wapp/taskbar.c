@@ -46,7 +46,7 @@ enum
 	DOCK_RIGHT,
 };
 
-const char *g_pNanoShellText = "\x05 NanoShell";
+const char *g_pNanoShellText = "NanoShell";
 int g_NanoShellButtonWidth = 0; // measured at startup
 //int g_taskbarDock = DOCK_TOP;
 int g_taskbarDock = DOCK_BOTTOM;
@@ -455,7 +455,7 @@ void TaskbarCreateControls(Window* pWindow)
 	int yOffset = (g_taskbarDock == DOCK_BOTTOM);
 	
 	RECT (r, 4, 3 + yOffset, g_NanoShellButtonWidth, TASKBAR_BUTTON_HEIGHT);
-	AddControl(pWindow, CONTROL_BUTTON, r, g_pNanoShellText, TASKBAR_HELLO, 0, 0);
+	AddControl(pWindow, CONTROL_BUTTON, r, g_pNanoShellText, TASKBAR_HELLO, ICON_NANOSHELL, 0);
 	
 	bool bIsVerticalLayout = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
 	
@@ -747,6 +747,7 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	int wbutton, hbutton;
 	VidTextOutInternal (g_pNanoShellText, 0, 0, 0, 0, true, &wbutton, &hbutton);
+	wbutton += 16 + 5;
 	
 	g_NanoShellButtonWidth = TASKBAR_BUTTON_WIDTH;
 	if (g_NanoShellButtonWidth < wbutton + 10)

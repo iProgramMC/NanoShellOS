@@ -53,7 +53,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
 				{
 					//send a command event to the window:
-					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, this->m_parm1);
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, 0);
 				}
 				this->m_buttonData.m_clicked = false;
 				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
@@ -110,42 +110,68 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 		}
 		case EVENT_PAINT:
 		{
+			int buttonWidth  = this->m_rect.right - this->m_rect.left;
+			int buttonHeight = this->m_rect.bottom - this->m_rect.top;
+			int buttonMinDim = buttonWidth;
+			if (buttonMinDim > buttonHeight)
+				buttonMinDim = buttonHeight;
+			
+			int iconID = this->m_parm1;
+			
+			int iconSize = 0;
+			Image* pImg = GetIconImage(iconID, buttonMinDim - 10);
+			if (pImg)
+				iconSize = pImg->width;
+			
+			bool bCanBe16x = iconSize == 32;
+			
+			if (iconSize > buttonMinDim - 8)
+			{
+				iconSize = buttonMinDim - 8;
+				if ((iconSize > 16 || iconID == ICON_NANOSHELL) && bCanBe16x) // hardcoded, but fine I hope
+					iconSize = 16;
+			}
+			
+			Rectangle r = this->m_rect;
+			
 			VidSetClipRect (&this->m_rect);
+			
+			if (this->m_buttonData.m_clicked)
+				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
+			else
+				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+			
 			if (this->m_buttonData.m_clicked)
 			{
-				Rectangle r = this->m_rect;
-				//draw the button as slightly pushed in
+				// draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
-				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
-				
-				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
-			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
+			
+			if (pImg)
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
-				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				r.left += iconSize + 4;
+				RenderIconForceSize(iconID, r.left - iconSize, r.top + (r.bottom - r.top - iconSize) / 2, iconSize);
+			}
+			
+			if (this->m_bDisabled)
+			{
+				//small hack
+				uint8_t b[4];
+				*((uint32_t*)b) = BUTTONMIDD;
+				b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+				
+				Rectangle r2 = r;
+				r2.left++; r2.right++; r2.top++; r2.bottom++;
+				VidDrawText(this->m_text, r2, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+				VidDrawText(this->m_text, r,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, *((uint32_t*)b),         TRANSPARENT);
 			}
 			else
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-				
-				if (this->m_bDisabled)
-				{
-					//small hack
-					uint8_t b[4];
-					*((uint32_t*)b) = BUTTONMIDD;
-					b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
-					
-					Rectangle r = this->m_rect;
-					r.left++; r.right++; r.top++; r.bottom++;
-					VidDrawText(this->m_text,       r     , TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
-					VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, *((uint32_t*)b),         TRANSPARENT);
-				}
-				else
-				{
-					VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-				}
+				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
+			
 			VidSetClipRect (NULL);
 			
 			break;

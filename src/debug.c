@@ -22,7 +22,7 @@ NO_RETURN void KeStopSystem()
 {
 	SLogMsg("System has been stopped!");
 	
-	PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, true);
+	//PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, true);
 	
 	asm ("cli");
 	
