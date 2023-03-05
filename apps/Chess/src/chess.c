@@ -74,6 +74,48 @@ int GetHomeRow(eColor col)
 	return (col == WHITE) ? 0 : (BOARD_SIZE - 1);
 }
 
+int Normalize(int x)
+{
+	if (x == 0) return x;
+	return x / abs(x);
+}
+
+// note: this 'ray shooting' only works in 8 directions, and is only intended for ChessCheckLegalBasedOnRank.
+bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
+{
+	int absRowDiff = abs(rowDst - rowSrc);
+	int absColDiff = abs(colDst - colSrc);
+	
+	// we shouldn't be able to get here anyways
+	if (absRowDiff == 0 && absColDiff == 0) return false;
+	
+	int absRowDiffUnit = Normalize(absRowDiff);
+	int absColDiffUnit = Normalize(absColDiff);
+	
+	// note: We add absRowDiffUnit to skip our source square
+	int rowCur = rowSrc + absRowDiffUnit;
+	int colCur = rowDst + absColDiffUnit;
+	
+	for (int i = 0; i < BOARD_SIZE; i++)
+	{
+		// if we have reached the piece we're in:
+		if (rowCur == rowDst && colCur == colDst) return true;
+		
+		BoardPiece * pPiece = GetPiece(rowCur, colCur);
+		
+		// we're OOB. seems like we overshot or something
+		if (!pPiece) return false;
+		
+		// we're hitting a piece, that is DIFFERENT from our destination, on our way there. Get outta here
+		if (pPiece->piece != PIECE_NONE) return false;
+		
+		rowCur += absRowDiffUnit;
+		colCur += absColDiffUnit;
+	}
+	
+	return false;
+}
+
 bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles);
 
 bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* pCastleTypeOut, bool* bWouldDoEP)
@@ -154,21 +196,31 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 		{
 			int absRowDiff = abs(rowDst - rowSrc);
 			int absColDiff = abs(colDst - colSrc);
-			return absRowDiff == absColDiff;
+			if (absRowDiff != absColDiff) return false;
+			
+			// shoot a 'ray' and see if we hit any pieces before this.
+			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
 		}
 		// A rook must move on a row or column.
 		case PIECE_ROOK:
 		{
 			int absRowDiff = abs(rowDst - rowSrc);
 			int absColDiff = abs(colDst - colSrc);
-			return absRowDiff == 0 || absColDiff == 0;
+			if (absRowDiff != 0 && absColDiff != 0) return false;
+			
+			// shoot a 'ray' and see if we hit any pieces before this.
+			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
 		}
 		// A queen may move in diagonals, rows or columns.
 		case PIECE_QUEEN:
 		{
 			int absRowDiff = abs(rowDst - rowSrc);
 			int absColDiff = abs(colDst - colSrc);
-			return absRowDiff == absColDiff || absRowDiff == 0 || absColDiff == 0;
+			
+			if (absRowDiff != absColDiff && absRowDiff != 0 && absColDiff != 0) return false;
+			
+			// shoot a 'ray' and see if we hit any pieces before this.
+			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
 		}
 		// A king may move in any of the 8 neighboring tiles, so long as his distance is no less than 1.
 		case PIECE_KING:
@@ -820,7 +872,7 @@ void SetupBoard()
 	
 	//SetPiece(3, 0, PIECE_ROOK, WHITE);
 	//SetPiece(3, 7, PIECE_ROOK, WHITE);
-	SetPiece(3, 3, PIECE_PAWN, BLACK);
-	SetPiece(4, 3, PIECE_PAWN, WHITE);
+	//SetPiece(3, 3, PIECE_PAWN, BLACK);
+	//SetPiece(4, 3, PIECE_PAWN, WHITE);
 	
 }

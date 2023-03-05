@@ -520,6 +520,8 @@ CALL_END
 CALL(ReleaseCursor, WIN_UPLOAD_CURSOR, void, int cursorID)
 	SARGS(cursorID)
 CALL_END
-
+CALL(SetListItemText, WIN_SET_LIST_ITEM_TEXT, void, Window* pWindow, int comboID, int index, int icon, const char * pText)
+	SARGS(pWindow, comboID, index, icon, pText)
+CALL_END
 
 

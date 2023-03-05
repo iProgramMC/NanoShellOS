@@ -352,8 +352,9 @@ enum
 	// System Calls V2.3
 		WIN_UPLOAD_CURSOR,
 		WIN_RELEASE_CURSOR,
-		VID_UPLOAD_ICON,    // todo
-		VID_RELEASE_ICON,
+		
+	// System Calls V2.4
+		WIN_SET_LIST_ITEM_TEXT,
 };
 
 const void *WindowCall[] = {
@@ -557,6 +558,7 @@ const void *WindowCall[] = {
 	// System Calls V2.3 - 14/02/2023
 		UploadCursor,
 		ReleaseCursor,
+		SetListItemText,
 };
 
 

@@ -120,6 +120,11 @@ void SetSelectedIndexList (Window* pWindow, int comboID, int index);
 void ResetList (Window* pWindow, int comboID);
 
 /**
+ * Sets the data of a list item in a ListView component.
+ */
+void SetListItemText(Window* pWindow, int comboID, int index, int icon, const char * pText);
+
+/**
  * Changes the text of any component with text with a certain comboID.
  */
 void SetLabelText (Window *pWindow, int comboID, const char* pText);

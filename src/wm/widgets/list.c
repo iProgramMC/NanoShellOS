@@ -32,6 +32,20 @@ static void CtlUpdateScrollBarSize(Control *pCtl, Window* pWindow)
 		c  = 1;
 	SetScrollBarMax (pWindow, -pCtl->m_comboID, c);
 }
+static void CtlSetListItemText(Control* pCtl, int index, int icon, const char * pText)
+{
+	ListViewData* pData = &pCtl->m_listViewData;
+	if (index < 0 || index >= pCtl->m_listViewData.m_elementCount) return;
+	
+	ListItem *pItem = &pData->m_pItems[index];
+	
+	pItem->m_icon = icon;
+	strncpy(pItem->m_contents, pText, sizeof pItem->m_contents);
+	pItem->m_contents[sizeof pItem->m_contents - 1] = 0;
+	
+	memcpy (pItem->m_contentsShown, pItem->m_contents, sizeof pItem->m_contentsShown);
+	strcpy (pItem->m_contentsShown + sizeof(pItem->m_contentsShown) - 4, "...");
+}
 static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalIcon, Window* pWindow)
 {
 	ListViewData* pData = &pCtl->m_listViewData;
@@ -52,18 +66,13 @@ static void CtlAddElementToList (Control* pCtl, const char* pText, int optionalI
 		
 		//then can add
 	}
-	ListItem *pItem = &pData->m_pItems[pData->m_elementCount];
+	
 	pData->m_elementCount++;
 	pData->m_highlightedElementIdx = -1;
 	
 	//also update the scroll bar.
 	CtlUpdateScrollBarSize(pCtl, pWindow);
-	
-	pItem->m_icon = optionalIcon;
-	strcpy(pItem->m_contents, pText);
-	
-	memcpy (pItem->m_contentsShown, pItem->m_contents, 64);
-	strcpy (pItem->m_contentsShown + sizeof(pItem->m_contentsShown) - 4, "...");
+	CtlSetListItemText(pCtl, pData->m_elementCount - 1, optionalIcon, pText);
 }
 static void CtlRemoveElementFromList(Control* pCtl, int index, Window* pWindow)
 {
@@ -1011,6 +1020,7 @@ void AddElementToList (Window* pWindow, int comboID, const char* pText, int opti
 		}
 	}
 }
+
 const char* GetElementStringFromList (Window* pWindow, int comboID, int index)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -1022,6 +1032,7 @@ const char* GetElementStringFromList (Window* pWindow, int comboID, int index)
 	}
 	return NULL;
 }
+
 void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -1038,6 +1049,7 @@ void RemoveElementFromList (Window* pWindow, int comboID, int elementIndex)
 		}
 	}
 }
+
 void ResetList (Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -1049,6 +1061,7 @@ void ResetList (Window* pWindow, int comboID)
 		}
 	}
 }
+
 int GetSelectedIndexList (Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -1060,6 +1073,7 @@ int GetSelectedIndexList (Window* pWindow, int comboID)
 	}
 	return -1;
 }
+
 void SetSelectedIndexList (Window* pWindow, int comboID, int index)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -1071,4 +1085,17 @@ void SetSelectedIndexList (Window* pWindow, int comboID, int index)
 		}
 	}
 }
+
+void SetListItemText(Window* pWindow, int comboID, int index, int icon, const char * pText)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetListItemText(&pWindow->m_pControlArray[i], index, icon, pText);
+			return;
+		}
+	}
+}
+
 #endif

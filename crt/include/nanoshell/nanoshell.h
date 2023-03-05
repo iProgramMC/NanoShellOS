@@ -53,6 +53,7 @@ int         GetScrollBarPos (Window *pWindow, int comboID);
 void        AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon);
 const char* GetElementStringFromList (Window* pWindow, int comboID, int index);
 void        RemoveElementFromList (Window* pWindow, int comboID, int elemIndex);
+void        SetListItemText(Window* pWindow, int comboID, int index, int icon, const char * pText);
 void        ResetList (Window* pWindow, int comboID);
 void        SetLabelText (Window *pWindow, int comboID, const char* pText);
 void        AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
