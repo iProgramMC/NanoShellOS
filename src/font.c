@@ -753,12 +753,18 @@ void KillFont (int fontID)
 			bold = true;
 		}
 		
-		if (drawFlags & TEXTSTYLE_VCENTERED)
+		if (drawFlags & TEXTSTYLE_DJUSTIFY)
+		{
+			startY += (rect.bottom - rect.top - lines * lineHeight);
+		}
+		else if (drawFlags & TEXTSTYLE_VCENTERED)
+		{
 			startY += ((rect.bottom - rect.top - lines * lineHeight) / 2);
+		}
 		
 		if (drawFlags & TEXTSTYLE_WORDWRAPPED)
 		{
-			if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY))
+			if (drawFlags & (TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED | TEXTSTYLE_RJUSTIFY | TEXTSTYLE_DJUSTIFY))
 			{
 				//draw some red text to attract the programmer's attention
 				VidTextOut ("Can't do everything at once! >:( -- it's still a todo.  Just centering for now.", rect.left, rect.top, 0xFF0000, TRANSPARENT);

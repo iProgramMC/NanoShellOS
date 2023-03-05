@@ -139,19 +139,43 @@ void PaintTile(int row, int column)
 	int x = g_BoardX + column * PIECE_SIZE;
 	int y = g_BoardY + (BOARD_SIZE - 1 - row) * PIECE_SIZE;
 	
+	bool bFlashed = g_FlashingTiles[row][column] % 2;
+	
 	// Fill the rectangle.
-	uint32_t bc = g_boardColors[color];
+	uint32_t bc = g_boardColors[color], oc = g_boardColors[!color];
 	
-	if (g_FlashingTiles[row][column] % 2)
-		bc = g_boardFlashColors[color];
+	if (bFlashed)
+		bc = g_boardFlashColors[color], oc = g_boardFlashColors[!color];
 	
-	VidFillRect(bc, x, y, x + PIECE_SIZE - 1, y + PIECE_SIZE - 1);
+	Rectangle rect = { x, y, x + PIECE_SIZE - 1, y + PIECE_SIZE - 1 };
+	
+	VidFillRectangle(bc, rect);
 	
 	BoardPiece* pPiece = GetPiece(row, column);
 	
 	Image* pImg = GetPieceImage(pPiece->piece, pPiece->color);
 	
 	bool bIsBeingDragged = (g_DraggedPieceRow == row && g_DraggedPieceCol == column);
+	
+	rect.left   += 2;
+	rect.top    += 2;
+	rect.right  -= 2;
+	rect.bottom -= 2;
+	
+	// If this is part of the first row or column, draw the text.
+	if (row == 0)
+	{
+		char buf[2];
+		buf[0] = 'a' + column;
+		buf[1] = 0;
+		VidDrawText(buf, rect, TEXTSTYLE_DJUSTIFY | TEXTSTYLE_RJUSTIFY, oc, TRANSPARENT);
+	}
+	if (column == 0)
+	{
+		char buf[10];
+		snprintf(buf, sizeof buf, "%d", row + 1);
+		VidDrawText(buf, rect, 0, oc, TRANSPARENT);
+	}
 	
 	if (pImg && !bIsBeingDragged)
 	{
@@ -285,6 +309,8 @@ void UpdateFlashingTiles()
 }
 
 int g_FlashTimerID = -1;
+
+ePiece PromotionPopup(eColor color, int row, int col);
 
 void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {

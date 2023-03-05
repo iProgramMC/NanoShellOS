@@ -328,7 +328,8 @@ int WrapText(char *pTextOut, const char* pTextToWrap, int xSize);
 #define TEXTSTYLE_VCENTERED   (2)
 #define TEXTSTYLE_WORDWRAPPED (4)
 #define TEXTSTYLE_RJUSTIFY    (8)
-#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
+#define TEXTSTYLE_FORCEBGCOL  (16)// VidDrawText does nothing with this flag, it's used for CONTROL_TEXTCENTER.
+#define TEXTSTYLE_DJUSTIFY    (32)// Down justify.
 //TODO: Add word wrap
 void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg);
 

@@ -155,7 +155,8 @@
 #define TEXTSTYLE_VCENTERED   (2)
 #define TEXTSTYLE_WORDWRAPPED (4)
 #define TEXTSTYLE_RJUSTIFY    (8)
-#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
+#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing with this flag, it's used for CONTROL_TEXTCENTER.
+#define TEXTSTYLE_DJUSTIFY    (32)
 
 // Structs and enums
 
