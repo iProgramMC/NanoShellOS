@@ -34,8 +34,19 @@ typedef enum
 	ERROR_NOT_YOUR_TURN,
 	ERROR_MOVE_ILLEGAL,
 	ERROR_MOVE_WOULD_PUT_US_IN_CHECK,
+	
+	ERROR_STALEMATE = 1000,
+	ERROR_CHECKMATE = 1001,
 }
 eErrorCode;
+
+typedef enum
+{
+	MATE_NONE,
+	MATE_STALE, // no legal moves, king is not attacked
+	MATE_CHECK, // no legal moves, king is attacked
+}
+eMateType;
 
 typedef enum
 {
@@ -64,6 +75,8 @@ extern Window* g_pWindow;
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst);
 
+// Check if a color is in checkmate or stalemate.
+eMateType ChessCheckmateOrStalemate(eColor color);
 
 void PaintTile(int row, int column);
 void SetPiece(int row, int column, ePiece pc, eColor col);

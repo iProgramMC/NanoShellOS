@@ -241,6 +241,17 @@ void ChessClickCursor(int x, int y)
 
 void UpdatePlayerTurn();
 
+const char* const g_playerNames[] =
+{
+	"Black",
+	"White",
+};
+
+const char* GetPlayerName(eColor player)
+{
+	return g_playerNames[player];
+}
+
 void ChessReleaseCursor(int x, int y)
 {
 	if (g_DraggedPieceRow != -1 && g_DraggedPieceCol != -1)
@@ -251,10 +262,45 @@ void ChessReleaseCursor(int x, int y)
 		BoardPiece* pPc = GetPiece(boardRow, boardCol);
 		if (pPc)
 		{
+			eColor col = pPc->color;
 			eErrorCode err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
-			if (err != ERROR_SUCCESS)
+			
+			char buffer[2048], buffer2[100];
+			
+			if (err != ERROR_SUCCESS) switch (err)
 			{
-				LogMsg("Cannot commit move: %d", err);
+				case ERROR_STALEMATE:
+				{
+					if (MessageBox(
+						g_pWindow,
+						"Stalemate!\n\nThis game is a draw.\n\nWould you like to reset the board, and play another game?",
+						"Game Draw",
+						MB_YESNO | ICON_SWEEP_SMILE << 16 // TODO ICON_SCALE << 16
+					) == MBID_YES)
+					{
+						//TODO
+					}
+					break;
+				}
+				case ERROR_CHECKMATE:
+				{
+					snprintf(buffer,  sizeof buffer,  "Checkmate!\n\n%s Wins.\n\nWould you like to reset the board, and play another game?", GetPlayerName(col));
+					snprintf(buffer2, sizeof buffer2, "%s Wins", GetPlayerName(col));
+					
+					if (MessageBox(
+						g_pWindow,
+						buffer,
+						buffer2,
+						MB_YESNO | ICON_SWEEP_CARET << 16 // TODO ICON_TROPHY << 16
+					) == MBID_YES)
+					{
+						//TODO
+					}
+					
+					break;
+				}
+				default:
+					LogMsg("Cannot commit move: %d", err);
 			}
 		}
 	}
@@ -271,17 +317,6 @@ void ChessReleaseCursor(int x, int y)
 		PaintTile(odpr, odpc);
 	
 	ChangeCursor(g_pWindow, CURSOR_DEFAULT);
-}
-
-const char* const g_playerNames[] =
-{
-	"Black",
-	"White",
-};
-
-const char* GetPlayerName(eColor player)
-{
-	return g_playerNames[player];
 }
 
 void UpdatePlayerTurn()

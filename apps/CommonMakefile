@@ -78,4 +78,4 @@ $(BLD_DIR)/%.asm.o: $(SRC_DIR)/%.asm
 $(BLD_DIR)/%.c.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo "compiling: $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
