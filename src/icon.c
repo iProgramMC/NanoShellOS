@@ -492,6 +492,7 @@ STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if addi
 
 Image *GetIconImageFromResource(int resID)
 {
+	SLogMsg("GetIconImageFromResource(%d)",resID);
 	Resource* pRes = ExLookUpResource(resID);
 	
 	if (!pRes) return NULL;
@@ -502,7 +503,9 @@ Image *GetIconImageFromResource(int resID)
 
 Image* GetIconImage(IconType type, int sz)
 {
-	if (type >= ICON_COUNT || type <= ICON_NULL)
+	if (type == ICON_NULL) return NULL;
+	
+	if (type >= ICON_COUNT || type < ICON_NULL)
 	{
 		return GetIconImageFromResource(type);
 	}
@@ -573,16 +576,14 @@ Image* GetIconImage(IconType type, int sz)
 }
 void RenderIcon(IconType type, int x, int y)
 {
-	if (type >= ICON_COUNT || type <= ICON_NULL) return;
-	
-	Image* p = g_iconTable[type];
+	Image* p = GetIconImage(type, -1);
+	if (!p) return;
 	VidBlitImage(p, x, y);
 }
 void RenderIconOutline(IconType type, int x, int y, uint32_t color)
 {
-	if (type >= ICON_COUNT || type <= ICON_NULL) return;
-	
-	Image* p = g_iconTable[type];
+	Image* p = GetIconImage(type, -1);
+	if (!p) return;
 	VidBlitImageOutline(p, x, y, color);
 }
 void RenderThumbClock(int x, int y, int size);
@@ -603,17 +604,16 @@ bool IsMonochromeIcon(IconType type)
 void RenderIconForceSize(IconType type, int x, int y, int size)
 {
 	Image *p = GetIconImage(type, size);
-	if (p)
+	if (!p) return;
+	
+	if (IsMonochromeIcon(type))
+		VidBlitImageResizeOutline(p, x, y, size, size, CAPTION_BUTTON_ICON_COLOR);
+	else
+		VidBlitImageResize(p, x, y, size, size);
+	
+	if (type == ICON_CLOCK_EMPTY)
 	{
-		if (IsMonochromeIcon(type))
-			VidBlitImageResizeOutline(p, x, y, size, size, CAPTION_BUTTON_ICON_COLOR);
-		else
-			VidBlitImageResize(p, x, y, size, size);
-		
-		if (type == ICON_CLOCK_EMPTY)
-		{
-			RenderThumbClock(x, y, size);
-		}
+		RenderThumbClock(x, y, size);
 	}
 }
 
@@ -621,8 +621,7 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t color)
 {
 	Image *p = GetIconImage(type, size);
-	if (p)
-	{
-		VidBlitImageResizeOutline(p, x, y, size, size, color);
-	}
+	if (!p) return;
+	
+	VidBlitImageResizeOutline(p, x, y, size, size, color);
 }

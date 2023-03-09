@@ -112,6 +112,8 @@ void        DisarmTimer(Window* pWindow, int timerID);
 void        ChangeTimer(Window* pWindow, int newFrequencyMs /* = -1 */, int newEventFired /* = -1 */);
 int         UploadCursor(Image* pImage, int xOff, int yOff);
 void        ReleaseCursor(int cursorID);
+Image*      GetIconImage(int iconType, int size /* = -1 */);
+Resource*   GetResource(int resID);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

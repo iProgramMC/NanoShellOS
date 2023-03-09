@@ -18,6 +18,7 @@
 #include <misc.h>
 #include <config.h>
 #include <idt.h>
+#include <process.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -352,9 +353,9 @@ enum
 	// System Calls V2.3
 		WIN_UPLOAD_CURSOR,
 		WIN_RELEASE_CURSOR,
-		
-	// System Calls V2.4
 		WIN_SET_LIST_ITEM_TEXT,
+		WIN_GET_ICON_IMAGE,
+		RST_LOOK_UP_RESOURCE,
 };
 
 const void *WindowCall[] = {
@@ -559,6 +560,8 @@ const void *WindowCall[] = {
 		UploadCursor,
 		ReleaseCursor,
 		SetListItemText,
+		GetIconImage,
+		ExLookUpResource,
 };
 
 

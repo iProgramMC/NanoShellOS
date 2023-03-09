@@ -104,8 +104,6 @@ Resource* RstLookUpResource(ResourceTable* pTable, int id)
 	{
 		mid = (left + right) / 2;
 		
-		SLogMsg("RstLookUpResource: %d", mid);
-		
 		Resource* pResource = pTable->m_pResources[mid];
 		if (pResource->m_id == id) return pResource;
 		

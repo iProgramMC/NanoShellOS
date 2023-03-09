@@ -10,42 +10,15 @@
 #define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH + 20)
 #define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT + 20)
 
-// Include the game icons.
-#include "../icons/black_pawn.h"
-#include "../icons/black_king.h"
-#include "../icons/black_queen.h"
-#include "../icons/black_rook.h"
-#include "../icons/black_knight.h"
-#include "../icons/black_bishop.h"
-#include "../icons/white_pawn.h"
-#include "../icons/white_king.h"
-#include "../icons/white_queen.h"
-#include "../icons/white_rook.h"
-#include "../icons/white_knight.h"
-#include "../icons/white_bishop.h"
+#define ICON_TROPHY 999
+#define ICON_PIECES_START 900
 
 Window* g_pWindow;
 int g_BoardX = 0, g_BoardY = TOP_BAR_HEIGHT;
 
 // note: The row number is flipped, so 1 is the bottom-most row.
 
-Image* const g_pPieceImages[] =
-{
-	NULL,
-	NULL,
-	&g_black_pawn_icon,
-	&g_white_pawn_icon,
-	&g_black_king_icon,
-	&g_white_king_icon,
-	&g_black_queen_icon,
-	&g_white_queen_icon,
-	&g_black_rook_icon,
-	&g_white_rook_icon,
-	&g_black_knight_icon,
-	&g_white_knight_icon,
-	&g_black_bishop_icon,
-	&g_white_bishop_icon,
-};
+Image* g_pPieceImages[14];
 
 enum
 {
@@ -291,7 +264,7 @@ void ChessReleaseCursor(int x, int y)
 						g_pWindow,
 						buffer,
 						buffer2,
-						MB_YESNO | ICON_SWEEP_CARET << 16 // TODO ICON_TROPHY << 16
+						MB_YESNO | ICON_TROPHY << 16
 					) == MBID_YES)
 					{
 						//TODO
@@ -420,6 +393,11 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {
+	for (int i = 2; i < 14; i++)
+	{
+		g_pPieceImages[i] = GetImage(GetResource(ICON_PIECES_START + i));
+	}
+	
 	g_pWindow = CreateWindow ("Chess", CW_AUTOPOSITION, CW_AUTOPOSITION, CHESS_WIDTH, CHESS_HEIGHT, ChessWndProc, 0);
 	
 	if (!g_pWindow)

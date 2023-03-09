@@ -453,15 +453,15 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
 		
 		// test out the resource stuff
-		Resource* pResource = ExLookUpResource(1004);
+		Resource* pResource = ExLookUpResource(10000);
 		
 		if (!pResource)
 		{
-			SLogMsg("Resource 1004 not found.");
+			SLogMsg("Resource 10000 not found.");
 		}
 		else
 		{
-			SLogMsg("Resource 1004: %s", pResource->m_data);
+			SLogMsg("Resource 10000 Found Type %d", pResource->m_type);
 		}
 		
 		//now that we have switched, call the entry func:

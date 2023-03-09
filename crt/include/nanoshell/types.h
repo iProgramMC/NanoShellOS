@@ -158,6 +158,9 @@
 #define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing with this flag, it's used for CONTROL_TEXTCENTER.
 #define TEXTSTYLE_DJUSTIFY    (32)
 
+#define GetImage(res)  ((Image*)((res)->m_data))
+#define GetString(res) ((const char*)((res)->m_data))
+
 // Structs and enums
 
 #define DefaultConsoleColor 0x0F
@@ -207,6 +210,16 @@ enum
 	
 	EVENT_USER = 0x1000,
 };
+
+enum // eResourceType
+{
+	RES_NONE,
+	RES_STRING,
+	RES_ICON,
+	RES_BITMAP,
+	RES_BLOB,
+};
+typedef int eResourceType;
 
 //NOTE WHEN WORKING WITH CONTROLS:
 //While yes, the window manager technically supports negative comboIDs, you're not supposed
@@ -628,5 +641,21 @@ typedef struct
 	};
 }
 ClipboardVariant;
+
+typedef struct
+{
+	// The resource's ID.
+	int m_id;
+	
+	// The type of resource.
+	eResourceType m_type;
+	
+	// The size of the binary data following this resource.
+	int m_size;
+	
+	// The data after the resource.
+	char m_data[];
+}
+Resource;
 
 #endif//_NANOSHELL_TYPES__H

@@ -523,5 +523,11 @@ CALL_END
 CALL(SetListItemText, WIN_SET_LIST_ITEM_TEXT, void, Window* pWindow, int comboID, int index, int icon, const char * pText)
 	SARGS(pWindow, comboID, index, icon, pText)
 CALL_END
+CALL(GetIconImage, WIN_GET_ICON_IMAGE, Image*, int iconID, int size)
+	RARGS(iconID, size)
+CALL_END
+CALL(GetResource, RST_LOOK_UP_RESOURCE, Resource*, int resID)
+	RARGS(resID)
+CALL_END
 
 
