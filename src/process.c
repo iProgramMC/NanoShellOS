@@ -217,6 +217,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->pDetail   = pDetail;
 	pProc->pSymTab   = pProc->pStrTab = NULL;
 	pProc->nSymTabEntries = 0;
+	pProc->sResourceTable.m_pResources = NULL;
+	pProc->sResourceTable.m_nResources = 0;
 	
 	KeTaskAssignTag(pTask, pProc->sIdentifier);
 	
@@ -250,7 +252,41 @@ void ExSetProgramInfo(const ProgramInfo* pProgInfo)
 #endif
 }
 
-void ExLoadResourceTable(void *pResourceTableData)
+bool ExLoadResourceTable(void *pResourceTableData)
 {
-	// TODO
+	if (!ExGetRunningProc()) return false;
+	
+	// so we can do byte level math with this. It'll be basic, don't worry.
+	uint8_t* pResourceTableDataBytes = (uint8_t*)pResourceTableData;
+	
+	// Step 1. Count the resources.
+	Resource* pResources = (Resource*)(pResourceTableDataBytes + 4), *pResource;
+	
+	int nResources = *(int*)pResourceTableDataBytes;
+	
+	SLogMsg("Nr of resources: %d", nResources);
+	
+	ResourceTable* pRT = &ExGetRunningProc()->sResourceTable;
+	
+	pResource = pResources;
+	pRT->m_pResources = MmAllocate(sizeof(Resource**) * nResources);
+	pRT->m_nResources = nResources;
+	
+	for (int i = 0; i < nResources; i++)
+	{
+		pRT->m_pResources[i] = pResource;
+		
+		SLogMsg("pResource id:%d data:%s",pResource->m_id, pResource->m_data);
+		
+		pResource = (Resource*)((uint8_t*)(pResource) + pResource->m_size + sizeof(Resource));
+	}
+	
+	return true;
+}
+
+Resource* ExLookUpResource(int id)
+{
+	if (!ExGetRunningProc()) return NULL;
+	
+	return RstLookUpResource(&ExGetRunningProc()->sResourceTable, id);
 }

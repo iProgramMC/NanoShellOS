@@ -353,7 +353,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		}
 	}
 	
-	if (!failed)
+	if (failed) return ELF_INVALID_SEGMENTS;
 	{
 		EDLogMsg("(loaded and mapped everything, activating heap!)");
 		MuUseHeap (pHeap);
@@ -389,7 +389,11 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 				if (strcmp(pName, ".nanoshell") == 0)
 					ExSetProgramInfo((ProgramInfo*)pSectHeader->m_addr);
 				else if (strcmp(pName, ".nanoshell_resources") == 0)
-					ExLoadResourceTable((void*)pSectHeader->m_addr);
+					if (!ExLoadResourceTable((void*)pSectHeader->m_addr))
+					{
+						failed = true;
+						break;
+					}
 			}
 			if (pSectHeader->m_type == SHT_SYMTAB)
 			{
@@ -447,6 +451,18 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		pThisProcess->nSymTabEntries = pLoaderBlock->nSymTabEntries;
 		
 		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
+		
+		// test out the resource stuff
+		Resource* pResource = ExLookUpResource(1004);
+		
+		if (!pResource)
+		{
+			SLogMsg("Resource 1004 not found.");
+		}
+		else
+		{
+			SLogMsg("Resource 1004: %s", pResource->m_data);
+		}
 		
 		//now that we have switched, call the entry func:
 		ElfEntry entry = (ElfEntry)pHeader->m_entry;

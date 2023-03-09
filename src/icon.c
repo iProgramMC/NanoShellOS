@@ -7,6 +7,7 @@
 #include <icon.h>
 #include <misc.h>
 #include <window.h>
+#include <process.h>
 
 #define C_TRANSPAR TRANSPARENT
 
@@ -489,9 +490,22 @@ Image * g_iconTable[] = {
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
 
+Image *GetIconImageFromResource(int resID)
+{
+	Resource* pRes = ExLookUpResource(resID);
+	
+	if (!pRes) return NULL;
+	if (pRes->m_type != RES_ICON) return NULL;
+	
+	return (Image*)pRes->m_data;
+}
+
 Image* GetIconImage(IconType type, int sz)
 {
-	if (type >= ICON_COUNT || type <= ICON_NULL) return NULL;
+	if (type >= ICON_COUNT || type <= ICON_NULL)
+	{
+		return GetIconImageFromResource(type);
+	}
 	
 	if (sz == 16)
 	{

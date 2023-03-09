@@ -74,6 +74,7 @@ Process* ExGetProcessByRID(uint64_t rid);
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail);
 
 void ExSetProgramInfo(const ProgramInfo* pProgInfo);
-void ExLoadResourceTable(void *pResourceTableData);
+bool ExLoadResourceTable(void *pResourceTableData);
+Resource* ExLookUpResource(int id);
 
 #endif//_PROCESS_H

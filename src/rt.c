@@ -14,27 +14,6 @@
 #include <elf.h>
 #include <vfs.h>
 
-void RstFreeResource(Resource* pResource)
-{
-	switch (pResource->m_type)
-	{
-		case RES_STRING:
-			MmFree((void*)pResource->m_pString);
-			break;
-		// note: The image is allocated with `BitmapAllocate`
-		case RES_BITMAP:
-			MmFree(pResource->m_pImage);
-			break;
-		// note: The icon is also allocated with `BitmapAllocate`
-		case RES_ICON:
-			MmFree(pResource->m_pIcon);
-			break;
-		default:
-			SLogMsg("Don't know how to dispose of resource %p with ID %d and type %d", pResource, pResource->m_id, pResource->m_type);
-			break;
-	}
-}
-
 // pVirtAddr = the section's starting virtual address
 static const char* RstNeutralizeOffset(const char* pAddr, const char* pVirtAddr, const char* pRealAddr, int nSectSize)
 {
@@ -116,3 +95,36 @@ ProgramInfo* RstRetrieveProgramInfoFromFile(const char* pFileName)
 	
 	return pProgInfo;
 }
+
+Resource* RstLookUpResource(ResourceTable* pTable, int id)
+{
+	int left = 0, right = pTable->m_nResources - 1, mid;
+	
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+		
+		SLogMsg("RstLookUpResource: %d", mid);
+		
+		Resource* pResource = pTable->m_pResources[mid];
+		if (pResource->m_id == id) return pResource;
+		
+		if (pResource->m_id < id)
+			left = mid + 1;
+		else
+			right = mid - 1;
+	}
+	
+	return NULL;
+}
+
+const char* GetStringResource(int resID)
+{
+	Resource* pRes = ExLookUpResource(resID);
+	
+	if (!pRes) return NULL;
+	if (pRes->m_type != RES_STRING) return NULL;
+	
+	return (const char*)pRes->m_data;
+}
+

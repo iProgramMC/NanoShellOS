@@ -29,27 +29,24 @@ typedef int eSubsystem;
 
 typedef struct
 {
-	// The type of resource.
-	eResourceType m_type;
-	
 	// The resource's ID.
 	int m_id;
 	
-	// The pointer to data.
-	union
-	{
-		void       *m_pResource;
-		Image      *m_pIcon;
-		Image      *m_pImage;
-		const char *m_pString;
-	};
+	// The type of resource.
+	eResourceType m_type;
+	
+	// The size of the binary data following this resource.
+	int m_size;
+	
+	// The data after the resource.
+	char m_data[];
 }
 Resource;
 
 // The resource table is an array of resources sorted in ascending order by their ID.
 typedef struct
 {
-	Resource* m_pResources;
+	Resource** m_pResources;
 	int m_nResources;
 }
 ResourceTable;
@@ -89,7 +86,9 @@ typedef struct
 }
 ProgramInfo;
 
-void RstFreeResource(Resource* pResource);
 ProgramInfo* RstRetrieveProgramInfoFromFile(const char* pFileName);
+
+Resource* RstLookUpResource(ResourceTable* pTable, int id);
+const char* GetStringResource(int resID);
 
 #endif//_RT_H

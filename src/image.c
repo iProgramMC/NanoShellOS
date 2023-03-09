@@ -9,6 +9,7 @@
 #include <string.h>
 #include <image.h>
 #include <memory.h>
+#include <process.h>
 
 //Note: As a specification, the image loader family of functions
 //returns the framebuffer as part of the image block, so that a
@@ -341,3 +342,14 @@ void BuildGraphCtxBasedOnImage(VBEData *pData, Image *pImage)
 	pData->m_bitdepth     = 2;
 	pData->m_dirty        = false;
 }
+
+Image *GetImageFromResource(int resID)
+{
+	Resource* pRes = ExLookUpResource(resID);
+	
+	if (!pRes) return NULL;
+	if (pRes->m_type != RES_BITMAP) return NULL;
+	
+	return (Image*)pRes->m_data;
+}
+
