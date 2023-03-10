@@ -7,13 +7,67 @@
 ******************************************/
 #include <nsstandard.h>
 
+void SetNumber(Window* win, int cid, int num)
+{
+	SetIcon(win, cid, num);
+	CallControlCallback(win, cid, EVENT_PAINT, 0, 0);
+}
+
+bool IsTimerRunning();
+void StartTimer();
+void TickTimer();
+void EndTimer();
+void ClearTimer();
+
 //#define BOARD_MAX_WIDTH  9
 //#define BoardHeight 9
 
 int BoardWidth = 9, BoardHeight = 9; //can customize easily
 int numberMines = 10;
 
+Window* g_pWindow = NULL;
+
+enum
+{
+	COMBO_SWEEPER = 1000,
+	COMBO_MENUBAR,
+	COMBO_BUTTON,
+	COMBO_LED_TIME,
+	COMBO_LED_SCORE,
+};
+
+enum
+{
+	RES_LCD = 1000,
+	RES_NUMBERS,
+	ICON_SMILEY,
+	ICON_WON,
+	ICON_CLICK,
+	ICON_DEAD,
+};
+
+enum
+{
+	NUM_FLAG = 9,
+	NUM_BOMB,
+	NUM_MAX,
+};
+
+enum
+{
+	LCD_BLANK = 10,
+	LCD_DASH,
+	LCD_MAX,
+};
+
 int minesweeperX = CW_AUTOPOSITION, minesweeperY = CW_AUTOPOSITION;
+
+Image *g_pLcdImage, *g_pNumbersImage;
+
+int g_tileSize = 18;
+int g_nNowMines = 0, g_nTimer = 0;
+
+#define TILE_SIZE (g_tileSize)
 
 #define BEGINNER_BOARD_WIDTH  9
 #define BEGINNER_BOARD_HEIGHT 9
@@ -36,13 +90,12 @@ int minesweeperX = CW_AUTOPOSITION, minesweeperY = CW_AUTOPOSITION;
 
 #define MINE_NUMBER  15
 
-#define MINESW_WIDTH  ((BoardWidth  * 16) + 16)
-#define MINESW_HEIGHT ((BoardHeight * 16) + 91)
+#define MINESW_WIDTH  ((BoardWidth  * TILE_SIZE) + 16)
+#define MINESW_HEIGHT ((BoardHeight * TILE_SIZE) + 54 + MENU_BAR_HEIGHT)
 
-#define HUD_TOP  50
-#define HUD_LEFT 8
-
-#define MENU_BAR_HEIGHT TITLE_BAR_HEIGHT - 3
+#define HUD_TOP    (MENU_BAR_HEIGHT + 8)
+#define HUD_LEFT   (8)
+#define HUD_HEIGHT (26)
 
 bool bRequestingNewSize = false;
 
@@ -79,6 +132,40 @@ void RenderButtonShapeNoRounding(Rectangle rect, unsigned colorDark, unsigned co
 		VidFillRectangle(colorMiddle, rect);
 }
 
+void RenderLCDNumber(int x, int y, int num)
+{
+	Image img;
+	img.width   = g_pLcdImage->width;
+	img.height  = g_pLcdImage->height;
+	
+	int numHeight = img.height / LCD_MAX;
+	
+	img.framebuffer = &g_pLcdImage->framebuffer[g_pLcdImage->width * numHeight * num];
+	img.height = numHeight;
+	
+	VidBlitImage(&img, x, y);
+}
+
+void RenderNumber(int x, int y, int num)
+{
+	if (num == 0) return;
+	num--;
+	
+	Image img;
+	img.width   = g_pNumbersImage->width;
+	img.height  = g_pNumbersImage->height;
+	
+	int numHeight = img.height / (NUM_MAX - 1);
+	
+	x += (TILE_SIZE - img.width) / 2;
+	y += (TILE_SIZE - numHeight) / 2;
+	
+	img.framebuffer = &g_pNumbersImage->framebuffer[g_pNumbersImage->width * numHeight * num];
+	img.height = numHeight;
+	
+	VidBlitImage(&img, x, y);
+}
+
 bool IsMine (int x, int y)
 {
 	if (x < 0 || y < 0 || x >= BoardWidth || y >= BoardHeight) return false;
@@ -113,26 +200,24 @@ void MineDrawTile(int tileX, int tileY, int drawX, int drawY)
 	{
 		if (m_clck[tileX][tileY] && !m_flag[tileX][tileY])
 		{
-			RECT(rect, drawX, drawY, 15, 15);
+			RECT(rect, drawX, drawY, TILE_SIZE - 1, TILE_SIZE - 1);
 			VidFillRectangle (0xC0C0C0, rect);
 			VidDrawRectangle (0x808080, rect);
 		}
 		else
 		{
-			RECT(rect, drawX, drawY, 16, 16);
+			RECT(rect, drawX, drawY, TILE_SIZE, TILE_SIZE);
 			RenderButtonShapeNoRounding(rect, 0x808080, 0xFFFFFF, 0xC0C0C0);
 			
 			if (m_flag[tileX][tileY])
 			{
-				RenderIconForceSize(ICON_NANOSHELL_LETTERS16, drawX, drawY, 16);
-				
-				//VidFillRect(0xFF0000, drawX+3, drawY+3, drawX+13, drawY+13);
+				RenderNumber(drawX, drawY, NUM_FLAG);
 			}
 		}
 	}
 	else
 	{
-		RECT(rect, drawX, drawY, 15, 15);
+		RECT(rect, drawX, drawY, TILE_SIZE - 1, TILE_SIZE - 1);
 		
 		//Is there a bomb?
 		if (IsMine (tileX, tileY))
@@ -141,9 +226,7 @@ void MineDrawTile(int tileX, int tileY, int drawX, int drawY)
 			VidFillRectangle (0xFF0000, rect);
 			VidDrawRectangle (0x808080, rect);
 			
-			RenderIconForceSize(ICON_BOMB, drawX, drawY, 16);
-				
-			//VidFillRect(0x000000, drawX+3, drawY+3, drawX+13, drawY+13);
+			RenderNumber(drawX, drawY, NUM_BOMB);
 		}
 		else
 		{
@@ -163,13 +246,7 @@ void MineDrawTile(int tileX, int tileY, int drawX, int drawY)
 			
 			if (mines_around)
 			{
-				//rect.left ++, rect.top ++;
-				rect.left ++, rect.top ++;
-				char text[2];
-				text[0] = '0' + mines_around;
-				text[1] = 0;
-				
-				VidDrawText (text, rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, g_MinesweeperColors[mines_around], TRANSPARENT);
+				RenderNumber(drawX, drawY, mines_around);
 			}
 		}
 	}
@@ -190,6 +267,11 @@ void MineFlagTile(int x, int y)
 		return;
 	
 	m_flag[x][y] ^= 1;
+	
+	if (!m_flag[x][y]) g_nNowMines++;
+	else               g_nNowMines--;
+	SetNumber(g_pWindow, COMBO_LED_SCORE, g_nNowMines);
+	
 	m_upda[x][y] = true;
 }
 	
@@ -205,6 +287,9 @@ void MineUncoverTile(int x, int y)
 		GenerateMines(numberMines, x, y);
 	}
 	
+	if (!IsTimerRunning())
+		StartTimer();
+	
 	if (m_flag[x][y])
 		return;
 	
@@ -216,6 +301,8 @@ void MineUncoverTile(int x, int y)
 	if (m_mine[x][y])
 	{
 		m_gameOver = true;
+		
+		EndTimer();
 		
 		// Uncover other mines
 		for (int my = 0; my < BoardHeight; my++)
@@ -258,6 +345,9 @@ void GenerateMines(int nMines, int avoidX, int avoidY)
 	if (nMines > BoardWidth * BoardHeight - 1)
 		nMines = BoardWidth * BoardHeight - 1;
 	
+	g_nNowMines = nMines;
+	SetNumber(g_pWindow, COMBO_LED_SCORE, nMines);
+	
 	while (nMines)
 	{
 		while (true)
@@ -294,6 +384,8 @@ void MineCheckWin()
 	if (!game_win) return;
 	
 	m_gameWon = true;
+	if (IsTimerRunning())
+		EndTimer();
 	
 	for (int my = 0; my < BoardHeight; my++)
 	{
@@ -307,6 +399,9 @@ void MineCheckWin()
 
 void InstantiateNewGame()
 {
+	EndTimer();
+	ClearTimer();
+	
 	m_gameOver = m_firstClickDone = m_gameWon = m_leftClickHeld = false;
 	
 	memset (m_mine, 0, sizeof m_mine);
@@ -327,11 +422,43 @@ void WidgetSweeperPaint(Control* this)
 			if (m_upda[x][y])
 			{
 				m_upda[x][y] = 0;
-				MineDrawTile(x, y, this->m_rect.left + x * 16, this->m_rect.top + y * 16);
+				MineDrawTile(x, y, this->m_rect.left + x * TILE_SIZE, this->m_rect.top + y * TILE_SIZE);
 			}
 		}
 	}
 }
+
+bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	if (eventType != EVENT_PAINT) return false;
+	
+	int num = this->m_parm1;
+	
+	RenderButtonShapeNoRounding(this->m_rect, 0xFFFFFF, 0x808080, TRANSPARENT);
+	
+	int digits[3];
+	
+	if (num < 0)
+	{
+		digits[0] = LCD_DASH;
+		num = abs(num);
+		digits[1] = num /  10 % 10;
+		digits[2] = num       % 10;
+	}
+	else
+	{
+		digits[0] = num / 100 % 10;
+		digits[1] = num /  10 % 10;
+		digits[2] = num       % 10;
+	}
+	
+	for (int i = 0; i < (int)ARRAY_COUNT(digits); i++)
+		RenderLCDNumber(this->m_rect.left + 2 + i * g_pLcdImage->width, this->m_rect.top + 2, digits[i]);
+	
+	return false;
+}
+
+bool g_bRightClicking = false;
 
 bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
@@ -360,6 +487,12 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 		{
 			if (m_gameOver || m_gameWon) break;
 			
+			if (g_bRightClicking)
+			{
+				m_leftClickHeld = true;
+				break; // don't do anything. Let right click handle it.
+			}
+			
 			for (int y = 0; y < BoardHeight; y++)
 			{
 				for (int x = 0; x < BoardWidth; x++)
@@ -377,8 +510,10 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 			xcl -= this->m_rect.left;
 			ycl -= this->m_rect.top;
 			
-			xcl /= 16;
-			ycl /= 16;
+			if (xcl < 0 || ycl < 0) return false;
+			
+			xcl /= TILE_SIZE;
+			ycl /= TILE_SIZE;
 			
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
@@ -387,8 +522,8 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 			
 			m_leftClickHeld  = true;
 			
-			SetIcon (pWindow, 2001, ICON_SWEEP_CLICK);
-			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+			SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_CLICK);
+			CallControlCallback(pWindow, COMBO_BUTTON, EVENT_PAINT, 0, 0);
 			
 			WidgetSweeperPaint(this);
 			
@@ -415,10 +550,14 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 			xcl -= this->m_rect.left;
 			ycl -= this->m_rect.top;
 			
-			xcl /= 16;
-			ycl /= 16;
+			if (xcl < 0 || ycl < 0) return false;
+			
+			xcl /= TILE_SIZE;
+			ycl /= TILE_SIZE;
 			
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
+			
+			g_bRightClicking = true;
 			
 			if (m_leftClickHeld)
 			{
@@ -448,14 +587,18 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 				}
 			}
 			
+			g_bRightClicking = false;
+			
 			int xcl = GET_X_PARM(parm1);
 			int ycl = GET_Y_PARM(parm1);
 			
 			xcl -= this->m_rect.left;
 			ycl -= this->m_rect.top;
 			
-			xcl /= 16;
-			ycl /= 16;
+			if (xcl < 0 || ycl < 0) return false;
+			
+			xcl /= TILE_SIZE;
+			ycl /= TILE_SIZE;
 			
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
@@ -493,18 +636,18 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 			
 			if (m_gameOver)
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_DEAD);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_DEAD);
 			}
 			else if (m_gameWon)
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_CARET);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_CARET);
 			}
 			else
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_SMILE);
 			}
 			
-			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, COMBO_BUTTON, EVENT_PAINT, 0, 0);
 			WidgetSweeperPaint(this);
 			
 			break;
@@ -514,35 +657,36 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 			int xcl = GET_X_PARM(parm1);
 			int ycl = GET_Y_PARM(parm1);
 			
+			m_leftClickHeld  = false;
+			
 			xcl -= this->m_rect.left;
 			ycl -= this->m_rect.top;
 			
-			xcl /= 16;
-			ycl /= 16;
+			if (xcl < 0 || ycl < 0) return false;
+			
+			xcl /= TILE_SIZE;
+			ycl /= TILE_SIZE;
 			
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
 			MineUncoverTile (xcl, ycl);
 			
-			m_leftClickHeld  = false;
-			
-			
 			MineCheckWin ();
 			
 			if (m_gameOver)
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_DEAD);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_DEAD);
 			}
 			else if (m_gameWon)
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_CARET);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_CARET);
 			}
 			else
 			{
-				SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
+				SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_SMILE);
 			}
 			
-			CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
+			CallControlCallback(pWindow, COMBO_BUTTON, EVENT_PAINT, 0, 0);
 			WidgetSweeperPaint(this);
 			
 			break;
@@ -551,48 +695,114 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1
 	return false;
 }
 
+int g_TimerID = -1;
+
+bool IsTimerRunning()
+{
+	return  g_TimerID >= 0;
+}
+
+void StartTimer()
+{
+	if (g_TimerID >= 0) EndTimer();
+	g_TimerID = AddTimer(g_pWindow, 1000, EVENT_USER);
+	g_nTimer = -1;
+	SetNumber(g_pWindow, COMBO_LED_TIME, 0);
+}
+
+void TickTimer()
+{
+	if (!IsTimerRunning())
+	{
+		LogMsg("Why are we ticking?");
+		return;
+	}
+	
+	g_nTimer++;
+	if (g_nTimer > 999) g_nTimer = 999;
+	
+	SetNumber(g_pWindow, COMBO_LED_TIME, g_nTimer);
+}
+
+void EndTimer()
+{
+	if (!IsTimerRunning()) return;
+	DisarmTimer(g_pWindow, g_TimerID);
+	g_TimerID = -1;
+}
+
+void ClearTimer()
+{
+	g_nTimer = 0;
+	SetNumber(g_pWindow, COMBO_LED_TIME, g_nTimer);
+}
+
 void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		case EVENT_USER:
+		{
+			TickTimer();
+			break;
+		}
 		case EVENT_CREATE:
 		{
+			g_pLcdImage     = GetImage(GetResource(RES_LCD));
+			g_pNumbersImage = GetImage(GetResource(RES_NUMBERS));
+			
 			Rectangle rect;
 			
-			RECT(rect, HUD_LEFT, 96-18-HUD_LEFT+MENU_BAR_HEIGHT, BoardWidth*16, BoardHeight*16);
+			RECT(rect, HUD_LEFT, HUD_TOP + HUD_HEIGHT + MENU_BAR_HEIGHT, BoardWidth*TILE_SIZE, BoardHeight*TILE_SIZE);
 			
-			AddControl (pWindow, CONTROL_NONE, rect, NULL, 1000, 0, 0);
+			AddControl (pWindow, CONTROL_NONE, rect, NULL, COMBO_SWEEPER, 0, 0);
 			
-			SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
+			SetWidgetEventHandler (pWindow, COMBO_SWEEPER, WidgetSweeper_OnEvent);
 			
 			// Add a menu bar
 			RECT(rect, 0, 0, 0, 0);
-			AddControl (pWindow, CONTROL_MENUBAR, rect, NULL, 2000, 0, 0);
+			AddControl (pWindow, CONTROL_MENUBAR, rect, NULL, COMBO_MENUBAR, 0, 0);
 			
-			AddMenuBarItem (pWindow, 2000, 0, 1, "Game");
-			AddMenuBarItem (pWindow, 2000, 0, 2, "Help");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 0, 1, "Game");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 0, 2, "Help");
 			
 			// help menu
-			AddMenuBarItem (pWindow, 2000, 2, 3, "About Minesweeper...");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 2, 3, "About Minesweeper...");
 			
 			// game menu
-			AddMenuBarItem (pWindow, 2000, 1, 4, "New Game");
-			AddMenuBarItem (pWindow, 2000, 1, 5, "");
-			AddMenuBarItem (pWindow, 2000, 1, 6, "Beginner");
-			AddMenuBarItem (pWindow, 2000, 1, 7, "Novice");
-			AddMenuBarItem (pWindow, 2000, 1, 8, "Intermediate");
-			AddMenuBarItem (pWindow, 2000, 1, 9, "Expert");
-			AddMenuBarItem (pWindow, 2000, 1,10, "");
-			AddMenuBarItem (pWindow, 2000, 1,11, "Exit");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 4, "New Game");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 5, "");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 6, "Beginner");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 7, "Novice");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 8, "Intermediate");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1, 9, "Expert");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,10, "");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,14, "Small Tiles");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,15, "Big Tiles");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,16, "Huge Tiles");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,12, "");
+			AddMenuBarItem (pWindow, COMBO_MENUBAR, 1,11, "Exit");
 			
-			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - HUD_LEFT * 2) - 26) / 2/*74*/, 56-18-15+MENU_BAR_HEIGHT, 26, 26);
-			AddControl (pWindow, CONTROL_BUTTON_ICON, rect, "", 2001, ICON_SWEEP_SMILE, 17);
+			RECT(rect, HUD_LEFT + ((MINESW_WIDTH - HUD_LEFT * 2) - HUD_HEIGHT) / 2, HUD_TOP + ((HUD_HEIGHT - (g_pLcdImage->height / LCD_MAX)) / 2), HUD_HEIGHT, HUD_HEIGHT);
+			AddControl (pWindow, CONTROL_BUTTON_ICON, rect, "", COMBO_BUTTON, ICON_SWEEP_SMILE, 17);
+			
+			int dispWidth =  g_pLcdImage->width * 3 + 4, dispHeight = g_pLcdImage->height / LCD_MAX + 4;
+			
+			RECT(rect, HUD_LEFT, HUD_TOP, dispWidth, dispHeight);
+			AddControl(pWindow, CONTROL_NONE, rect, "", COMBO_LED_SCORE, 0, 0);
+			SetWidgetEventHandler(pWindow, COMBO_LED_SCORE, WidgetNumDisplay_OnEvent);
+			RECT(rect, MINESW_WIDTH - HUD_LEFT - dispWidth, HUD_TOP, dispWidth, dispHeight);
+			AddControl(pWindow, CONTROL_NONE, rect, "", COMBO_LED_TIME, 0, 0);
+			SetWidgetEventHandler(pWindow, COMBO_LED_TIME, WidgetNumDisplay_OnEvent);
 			
 			break;
 		}
 		case EVENT_COMMAND:
 		{
-			if (parm1 == 2000) switch (parm2)
+			Rectangle rect;
+			GetWindowRect(pWindow, &rect);
+			
+			if (parm1 == COMBO_MENUBAR) switch (parm2)
 			{
 				case 3:
 					// About
@@ -604,11 +814,11 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					// A side effect of SetWidgetEventHandler is that it actually calls EVENT_DESTROY
 					// with the old handler, and EVENT_CREATE with the new one.  Nifty if you want
 					// to reset a control's defaults
-					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
+					SetWidgetEventHandler (pWindow, COMBO_SWEEPER, WidgetSweeper_OnEvent);
 					
-					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
-					CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
-					CallControlCallback(pWindow, 1000, EVENT_PAINT, 0, 0);
+					SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_SMILE);
+					CallControlCallback(pWindow, COMBO_BUTTON, EVENT_PAINT, 0, 0);
+					CallControlCallback(pWindow, COMBO_SWEEPER, EVENT_PAINT, 0, 0);
 					
 					break;
 				case 11:
@@ -622,8 +832,8 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					numberMines = BEGINNER_NUMBER_MINES;
 					//If we destroy the window after this flag gets set then a new window will come in its place!
 					bRequestingNewSize = true;
-					minesweeperX = pWindow->m_rect.left;
-					minesweeperY = pWindow->m_rect.top;
+					minesweeperX = rect.left;
+					minesweeperY = rect.top;
 					DestroyWindow (pWindow);
 					break;
 				case 7: // "Novice"
@@ -632,8 +842,8 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					numberMines = NOVICE_NUMBER_MINES;
 					//If we destroy the window after this flag gets set then a new window will come in its place!
 					bRequestingNewSize = true;
-					minesweeperX = pWindow->m_rect.left;
-					minesweeperY = pWindow->m_rect.top;
+					minesweeperX = rect.left;
+					minesweeperY = rect.top;
 					DestroyWindow (pWindow);
 					break;
 				case 8: // "Intermediate"
@@ -642,8 +852,8 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					numberMines = INTERMEDIATE_NUMBER_MINES;
 					//If we destroy the window after this flag gets set then a new window will come in its place!
 					bRequestingNewSize = true;
-					minesweeperX = pWindow->m_rect.left;
-					minesweeperY = pWindow->m_rect.top;
+					minesweeperX = rect.left;
+					minesweeperY = rect.top;
 					DestroyWindow (pWindow);
 					break;
 				case 9: // "Expert"
@@ -652,20 +862,33 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 					numberMines = EXPERT_NUMBER_MINES;
 					//If we destroy the window after this flag gets set then a new window will come in its place!
 					bRequestingNewSize = true;
-					minesweeperX = pWindow->m_rect.left;
-					minesweeperY = pWindow->m_rect.top;
+					minesweeperX = rect.left;
+					minesweeperY = rect.top;
 					DestroyWindow (pWindow);
 					break;
+					
+				case 14:
+				case 15:
+				case 16:
+				{
+					static const int tileSizes[] = { 18, 28, 38 };
+					g_tileSize = tileSizes[parm2 - 14];
+					bRequestingNewSize = true;
+					minesweeperX = rect.left;
+					minesweeperY = rect.top;
+					DestroyWindow (pWindow);
+					break;
+				}
 			}
 			else switch (parm1)
 			{
-				case 2001:
+				case COMBO_BUTTON:
 				{
-					SetWidgetEventHandler (pWindow, 1000, WidgetSweeper_OnEvent);
+					SetWidgetEventHandler (pWindow, COMBO_SWEEPER, WidgetSweeper_OnEvent);
 					
-					SetIcon (pWindow, 2001, ICON_SWEEP_SMILE);
-					CallControlCallback(pWindow, 2001, EVENT_PAINT, 0, 0);
-					CallControlCallback(pWindow, 1000, EVENT_PAINT, 0, 0);
+					SetIcon (pWindow, COMBO_BUTTON, ICON_SWEEP_SMILE);
+					CallControlCallback(pWindow, COMBO_BUTTON, EVENT_PAINT, 0, 0);
+					CallControlCallback(pWindow, COMBO_SWEEPER, EVENT_PAINT, 0, 0);
 					break;
 				}
 			}
@@ -681,7 +904,7 @@ int NsMain (UNUSED int argc, UNUSED char **argv)
 	do {
 		bRequestingNewSize = false;
 		
-		Window* pWindow = CreateWindow ("Minesweeper", minesweeperX, minesweeperY, MINESW_WIDTH, MINESW_HEIGHT-15+MENU_BAR_HEIGHT, PrgMineProc, 0);
+		Window* pWindow = g_pWindow = CreateWindow ("Minesweeper", minesweeperX, minesweeperY, MINESW_WIDTH, MINESW_HEIGHT, PrgMineProc, 0);
 		SetWindowIcon (pWindow, ICON_BOMB);
 		
 		if (!pWindow)
