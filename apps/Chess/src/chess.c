@@ -887,12 +887,16 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 
 void SetupBoard()
 {
+	memset(&g_pieces, 0, sizeof g_pieces);
+	
 	// allow castling initially
 	for (int i = 0; i < NPLAYERS; i++)
 	{
 		g_bCastleAllowed[CASTLE_KINGSIDE] [i] = true;
 		g_bCastleAllowed[CASTLE_QUEENSIDE][i] = true;
 	}
+	
+	g_playingPlayer = WHITE;
 	
 	// clear other resources, such as checks, and captures
 	for (int i = 0; i < NPLAYERS; i++)
@@ -902,7 +906,6 @@ void SetupBoard()
 		g_bIsKingInCheck[i] = false;
 		g_nCaptures     [i] = 0;
 		g_KingPositions [i] = emptyPos;
-		g_playingPlayer = WHITE;
 		g_nEnPassantColumn[i] = -1;
 	}
 	
@@ -938,34 +941,4 @@ void SetupBoard()
 	// Kings
 	SetPiece(0, 4, PIECE_KING, WHITE);
 	SetPiece(7, 4, PIECE_KING, BLACK);
-	
-	/*
-	
-	// IPROGRAM's junk for testing
-	SetPiece(1, 1, PIECE_BISHOP, WHITE);
-	SetPiece(4, 7, PIECE_BISHOP, WHITE);
-	SetPiece(3, 5, PIECE_QUEEN, WHITE);
-	SetPiece(4, 4, PIECE_PAWN, WHITE);
-	SetPiece(1, 2, PIECE_PAWN, WHITE);
-	SetPiece(2, 0, PIECE_PAWN, WHITE);
-	SetPiece(0, 0, PIECE_ROOK, WHITE);
-	SetPiece(0, 5, PIECE_ROOK, WHITE);
-	SetPiece(1, 5, PIECE_PAWN, WHITE);
-	SetPiece(1, 6, PIECE_PAWN, WHITE);
-	SetPiece(1, 7, PIECE_PAWN, WHITE);
-	
-	SetPiece(7, 1, PIECE_KNIGHT, BLACK);
-	SetPiece(7, 3, PIECE_QUEEN, BLACK);
-	SetPiece(6, 3, PIECE_PAWN, BLACK);
-	SetPiece(5, 0, PIECE_PAWN, BLACK);
-	SetPiece(5, 4, PIECE_PAWN, BLACK);
-	SetPiece(4, 3, PIECE_BISHOP, BLACK);
-	SetPiece(4, 2, PIECE_BISHOP, BLACK);
-	SetPiece(7, 0, PIECE_ROOK, BLACK);
-	SetPiece(7, 7, PIECE_ROOK, BLACK);
-	
-	SetPiece(0, 6, PIECE_KING, WHITE);
-	SetPiece(6, 6, PIECE_KING, BLACK);
-	
-	*/
 }

@@ -5,8 +5,8 @@
 
 #define BOARD_SIZE (8)  // most likely will never change
 #define PIECE_SIZE (32)
-#define SIDE_BAR_WIDTH  (200)
-#define TOP_BAR_HEIGHT  (50)
+#define SIDE_BAR_WIDTH  (400)
+#define TOP_BAR_HEIGHT  (70)
 #define MOVE_LIST_WIDTH (50)
 
 #define TILE_FLASH_COUNT (9)

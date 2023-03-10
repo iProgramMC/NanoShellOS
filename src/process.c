@@ -276,8 +276,6 @@ bool ExLoadResourceTable(void *pResourceTableData)
 	{
 		pRT->m_pResources[i] = pResource;
 		
-		SLogMsg("pResource id:%d data:%s",pResource->m_id, pResource->m_data);
-		
 		pResource = (Resource*)((uint8_t*)(pResource) + pResource->m_size + sizeof(Resource));
 	}
 	

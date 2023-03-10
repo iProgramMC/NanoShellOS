@@ -10,8 +10,9 @@
 #define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH + 20)
 #define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT + 20)
 
-#define ICON_TROPHY 999
-#define ICON_PIECES_START 900
+#define ICON_TROPHY (900)
+#define ICON_SCALE  (901)
+#define ICON_PIECES_START (900)
 
 Window* g_pWindow;
 int g_BoardX = 0, g_BoardY = TOP_BAR_HEIGHT;
@@ -248,10 +249,11 @@ void ChessReleaseCursor(int x, int y)
 						g_pWindow,
 						"Stalemate!\n\nThis game is a draw.\n\nWould you like to reset the board, and play another game?",
 						"Game Draw",
-						MB_YESNO | ICON_SWEEP_SMILE << 16 // TODO ICON_SCALE << 16
+						MB_YESNO | ICON_SCALE << 16
 					) == MBID_YES)
 					{
-						//TODO
+						SetupBoard();
+						RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
 					}
 					break;
 				}
@@ -267,7 +269,8 @@ void ChessReleaseCursor(int x, int y)
 						MB_YESNO | ICON_TROPHY << 16
 					) == MBID_YES)
 					{
-						//TODO
+						SetupBoard();
+						RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
 					}
 					
 					break;
@@ -342,8 +345,8 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			
 			// Create some controls letting the players know about their status in the game.
 			
-			g_BoardY = TOP_BAR_HEIGHT + 10;
-			g_BoardX = 10;
+			g_BoardY = (CHESS_HEIGHT - BOARD_SIZE * PIECE_SIZE) / 2;
+			g_BoardX = (CHESS_WIDTH  - BOARD_SIZE * PIECE_SIZE) / 2;
 			SetupBoard();
 			
 			Rectangle rect;
