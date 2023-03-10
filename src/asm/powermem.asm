@@ -19,6 +19,7 @@ global align16_memcpy
 global memcpy_16_byte_aligned
 global memcpy_128_byte_aligned
 
+section .text.othermemcpies align=4096
 ; Not Fast
 not_fast_memcpy:
 	push ebp
@@ -92,9 +93,9 @@ fast_memcpy:
 	mov ecx, [ebp + 10h]
 	
 	push ebp
-	prefetchnta [esi]
+	;prefetchnta [esi]
 	.some_loop:
-		prefetchnta [esi+32]
+		;prefetchnta [esi+32]
 		mov eax, [esi]
 		mov ebx, [esi+4]
 		mov edx, [esi+8]
@@ -187,60 +188,8 @@ memset_shorts:
 	mov esp, ebp
 	pop ebp
 	ret
-
-; WARNING: Needs count to be 128 byte aligned, and source/dest to be 16-byte aligned. Else will cause a GPF.
-memcpy_128_byte_aligned:
-	push ebp
-	mov  ebp, esp
 	
-	push ebx
-	push esi
-	push edi
-	
-	mov esi, [ebp + 0Ch]
-	mov edi, [ebp + 08h]
-	mov ecx, [ebp + 10h]
-	
-	shr ecx, 7 ; divide by 128 (i.e. multiply the number of 128-byte blocks you want to copy by 128 when you call this) 
-	
-	; https://stackoverflow.com/a/1715385 <-- Thanks!
-	.loop_cpy:
-		prefetchnta [esi + 128]
-		prefetchnta [esi + 160]
-		prefetchnta [esi + 192]
-		prefetchnta [esi + 224]
-		
-		movdqa xmm0, [esi + 0]
-		movdqa xmm1, [esi + 16]
-		movdqa xmm2, [esi + 32]
-		movdqa xmm3, [esi + 48]
-		movdqa xmm4, [esi + 64]
-		movdqa xmm5, [esi + 80]
-		movdqa xmm6, [esi + 96]
-		movdqa xmm7, [esi + 112]
-		
-		movntdq [edi + 0]  , xmm0
-		movntdq [edi + 16] , xmm1
-		movntdq [edi + 32] , xmm2
-		movntdq [edi + 48] , xmm3
-		movntdq [edi + 64] , xmm4
-		movntdq [edi + 80] , xmm5
-		movntdq [edi + 96] , xmm6
-		movntdq [edi + 112], xmm7
-		
-		add esi, 128
-		add edi, 128
-		dec ecx
-		jnz .loop_cpy
-	
-	pop edi
-	pop esi
-	pop ebx
-	
-	mov esp, ebp
-	pop ebp
-	ret
-
+section .text.memcpies align=4096
 ; WARNING: Needs count and source/dest to be 16-byte aligned. Else will cause a GPF.
 memcpy_16_byte_aligned:
 	push ebp
@@ -257,7 +206,7 @@ memcpy_16_byte_aligned:
 	shr ecx, 4 ; divide by 16 (i.e. multiply the number of 16-byte blocks you want to copy by 16 when you call this) 
 	
 	.loop_cpy:
-		prefetchnta [esi + 16]
+		;prefetchnta [esi + 16]
 		
 		movdqa xmm0, [esi + 0]
 		movntdq [edi + 0]  , xmm0
@@ -288,9 +237,9 @@ memcpy_ints:
 	mov ecx, [ebp + 10h]
 	
 	push ebp
-	prefetchnta [esi]
+	;prefetchnta [esi]
 	.some_loop:
-		prefetchnta [esi+4]
+		;prefetchnta [esi+4]
 		mov eax, [esi]
 		mov [edi   ], eax
 		add esi, 4
@@ -309,6 +258,7 @@ memcpy_ints:
 	pop ebp
 	ret
 
+section .text.alignmemcpies align=4096
 align4_memcpy:
 	push ebp
 	mov  ebp, esp
@@ -321,10 +271,15 @@ align4_memcpy:
 	mov edi, [ebp + 08h]
 	mov ecx, [ebp + 10h]
 	
+	; An alternative to try. TODO test this out on real hardware, see how it performs.
+	; Do this likewise on other platforms as well.
+	;   shr ecx, 2
+	;   rep movsd
+	
 	push ebp
-	prefetchnta [esi]
+	;prefetchnta [esi]
 	.some_loop:
-		prefetchnta [esi+4]
+		;prefetchnta [esi+4]
 		mov eax, [esi]
 		mov [edi   ], eax
 		add esi, 4
@@ -355,9 +310,9 @@ align8_memcpy:
 	mov ecx, [ebp + 10h]
 	
 	push ebp
-	prefetchnta [esi]
+	;prefetchnta [esi]
 	.some_loop:
-		prefetchnta [esi+8]
+		;prefetchnta [esi+8]
 		mov eax, [esi]
 		mov ebx, [esi+4]
 		mov [edi  ], eax
@@ -390,9 +345,9 @@ align16_memcpy:
 	mov ecx, [ebp + 10h]
 	
 	push ebp
-	prefetchnta [esi]
+	;prefetchnta [esi]
 	.some_loop:
-		prefetchnta [esi+16]
+		;prefetchnta [esi+16]
 		mov eax, [esi]
 		mov ebx, [esi+4]
 		mov edx, [esi+8]
@@ -416,4 +371,3 @@ align16_memcpy:
 	mov esp, ebp
 	pop ebp
 	ret
-	
