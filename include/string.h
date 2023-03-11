@@ -7,6 +7,7 @@
 #ifndef _STRING_H
 #define _STRING_H
 #include <main.h>
+#include <utf8.h>
 
 // Memory functions
 int memcmp(const void*ap,const void*bp,size_t size);
