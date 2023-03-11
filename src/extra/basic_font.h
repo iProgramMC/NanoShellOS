@@ -277,6 +277,133 @@ const uint8_t g_BasicFontData_data[] =
 	0b01001100,
 	0b00111000,
 	0b00000000,
+	
+	// Additional characters:
+	// U+00C2 - LATIN CAPITAL LETTER A WITH CIRCUMFLEX
+	0b00010000,
+	0b00101000,
+	0b00010000,
+	0b00101000,
+	0b01000100,
+	0b01111100,
+	0b10000010,
+	0b10000010,
+	0b00000000,
+	0b00000000,
+	// U+00CE - LATIN CAPITAL LETTER I WITH CIRCUMFLEX
+	0b01000000,
+	0b10100000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b00000000,
+	0b00000000,
+	// U+00E2 - LATIN SMALL LETTER A WITH CIRCUMFLEX
+	0b00100000,
+	0b01010000,
+	0b01110000,
+	0b00001000,
+	0b01111000,
+	0b10001000,
+	0b10001000,
+	0b01111000,
+	0b00000000,
+	0b00000000,
+	// U+00EE - LATIN SMALL LETTER I WITH CIRCUMFLEX
+	0b00000000,
+	0b01000000,
+	0b10100000,
+	0b00000000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b01000000,
+	0b00000000,
+	0b00000000,
+	// U+0102 - LATIN CAPITAL LETTER A WITH BREVE
+	0b00101000,
+	0b00010000,
+	0b00101000,
+	0b00101000,
+	0b01000100,
+	0b01111100,
+	0b10000010,
+	0b10000010,
+	0b00000000,
+	0b00000000,
+	// U+0103 - LATIN SMALL LETTER A WITH BREVE
+	0b01010000,
+	0b00100000,
+	0b01110000,
+	0b00001000,
+	0b01111000,
+	0b10001000,
+	0b10001000,
+	0b01111000,
+	0b00000000,
+	0b00000000,
+	// U+0218 - LATIN CAPITAL LETTER S WITH COMMA BELOW
+	0b01110000,
+	0b10001000,
+	0b10000000,
+	0b01110000,
+	0b00001000,
+	0b10001000,
+	0b10001000,
+	0b01110000,
+	0b00100000,
+	0b01000000,
+	// U+0219 - LATIN SMALL LETTER S WITH COMMA BELOW
+	0b00000000,
+	0b00000000,
+	0b01110000,
+	0b10001000,
+	0b01100000,
+	0b00010000,
+	0b10001000,
+	0b01110000,
+	0b00100000,
+	0b01000000,
+	// U+021A - LATIN CAPITAL LETTER T WITH COMMA BELOW
+	0b11111000,
+	0b00100000,
+	0b00100000,
+	0b00100000,
+	0b00100000,
+	0b00100000,
+	0b00100000,
+	0b00000000,
+	0b00100000,
+	0b01000000,
+	// U+021B - LATIN SMALL LETTER T WITH COMMA BELOW
+	0b00000000,
+	0b10000000,
+	0b11000000,
+	0b10000000,
+	0b10000000,
+	0b10000000,
+	0b10000000,
+	0b01000000,
+	0b01000000,
+	0b10000000,
+};
+
+// note: Keep the data ordered! This is meant to be looked through with a binary search!
+UnicodeCharacterData g_BasicFont_UnicodeTable[] =
+{
+	{ 0x00C2, { 8, 10 * 257 } },
+	{ 0x00CE, { 4, 10 * 258 } },
+	{ 0x00E2, { 6, 10 * 259 } },
+	{ 0x00EE, { 4, 10 * 250 } },
+	{ 0x0102, { 8, 10 * 261 } },
+	{ 0x0103, { 6, 10 * 262 } },
+	{ 0x0218, { 6, 10 * 263 } },
+	{ 0x0219, { 6, 10 * 264 } },
+	{ 0x021A, { 6, 10 * 265 } },
+	{ 0x021B, { 3, 10 * 266 } },
 };
 
 ScreenFont g_BasicFontData =
@@ -288,8 +415,10 @@ ScreenFont g_BasicFontData =
 	   10, // Line height
 	false, // Already bold?
 	   -1, // Alternate variant
-	    0, // Number of unicode table entries
-	 NULL, // The unicode table
+	
+	(int)ARRAY_COUNT(g_BasicFont_UnicodeTable), // Number of unicode table entries
+	g_BasicFont_UnicodeTable,                   // The unicode table
+	
 	// Character data:
 	{
 		{  8,10*  0 },{  8,10*  1 },{  8,10*  2 },{  8,10*  3 },{  8,10*  4 },{  8,10*  5 },{  8,10*  6 },{  8,10*  7 },
@@ -326,5 +455,4 @@ ScreenFont g_BasicFontData =
 		{  8,10*248 },{  8,10*249 },{  8,10*250 },{  8,10*251 },{  8,10*252 },{  8,10*253 },{  8,10*254 },{  8,10*255 },
 	},
 	{ 7, 10*256 }
-
 };

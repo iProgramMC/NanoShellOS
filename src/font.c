@@ -315,7 +315,28 @@ void KillFont (int fontID)
 		unsigned chr = (unsigned)character;
 		
 		if (chr < 0 || chr > 255)
+		{
+			ScreenFont* pFont = g_pCurrentFont;
+			
+			if (!pFont->m_pUnicodeTable || !pFont->m_unicodeTableSize) return g_pCurrentFont->m_replacementChar;
+			
+			int left = 0, right = pFont->m_unicodeTableSize - 1;
+			
+			while (left <= right)
+			{
+				int mid = (left + right) / 2;
+				
+				int cid = pFont->m_pUnicodeTable[mid].m_charID;
+				if (cid == character) return pFont->m_pUnicodeTable[mid].m_charData;
+				
+				if (cid < character)
+					left = mid + 1;
+				else
+					right = mid - 1;
+			}
+			
 			return g_pCurrentFont->m_replacementChar;
+		}
 		
 		return g_pCurrentFont->m_asciiData[chr];
 	}
