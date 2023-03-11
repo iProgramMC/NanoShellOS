@@ -265,6 +265,10 @@ void* MhAllocate(size_t size, uint32_t* pPhysOut)
 	{
 		//more than one page, take matters into our own hands:
 		int numPagesNeeded = ((size - 1) >> 12) + 1;
+		
+		if (numPagesNeeded >= C_MAX_KERNEL_HEAP_PAGE_ENTRIES)
+			return NULL;
+		
 		//ex: if we wanted 6100 bytes, we'd take 6100-1=6099, then divide that by 4096 (we get 1) and add 1
 		//    if we wanted 8192 bytes, we'd take 8192-1=8191, then divide that by 4096 (we get 1) and add 1 to get 2 pages
 		

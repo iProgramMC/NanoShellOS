@@ -71,6 +71,8 @@ typedef struct
 	bool      m_dirty;
 	int       m_knownScrollBarX;
 	int       m_knownScrollBarY;
+	bool      m_bCursorFlash;
+	int       m_ignoreTicksTill;
 }
 TextInputDataEx;
 
@@ -273,6 +275,14 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 
 static void TextInput_RepaintLine(Control* pCtl, int lineNum);
 static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum);
+
+static void TextInput_MakeCursorStayUpFor(Control* this, int ms)
+{
+	TextInputDataEx* pData   = TextInput_GetData(this);
+	pData->m_bCursorFlash    = false;
+	pData->m_ignoreTicksTill = GetTickCount() + ms;
+	TextInput_RepaintLine(this, pData->m_cursorY);
+}
 
 static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
 {
@@ -637,7 +647,7 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 				VidPlotChar(chr, charX, lineY, WINDOW_TEXT_COLOR, WINDOW_TEXT_COLOR_LIGHT);
 			}
 			
-			if (isWithinScreenBounds && pData->m_cursorX == (int)j && pData->m_cursorY == (int)i)
+			if (isWithinScreenBounds && pData->m_cursorX == (int)j && pData->m_cursorY == (int)i && !pData->m_bCursorFlash)
 			{
 				VidFillRect(0xFF, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + GetLineHeight() - 1);
 			}
@@ -646,7 +656,7 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 		}
 		
 		const bool isWithinScreenBounds = rect.left <= charX && charX < rect.right;
-		if (isWithinScreenBounds && pData->m_cursorX == (int)pData->m_lines[i].m_length && pData->m_cursorY == (int)i)
+		if (isWithinScreenBounds && pData->m_cursorX == (int)pData->m_lines[i].m_length && pData->m_cursorY == (int)i && !pData->m_bCursorFlash)
 		{
 			VidFillRect(0xFF, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + GetLineHeight() - 1);
 		}
@@ -968,6 +978,8 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 		}
 	}
 	
+	TextInput_MakeCursorStayUpFor(this, 500);
+	
 	TextInput_UpdateScrollBars(this);
 	TextInput_ClampCursorWithinScrollBounds(this);
 	
@@ -1032,10 +1044,36 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			break;
 		}
+		case EVENT_TICK:
+		{
+			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			if (pData->m_ignoreTicksTill > GetTickCount()) break;
+			
+			if (!this->m_bFocused)
+			{
+				if (!pData->m_bCursorFlash)
+				{
+					pData->m_bCursorFlash = true;
+					TextInput_RepaintLine(this, pData->m_cursorY);
+				}
+			}
+			else
+			{
+				pData->m_bCursorFlash ^= 1;
+				TextInput_RepaintLine(this, pData->m_cursorY); // TODO: More efficient way.
+			}
+			
+			break;
+		}
 		case EVENT_CLICKCURSOR:
 		case EVENT_SCROLLDONE:
 		{
 			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			// if we're a single line text control, break.
+			if (~this->m_parm1 & TEXTEDIT_MULTILINE) break;
+			
 			int lkX = pData->m_knownScrollBarX;
 			int lkY = pData->m_knownScrollBarY;
 			pData->m_knownScrollBarX = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID));
@@ -1088,8 +1126,8 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			if (!RectangleContains(&this->m_rect, &mouseClickPos))
 			{
 				// if no one took focus from us before us, make us not focused at all
-				if (this->m_bFocused)
-					SetFocusedControl(pWindow, -1);
+				//if (this->m_bFocused)
+				//	SetFocusedControl(pWindow, -1);
 				break;
 			}
 			
@@ -1172,6 +1210,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					{
 						TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX);
 					}
+					TextInput_MakeCursorStayUpFor(this, 500);
 					
 					break;
 				}

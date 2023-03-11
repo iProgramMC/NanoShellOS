@@ -6,6 +6,8 @@
 ******************************************/
 #include "wi.h"
 
+int g_TextCursorFlashSpeed = 500; // 2 hz.
+
 static bool IsEventPrivate(int eventType)
 {
 	return eventType >= EVENT_PRIVATE_START && eventType < EVENT_USER;
@@ -659,6 +661,8 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			if (pWindow->m_privFlags & WPF_INITGOOD) break;
 			
 			pWindow->m_privFlags |= WPF_INITGOOD;
+			
+			AddTimer(pWindow, g_TextCursorFlashSpeed, EVENT_TICK);
 			
 			break;
 		}

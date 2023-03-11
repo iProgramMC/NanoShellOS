@@ -31,6 +31,8 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 			
 			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_ZOOM);
 			
+			MmFree(pImage);
+			
 			ImageCtlZoomToFill(pWindow, 1000);
 			
 			break;

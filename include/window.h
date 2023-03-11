@@ -214,6 +214,7 @@ enum {
 	EVENT_CTLREPAINT,//parm1 represents the comboID of the control to repaint.
 	EVENT_TABCHANGED,//CONTROL_TAB_PICKER
 	EVENT_CTLUPDATEVISIBLE,
+	EVENT_TICK, // used for blinking text controls.
 	EVENT_MAX,
 	
 	EVENT_PRIVATE_START = 0xF00,

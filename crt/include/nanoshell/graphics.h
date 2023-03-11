@@ -30,7 +30,6 @@ void VidFillRectHGradient(unsigned colorL, unsigned colorR, int left, int top, i
 void VidFillRectVGradient(unsigned colorU, unsigned colorD, int left, int top, int right, int bottom);
 void VidDrawRectangle(unsigned color, Rectangle rect);
 void SetMousePos (int pX, int pY);
-void VidSetVbeData (VBEData* pData);
 void RenderIcon(int type, int x, int y);
 void RenderIconOutline(int type, int x, int y, uint32_t color);
 void RenderIconForceSize(int type, int x, int y, int size);
@@ -38,5 +37,9 @@ void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color
 
 bool RectangleContains(Rectangle *r, Point *p);
 bool RectangleOverlap (Rectangle *r1, Rectangle *r2);
+
+unsigned VidReadPixel(unsigned x, unsigned y);
+
+VBEData* VidSetVbeData (VBEData* pData);
 
 #endif//_NANOSHELL_GRAPHICS__H

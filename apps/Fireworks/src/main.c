@@ -166,8 +166,6 @@ void OnExplode(Particle* pPart)
 
 int g_lastDelta = UPDATE_MS;
 
-unsigned VidReadPixel(unsigned x, unsigned y);
-
 void UpdateParticle(Particle* part)
 {
 	double deltaSec = ((double)g_lastDelta / 1000.0);

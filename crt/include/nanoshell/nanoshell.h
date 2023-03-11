@@ -80,7 +80,8 @@ uint32_t    ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCa
 uint32_t    GetThemingParameter (int type);
 void        SetThemingParameter (int type, uint32_t parm);
 void        SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler);
-// The input boxes that return stings return a kernel memory region. Use MmKernelFree() instead of free() to free it.
+WidgetEventHandler GetWidgetEventHandler(Window* pWindow, int comboID);
+// The input boxes that return strings return a kernel memory region. Use MmKernelFree() instead of free() to free it.
 char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 char*       FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 void        CallControlCallback(Window * pWindow, int comboID, int event, int parm1, int parm2);
@@ -114,6 +115,12 @@ int         UploadCursor(Image* pImage, int xOff, int yOff);
 void        ReleaseCursor(int cursorID);
 Image*      GetIconImage(int iconType, int size /* = -1 */);
 Resource*   GetResource(int resID);
+Point       GetMousePos();
+void        SetImageCtlMde(Window* pWindow, int comboID, int mode);
+void        SetImageCtlColor(Window* pWindow, int comboID, uint32_t color);
+void        SetImageCtlCurrentImage(Window* pWindow, int comboID, Image* pImage);
+Image*      GetImageCtlCurrentImage(Window* pWindow, int comboID);
+void        ImageCtlZoomToFill(Window* pWindow, int comboID);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

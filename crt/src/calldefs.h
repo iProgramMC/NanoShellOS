@@ -274,8 +274,8 @@ CALL (FilePickerBox, WIN_FILE_CHOOSE_BOX, char *, Window * pWindow, const char *
 CALL_END
 
 // Calls V1.4
-CALL (VidSetVbeData, VID_SET_VBE_DATA, void, VBEData* pData)
-	SARGS(pData)
+CALL (VidSetVbeData, VID_SET_VBE_DATA, VBEData*, VBEData* pData)
+	RARGS(pData)
 CALL_END
 CALLI(FiOpenDirD, FI_OPEN_DIR_D, int, const char* pFileName, const char* srcFile, int srcLine)
 	RARGS(pFileName, srcFile, srcLine)

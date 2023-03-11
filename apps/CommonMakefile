@@ -46,11 +46,11 @@ else
 $(RESOURCE_COMP_OBJ): $(RESOURCE_COMPILED)
 	@mkdir -p $(dir $@)
 	@echo "assembling resource file"
-	$(AS) $(ASFLAGS) -o $@ $^
+	@$(AS) $(ASFLAGS) -o $@ $^
 	
 $(RESOURCE_COMPILED): $(RESOURCE)
 	@mkdir -p $(dir $@)
-	$(RC) $< $@
+	@$(RC) $< $@ /s
 endif
 
 $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)
