@@ -50,7 +50,7 @@ $(RESOURCE_COMP_OBJ): $(RESOURCE_COMPILED)
 	
 $(RESOURCE_COMPILED): $(RESOURCE)
 	@mkdir -p $(dir $@)
-	@$(RC) $< $@ /s
+	@$(RC) $< $@ /S
 endif
 
 $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)

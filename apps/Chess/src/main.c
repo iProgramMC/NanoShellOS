@@ -24,7 +24,9 @@ Image* g_pPieceImages[14];
 enum
 {
 	CHESS_TURN_LABEL = 1000,
-	
+	CHESS_MOVE_LIST,
+	CHESS_CAPTURES_BLACK,
+	CHESS_CAPTURES_WHITE,
 };
 
 void DrawFrameAroundBoard()
@@ -233,7 +235,7 @@ void ChessReleaseCursor(int x, int y)
 		int boardRow = -1, boardCol = -1;
 		GetBoardCoords(x, y, &boardRow, &boardCol);
 		
-		BoardPiece* pPc = GetPiece(boardRow, boardCol);
+		BoardPiece* pPc = GetPiece(g_DraggedPieceRow, g_DraggedPieceCol);
 		if (pPc)
 		{
 			eColor col = pPc->color;
@@ -319,6 +321,30 @@ void UpdateFlashingTiles()
 	}
 }
 
+
+
+int g_nMoveNumber = 0;
+
+void ChessAddMoveToUI(const char* moveList)
+{
+	static char buffer[128];
+	if (g_playingPlayer == WHITE)
+	{
+		snprintf(buffer, sizeof buffer, "%d. %s", ++g_nMoveNumber, moveList);
+		AddElementToList(g_pWindow, CHESS_MOVE_LIST, buffer, ICON_NULL);
+	}
+	else
+	{
+		// take whatever we had before. This isn't great, and can be a source of bugs.
+		// It should be fine though
+		char* buffer2 = buffer + strlen(buffer);
+		sprintf(buffer2, " %s", moveList);
+		SetListItemText(g_pWindow, CHESS_MOVE_LIST, g_nMoveNumber - 1, ICON_NULL, buffer);
+	}
+	
+	CallControlCallback(g_pWindow, CHESS_MOVE_LIST, EVENT_PAINT, 0, 0);
+}
+
 int g_FlashTimerID = -1;
 
 ePiece PromotionPopup(eColor color, int row, int col);
@@ -346,14 +372,22 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			// Create some controls letting the players know about their status in the game.
 			
 			g_BoardY = (CHESS_HEIGHT - BOARD_SIZE * PIECE_SIZE) / 2;
-			g_BoardX = (CHESS_WIDTH  - BOARD_SIZE * PIECE_SIZE) / 2;
+			g_BoardX = LEFT_BAR_WIDTH;
 			SetupBoard();
 			
 			Rectangle rect;
-			RECT(rect, PIECE_SIZE * BOARD_SIZE + 10, 10, CHESS_WIDTH - PIECE_SIZE*BOARD_SIZE-10, 20);
+			RECT(rect, g_BoardX, g_BoardY - 15, BOARD_SIZE * PIECE_SIZE, 10);
 			
 			AddControl(pWindow, CONTROL_TEXTCENTER, rect, "", CHESS_TURN_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL | TEXTSTYLE_VCENTERED | TEXTSTYLE_HCENTERED);
 			UpdatePlayerTurn();
+			
+			RECT(rect, g_BoardX + BOARD_SIZE * PIECE_SIZE + 10, g_BoardY, RIGHT_BAR_WIDTH, BOARD_SIZE * PIECE_SIZE);
+			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_MOVE_LIST, 0, 0);
+			
+			RECT(rect, 10, g_BoardY, 40, (BOARD_SIZE * PIECE_SIZE / 2) - 5);
+			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_CAPTURES_BLACK, 0, 0);
+			RECT(rect, 10, g_BoardY + (BOARD_SIZE * PIECE_SIZE / 2) + 5, 40, (BOARD_SIZE * PIECE_SIZE / 2) - 5);
+			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_CAPTURES_BLACK, 0, 0);
 			
 			g_FlashTimerID = AddTimer(pWindow, 250, EVENT_USER);
 			

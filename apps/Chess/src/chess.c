@@ -780,16 +780,14 @@ void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleTyp
 				//if (row == rowDst && clm == colDst) continue;
 				
 				if (pPiece->piece != pie || pPiece->color != col) continue;
-				
-				
-				LogMsg("Checking piece on %c%d", clm+'a', row+1);
+				//LogMsg("Checking piece on %c%d", clm+'a', row+1);
 				
 				// see if the piece can move here
 				UNUSED eCastleType castleType;
 				UNUSED bool bEnPassant;
 				if (ChessCheckMove(row, clm, rowDst, colDst, &castleType, &bEnPassant, true) == ERROR_SUCCESS)
 				{
-					LogMsg("ChessGeneratePGN: move from %c%d is also valid", clm+'a', row+1);
+					//LogMsg("ChessGeneratePGN: move from %c%d is also valid", clm+'a', row+1);
 					
 					// yes. Need disambiguation.
 					if (row == rowDst)
@@ -825,7 +823,7 @@ void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleTyp
 		*pcDst = pcCopy;
 	}
 	
-	LogMsg("MOVE: %s", moveList);
+	ChessAddMoveToUI(moveList);
 }
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
@@ -865,7 +863,7 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 		if (g_bIsKingInCheck[i])
 		{
 			bCheck = true;
-			LogMsg("%d's in check!", i);
+			//LogMsg("%d's in check!", i);
 		}
 		
 		// TODO: handle other players properly
@@ -885,8 +883,10 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	}
 }
 
+extern int g_nMoveNumber;
 void SetupBoard()
 {
+	g_nMoveNumber = 0;
 	memset(&g_pieces, 0, sizeof g_pieces);
 	
 	// allow castling initially

@@ -5,7 +5,10 @@
 
 #define BOARD_SIZE (8)  // most likely will never change
 #define PIECE_SIZE (32)
-#define SIDE_BAR_WIDTH  (400)
+
+#define RIGHT_BAR_WIDTH (140)
+#define LEFT_BAR_WIDTH  (60)
+#define SIDE_BAR_WIDTH  (LEFT_BAR_WIDTH + RIGHT_BAR_WIDTH)
 #define TOP_BAR_HEIGHT  (70)
 #define MOVE_LIST_WIDTH (50)
 
@@ -85,5 +88,7 @@ BoardPiece* GetPiece(int row, int column);
 void FlashTile(int row, int column);
 
 eColor GetNextPlayer(eColor curPlr);
+
+void ChessAddMoveToUI(const char* moveList);
 
 #endif//CHESS_H
