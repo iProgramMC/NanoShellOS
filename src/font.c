@@ -309,11 +309,20 @@ void KillFont (int fontID)
 
 // Standard font rendering
 #if 1 
-	__attribute__((always_inline))
-	static inline int GetCharWidthInl(char chr)
+	
+	CharacterData VidGetCharacterData(int character)
 	{
-		uint8_t cx = (uint8_t)chr;
-		int charWidth = g_pCurrentFont->m_asciiData[cx].m_width;
+		unsigned chr = (unsigned)character;
+		
+		if (chr < 0 || chr > 255)
+			return g_pCurrentFont->m_replacementChar;
+		
+		return g_pCurrentFont->m_asciiData[chr];
+	}
+	
+	SAI int GetCharWidthInl(int chr)
+	{
+		int charWidth = VidGetCharacterData(chr).m_width;
 		
 		if (chr == '\t')
 			charWidth *= 4;
@@ -321,7 +330,7 @@ void KillFont (int fontID)
 		return charWidth;
 	}
 	
-	int GetCharWidth(char c)
+	int GetCharWidth(int c)
 	{
 		return GetCharWidthInl (c);
 	}
@@ -398,20 +407,11 @@ void KillFont (int fontID)
 		return "Unknown Font";
 	}
 	
-	CharacterData GetCharacterData(char character)
+	void VidPlotChar (int chr, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
 	{
-		unsigned char chr = (unsigned char)character;
-		
-		//if (chr < 0 || chr > 255) // never true, but would be if `chr` becomes an int
-		//	return g_pCurrentFont->m_replacementChar;
-		
-		return g_pCurrentFont->m_asciiData[chr];
-	}
-	
-	void VidPlotChar (char chr, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/)
-	{
-		uint8_t c = (uint8_t) chr;
-		if (!g_pCurrentFont) {
+		unsigned c = (unsigned)chr;
+		if (!g_pCurrentFont)
+		{
 			SLogMsg("Darn it (VidPlotChar)!");
 			return;
 		}
@@ -426,7 +426,7 @@ void KillFont (int fontID)
 		
 		bool trans = colorBg == TRANSPARENT;
 		
-		CharacterData chrData = GetCharacterData(chr);
+		CharacterData chrData = VidGetCharacterData(chr);
 		
 		int width  = chrData.m_width;
 		int height = g_pCurrentFont->m_charHeight;

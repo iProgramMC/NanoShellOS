@@ -265,7 +265,7 @@ unsigned VidSetFont(unsigned fontType);
 /**
  * Draws a character in "colorFg" with an optional colorBg (if it's 0xFFFFFFFF we don't draw any).
  */
-void VidPlotChar (char c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
+void VidPlotChar (int c, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg /*=0xFFFFFFFF*/);
 
 /**
  * Blits an image onto the screen.
@@ -411,7 +411,7 @@ void SetMousePos (int pX, int pY);
 /**
  * Gets the width of a character 'c' in the current font.
  */
-int GetCharWidth(char c);
+int GetCharWidth(int c);
 
 /**
  * Gets the height of a in the current font.
