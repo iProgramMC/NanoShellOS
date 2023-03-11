@@ -560,7 +560,8 @@ void KillFont (int fontID)
 		while (*pText)
 		{
 			//print this character:
-			char c = *pText;
+			int c = Utf8GetCharacterAndIncrement(&pText);
+			
 			if (c == '\n')
 			{
 				y += lineHeight;
@@ -588,7 +589,6 @@ void KillFont (int fontID)
 					continue;
 				}
 			}
-			pText++;
 		}
 		if (cwidth < width)
 			cwidth = width;
@@ -619,8 +619,8 @@ void KillFont (int fontID)
 		int lc = 1;
 		while (*pText)
 		{
-			if (*pText == '\n') lc++;
-			pText++;
+			int chr = Utf8GetCharacterAndIncrement(&pText);
+			if (chr == '\n') lc++;
 		}
 		return lc;
 	}
@@ -631,14 +631,15 @@ void KillFont (int fontID)
 		int w = 0;
 		while (1)
 		{
-			if (*pText == '\n' || *pText == '\0')
+			const char* pTextOld = pText;
+			int chr = Utf8GetCharacterAndIncrement(&pText);
+			if (chr == '\n' || chr == '\0')
 			{
-				*pTextOut = pText;
+				*pTextOut = pTextOld;
 				return w;
 			}
-			int cw = GetCharWidthInl(*pText) + bold;
+			int cw = GetCharWidthInl(chr) + bold;
 			w += cw;
-			pText++;
 		}
 	}
 	int MeasureTextUntilNewLine (const char* pText, const char** pTextOut)
@@ -651,14 +652,15 @@ void KillFont (int fontID)
 		int w = 0;
 		while (1)
 		{
-			if (*pText == '\n' || *pText == '\0' || *pText == ' ')
+			const char* pTextOld = pText;
+			int chr = Utf8GetCharacterAndIncrement(&pText);
+			if (chr == '\n' || chr == '\0' || chr == ' ')
 			{
-				*pTextOut = pText;
+				*pTextOut = pTextOld;
 				return w;
 			}
-			int cw = GetCharWidthInl(*pText);
+			int cw = GetCharWidthInl(chr);
 			w += cw;
-			pText++;
 		}
 	}
 	
@@ -667,22 +669,23 @@ void KillFont (int fontID)
 		int w = 0;
 		while (1)
 		{
-			if (*pText == '\n' || *pText == '\0' || *pText == ' ')
+			const char* pTextOld = pText;
+			int chr = Utf8GetCharacterAndIncrement(&pText);
+			if (chr == '\n' || chr == '\0' || chr == ' ')
 			{
-				*pTextOut = pText;
+				*pTextOut = pTextOld;
 				*bReachedMaxSizeBeforeEnd = false;
 				return w;
 			}
-			int cw = GetCharWidthInl(*pText);
+			
+			int cw = GetCharWidthInl(chr);
 			w += cw;
 			if (w >= xMaxSize)
 			{
-				
-				*pTextOut = pText;
+				*pTextOut = pTextOld;
 				*bReachedMaxSizeBeforeEnd = true;
 				return w;
 			}
-			pText++;
 		}
 	}
 	
@@ -774,7 +777,6 @@ void KillFont (int fontID)
 				int x = rect.left, y = rect.top;
 				while (1)
 				{
-					
 					int widthWord = MeasureTextUntilSpace (text, &text2);
 					//can fit?
 					if (x + widthWord > rect.right)
@@ -786,10 +788,10 @@ void KillFont (int fontID)
 					
 					while (text != text2)
 					{
-						VidPlotChar(*text, x, y, colorFg, colorBg);
-						int cw = GetCharWidthInl(*text) + bold;
+						int chr = Utf8GetCharacterAndIncrement(&text);
+						VidPlotChar(chr, x, y, colorFg, colorBg);
+						int cw = GetCharWidthInl(chr) + bold;
 						x += cw;
-						text++;
 					}
 					if (*text2 == '\n')
 					{
@@ -823,11 +825,12 @@ void KillFont (int fontID)
 			
 			while (text != text2)
 			{
-				VidPlotChar(*text, startX, startY, colorFg, colorBg);
-				int cw = GetCharWidthInl(*text) + bold;
+				int chr = Utf8GetCharacterAndIncrement(&text);
+				VidPlotChar(chr, startX, startY, colorFg, colorBg);
+				int cw = GetCharWidthInl(chr) + bold;
 				startX += cw;
-				text++;
 			}
+			
 			startY += lineHeight;
 			
 			text = text2 + 1;
