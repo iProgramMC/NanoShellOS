@@ -10,8 +10,11 @@
 #define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH + 20)
 #define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT + 20)
 
-#define ICON_TROPHY (900)
-#define ICON_SCALE  (901)
+#define ICON_RESIGN  (914)
+#define ICON_SCALE16 (915)
+#define ICON_QUES    (916)
+#define ICON_TROPHY  (900)
+#define ICON_SCALE   (901)
 #define ICON_PIECES_START (900)
 
 Window* g_pWindow;
@@ -27,6 +30,10 @@ enum
 	CHESS_MOVE_LIST,
 	CHESS_CAPTURES_BLACK,
 	CHESS_CAPTURES_WHITE,
+	CHESS_RESIGN_BLACK,
+	CHESS_RESIGN_WHITE,
+	CHESS_DRAW_BLACK,
+	CHESS_DRAW_WHITE,
 };
 
 void DrawFrameAroundBoard()
@@ -228,6 +235,78 @@ const char* GetPlayerName(eColor player)
 	return g_playerNames[player];
 }
 
+void ChessOnGameEnd(eErrorCode errCode, eColor col)
+{
+	char buffer[2048], buffer2[100];
+	
+	switch (errCode)
+	{
+		case ERROR_RESIGNATION_BLACK:
+		case ERROR_RESIGNATION_WHITE:
+		{
+			eColor won = errCode == ERROR_RESIGNATION_BLACK ? WHITE : BLACK;
+			
+			snprintf(buffer,  sizeof buffer,  "%s wins by resignation.\n\nWould you like to reset the board, and play another game?", GetPlayerName(won));
+			snprintf(buffer2, sizeof buffer2, "%s wins", GetPlayerName(won));
+			
+			if (MessageBox(
+				g_pWindow,
+				buffer,
+				buffer2,
+				MB_YESNO | ICON_TROPHY << 16
+			) == MBID_YES)
+			{
+				SetupBoard();
+				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
+			}
+			
+			break;
+		}
+		case ERROR_STALEMATE:
+		{
+			if (MessageBox(
+				g_pWindow,
+				"Stalemate!\n\nThis game is a draw.\n\nWould you like to reset the board, and play another game?",
+				"Game Draw",
+				MB_YESNO | ICON_SCALE << 16
+			) == MBID_YES)
+			{
+				SetupBoard();
+				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
+			}
+			break;
+		}
+		case ERROR_CHECKMATE:
+		{
+			snprintf(buffer,  sizeof buffer,  "Checkmate!\n\n%s Wins.\n\nWould you like to reset the board, and play another game?", GetPlayerName(col));
+			snprintf(buffer2, sizeof buffer2, "%s Wins", GetPlayerName(col));
+			
+			if (MessageBox(
+				g_pWindow,
+				buffer,
+				buffer2,
+				MB_YESNO | ICON_TROPHY << 16
+			) == MBID_YES)
+			{
+				SetupBoard();
+				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
+			}
+			
+			break;
+		}
+	}
+}
+
+int g_nMoveNumber = 0;
+
+void ChessClearGUI()
+{
+	g_nMoveNumber = 0;
+	ResetList(g_pWindow, CHESS_MOVE_LIST);
+	ResetList(g_pWindow, CHESS_CAPTURES_BLACK);
+	ResetList(g_pWindow, CHESS_CAPTURES_WHITE);
+}
+
 void ChessReleaseCursor(int x, int y)
 {
 	if (g_DraggedPieceRow != -1 && g_DraggedPieceCol != -1)
@@ -241,42 +320,12 @@ void ChessReleaseCursor(int x, int y)
 			eColor col = pPc->color;
 			eErrorCode err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
 			
-			char buffer[2048], buffer2[100];
-			
 			if (err != ERROR_SUCCESS) switch (err)
 			{
 				case ERROR_STALEMATE:
-				{
-					if (MessageBox(
-						g_pWindow,
-						"Stalemate!\n\nThis game is a draw.\n\nWould you like to reset the board, and play another game?",
-						"Game Draw",
-						MB_YESNO | ICON_SCALE << 16
-					) == MBID_YES)
-					{
-						SetupBoard();
-						RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
-					}
-					break;
-				}
 				case ERROR_CHECKMATE:
-				{
-					snprintf(buffer,  sizeof buffer,  "Checkmate!\n\n%s Wins.\n\nWould you like to reset the board, and play another game?", GetPlayerName(col));
-					snprintf(buffer2, sizeof buffer2, "%s Wins", GetPlayerName(col));
-					
-					if (MessageBox(
-						g_pWindow,
-						buffer,
-						buffer2,
-						MB_YESNO | ICON_TROPHY << 16
-					) == MBID_YES)
-					{
-						SetupBoard();
-						RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
-					}
-					
+					ChessOnGameEnd(err, col);
 					break;
-				}
 				default:
 					LogMsg("Cannot commit move: %d", err);
 			}
@@ -320,10 +369,6 @@ void UpdateFlashingTiles()
 		}
 	}
 }
-
-
-
-int g_nMoveNumber = 0;
 
 void ChessAddMoveToUI(const char* moveList)
 {
@@ -389,6 +434,19 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			RECT(rect, 10, g_BoardY + (BOARD_SIZE * PIECE_SIZE / 2) + 5, 40, (BOARD_SIZE * PIECE_SIZE / 2) - 5);
 			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_CAPTURES_BLACK, 0, 0);
 			
+			int btnWidth = RIGHT_BAR_WIDTH / 2;
+			RECT(rect, CHESS_WIDTH - btnWidth - 5, 10, btnWidth - 5, 20);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_BLACK, ICON_RESIGN, 0);
+			RECT(rect, CHESS_WIDTH - btnWidth * 2 - 10, 10, btnWidth - 5, 20);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Draw",   CHESS_DRAW_BLACK,   ICON_SCALE16, 0);
+			SetControlDisabled(pWindow, CHESS_DRAW_BLACK, true);
+			
+			RECT(rect, CHESS_WIDTH - btnWidth - 5, CHESS_HEIGHT - 30, btnWidth - 5, 20);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_WHITE, ICON_RESIGN, 0);
+			RECT(rect, CHESS_WIDTH - btnWidth * 2 - 10, CHESS_HEIGHT - 30, btnWidth - 5, 20);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Draw",   CHESS_DRAW_WHITE,   ICON_SCALE16, 0);
+			SetControlDisabled(pWindow, CHESS_DRAW_WHITE, true);
+			
 			g_FlashTimerID = AddTimer(pWindow, 250, EVENT_USER);
 			
 			break;
@@ -412,6 +470,37 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 		}
 		case EVENT_COMMAND:
 		{
+			switch (parm1)
+			{
+				case CHESS_RESIGN_WHITE:
+				{
+					if (g_playingPlayer != WHITE)
+					{
+						MessageBox(pWindow, "You can't resign. It's not your turn!", "Chess", MB_OK | ICON_WARNING << 16);
+						break;
+					}
+					
+					if (MessageBox(pWindow, "Are you sure you want to resign as white?", "Chess", ICON_QUES << 16 | MB_YESNO) == MBID_YES)
+					{
+						ChessOnGameEnd(ERROR_RESIGNATION_WHITE, BLACK);
+					}
+					break;
+				}
+				case CHESS_RESIGN_BLACK:
+				{
+					if (g_playingPlayer != BLACK)
+					{
+						MessageBox(pWindow, "You can't resign. It's not your turn!", "Chess", MB_OK | ICON_WARNING << 16);
+						break;
+					}
+					
+					if (MessageBox(pWindow, "Are you sure you want to resign as black?", "Chess", ICON_QUES << 16 | MB_YESNO) == MBID_YES)
+					{
+						ChessOnGameEnd(ERROR_RESIGNATION_BLACK, WHITE);
+					}
+					break;
+				}
+			}
 			break;
 		}
 		case EVENT_CLOSE:

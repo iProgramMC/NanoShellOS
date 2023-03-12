@@ -529,5 +529,14 @@ CALL_END
 CALL(GetResource, RST_LOOK_UP_RESOURCE, Resource*, int resID)
 	RARGS(resID)
 CALL_END
+CALL(SetControlDisabled, WIN_SET_CONTROL_DISABLED, void, Window* pWindow, int comboID, bool flag)
+	SARGS(pWindow, comboID, flag)
+CALL_END
+CALL(SetControlFocused, WIN_SET_CONTROL_FOCUSED, void, Window* pWindow, int comboID, bool flag)
+	SARGS(pWindow, comboID, flag)
+CALL_END
+CALL(SetControlVisible, WIN_SET_CONTROL_VISIBLE, void, Window* pWindow, int comboID, bool flag)
+	SARGS(pWindow, comboID, flag)
+CALL_END
 
 

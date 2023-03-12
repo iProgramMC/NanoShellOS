@@ -121,6 +121,9 @@ void        SetImageCtlColor(Window* pWindow, int comboID, uint32_t color);
 void        SetImageCtlCurrentImage(Window* pWindow, int comboID, Image* pImage);
 Image*      GetImageCtlCurrentImage(Window* pWindow, int comboID);
 void        ImageCtlZoomToFill(Window* pWindow, int comboID);
+void        SetControlDisabled(Window* pWindow, int comboID, bool flag);
+void        SetControlFocused (Window* pWindow, int comboID, bool flag);
+void        SetControlVisible (Window* pWindow, int comboID, bool flag);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

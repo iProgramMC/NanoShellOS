@@ -37,9 +37,12 @@ typedef enum
 	ERROR_NOT_YOUR_TURN,
 	ERROR_MOVE_ILLEGAL,
 	ERROR_MOVE_WOULD_PUT_US_IN_CHECK,
+	ERROR_OUT_OF_BOUNDS,
 	
 	ERROR_STALEMATE = 1000,
-	ERROR_CHECKMATE = 1001,
+	ERROR_CHECKMATE,
+	ERROR_RESIGNATION_BLACK,
+	ERROR_RESIGNATION_WHITE,
 }
 eErrorCode;
 
@@ -90,5 +93,6 @@ void FlashTile(int row, int column);
 eColor GetNextPlayer(eColor curPlr);
 
 void ChessAddMoveToUI(const char* moveList);
+void ChessClearGUI();
 
 #endif//CHESS_H

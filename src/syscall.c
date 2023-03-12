@@ -356,6 +356,9 @@ enum
 		WIN_SET_LIST_ITEM_TEXT,
 		WIN_GET_ICON_IMAGE,
 		RST_LOOK_UP_RESOURCE,
+		WIN_SET_CONTROL_DISABLED,
+		WIN_SET_CONTROL_FOCUSED,
+		WIN_SET_CONTROL_VISIBLE,
 };
 
 const void *WindowCall[] = {
@@ -562,6 +565,9 @@ const void *WindowCall[] = {
 		SetListItemText,
 		GetIconImage,
 		ExLookUpResource,
+		SetDisabledControl,
+		SetFocusedControl,
+		SetControlVisibility,
 };
 
 

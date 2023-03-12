@@ -103,7 +103,7 @@ bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
 		
 		BoardPiece * pPiece = GetPiece(rowCur, colCur);
 		
-		LogMsg("checking piece: %c%d %c%d  %d  %d", colCur+'a', rowCur+1, colSrc+'a', rowSrc+1, rowDiffUnit, colDiffUnit);
+		//LogMsg("checking piece: %c%d %c%d  %d  %d", colCur+'a', rowCur+1, colSrc+'a', rowSrc+1, rowDiffUnit, colDiffUnit);
 		
 		// we're OOB. seems like we overshot or something
 		if (!pPiece)
@@ -115,7 +115,7 @@ bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
 		// we're hitting a piece, that is DIFFERENT from our destination, on our way there. Get outta here
 		if (pPiece->piece != PIECE_NONE)
 		{
-			LogMsg("diff: %c%d %d", colCur+'a', rowCur+1, 0);
+			//LogMsg("diff: %c%d %d", colCur+'a', rowCur+1, 0);
 			return false;
 		}
 		
@@ -485,6 +485,9 @@ eErrorCode ChessCheckMove(int rowSrc, int colSrc, int rowDst, int colDst, eCastl
 	BoardPiece* pcSrc = GetPiece(rowSrc, colSrc);
 	BoardPiece* pcDst = GetPiece(rowDst, colDst);
 	
+	if (!pcSrc || !pcDst)
+		return ERROR_OUT_OF_BOUNDS;
+	
 	// Check if it even makes sense to move here
 	if (pcDst->piece == PIECE_KING)
 		return ERROR_CANNOT_CAPTURE_KING;
@@ -582,7 +585,7 @@ eMateType ChessCheckmateOrStalemate(eColor color)
 			UNUSED bool bEnPassant;
 			if (ChessCheckMove(iRow, iCol, jRow, jCol, &castleType, &bEnPassant, false) == ERROR_SUCCESS)
 			{
-				LogMsg("Move from %c%d to %c%d works", iCol+'a', iRow+1, jCol+'a', jRow+1);
+				//LogMsg("Move from %c%d to %c%d works", iCol+'a', iRow+1, jCol+'a', jRow+1);
 				g_playingPlayer = backup;
 				return MATE_NONE;
 			}
@@ -886,7 +889,7 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 extern int g_nMoveNumber;
 void SetupBoard()
 {
-	g_nMoveNumber = 0;
+	ChessClearGUI();
 	memset(&g_pieces, 0, sizeof g_pieces);
 	
 	// allow castling initially

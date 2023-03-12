@@ -492,7 +492,6 @@ STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if addi
 
 Image *GetIconImageFromResource(int resID)
 {
-	SLogMsg("GetIconImageFromResource(%d)",resID);
 	Resource* pRes = ExLookUpResource(resID);
 	
 	if (!pRes) return NULL;
