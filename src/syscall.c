@@ -359,6 +359,8 @@ enum
 		WIN_SET_CONTROL_DISABLED,
 		WIN_SET_CONTROL_FOCUSED,
 		WIN_SET_CONTROL_VISIBLE,
+		WIN_PROG_BAR_SET_PROGRESS,
+		WIN_PROG_BAR_SET_MAX_PROG,
 };
 
 const void *WindowCall[] = {
@@ -568,6 +570,8 @@ const void *WindowCall[] = {
 		SetDisabledControl,
 		SetFocusedControl,
 		SetControlVisibility,
+		ProgBarSetProgress,
+		ProgBarSetMaxProg,
 };
 
 

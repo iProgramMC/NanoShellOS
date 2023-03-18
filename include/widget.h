@@ -320,4 +320,14 @@ void RenderButtonShape(Rectangle rect, unsigned colorDark, unsigned colorLight, 
  */
 void RenderButtonShapeSmall(Rectangle rectb, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 
+/**
+ * Sets the progress field of a progress bar.
+ */
+void ProgBarSetProgress(Window* pWindow, int comboID, int prog);
+
+/**
+ * Sets the maximum progress field of a progress bar.
+ */
+void ProgBarSetMaxProg(Window* pWindow, int comboID, int max_prog);
+
 #endif//_WIDGET_H

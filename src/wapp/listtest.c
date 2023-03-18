@@ -16,6 +16,13 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 	{
 		case EVENT_PAINT:
 			break;
+		case EVENT_USER:
+		{
+			pWindow->m_data = (void*)(((int)pWindow->m_data + 1) % 200);
+			ProgBarSetProgress(pWindow, 3, (int)pWindow->m_data);
+			CallControlCallback(pWindow, 3, EVENT_PAINT, 0, 0);
+			break;		
+		}
 		case EVENT_CREATE:
 		{
 			Rectangle r;
@@ -24,8 +31,15 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			RECT(r, 8, 8, LISTTEST_WIDTH - 16, 40);
 			AddControlEx(pWindow, CONTROL_TAB_PICKER, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 2, 0, 0);
 			
-			RECT(r, 8, 8 + 40, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16 - 40);
+			RECT(r, 8, 8 + 40, LISTTEST_WIDTH - 16, 30);
+			AddControlEx(pWindow, CONTROL_PROGRESS_BAR, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 3, 84, 200);
+			
+			RECT(r, 8, 8 + 40 + 40, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16 - 40 - 40);
 			AddControlEx(pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1, 0, 0);
+			
+			pWindow->m_data = (void*)42;
+			
+			AddTimer(pWindow, 10, EVENT_USER);
 			
 			/*RECT (r, 20, 20, 1, 240-40);
 			//goes from 0-99

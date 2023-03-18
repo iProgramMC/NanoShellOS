@@ -297,6 +297,8 @@ enum {
 	CONTROL_BUTTON_ICON_CHECKABLE,
 	//Tab picker control.
 	CONTROL_TAB_PICKER,
+	//Progress bar control.
+	CONTROL_PROGRESS_BAR,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.
