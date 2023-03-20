@@ -18,9 +18,9 @@
 #define PAGE_SIZE           (0x1000)
 
 #define USER_EXEC_MAPPING_START    0x00C00000
-#define USER_HEAP_DYNAMEM_START    0x40000000
-#define KERNEL_HEAP_DYNAMEM_START  0x80000000
-#define USER_DYNAMIC_LIBS_START    0xA0000000
+#define USER_HEAP_DYNAMEM_START    0x40000000 // User Page Dynamic Mapper
+#define KERNEL_HEAP_PBA_START      0x80000000 // Kernel Page Based Allocator
+#define KERNEL_HEAP_DYNAMEM_START  0x90000000 // Kernel Page Dynamic Mapper
 #define KERNEL_CODE_AND_DATA_START 0xC0000000
 #define MMIO_AREA_0                0xD0000000
 #define VBE_FRAMEBUFFER_HINT       0xE0000000
@@ -85,6 +85,13 @@ typedef struct UserHeap
 	uint32_t   m_nMappingHint;     // The hint to use when mapping with no hint next.
 }
 UserHeap;
+
+typedef struct KernelHeap
+{
+	PageTable* m_pPageTables[(0xC0000000 - 0x90000000) >> 22]; // The kernel's page tables, referenced by the page directory.
+	uint32_t   m_nMappingHint;    // The hint to use when mapping with no hint next.
+}
+KernelHeap;
 
 // Exposed memory functions
 

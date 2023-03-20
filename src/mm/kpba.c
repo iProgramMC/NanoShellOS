@@ -1,5 +1,5 @@
 //  ***************************************************************
-//  mm/kheap.c - Creation date: 11/08/2022
+//  mm/kpba.c - Creation date: 11/08/2022
 //  -------------------------------------------------------------
 //  NanoShell Copyright (C) 2022 - Licensed under GPL V3
 //
@@ -7,7 +7,7 @@
 //  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
 //  ***************************************************************
 
-// Namespace: Mh (Memory manager, kernel Heap)
+// Namespace: Mh (Memory manager, kernel page based allocator)
 
 #include <string.h>
 #include <memory.h>
@@ -37,8 +37,8 @@ int g_KernelPageAllocOffset = 0;
 
 SafeLock g_KernelHeapLock;//TODO
 
-// Can allocate up to 256 MB of RAM.  No need for more I think,
-// but if there is a need, just increase this. Recommend a Power of 2
+// The kernel page based allocator can allocate a total maximum of 256 MiB of RAM.
+// This is good enough. It can go from 0x80000000 to 0x90000000.
 #define C_MAX_KERNEL_HEAP_PAGE_ENTRIES 65536
 
 uint32_t  g_KernelPageEntries  [C_MAX_KERNEL_HEAP_PAGE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -118,6 +118,8 @@ void MhInitialize()
 	}
 	
 	MmTlbInvalidate();
+	
+	MkSetUpKernelMapping();
 }
 
 void* MhSetupPage(int index, uint32_t* pPhysOut)

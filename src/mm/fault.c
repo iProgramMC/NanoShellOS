@@ -79,9 +79,15 @@ void MmOnPageFault(Registers *pRegs)
 		}
 		if (!pPageEntry)
 		{
-			// Hrm, maybe it's part of the kernel heap, that can be demand-paged too
-			pPageEntry = MhGetPageEntry(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK);
+			// Hrm, maybe it's part of the kernel page based allocator, that can be demand-paged too
 			bIsKernelHeap = true;
+			pPageEntry = MhGetPageEntry(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK);
+			
+			// if it's part of the kernel mapper
+			if (!pPageEntry)
+			{
+				pPageEntry = MkiGetPageEntryAt(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK);
+			}
 		}
 		
 		if (pPageEntry)
@@ -120,6 +126,7 @@ void MmOnPageFault(Registers *pRegs)
 				
 				MmInvalidateSinglePage(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK);
 				
+				// TODO: figure out why removing this crashes programs
 				memset((void*)(pRegs->cr2 & PAGE_BIT_ADDRESS_MASK), nScrubByte, PAGE_SIZE);
 				
 				// Let's go!

@@ -61,7 +61,7 @@ void MmUsePageDirectory(uintptr_t pageDir);   //unsafe!! This is exposed just so
 void MmInvalidateSinglePage(uintptr_t add);
 void MmOnPageFault(Registers* pRegs);
 
-// Kernel heap
+// Kernel page based allocator
 void* MhAllocate(size_t size, uint32_t* pPhysOut);
 void* MhReAllocate(void *oldPtr, size_t newSize);
 void* MhAllocateSinglePage(uint32_t* pPhysOut);
@@ -70,6 +70,12 @@ void  MhFree(void* pPage);
 void* MhMapPhysicalMemory(uintptr_t physMem, size_t nPages, bool bReadWrite);
 void  MhUnMapPhysicalMemory(void *pAddr);
 uint32_t* MhGetPageEntry(uintptr_t address);
+
+// Kernel memory mapper
+bool MkMapMemoryFixedHint(uintptr_t hint, size_t numPages, uint32_t *pPhysicalAddresses, bool bReadWrite, int clobberingLevel, bool bIsMMIO, uint32_t nDaiFlags);
+bool MkUnMap(uintptr_t mem, size_t numPages);
+void MkSetUpKernelMapping();
+uint32_t* MkiGetPageEntryAt(uintptr_t address);
 
 // User heap manager
 void MuUseHeap (UserHeap* pHeap);
