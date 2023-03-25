@@ -367,6 +367,9 @@ void FsInit ();
 	// Releases all file resources owned by a task.
 	void FiReleaseResourcesFromTask(void* task);
 	
+	// Gets the current working directory of the running process.
+	const char* FiGetCwd();
+	
 #endif
 
 #endif//_VFS_H

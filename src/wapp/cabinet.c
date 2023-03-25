@@ -18,6 +18,8 @@
 #define CABINET_PROPS_WIDTH  (300)
 #define CABINET_PROPS_HEIGHT (300)
 
+void CabinetChangeDirectory(Window* pWindow, const char * cwd, bool bTakeToRootOnFailure);
+
 enum
 {
 	PROPS_NOTHING,
@@ -500,7 +502,6 @@ static void AddFileElementToList(Window* pWindow, const char * text, int icon, u
 
 static void UpdateDirectoryListing (Window* pWindow)
 {
-reset:
 	ClearFileListing(pWindow);
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
@@ -513,9 +514,8 @@ reset:
 	int dd = FiOpenDir (g_cabinetCWD);
 	if (dd < 0)
 	{
-		MessageBox(pWindow, "Could not load directory, taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
-		strcpy (g_cabinetCWD, "/");
-		goto reset;
+		CabinetChangeDirectory(pWindow, "/", false);
+		return;
 	}
 	
 	int filesDone = 0;
@@ -571,29 +571,9 @@ reset:
 	CallControlCallback(pWindow, MAIN_PATH_TEXT, EVENT_PAINT, 0, 0);
 }
 
-//TODO FIXME
 void CdBack(Window* pWindow)
 {
-	for (int i = PATH_MAX - 1; i >= 0; i--)
-	{
-		if (g_cabinetCWD[i] == PATH_SEP)
-		{
-			g_cabinetCWD[i+(i == 0)] = 0;
-			
-			int result = FiChangeDir(g_cabinetCWD);
-			if (result < 0)
-			{
-				MessageBox(pWindow, "Cannot find parent directory.\n\nGoing back to root.", pWindow->m_title, ICON_ERROR << 16 | MB_OK);
-				
-				strcpy (g_cabinetCWD, "/");
-				FiChangeDir("/");
-				return;
-			}
-			
-			UpdateDirectoryListing (pWindow);
-			break;
-		}
-	}
+	CabinetChangeDirectory(pWindow, "..", true);
 }
 
 void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
@@ -700,10 +680,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				int dd = FiOpenDir(g_cabinetCWD);
 				if (dd < 0)
 				{
-					MessageBox(pWindow, "This directory has been deleted. Taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
-					strcpy (g_cabinetCWD, "/");
-					FiChangeDir("/");
-					UpdateDirectoryListing(pWindow);
+					CabinetChangeDirectory(pWindow, "/", 0);
 					break;
 				}
 				
@@ -731,27 +708,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						if (sr.m_type & FILE_TYPE_DIRECTORY)
 						{
 							OnBusy(pWindow);
-							
-							// Is a directory.  Navigate to it.
-							char cwd_copy[sizeof(g_cabinetCWD)];
-							memcpy(cwd_copy, g_cabinetCWD, sizeof(g_cabinetCWD));
-							if (g_cabinetCWD[1] != 0)
-								strcat (g_cabinetCWD, "/");
-							strcat (g_cabinetCWD, pFileName);
-							
-							int result = FiChangeDir(g_cabinetCWD);
-							if (result < 0)
-							{
-								memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
-								char buffer [256];
-								sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
-								MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
-							}
-							else
-							{
-								UpdateDirectoryListing (pWindow);
-							}
-							
+							CabinetChangeDirectory(pWindow, pFileName, false);
 							OnNotBusy(pWindow);
 						}
 						else if (EndsWith (pFileName, ".nse"))
@@ -897,8 +854,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						DestroyWindow (pWindow);
 						break;
 					case MENU$FILE$ROOT:
-						strcpy (g_cabinetCWD, "/");
-						FiChangeDir("/");
+						CabinetChangeDirectory(pWindow, "/", false);
 						UpdateDirectoryListing(pWindow);
 						break;
 					case MENU$VIEW$REFRESH:
@@ -1036,10 +992,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$HELP, MENU$HELP$ABOUT, "About File Cabinet");
 			}
 			
-			strcpy (g_cabinetCWD, "/");
-			FiChangeDir("/"); // just in case we inherited something else from the parent.
-			
-			UpdateDirectoryListing (pWindow);
+			CabinetChangeDirectory(pWindow, "/", false);
 			
 			// Add the cool bar widgets
 			int i = 0;
@@ -1108,6 +1061,30 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
+}
+
+void CabinetChangeDirectory(Window* pWindow, const char * cwd, bool bTakeToRootOnFailure)
+{
+	if (strlen(cwd) >= sizeof g_cabinetCWD - 1) return;
+	
+	if (FiChangeDir(cwd) < 0)
+	{
+		char buffer [256];
+		sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\n%s", cwd,
+			bTakeToRootOnFailure ? "Changing back to the root directory." : "Try clicking the 'Refresh' button in the top bar.");
+		MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+		
+		if (bTakeToRootOnFailure)
+			CabinetChangeDirectory(pWindow, "/", false);
+		
+		return;
+	}
+	
+	//note: the appropriate length checks were done above
+	strncpy(g_cabinetCWD, FiGetCwd(), sizeof g_cabinetCWD - 1);
+	g_cabinetCWD[sizeof g_cabinetCWD - 1] = 0;
+	
+	UpdateDirectoryListing(pWindow);
 }
 
 static void CreateListView(Window* pWindow)

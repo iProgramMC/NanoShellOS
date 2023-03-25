@@ -93,12 +93,6 @@ void VidSetClipRectP (Rectangle rect)
 		VidSetClipRect(&rect);
 }
 
-const char* FiGetCwd ()
-{
-	extern char g_cwd[PATH_MAX + 2];
-	return g_cwd;
-}
-
 void LogString(const char* pText)
 {
 	LogMsgNoCr("%s", pText);

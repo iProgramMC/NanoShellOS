@@ -20,6 +20,12 @@
 
 char g_cwd[PATH_MAX+2];
 
+const char* FiGetCwd ()
+{
+	extern char g_cwd[PATH_MAX + 2];
+	return g_cwd;
+}
+
 void FsAddReference(FileNode* pNode)
 {
 	//SLogMsg("FsAddReference(%s) -> %d", pNode->m_name, pNode->m_refCount + 1);
