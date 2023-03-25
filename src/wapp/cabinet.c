@@ -165,7 +165,7 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 					RECTA(r, 10, 10, CABINET_PROPS_WIDTH - 20, CABINET_PROPS_HEIGHT - 50 - TITLE_BAR_HEIGHT);
 					AddControl(pWindow, CONTROL_TABLEVIEW, r, NULL, PROPS_DETAILS_TABLE, 0, TABLEVIEW_NOICONCOLUMN);
 					
-					AddTableColumn(pWindow, PROPS_DETAILS_TABLE, "Property", 70);
+					AddTableColumn(pWindow, PROPS_DETAILS_TABLE, "Property", 75);
 					AddTableColumn(pWindow, PROPS_DETAILS_TABLE, "Value", CABINET_PROPS_WIDTH - 100 - 20);
 					
 					const char* text[] = {NULL, NULL};
@@ -185,7 +185,7 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 					text[0] = "Architecture";
 					text[1] = ElfGetArchitectureString(pPrgInfo->m_machine, pPrgInfo->m_word_size);
 					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
-					text[0] = "Architecture";
+					text[0] = "System ABI";
 					text[1] = ElfGetOSABIString(pPrgInfo->m_os_abi);
 					AddTableRow(pWindow, PROPS_DETAILS_TABLE, text, ICON_NULL);
 					
@@ -352,6 +352,7 @@ enum
 	CB$VIEWTABLE, //
 	CB$WHATSTHIS, //pops out 'help' at, say, <root>/Help/Cabinet.md?
 	CB$PACKAGER,  //zip archive?
+	CB$DELETE,    //delete the file
 };
 
 void CabinetMountRamDisk(Window *pwnd, const char *pfn)
@@ -578,16 +579,18 @@ void CdBack(Window* pWindow)
 		if (g_cabinetCWD[i] == PATH_SEP)
 		{
 			g_cabinetCWD[i+(i == 0)] = 0;
-			FileNode* checkNode = FsResolvePath(g_cabinetCWD);
-			if (!checkNode)
+			
+			int result = FiChangeDir(g_cabinetCWD);
+			if (result < 0)
 			{
 				MessageBox(pWindow, "Cannot find parent directory.\n\nGoing back to root.", pWindow->m_title, ICON_ERROR << 16 | MB_OK);
 				
 				strcpy (g_cabinetCWD, "/");
+				FiChangeDir("/");
 				return;
 			}
+			
 			UpdateDirectoryListing (pWindow);
-			FsReleaseReference(checkNode);
 			break;
 		}
 	}
@@ -689,20 +692,21 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 {
 	switch (messageType)
 	{
-		case EVENT_PAINT:
-		{
-			/*
-			VidTextOut (g_cbntOldCWD, 8, 10 + TITLE_BAR_HEIGHT + 28, WINDOW_BACKGD_COLOR, WINDOW_BACKGD_COLOR);
-			VidTextOut (g_cabinetCWD, 8, 10 + TITLE_BAR_HEIGHT + 28,  WINDOW_TEXT_COLOR , WINDOW_BACKGD_COLOR);
-			strcpy(g_cbntOldCWD, g_cabinetCWD);
-			*/
-			break;
-		}
 		case EVENT_COMMAND:
 		{
 			if (parm1 == MAIN_LISTVIEW)
 			{
-				FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
+				//FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
+				int dd = FiOpenDir(g_cabinetCWD);
+				if (dd < 0)
+				{
+					MessageBox(pWindow, "This directory has been deleted. Taking you back to root.", "Cabinet", MB_OK | ICON_WARNING << 16);
+					strcpy (g_cabinetCWD, "/");
+					FiChangeDir("/");
+					UpdateDirectoryListing(pWindow);
+					break;
+				}
+				
 				const char* pFileName = GetFileNameFromList(pWindow, parm2);//GetElementStringFromList (pWindow, parm1, parm2);
 				//LogMsg("Double clicked element: %s", pFileName);
 				
@@ -719,10 +723,12 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				}
 				else
 				{
-					FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
-					if (pFileNode)
+					StatResult sr;
+					int res = FiStatAt(dd, pFileName, &sr);
+					
+					if (res >= 0)
 					{
-						if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
+						if (sr.m_type & FILE_TYPE_DIRECTORY)
 						{
 							OnBusy(pWindow);
 							
@@ -733,8 +739,8 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 								strcat (g_cabinetCWD, "/");
 							strcat (g_cabinetCWD, pFileName);
 							
-							FileNode *pCurrent = FsResolvePath (g_cabinetCWD);
-							if (!pCurrent)
+							int result = FiChangeDir(g_cabinetCWD);
+							if (result < 0)
 							{
 								memcpy(g_cabinetCWD, cwd_copy, sizeof(g_cabinetCWD));
 								char buffer [256];
@@ -744,7 +750,6 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 							else
 							{
 								UpdateDirectoryListing (pWindow);
-								FsReleaseReference(pCurrent);
 							}
 							
 							OnNotBusy(pWindow);
@@ -876,14 +881,12 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					else
 					{
 						char buffer [256];
-						sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
+						sprintf (buffer, "Cannot access file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
 						MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 					}
-					
-					FsReleaseReference(pFileNode);
 				}
 				
-				FsReleaseReference(pFolderNode);
+				FiCloseDir(dd);
 			}
 			else if (parm1 == MAIN_MENU_BAR)
 			{
@@ -895,6 +898,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						break;
 					case MENU$FILE$ROOT:
 						strcpy (g_cabinetCWD, "/");
+						FiChangeDir("/");
 						UpdateDirectoryListing(pWindow);
 						break;
 					case MENU$VIEW$REFRESH:
@@ -939,8 +943,52 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 					
 					break;
 				}
+				case CB$DELETE:
+				{
+					const char* pFileName = GetFileNameFromList(pWindow, GetSelectedFileIndex(pWindow));
+					if (!pFileName) break;
+					if (strcmp(pFileName, "..") == 0) break;
+					
+					char buffer[1024];
+					
+					// check what it is
+					StatResult sr;
+					int res = FiStat(pFileName, &sr);
+					if (res < 0)
+					{
+						snprintf(buffer, sizeof buffer, "The file '%s' is not accessible. It may have been moved or deleted.\n\nClick the 'Refresh' button in the top toolbar.", pFileName);
+						MessageBox(pWindow, buffer, "Cabinet", MB_OK | ICON_ERROR << 16);
+						break;
+					}
+					
+					snprintf(buffer, sizeof buffer, "Are you sure you want to delete '%s'?", pFileName);
+					
+					if (MessageBox(pWindow, buffer, "Confirm File Deletion", MB_YESNO | ICON_WARNING << 16) == MBID_YES)
+					{
+						// is this a directory?
+						if (sr.m_type & FILE_TYPE_DIRECTORY)
+						{
+							// TODO
+							snprintf(buffer, sizeof buffer, "The directory '%s' cannot be deleted for now, recursive deletion is still in the works.", pFileName);
+							MessageBox(pWindow, buffer, "Cabinet", MB_OK | ICON_WARNING << 16);
+						}
+						else
+						{
+							int res = FiUnlinkFile(pFileName);
+							if (res < 0)
+							{
+								snprintf(buffer, sizeof buffer, "The file '%s' cannot be deleted.\n\n%s", pFileName, GetErrNoString(res));
+								MessageBox(pWindow, buffer, "Cabinet", MB_OK | ICON_WARNING << 16);
+							}
+							
+							UpdateDirectoryListing(pWindow);
+						}
+					}
+					
+					break;
+				}
 				default:
-					MessageBox(pWindow, "Not implemented!  Check back later or something", "Cabinet", MB_OK | ICON_INFO << 16);
+					MessageBox(pWindow, "Not implemented! Check back later or something.", "Cabinet", MB_OK | ICON_INFO << 16);
 			}
 			break;
 		}
@@ -989,6 +1037,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 			}
 			
 			strcpy (g_cabinetCWD, "/");
+			FiChangeDir("/"); // just in case we inherited something else from the parent.
 			
 			UpdateDirectoryListing (pWindow);
 			
@@ -1005,6 +1054,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				-1,
 				ICON_PROPERTIES, ICON_FILE_SEARCH,
 				ICON_WHATS_THIS, ICON_PACKAGER,
+				ICON_DELETE,
 			};
 			// TODO
 			int button_actions[] = {
@@ -1018,6 +1068,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				-1,
 				CB$PROPERTIES, CB$SEARCH,
 				CB$WHATSTHIS, CB$PACKAGER,
+				CB$DELETE,
 			};
 			int x_pos = PADDING_AROUND_LISTVIEW;
 			for (i = 0; i < (int)ARRAY_COUNT(button_icons); i++)
