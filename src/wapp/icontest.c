@@ -9,132 +9,413 @@
 #include <wmenu.h>
 #include <image.h>
 
-/*
-static int lastTick1 = 0;
-static int lastTick2 = 0;
-static int lastTick3 = 0;
-*/
+#define ICON_WIDTH  (80)
+#define ICON_HEIGHT (60)
 
-int g_IconTestTooltipNumber = 0;
+#define DOUBLE_CLICK_TIMING (200) // 50 ms. Ideally, this would be a theming property or something
 
-Image* GetIconImage(IconType type, int sz);
+SAI int DtMax(int x, int y)
+{
+	return x > y ? x : y;
+}
+
+SAI int DtMin(int x, int y)
+{
+	return x < y ? x : y;
+}
+
+SAI int DtAbs(int x)
+{
+	return x < 0 ? -x : x;
+}
+
+typedef struct DesktopIcon
+{
+	struct DesktopIcon *m_pNext, *m_pPrev;
+	
+	int m_icon;
+	
+	int m_x, m_y;
+	int m_offsetX, m_offsetY;
+	
+	// a big amount of text, but this is fine
+	char m_text[2000];
+	
+	char m_shown_text[64]; // a wrapped version of the text
+	
+	bool m_bEverDrawn;
+	Rectangle m_DrawnIconRect;
+	Rectangle m_DrawnTextRect;
+	
+	bool m_bSelected;
+	
+	int m_LastClicked;
+}
+DesktopIcon;
+
+// going to allow only one instance for now. This application is for testing, anyways.
+bool g_bIconTestRunning = false;
+bool g_bDraggingAnIcon = false;
+bool g_bWasClickingBefore = false;
+int g_DraggingCursor = -1;
+DesktopIcon* g_pFirstIcon;         // the linked lisst
+DesktopIcon* g_pHeldIcon = NULL;   // the icon that's currently being clicked/dragged
+Image g_BlankImage = { 0, 0, NULL };
+Window* g_pIconTestWindow = NULL;
+Point g_StartedClickAt;
+
+void DtAddIconToList(DesktopIcon* pIcon)
+{
+	if (g_pFirstIcon)
+	{
+		g_pFirstIcon->m_pPrev = pIcon;
+		pIcon->m_pNext = g_pFirstIcon;
+	}
+	g_pFirstIcon = pIcon;
+}
+
+void DtRemoveIconFromList(DesktopIcon* pIcon)
+{
+	if (pIcon->m_pNext)
+		pIcon->m_pNext->m_pPrev = pIcon->m_pPrev;
+	
+	if (pIcon->m_pPrev)
+		pIcon->m_pPrev->m_pNext = pIcon->m_pNext;
+	
+	if (pIcon == g_pFirstIcon)
+		g_pFirstIcon = pIcon->m_pNext;
+	
+	if (pIcon == g_pHeldIcon)
+		g_pHeldIcon = NULL;
+	
+	MmFree(pIcon);
+}
+
+int g_IconX, g_IconY;
+
+void DtAdvanceIconCoords()
+{
+	g_IconX += ICON_WIDTH;
+	if (g_IconX > 400)
+	{
+		g_IconX -= 400;
+		g_IconY += ICON_HEIGHT;
+		if (g_IconY >= 300)
+			g_IconY = 0;
+	}
+}
+
+void DtRedrawBackground(Rectangle rect)
+{
+	rect.right--;
+	rect.bottom--;
+	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
+}
+
+void DtAddIcon(int icon, const char* text)
+{
+	DesktopIcon* pIcon = MmAllocate(sizeof(DesktopIcon));
+	memset(pIcon, 0, sizeof *pIcon);
+	
+	pIcon->m_icon = icon;
+	pIcon->m_x = g_IconX;
+	pIcon->m_y = g_IconY;
+	
+	strncpy(pIcon->m_text, text, sizeof pIcon->m_text - 1);
+	pIcon->m_text[sizeof pIcon->m_text - 1] = 0;
+	
+	char buffer[3000];
+	WrapText(buffer, pIcon->m_text, ICON_WIDTH - 8);
+	
+	strncpy(pIcon->m_shown_text, buffer, sizeof pIcon->m_shown_text - 1);
+	pIcon->m_shown_text[sizeof pIcon->m_shown_text - 1] = 0;
+	
+	strcpy (pIcon->m_shown_text + sizeof pIcon->m_shown_text - 4, "...");
+	
+	DtAdvanceIconCoords();
+	DtAddIconToList(pIcon);
+}
+
+Rectangle DtIconGetTotalBounds(DesktopIcon* pIcon)
+{
+	Rectangle x;
+	
+	x.left   = DtMin(pIcon->m_DrawnIconRect.left,   pIcon->m_DrawnTextRect.left);
+	x.top    = DtMin(pIcon->m_DrawnIconRect.top,    pIcon->m_DrawnTextRect.top);
+	x.right  = DtMax(pIcon->m_DrawnIconRect.right,  pIcon->m_DrawnTextRect.right);
+	x.bottom = DtMax(pIcon->m_DrawnIconRect.bottom, pIcon->m_DrawnTextRect.bottom);
+	
+	return x;
+}
+
+void DtDrawIcon(DesktopIcon* pIcon)
+{
+	pIcon->m_bEverDrawn = true;
+	
+	// draw the icon
+	int iconX = pIcon->m_x + (ICON_WIDTH - 32) / 2, iconY = pIcon->m_y + 3;
+	RenderIconForceSize(pIcon->m_icon, iconX, iconY, 32);
+	
+	Rectangle iconRect = { iconX, iconY, iconX + 32, iconY + 32 };	
+	pIcon->m_DrawnIconRect = iconRect;
+	
+	
+	int width = 0, height = 0;
+	VidTextOutInternal(pIcon->m_shown_text, 0, 0, 0, 0, true, &width, &height);
+	
+	width += 2;
+	height += 2;
+	
+	Rectangle textRect = { pIcon->m_x + (ICON_WIDTH - width) / 2, pIcon->m_y + 40, 0, 0 };
+	textRect.right  = textRect.left + width;
+	textRect.bottom = textRect.top  + height;
+	
+	uint32_t bg = TRANSPARENT, fg = WINDOW_TEXT_COLOR;
+	
+	if (pIcon->m_bSelected)
+	{
+		bg = SELECTED_ITEM_COLOR;
+		fg = WINDOW_TEXT_COLOR_LIGHT;
+	}
+	
+	if (bg == TRANSPARENT)
+		DtRedrawBackground(textRect);
+	else
+		VidFillRect(bg, textRect.left, textRect.top, textRect.right - 1, textRect.bottom - 1);
+	
+	textRect.top++;
+	VidDrawText(pIcon->m_shown_text, textRect, TEXTSTYLE_HCENTERED, fg, TRANSPARENT);
+	textRect.top--;
+	
+	pIcon->m_DrawnTextRect = textRect;
+}
+
+DesktopIcon* DtGetIconByPosition(Point pt)
+{
+	for (DesktopIcon* pIcon = g_pFirstIcon; pIcon; pIcon = pIcon->m_pNext)
+	{
+		if (RectangleContains(&pIcon->m_DrawnIconRect, &pt) ||
+			RectangleContains(&pIcon->m_DrawnTextRect, &pt))
+			
+			return pIcon;
+	}
+	
+	return NULL;
+}
+
+void DtUndrawIcon(DesktopIcon* pIcon, bool bRedrawOtherIcons)
+{
+	if (!pIcon->m_bEverDrawn) return;
+	
+	// draw the background over the two rectangles
+	DtRedrawBackground(pIcon->m_DrawnIconRect);
+	DtRedrawBackground(pIcon->m_DrawnTextRect);
+	
+	if (!bRedrawOtherIcons) return;
+	
+	Rectangle totalBounds = DtIconGetTotalBounds(pIcon);
+	
+	VidSetClipRect(&totalBounds);
+	
+	for (DesktopIcon* pOtherIcon = g_pFirstIcon; pOtherIcon; pOtherIcon = pOtherIcon->m_pNext)
+	{
+		if (pOtherIcon == pIcon) continue;
+		
+		Rectangle otherTotalBounds = DtIconGetTotalBounds(pOtherIcon);
+		if (!RectangleOverlap(&otherTotalBounds, &totalBounds)) continue;
+		
+		DtDrawIcon(pOtherIcon);
+	}
+	
+	VidSetClipRect(NULL);
+}
+
+void DtRedrawIcon(DesktopIcon* pIcon)
+{
+	DtUndrawIcon(pIcon, true);
+	DtDrawIcon(pIcon);
+}
+
+void DtDrawAllIcons()
+{
+	for (DesktopIcon* pIcon = g_pFirstIcon; pIcon; pIcon = pIcon->m_pNext)
+	{
+		DtDrawIcon(pIcon);
+	}
+}
+
+void DtRedrawAllIcons()
+{
+	for (DesktopIcon* pIcon = g_pFirstIcon; pIcon; pIcon = pIcon->m_pNext)
+	{
+		DtUndrawIcon(pIcon, false);
+	}
+	DtDrawAllIcons();
+}
+
+void DtOnClick(Point pt)
+{
+	DesktopIcon* pIcon = DtGetIconByPosition(pt);
+	
+	for (DesktopIcon* pCIcon = g_pFirstIcon; pCIcon; pCIcon = pCIcon->m_pNext)
+	{
+		if (!pCIcon->m_bSelected) continue;
+		if (pIcon == pCIcon) continue;
+		
+		pCIcon->m_bSelected = false;
+		DtDrawIcon(pCIcon);
+	}
+	
+	if (pIcon)
+	{
+		g_pHeldIcon = pIcon;
+		if (!pIcon->m_bSelected)
+		{
+			pIcon->m_bSelected = true;
+			DtDrawIcon(pIcon);
+		}
+	}
+	
+	g_StartedClickAt = pt;
+}
+
+void DtOnDrag(Point pt)
+{
+	DesktopIcon* pIcon = g_pHeldIcon;
+	if (!pIcon) return;
+	if (g_bDraggingAnIcon) return;
+	
+	// check if we moved enough. helps people who accidentally click and drag a small amount
+	if (DtAbs(g_StartedClickAt.x - pt.x) <= 5 &&
+		DtAbs(g_StartedClickAt.y - pt.y) <= 5)
+		return;
+	
+	// hide the icon
+	DtUndrawIcon(pIcon, true);
+	
+	// start dragging it. This involves...
+	g_bDraggingAnIcon = true;
+	
+	// 1. setting the proper offsets
+	pIcon->m_offsetX = pt.x - pIcon->m_x;
+	pIcon->m_offsetY = pt.y - pIcon->m_y;
+	
+	int iconX = pt.x, iconY = pt.y;
+	if (pIcon->m_bEverDrawn)
+	{
+		iconX = pIcon->m_DrawnIconRect.left;
+		iconY = pIcon->m_DrawnIconRect.top;
+	}
+	
+	Image* pImage = GetIconImage(pIcon->m_icon, 32);
+	if (!pImage)
+		pImage = &g_BlankImage;
+	
+	if (g_DraggingCursor >= 0)
+	{
+		ReleaseCursor(g_DraggingCursor);
+		g_DraggingCursor = -1;
+	}
+	
+	g_DraggingCursor = UploadCursor(pImage, pt.x - iconX, pt.y - iconY);
+	
+	if (g_DraggingCursor >= 0)
+		ChangeCursor(g_pIconTestWindow, g_DraggingCursor);
+}
+
+void DtOnRelease(Point pt)
+{
+	DesktopIcon* pIcon = g_pHeldIcon;
+	if (!pIcon) return;
+	if (!g_bDraggingAnIcon)
+	{
+		// try double click
+		if (pIcon->m_LastClicked + DOUBLE_CLICK_TIMING > GetTickCount())
+		{
+			WindowAddEventToMasterQueue(g_pIconTestWindow, EVENT_USER, (int)pIcon, 0);
+		}
+		
+		pIcon->m_LastClicked = GetTickCount();
+		return;
+	}
+	
+	// hide the icon
+	DtUndrawIcon(pIcon, true);
+	
+	// change its position.
+	pIcon->m_x = pt.x - pIcon->m_offsetX;
+	pIcon->m_y = pt.y - pIcon->m_offsetY;
+	
+	// draw the icon there
+	DtDrawIcon(pIcon);
+	
+	// turn off some things
+	g_bDraggingAnIcon = false;
+	
+	// set the cursor to default
+	ChangeCursor(g_pIconTestWindow, CURSOR_DEFAULT);
+}
 
 void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
-		/*
+		case EVENT_CREATE:
+		{
+			DtAddIcon(ICON_COMPUTER, "My Computer");
+			DtAddIcon(ICON_FILES,    "My Files");
+			DtAddIcon(ICON_SHUTDOWN, "Shut Down");
+			DtAddIcon(ICON_SHUTDOWN, "Really long text to test out the wrapping of the name");
+			DtAddIcon(ICON_SHUTDOWN, "Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! Really long text to test out the wrapping of the name and the ellipses! ");
+			
+			DtDrawAllIcons();			
+			break;
+		}
 		case EVENT_USER:
 		{
-			int nowTick = GetTickCount();
-			SLogMsg("Update Timer 1. Diff = %d", nowTick - lastTick1);
-			lastTick1 = nowTick;
-			break;
-		}
-		case EVENT_USER + 1:
-		{
-			int nowTick = GetTickCount();
-			SLogMsg("Update Timer 2. Diff = %d", nowTick - lastTick2);
-			lastTick2 = nowTick;
-			break;
-		}
-		case EVENT_USER + 2:
-		{
-			int nowTick = GetTickCount();
-			SLogMsg("Update Timer 3. Diff = %d", nowTick - lastTick3);
-			lastTick3 = nowTick;
-			break;
-		}
-		case EVENT_CREATE:
-		{
-			AddTimer(pWindow, 500, EVENT_USER);
-			AddTimer(pWindow, 250, EVENT_USER + 1);
-			AddTimer(pWindow, 100, EVENT_USER + 2);
-			break;
-		}
-		*/
-		
-		case EVENT_CREATE:
-		{
-			//Image* pImg = GetIconImage(ICON_EXPERIMENT, 32);
+			DesktopIcon* pIcon = (DesktopIcon*)parm1;
 			
-			//int id = UploadCursor(pImg, 16, 16);
-			//pWindow->m_data = (void*)id;
+			char buffer[4096];
+			snprintf(buffer, sizeof buffer, "You clicked '%s'!", pIcon->m_text);
+			MessageBox(pWindow, buffer, "Icon test", MB_OK | pIcon->m_icon << 16);
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		{
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			
-			//ChangeCursor(pWindow, id);
-			ChangeCursor(pWindow, CURSOR_SIZE_ALL);
+			if (g_bWasClickingBefore)
+				DtOnDrag(pt);
+			else
+				DtOnClick(pt);
+			
+			g_bWasClickingBefore = true;
 			
 			break;
 		}
-		case EVENT_DESTROY:
+		case EVENT_RELEASECURSOR:
 		{
-			//int id = (int)pWindow->m_data;
-			//ChangeCursor(pWindow, CURSOR_DEFAULT);
-			//ReleaseCursor(id);
-			
-			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			DtOnRelease(pt);
+			g_bWasClickingBefore = false;
+			g_pHeldIcon = NULL;
 			break;
 		}
 		case EVENT_PAINT:
 		{
-			//draw until ICON_COUNT:
-			int icons_per_width = (pWindow->m_rect.right - pWindow->m_rect.left - 40) / 32;
-			if (icons_per_width == 0) icons_per_width = 1;
-			for (int i = ICON_NULL+1; i < ICON_COUNT; i++)
-			{
-				int x = i % icons_per_width, y = i / icons_per_width;
-				RenderIconForceSize((IconType)i, x*32 + 10, y*32 + 8/*+((pWindow->m_rect.bottom - pWindow->m_rect.top) - (400 - 82))*/, 32);
-			}
-			
-			Rectangle r;
-			RECT(r, 10, 10, 100, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (5 sec)", 1002, 0, 0);
-			
-			RECT(r, 10, 40, 100, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (10 sec)", 1000, 0, 0);
-			
-			RECT(r, 10, 70, 100, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Hang (30 sec)", 1001, 0, 0);
-			
-			RECT(r, 10, 100, 100, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Show Tooltip", 1003, 0, 0);
-			
-			RECT(r, 10, 130, 100, 20);
-			AddControl (pWindow, CONTROL_BUTTON, r, "Crash Now!", 1004, 0, 0);
-			
+			DtRedrawAllIcons();
 			break;
 		}
 		case EVENT_COMMAND:
 		{
-			switch (parm1)
-			{
-				case 1000:
-					SLogMsg("Hanging 10 sec!");
-					WaitMS(10000);
-					break;
-				case 1001:
-					SLogMsg("Hanging 30 sec!");
-					WaitMS(30000);
-					break;
-				case 1002:
-					SLogMsg("Hanging 5 sec!");
-					WaitMS(5000);
-					break;
-				case 1004:
-					SLogMsg("Gonna crash now!");
-					*((uint32_t*)0xFFFFFFF8) = 0x01234567;
-					break;
-				case 1003:
-				{
-					char buf[128];
-					snprintf(buf, sizeof buf, "This is the #%d testing tooltip!\n\nLook ma, I'm on another line!!\nThis is awesome!", ++g_IconTestTooltipNumber);
-					Point p = GetMousePos();
-					TooltipShow(buf, p.x, p.y + 30);
-					break;
-				}
-			}
 			break;
 		}
+		case EVENT_DESTROY:
+			if (g_DraggingCursor >= 0)
+			{
+				ReleaseCursor(g_DraggingCursor);
+				g_DraggingCursor = -1;
+			}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
@@ -142,21 +423,34 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 
 void IconTestTask (__attribute__((unused)) int argument)
 {
-	// create ourself a window:
-	Window* pWindow = CreateWindow ("Icon test", 300, 200, 540, 540, IconTestProc, WF_ALWRESIZ);
-	pWindow->m_iconID = ICON_INFO;
+	cli;
+	if (g_bIconTestRunning)
+	{
+		sti;
+		MessageBox(NULL, "Please only run one icon test application.", "Icon test", MB_OK);
+		return;
+	}
+	g_bIconTestRunning = true;
+	sti;
 	
+	// create ourself a window:
+	Window* pWindow = g_pIconTestWindow = CreateWindow ("Icon test", CW_AUTOPOSITION, CW_AUTOPOSITION, 400, 300, IconTestProc, WF_ALWRESIZ);
+	//Window* pWindow = g_pIconTestWindow = CreateWindow ("Icon test", CW_AUTOPOSITION, CW_AUTOPOSITION, 100, 100, IconTestProc, WF_NOBORDER | WF_NOTITLE | WF_MAXIMIZE);
 	if (!pWindow)
 	{
 		DebugLogMsg("Hey, the window couldn't be created. Why?");
+		g_bIconTestRunning = false;
 		return;
 	}
 	
-	// setup:
-	//ShowWindow(pWindow);
+	pWindow->m_iconID = ICON_INFO;
+	
 	
 	// event loop:
 #if THREADING_ENABLED
 	while (HandleMessages (pWindow));
 #endif
+	
+	g_bIconTestRunning = false;
+	g_pIconTestWindow = NULL;
 }

@@ -617,7 +617,7 @@ static void CtlIconDragAddElementToList (Control* pCtlIcon, const char* pText, i
 	char text_wrapped[256];
 	WrapText(text_wrapped, pItem->m_contentsShown, ICON_ITEM_WIDTH);
 	if (text_wrapped[0] == '\n')
-		memcpy(text_wrapped, text_wrapped+1, sizeof(text_wrapped) - 1);
+		memmove(text_wrapped, text_wrapped+1, sizeof(text_wrapped) - 1);
 	
 	memcpy (pItem->m_contentsShown, text_wrapped, 64);
 	

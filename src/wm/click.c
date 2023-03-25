@@ -371,16 +371,16 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 	
 	if (!window->m_isBeingDragged && !(window->m_flags & WF_FROZEN))
 	{
+		int x = mouseX - window->m_fullRect.left;
+		int y = mouseY - window->m_fullRect.top;
+		Point mousePoint = {x, y};
+		
 		// if we're not frozen AND we have a title to drag on
 		if ((window->m_flags & WF_MINIMIZE) || !(window->m_flags & WF_NOTITLE))
 		{
 			//are we in the title bar region?
 			Rectangle recta;
 			UNUSED bool hasTitle = GetWindowTitleRect(window, &recta);
-			
-			int x = mouseX - window->m_fullRect.left;
-			int y = mouseY - window->m_fullRect.top;
-			Point mousePoint = {x, y};
 			
 			if (!(window->m_flags & WF_MAXIMIZE) && (RectangleContains(&recta, &mousePoint) || (window->m_flags & WF_MINIMIZE)))
 			{
@@ -393,16 +393,16 @@ void OnUILeftClickDrag (int mouseX, int mouseY)
 					StartDragUnsafe(window, mouseX, mouseY, 0);
 				}
 			}
+		}
+		
+		if (!(window->m_flags & WF_MINIMIZE) && !window->m_isBeingDragged)
+		{
+			window->m_clickedInside = true;
+			WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
 			
-			if (!(window->m_flags & WF_MINIMIZE) && !window->m_isBeingDragged)
-			{
-				window->m_clickedInside = true;
-				WindowCheckButtons(window, EVENT_CLICKCURSOR, x, y);
-				
-				Rectangle margins = GetWindowMargins(window);
-				int offsX = -margins.left, offsY = -margins.top;
-				WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
-			}
+			Rectangle margins = GetWindowMargins(window);
+			int offsX = -margins.left, offsY = -margins.top;
+			WindowAddEventToMasterQueue(window, EVENT_CLICKCURSOR, MAKE_MOUSE_PARM (offsX + x, offsY + y), 0);
 		}
 		
 		if ((window->m_flags & (WF_NOBORDER | WF_ALWRESIZ | WF_MAXIMIZE)) == WF_ALWRESIZ && g_bFirstDrag)
