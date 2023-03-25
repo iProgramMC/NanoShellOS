@@ -346,6 +346,16 @@ void DtOnRelease(Point pt)
 	pIcon->m_x = pt.x - pIcon->m_offsetX;
 	pIcon->m_y = pt.y - pIcon->m_offsetY;
 	
+	Rectangle rect = GetWindowClientRect(g_pIconTestWindow, true);
+	int ww = rect.right - rect.left, wh = rect.bottom - rect.top;
+	
+	if (pIcon->m_x > ww - ICON_WIDTH)
+		pIcon->m_x = ww - ICON_WIDTH;
+	if (pIcon->m_y > wh - ICON_HEIGHT)
+		pIcon->m_y = wh - ICON_HEIGHT;
+	if (pIcon->m_x < 0) pIcon->m_x = 0;
+	if (pIcon->m_y < 0) pIcon->m_y = 0;
+	
 	// draw the icon there
 	DtDrawIcon(pIcon);
 	

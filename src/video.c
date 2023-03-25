@@ -1785,6 +1785,11 @@ void RedrawOldPixels(int oldX, int oldY)
 }
 void RefreshPixels(int oldX, int oldY, int oldWidth, int oldHeight)
 {
+	if (oldX > GetScreenWidth ()) return;
+	if (oldY > GetScreenHeight()) return;
+	if (oldX + oldWidth  < 0) return;
+	if (oldY + oldHeight < 0) return;
+	
 	//NEW: Optimization
 	int ys =           + oldY;
 	int ye = oldHeight + oldY;
