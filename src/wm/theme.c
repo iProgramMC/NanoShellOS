@@ -307,7 +307,7 @@ void ThmLoadFont(ConfigEntry *pEntry)
 		return;
 	}
 	
-	int font_id = CreateFont ((char*)pFnt, pBmp, nBitmapWidth, nBitmapHeight, nChrHeit);
+	int font_id = CreateBMFont ((char*)pFnt, pBmp, nBitmapWidth, nBitmapHeight, nChrHeit);
 	if (bSysFont)
 		SetThemingParameter (P_SYSTEM_FONT, font_id);
 	if (bTibFont)

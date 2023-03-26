@@ -26,10 +26,22 @@ BitmapCharInfo;
 
 typedef struct
 {
-	uint8_t*   m_bitmap;          //bitmap data is grayscale 0-255
-	uint32_t   m_bmWidth, m_bmHeight;
 	ScreenFont m_font;
-	BitmapCharInfo m_charInfo[127 - 32];
+	
+	union {
+		// for the BMfont stuff
+		struct
+		{
+			uint8_t*   m_bitmap;          //bitmap data is grayscale 0-255
+			uint32_t   m_bmWidth, m_bmHeight;
+			BitmapCharInfo m_charInfo[127 - 32];
+		};
+		// for the PSF stuff
+		struct
+		{
+			uint8_t*   m_pData;
+		};
+	};
 }
 BitmapFont;
 
@@ -124,7 +136,7 @@ BitmapFont;
 //destructive tokenizing functions.
 
 //Returns a handle to a basic font.
-int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight)
+int CreateBMFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight)
 {
 	BitmapCharInfo chinfo [95];
 	
@@ -134,6 +146,7 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	memset (&pNLState, 0, sizeof(pNLState));
 	char* line;
 	int   linen = 0;
+	int   max_cwidth = 255;
 	do
 	{
 		linen++;
@@ -195,6 +208,9 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 					info.xadvance = vali;
 				else
 					;//SLogMsg("[Font load] warning: unknown variable '%s' on line %d. Skipping.", var, linen);
+				
+				if (max_cwidth > info.cwidth)
+					max_cwidth = info.cwidth;
 			}
 			
 			chinfo[info_id] = info;
@@ -203,6 +219,12 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 			;//SLogMsg("[Font load] warning: unknown insn '%s', skipping", insn);
 	}
 	while (1);
+	
+	uint8_t* bitmapCopy = MmAllocate(imwidth * imheight);
+	if (!bitmapCopy)
+		return FONT_BASIC;
+	
+	memcpy(bitmapCopy, bitmap, imwidth * imheight);
 	
 	LockAcquire(&g_LoadedFontsPoolLock);
 	
@@ -233,25 +255,12 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	
 	memset (pFont, 0, sizeof *pFont);
 	
-	/*
-	pFont->m_bmWidth  = imwidth;
-	pFont->m_bmHeight = imheight;
-	pFont->m_bitmap   = bitmap;
-	pFont->m_width    = chheight/2;
-	pFont->m_height   = chheight;
-	pFont->m_type     = FONTTYPE_BITMAP;
-	pFont->m_bAlreadyBold = true; // can't embolden further
-	for (int i = 0; i < 95; i++)
-		pFont->m_charInfo [i] = chinfo [i];
-	*/
-	
 	// Set up the ScreenFont structure.
 	ScreenFont *pSF  = &pFont->m_font;
 	pSF->m_fontType  = FONTTYPE_BITMAP;
 	pSF->m_pFontData = (const uint8_t*) pFont; // really, it's just a pointer
 	
-	// XXX: This should be fine, since GetCharWithInl only uses the local CharacterData's width field.
-	pSF->m_charWidth  = 255;
+	pSF->m_charWidth  = max_cwidth;
 	
 	pSF->m_charHeight   = chheight;
 	pSF->m_bAlreadyBold = true;  // can't embolden further
@@ -277,10 +286,115 @@ int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t i
 	// Fill in the bitmap part of the BitmapFont structure.
 	pFont->m_bmWidth  = imwidth;
 	pFont->m_bmHeight = imheight;
-	pFont->m_bitmap   = bitmap;
+	pFont->m_bitmap   = bitmapCopy;
 	
 	for (int i = 0; i < 95; i++)
 		pFont->m_charInfo [i] = chinfo [i];
+	
+	return 0xF000 + freeSpot;
+}
+
+//Returns a handle to a basic font.
+int CreatePSFont(const uint8_t* pPSFData, size_t sz)
+{
+	if (sz < 32) return FONT_BASIC;
+	
+	// check for PSF2 header. We can load PSF2 fonts only right now.
+	if (*((const uint32_t*)pPSFData) != 0x864AB572)
+	{
+		SLogMsg("This font could not be loaded!! It's not a valid PSF font.");
+		return FONT_BASIC;//Use a basic font
+	}
+	
+	const struct
+	{
+		uint32_t m_magic;
+		uint32_t m_version;
+		uint32_t m_header_size;
+		uint32_t m_flags;       // font flags
+		uint32_t m_num_glyphs;  // the number of glyphs
+		uint32_t m_char_size;   // the size of each character in bytes
+		uint32_t m_height;      // height of each glyph in pixels
+		uint32_t m_width;       // width of each glyph in pixels
+	}
+	*pHeader = (void*)pPSFData;
+	
+	if (pHeader->m_num_glyphs < 256)
+	{
+		SLogMsg("There are %d glyphs in this PSF, less than 256", pHeader->m_num_glyphs);
+		return FONT_BASIC;//Use a basic font
+	}
+	
+	if (sz < pHeader->m_header_size + pHeader->m_num_glyphs * pHeader->m_char_size)
+	{
+		SLogMsg("The PSF is not big enough!");
+		return FONT_BASIC;
+	}
+	
+	void *pData = MmAllocate(sz);
+	if (!pData)
+	{
+		SLogMsg("No memory to allow this font!");
+		return FONT_BASIC;
+	}
+	
+	memcpy(pData, pPSFData, sz);
+	
+	LockAcquire(&g_LoadedFontsPoolLock);
+	
+	// Search for a free spot in the font pool
+	int freeSpot = -1;
+	for (size_t i = 0; i < ARRAY_COUNT(g_pLoadedFontsPool); i++)
+	{
+		if (g_pLoadedFontsPool[i] == NULL)
+		{
+			freeSpot = i;
+			break;
+		}
+	}
+	
+	if (freeSpot < 0)
+	{
+		//doing this makes CreateFont have a failsafe
+		SLogMsg("Could not initialize a font, resorting to a default one.");
+		LockFree(&g_LoadedFontsPoolLock);
+		MmFree(pData);
+		pData = NULL;
+		return FONT_BASIC;//Use a basic font
+	}
+	
+	// Setup a basic BMFont structure.
+	BitmapFont *pFont = MmAllocate (sizeof (BitmapFont));
+	g_pLoadedFontsPool[freeSpot] = pFont;
+	
+	LockFree(&g_LoadedFontsPoolLock);
+	
+	memset (pFont, 0, sizeof *pFont);
+	
+	// Set up the ScreenFont structure.
+	ScreenFont *pSF  = &pFont->m_font;
+	pSF->m_fontType  = FONTTYPE_PSF;
+	pSF->m_pFontData = (const uint8_t*) pFont; // really, it's just a pointer
+	
+	pSF->m_psf_charSize = pHeader->m_char_size;
+	pSF->m_charWidth    = pHeader->m_width;
+	pSF->m_charHeight   = pHeader->m_height;
+	pSF->m_bAlreadyBold = false;
+	pSF->m_altFontID    = -1;
+	pSF->m_unicodeTableSize = 0; // TODO!!
+	pSF->m_pFontData = pData;
+	
+	for (int i = 0; i < 256; i++)
+	{
+		CharacterData* pChr = &pSF->m_asciiData[i];
+		
+		pChr->m_width  = pSF->m_charWidth;
+		
+		if (i)
+			pChr->m_offset = pHeader->m_header_size + pHeader->m_char_size * i;
+		else
+			pChr->m_offset = pHeader->m_header_size + pHeader->m_char_size * 32;
+	}
 	
 	return 0xF000 + freeSpot;
 }
@@ -294,15 +408,24 @@ void KillFont (int fontID)
 	if (fontID >= (int) ARRAY_COUNT(g_pLoadedFontsPool)) return;// can't kill fonts not in the pool..
 	
 	LockAcquire(&g_LoadedFontsPoolLock);
+	BitmapFont* pFont = g_pLoadedFontsPool[fontID];
 	
-	MmFree(g_pLoadedFontsPool [fontID]);
+	if (pFont->m_font.m_fontType == FONTTYPE_BITMAP)
+	{
+		MmFree(pFont->m_bitmap);
+	}
+	if (pFont->m_font.m_fontType == FONTTYPE_PSF)
+	{
+		MmFree((void*)pFont->m_font.m_pFontData);
+	}
 	
-	if (g_pCurrentFont == &g_pLoadedFontsPool[fontID]->m_font)
+	if (g_pCurrentFont == &pFont->m_font)
 		VidSetFont(FONT_BASIC);//use a temporary font for now.
 	
 	g_pLoadedFontsPool[fontID] = NULL;
-	
 	LockFree(&g_LoadedFontsPoolLock);
+	
+	MmFree(pFont);
 }
 
 #endif
@@ -455,7 +578,7 @@ void KillFont (int fontID)
 		if (width > g_pCurrentFont->m_charWidth)
 			width = g_pCurrentFont->m_charWidth;
 		
-		const unsigned char * pCharBytes = &g_pCurrentFont->m_pFontData[chrData.m_offset];
+		const uint8_t* pCharBytes = &g_pCurrentFont->m_pFontData[chrData.m_offset];
 		
 		if (g_pCurrentFont->m_fontType == FONTTYPE_BITMAP)
 		{
@@ -538,6 +661,33 @@ void KillFont (int fontID)
 			{
 				for (int y = 0; y < height; y++)
 					VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+			}
+			
+			DirtyRectLogger(ox, oy, width, height);
+		}
+		else if (g_pCurrentFont->m_fontType == FONTTYPE_PSF)
+		{
+			int offset = 0;
+			for (int y = 0; y < height; y++)
+			{
+				uint8_t data = 0;
+				for (int x = 0; x < width; x++)
+				{
+					if (x % 8 == 0)
+						data = pCharBytes[offset++];
+					
+					if (data & 0x80)
+					{
+						VidPlotPixelInlineF(ox + x, oy + y, colorFg);
+						if (bold) VidPlotPixelInlineF(ox + x + bold, oy + y, colorFg);
+					}
+					else if (colorBg != TRANSPARENT)
+					{
+						VidPlotPixelInlineF(ox + x, oy + y, colorBg);
+					}
+					
+					data <<= 1;
+				}
 			}
 			
 			DirtyRectLogger(ox, oy, width, height);

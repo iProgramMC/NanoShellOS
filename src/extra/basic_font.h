@@ -475,8 +475,10 @@ ScreenFont g_BasicFontData =
 	   10, // Line height
 	false, // Already bold?
 	   -1, // Alternate variant
-	
 	(int)ARRAY_COUNT(g_BasicFont_UnicodeTable), // Number of unicode table entries
+		{ 0 }, // Font specific 0
+		{ 0 }, // Font specific 1
+		{ 0 }, // Font specific 2
 	g_BasicFont_UnicodeTable,                   // The unicode table
 	
 	// Character data:

@@ -275,6 +275,9 @@ ScreenFont g_TamsynRegu8x16 =
 	false, // Already bold?
 	   -1, // Alternate variant
 		0, // Number of unicode table entries
+	{ 0 }, // Font specific 0
+	{ 0 }, // Font specific 1
+	{ 0 }, // Font specific 2
 	 NULL, // The unicode table
 	// Character data:
 	{
@@ -585,6 +588,9 @@ ScreenFont g_TamsynBold8x16 =
 	false, // Already bold?
 	   -1, // Alternate variant
 		0, // Number of unicode table entries
+	{ 0 }, // Font specific 0
+	{ 0 }, // Font specific 1
+	{ 0 }, // Font specific 2
 	 NULL, // The unicode table
 	// Character data:
 	{

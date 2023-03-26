@@ -36,6 +36,7 @@ enum
 	FONTTYPE_GLCD,
 	FONTTYPE_BIG,
 	FONTTYPE_BITMAP,
+	FONTTYPE_PSF,
 };
 
 typedef struct
@@ -61,7 +62,18 @@ typedef struct
 	int      m_charHeight;
 	bool     m_bAlreadyBold;
 	int      m_altFontID;    // Alternate variant. If the font is 'already bold', this will point to the regular version of the font.
-	int      m_unicodeTableSize;            // unused as of 3 March 2023
+	int      m_unicodeTableSize;
+	union {
+		int m_fontSpecific0;
+		int m_psf_charSize;
+	};
+	union {
+		int m_fontSpecific1;
+	};
+	union {
+		int m_fontSpecific2;
+	};
+	
 	UnicodeCharacterData* m_pUnicodeTable;
 	CharacterData m_asciiData[256];
 	CharacterData m_replacementChar;

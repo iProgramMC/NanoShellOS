@@ -278,6 +278,9 @@ ScreenFont g_GlcdData =
 	false, // Already bold?
 	   -1, // Alternate variant
 		0, // Number of unicode table entries
+	{ 0 }, // Font specific 0
+	{ 0 }, // Font specific 1
+	{ 0 }, // Font specific 2
 	 NULL, // The unicode table
 	// Character data:
 	{

@@ -454,10 +454,15 @@ const char* VidGetFontName(unsigned fontType);
 	int font = CreateFont (pFntCopy, pBmp, imWidth, imHeight, chHeight);
 	MmFree(pFntCopy);
  */
-int CreateFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight);
+int CreateBMFont(char* pFntFileData, uint8_t *bitmap, uint32_t imwidth, uint32_t imheight, uint32_t chheight);
 
 /**
- * Kills a CreateFont() created font.  Other fonts cannot be killed.
+ * Creates a "PC Screen Font" font ID.
+ */
+int CreatePSFont(const uint8_t* pPSFData, size_t sz);
+
+/**
+ * Kills a CreateBMFont() or CreatePSFont() created font.  Other fonts cannot be killed.
  */
 void KillFont (int fontID);
 

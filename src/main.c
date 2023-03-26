@@ -63,6 +63,44 @@ int StopwatchEnd()
 	return GetTickCount() - s_stopwatchStart;
 }
 
+/*
+void TestFontInit()
+{
+	StatResult sr;
+	const char * filename = "/PSF2_Lat2-TerminusBold32x16.psf";
+	
+	int res = FiStat(filename, &sr);
+	if (res < 0)
+	{
+		LogMsg("Could not load font '%s': %s", filename, GetErrNoString(res));
+		return;
+	}
+	int fd = FiOpen(filename, O_RDONLY);
+	if (fd < 0)
+	{
+		LogMsg("Could not load font '%s': %s", filename, GetErrNoString(fd));
+		return;
+	}
+	
+	uint8_t* pBytes = MmAllocate(sr.m_size);
+	if (!pBytes)
+	{
+		LogMsg("The font '%s' could not be loaded due to a memory shortage.", filename);
+		return;
+	}
+	
+	FiRead(fd, pBytes, sr.m_size);
+	FiClose(fd);
+	
+	int id = CreatePSFont(pBytes, sr.m_size);
+	if (id == FONT_BASIC)
+		LogMsg("The font '%s' could not be loaded.", filename);
+	
+	MmFree(pBytes);
+	
+	VidSetFont(id);
+}
+*/
 
 NO_RETURN
 void KiStartupSystem(uint32_t check, uint32_t mbaddr)
