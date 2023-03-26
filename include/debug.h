@@ -52,7 +52,7 @@ enum {
 	BC_EX_ASSERTION_FAILED,
 };
 
-// Assume, as is often the case, that EBP is the first thing pushed. If not, we are in trouble.
+// Assume, as is often the case, that EBP is the first thing pushed when entering a function. If not, we are in trouble.
 typedef struct StackFrame
 {
 	struct StackFrame* ebp;
@@ -62,13 +62,45 @@ StackFrame;
 
 typedef int BugCheckReason;
 
+/**
+ * Gets the current instruction pointer.
+ */
 uint32_t KeGetEIP();
+
+/**
+ * Gets the current stack base pointer.
+ */
 uint32_t KeGetEBP();
+
+/**
+ * This is a panic function. When something severely bad happens, this gets called to
+ * instantly shut down the system and report the failure to the user.
+ */
 void KeBugCheck (BugCheckReason reason, Registers* pRegs);
+
+/**
+ * Dumps a Registers struct to the main console.
+ */
 void DumpRegisters (Registers*);
-//WORK: make sure the string you pass in here is large enough!!!
+
+/**
+ * Dumps a Registers struct to a string.
+ *
+ * WORK: Make sure the string is over 512 bytes in size.
+ */
 void DumpRegistersToString (char* pStr, Registers* pRegs);
+
+/**
+ * Follows the stack trace and prints it out to either the debug console, or the screen.
+ *
+ * An example of usage:
+ * PrintBackTrace((StackFrame*)KeGetEBP(), KeGetEIP(), "some tag", NULL, true);
+ */
 void PrintBackTrace (StackFrame* pFrame, uintptr_t eip, const char* pTag, void* pProcess, bool bPrintToScreen);
+
+/**
+ * Logs details of an exception to the screen.
+ */
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProcess);
 
 #endif//_DEBUG_H

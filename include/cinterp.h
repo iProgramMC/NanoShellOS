@@ -91,18 +91,29 @@ enum {
 	CCSTATUS_SEMICOLON_EXPECTED,
 };
 
-//int RunCCode(const char* code);
+/**
+ * Initializes a C interpreter machine.
+ */
 CCSTATUS CcInitMachine(CMachine* pMachine);
-CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length);
-void CcRunMachine(CMachine* pMachine, int cycs_per_call);
-void CcKillMachine(CMachine* pMachine);
-int CcRunCCode(const char* pCode, int length);
 
-//int RunCCode(const char* code);
-CCSTATUS CcInitMachine(CMachine* pMachine);
+/**
+ * Compiles a string of text (the code).
+ */
 CCSTATUS CcCompileCode(CMachine* pMachine, const char* pCode, int length);
+
+/**
+ * Runs the machine for a certain amount of cycles.
+ */
 void CcRunMachine(CMachine* pMachine, int cycs_per_call);
+
+/**
+ * Kill the C interpreter machine.
+ */
 void CcKillMachine(CMachine* pMachine);
+
+/**
+ * Integrates a C interpreter machine and runs it synchronously. The function will only return when execution is finished.
+ */
 int CcRunCCode(const char* pCode, int length);
 
 #endif//_CINTERP_H

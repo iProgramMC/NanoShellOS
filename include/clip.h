@@ -40,15 +40,45 @@ typedef struct
 }
 ClipboardVariant;
 
-ClipboardVariant* CbGetCurrentVariant();                // Locks the clipboard until the current variant is gotten rid of
-void              CbRelease(ClipboardVariant*);         // Releases a lock to the clipboard variant.
-bool              CbPushTextIntoBuffer();               // If possible, pushes text as keyboard events.
+/**
+ * Gets the contents of the clipboard. Use CbRelease to release them.
+ */
+ClipboardVariant* CbGetCurrentVariant();
 
-void              CbClear();                            // Clears the clipboard
-bool              CbCopyText(const char* pText);        // Copies a piece of text into the clipboard.  Will return true on success.
-bool              CbCopyBlob(void* pBlob, size_t size); // Copies a piece of data into the clipboard.  Will return true on success.
+/**
+ * Releases the contents of the clipboard, so that other programs can use it.
+ */
+void CbRelease(ClipboardVariant*);
 
-void              CbDump ();                            // Dumps the clipboard
-void              CbInit ();                            // Inits the clipboard
+/**
+ * This is a function for testing. It types a small block of text from the clipboard (CLIPBOARD_DATA_TEXT)
+ * as if it were a sequence of keyboard key presses.
+ */
+bool CbPushTextIntoBuffer();
+
+/**
+ * Clears the clipboard.
+ */
+void CbClear();
+
+/**
+ * Copies a block of text to the clipboard. If the function succeeds, it returns true.
+ */
+bool CbCopyText(const char* pText);
+
+/**
+ * Copies a binary blob to the clipboard. If the function succeeds, it returns true.
+ */
+bool CbCopyBlob(void* pBlob, size_t size);
+
+/**
+ * Debug: Dumps the contents of the clipboard to the console.
+ */
+void CbDump();
+
+/**
+ * Initializes the clipboard.
+ */
+void CbInit();
 
 #endif
