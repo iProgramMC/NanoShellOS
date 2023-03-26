@@ -67,7 +67,7 @@ int StopwatchEnd()
 void TestFontInit()
 {
 	StatResult sr;
-	const char * filename = "/PSF2_Lat2-TerminusBold32x16.psf";
+	const char * filename = "/Lat15-Terminus16.psf";
 	
 	int res = FiStat(filename, &sr);
 	if (res < 0)
@@ -148,6 +148,7 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	MouseInit();
 	VmwInitIfApplicable();
 	ShellInit();
+	//TestFontInit();
 	SLogMsg("System ready to roll!");
 	if (KiEmergencyMode())
 		KiLaunch(ShellRun);
