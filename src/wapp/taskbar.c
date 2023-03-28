@@ -368,6 +368,10 @@ void TaskbarPopOut(int buttonID)
 	
 	strcpy(g_taskbarRightClickMenu.pMenuEntries[2].sText, TaskbarGetPopoutToggleText());
 	
+	g_taskbarRightClickMenu.pMenuEntries[2].nIconID =  (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT;
+	
+	// note: the icon is only shown once to not be jarring.
+	
 	int x = 0, y = 0, width = 0, height = 0;
 	
 	TaskbarSetMargins();
@@ -428,12 +432,12 @@ void TaskbarCreateControls(Window* pWindow)
 		int index = 0;
 		
 	#define CI(text, id, icon) TaskbarCreateMenuEntry(pWindow, &pMenu->pMenuEntries[index++], text, TASKBAR_RC_MENU_ORIGINAL_ID, id, icon);
-		CI("Open System Monitor", 1, ICON_NULL);
+		CI("Open System Monitor", 1, ICON_SYSMON);
 		CI("", 2, ICON_NULL);
-		CI(TaskbarGetPopoutToggleText(), 3, ICON_NULL);
-		CI("Dock to bottom", 4, ICON_NULL);
-		CI("Dock to left",   5, ICON_NULL);
-		CI("Dock to right",  6, ICON_NULL);
+		CI(TaskbarGetPopoutToggleText(), 3, (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT);
+		CI("Dock to bottom", 4, ICON_COUNT);
+		CI("Dock to left",   5, ICON_COUNT);
+		CI("Dock to right",  6, ICON_COUNT);
 	#endif
 		
 		pMenu->nLineSeparators = 1;
