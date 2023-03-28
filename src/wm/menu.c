@@ -450,10 +450,10 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 		smTile[i]->bPrivate  = false;
 		
 		int x = i % 4, y = i / 4;
-		smTile[i]->nItemX = x * (MenuWidth / 4);
-		smTile[i]->nItemY = (MENU_ITEM_HEIGHT + 4) * y + 1;
-		smTile[i]->nItemWidth = MenuWidth / 4 - 1;
-		smTile[i]->nIconID = ICON_VB_CURSOR + i;
+		smTile[i]->nItemX          = x * (MenuWidth / 4);
+		smTile[i]->nItemY          = (MENU_ITEM_HEIGHT + 4) * y + 1;
+		smTile[i]->nItemWidth      = MenuWidth / 4 - 1;
+		smTile[i]->nIconID         = ICON_SNAP_U + i;
 		smTile[i]->nMenuComboID    = CID_SMARTSNAP_0 + i;
 		smTile[i]->nOrigCtlComboID = WINDOW_ACTION_MENU_ORIG_CID;
 	}
@@ -488,7 +488,7 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	minimizeEnt->nIconID = ICON_MINIMIZE;
 	maximizeEnt->nIconID = ICON_MAXIMIZE;
 	closeEnt   ->nIconID = ICON_CLOSE;
-	smSnapEnt  ->nIconID = ICON_COUNT;
+	smSnapEnt  ->nIconID = ICON_TASKBAR_DOCK;
 	
 	// Disable the buttons on a case-by-case basis
 	restoreEnt->bDisabled  = !(pWindow->m_flags & WF_MAXIMIZE) || !!(pWindow->m_flags & WF_NOMAXIMZ);

@@ -176,7 +176,7 @@ typedef uint32_t IconColor;
 #include <icons/keybrepspeed.h>
 #include <icons/keybrepdelay.h>
 #include <icons/monitor.h>
-//icons V1.6
+// Icons V1.6
 #include <icons/ns_ini.h>
 #include <icons/wmenu.h>
 #include <icons/wmenu16.h>
@@ -190,14 +190,14 @@ typedef uint32_t IconColor;
 #include <icons/note_green.h>
 #include <icons/note_white.h>
 #include <icons/folder_open.h>
-//icons V1.61
+// Icons V1.61
 #include <icons/experiment2.h>
 #include <icons/floppy.h>
 #include <icons/action_save16.h>
 #include <icons/action_open.h>
 #include <icons/action_open16.h>
 #include <icons/plus.h>
-//icons V1.7
+// Icons V1.7
 #include <icons/paste.h>
 #include <icons/paste16.h>
 #include <icons/delete.h>
@@ -234,11 +234,11 @@ typedef uint32_t IconColor;
 #include <icons/journal16.h>
 #include <icons/packager.h>
 #include <icons/packager16.h>
-//icons V1.71
+// Icons V1.71
 #include <icons/box_check.h>
 #include <icons/box_uncheck.h>
 #include <icons/folder_settings16.h>
-//icons V1.8
+// Icons V1.8
 #include <icons/minimize.h>
 #include <icons/maximize.h>
 #include <icons/restore.h>
@@ -268,6 +268,17 @@ typedef uint32_t IconColor;
 #include <icons/play_wide.h>
 #include <icons/play_small.h>
 #include <icons/browse.h>
+// Icons V1.9
+#include <icons/snap_u.h>
+#include <icons/snap_d.h>
+#include <icons/snap_l.h>
+#include <icons/snap_r.h>
+#include <icons/snap_ul.h>
+#include <icons/snap_ur.h>
+#include <icons/snap_dl.h>
+#include <icons/snap_dr.h>
+#include <icons/taskbar_popout.h>
+#include <icons/taskbar_dock.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -486,6 +497,16 @@ Image * g_iconTable[] = {
 	&g_play_wide_icon,
 	&g_play_small_icon,
 	&g_browse_icon,
+	&g_snap_u_icon,
+	&g_snap_d_icon,
+	&g_snap_l_icon,
+	&g_snap_r_icon,
+	&g_snap_ul_icon,
+	&g_snap_ur_icon,
+	&g_snap_dl_icon,
+	&g_snap_dr_icon,
+	&g_taskbar_popout_icon,
+	&g_taskbar_dock_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
