@@ -29,7 +29,9 @@ bool MenuRecursivelyCopyEntries (WindowMenu* pNewMenu, WindowMenu*pMenu)
 		{
 			pNewMenu->nLineSeparators++;
 		}
-		pNewMenu->bHasIcons = pNewMenu->bHasIcons || MenuRecursivelyCopyEntries(&pNewMenu->pMenuEntries[i], &pMenu->pMenuEntries[i]);
+		
+		if (MenuRecursivelyCopyEntries(&pNewMenu->pMenuEntries[i], &pMenu->pMenuEntries[i]))
+			pNewMenu->bHasIcons = true;
 	}
 	if (!pNewMenu->bHasIcons)
 		pNewMenu->bHasIcons = pNewMenu->nIconID != ICON_NULL;
@@ -66,11 +68,30 @@ int GetMenuWidth (UNUSED WindowMenu* pMenu)
 {
 	return pMenu->nWidth;//150 + (pMenu->bHasIcons ? 50 : 0);
 }
+
 int GetMenuHeight (WindowMenu* pMenu)
 {
-	int haute = (MENU_ITEM_HEIGHT + (pMenu->bHasIcons ? 4 : 0));
-	return pMenu->nMenuEntries * haute - 
-		   pMenu->nLineSeparators * (haute - MENU_SEPA_HEIGHT) - 1;
+	if (pMenu->nHeight)
+		return pMenu->nHeight;
+	
+	int height = (MENU_ITEM_HEIGHT + (pMenu->bHasIcons ? 4 : 0));
+	int y = 0;
+	
+	for (int i = 0; i < pMenu->nMenuEntries; i++)
+	{
+		if (pMenu->pMenuEntries[i].nItemY)
+			y = pMenu->pMenuEntries[i].nItemY;
+		
+		if (pMenu->pMenuEntries[i].sText[0] == 0)
+			y += MENU_SEPA_HEIGHT;
+		else
+			y += height;
+		
+		if (pMenu->nHeight < y)
+			pMenu->nHeight = y;
+	}
+	
+	return pMenu->nHeight;
 }
 
 #define MENU_ITEM_COMBOID (1000000)
@@ -131,7 +152,18 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					}
 					else
 					{
-						RECT(r, 0, y, GetMenuWidth(pData), height - 2);
+						int width = pData->pMenuEntries[i].nItemWidth;
+						if (width == 0)
+							width = GetMenuWidth(pData);
+						int xPos  = pData->pMenuEntries[i].nItemX;
+						if (xPos  > GetMenuWidth(pData) - width)
+							xPos  = GetMenuWidth(pData) - width;
+
+						if (pData->pMenuEntries[i].nItemY)
+							y = pData->pMenuEntries[i].nItemY;
+
+						RECT(r, xPos, y, width, height - 2);
+						
 						char buffer[110];
 						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
 						
@@ -270,7 +302,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			
 			if (pParentWindow)
 			{
-				SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
+				//SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
 				SelectWindow(pParentWindow);
 			}
 			if (pWindow->m_data)
@@ -338,7 +370,7 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 		newYPos = GetScreenHeight() - GetMenuHeight(pRoot);
 	
 	//Create a new window
-	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_MENUITEM | WF_NOCLOSE | WF_NOTITLE | WF_NOMINIMZ | WF_SYSPOPUP | WF_FOREGRND | WI_NEVERSEL);
+	Window *pMenuWnd = CreateWindow(root->sText, newXPos, newYPos, GetMenuWidth(pRoot), GetMenuHeight(pRoot), MenuProc, WF_MENUITEM | WF_NOCLOSE | WF_NOTITLE |	WF_NOMINIMZ | WF_SYSPOPUP | WF_FOREGRND | WI_NEVERSEL);
 	
 	KeVerifyInterruptsEnabled;
 	cli;
@@ -355,6 +387,7 @@ Window* SpawnMenu(Window* pParentWindow, WindowMenu *root, int newXPos, int newY
 	pMenuWnd->m_bWindowManagerUpdated = true;
 	pMenuWnd->m_data = pRoot;
 	sti;
+	
 	return pMenuWnd;
 }
 
@@ -367,14 +400,19 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	int MenuWidth = 100;
 	
 	// This kinda sucks.. but it should be okay
-	WindowMenu *restoreEnt, *minimizeEnt, *maximizeEnt, *closeEnt, *spacerEnt;
+	WindowMenu *restoreEnt, *minimizeEnt, *maximizeEnt, *closeEnt, *spacerEnt, *smSnapEnt, *smTile[8];
 	WindowMenu rootEnt;
-	WindowMenu table[5];
+	WindowMenu table[6];
+	WindowMenu smSnapTable[8];
 	restoreEnt  = &table[0];
 	minimizeEnt = &table[1];
 	maximizeEnt = &table[2];
-	spacerEnt   = &table[3];
-	closeEnt    = &table[4];
+	smSnapEnt   = &table[3];
+	spacerEnt   = &table[4];
+	closeEnt    = &table[5];
+	
+	for (int i = 0; i < 8; i++) smTile[i] = &smSnapTable[i];
+	
 	strcpy(rootEnt.sText, "Menu");
 	rootEnt.pMenuEntries = table;
 	rootEnt.nMenuEntries = (int)ARRAY_COUNT(table);
@@ -402,22 +440,55 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	memcpy(maximizeEnt, restoreEnt, sizeof *restoreEnt);
 	memcpy(closeEnt,    restoreEnt, sizeof *restoreEnt);
 	memcpy(spacerEnt,   restoreEnt, sizeof *restoreEnt);
+	memcpy(smSnapEnt,   restoreEnt, sizeof *restoreEnt);
+	
+	for (int i = 0; i < 8; i++)
+	{
+		memcpy(smTile[i], restoreEnt, sizeof *restoreEnt);
+		strcpy(smTile[i]->sText, " "); // just a space. Having no text implies being a separator...
+		smTile[i]->nMenuComboID = 6 + i;
+		smTile[i]->bPrivate  = false;
+		
+		int x = i % 4, y = i / 4;
+		smTile[i]->nItemX = x * (MenuWidth / 4);
+		smTile[i]->nItemY = (MENU_ITEM_HEIGHT + 4) * y + 1;
+		smTile[i]->nItemWidth = MenuWidth / 4 - 1;
+		smTile[i]->nIconID = ICON_VB_CURSOR + i;
+		smTile[i]->nMenuComboID    = CID_SMARTSNAP_0 + i;
+		smTile[i]->nOrigCtlComboID = WINDOW_ACTION_MENU_ORIG_CID;
+	}
 	
 	// copy the text
 	strcpy(restoreEnt ->sText, "Restore");
 	strcpy(minimizeEnt->sText, "Minimize");
 	strcpy(maximizeEnt->sText, "Maximize");
 	strcpy(closeEnt   ->sText, "Close");
+	strcpy(smSnapEnt  ->sText, "SmartSnap");
 	
-	restoreEnt ->nMenuComboID = 1;
-	minimizeEnt->nMenuComboID = 2;
-	maximizeEnt->nMenuComboID = 3;
-	spacerEnt  ->nMenuComboID = 4;
-	closeEnt   ->nMenuComboID = 5;
+	// Set up the smart snap menu. Disable it if we cannot resize.
+	if (pWindow->m_flags & WF_ALWRESIZ)
+	{
+		smSnapEnt->bDisabled = false;
+		smSnapEnt->bPrivate  = false;
+		smSnapEnt->pMenuEntries = &smSnapTable[0];
+		smSnapEnt->nMenuEntries = (int)ARRAY_COUNT(smSnapTable);
+	}
+	else
+	{
+		smSnapEnt->bDisabled = true;
+	}
+	
+	restoreEnt ->nMenuComboID = CID_RESTORE;
+	minimizeEnt->nMenuComboID = CID_MINIMIZE;
+	maximizeEnt->nMenuComboID = CID_MINIMIZE;
+	spacerEnt  ->nMenuComboID = CID_SPACER;
+	closeEnt   ->nMenuComboID = CID_CLOSE;
+	smSnapEnt  ->nMenuComboID = CID_SMARTSNAP_PARENT;
 	
 	minimizeEnt->nIconID = ICON_MINIMIZE;
 	maximizeEnt->nIconID = ICON_MAXIMIZE;
 	closeEnt   ->nIconID = ICON_CLOSE;
+	smSnapEnt  ->nIconID = ICON_COUNT;
 	
 	// Disable the buttons on a case-by-case basis
 	restoreEnt->bDisabled  = !(pWindow->m_flags & WF_MAXIMIZE) || !!(pWindow->m_flags & WF_NOMAXIMZ);

@@ -446,7 +446,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			}
 			
 			Rectangle r1 = this->m_rect;
-			r1.right = r1.left + offs1;
+			r1.right = offs1;
 			
 			if (this->m_bDisabled)
 			{
@@ -454,8 +454,10 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r2.left = r1.right;
 				if (parm2)
 				{
-					VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, r);
-					VidFillRectangle(WINDOW_BACKGD_COLOR, r1);
+					if (r.left <= r.right)
+						VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, r);
+					if (r1.left <= r1.right)
+						VidFillRectangle(WINDOW_BACKGD_COLOR, r1);
 				}
 				r.left += offs;
 				r.top += 1;

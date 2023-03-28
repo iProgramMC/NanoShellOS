@@ -22,9 +22,13 @@ typedef struct MenuEntry
 	int               nLineSeparators;
 	Window*           pOpenWindow;
 	int               nIconID;
-	int               nWidth;
+	int               nWidth;           // The width of the menu window (if this has children)
+	int               nHeight;          // The height of the menu window
+	int               nItemWidth;       // The width of this item when the parent menu is opened. If 0, this fills to the width.
+	int               nItemX;           // The X position of the item.
+	int               nItemY;           // The Y position of the item. If 0, this is automatically laid out.
 	bool              bDisabled;
-	bool              bPrivate; // uses a private event rather than a public one.
+	bool              bPrivate;         // uses a private event rather than a public one.
 }
 WindowMenu;
 

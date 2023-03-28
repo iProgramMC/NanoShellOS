@@ -721,6 +721,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 					case CID_MINIMIZE: eventType = EVENT_MINIMIZE;   break;
 					case CID_MAXIMIZE: eventType = EVENT_MAXIMIZE;   break;
 					case CID_CLOSE:    eventType = EVENT_CLOSE;      break;
+					default: SLogMsg("Unknown menu action %d", parm2);
 				}
 				
 				if (eventType != EVENT_NULL)
