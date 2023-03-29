@@ -413,12 +413,12 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		if (pWindow->m_flags & WF_MAXIMIZE)
 		{
 			WindowAddEventToMasterQueue(pWindow, EVENT_UNMAXIMIZE, 0, 0);
-			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  0, 0);
+			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
 		}
 		else if (pWindow->m_flags & WF_MINIMIZE)
 		{
 			WindowAddEventToMasterQueue(pWindow, EVENT_UNMINIMIZE, 0, 0);
-			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  0, 0);
+			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
 		}
 		else
 		{
@@ -778,7 +778,6 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			if (parm1 == WINDOW_ACTION_MENU_ORIG_CID  &&  !pWindow->m_bWindowManagerUpdated)
 			{
 				int eventType = EVENT_NULL, parm1 = 0;
-				SLogMsg("menu action %d", parm2);
 				switch (parm2)
 				{
 					// basic window actions.
