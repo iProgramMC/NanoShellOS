@@ -437,9 +437,11 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		{
 			Rectangle r = this->m_rect;
 			
-			int offs1 = 16;
-			int offs = 20;
-			if (this->m_parm1)
+			int iconSize = (this->m_parm2 & BTNLIST_BIG) ? 32 : 16;
+			int offs1 = iconSize;
+			int offs = iconSize + 4;
+			
+			if (this->m_parm2 & BTNLIST_HASICON)
 			{
 				offs1 += 8;
 				offs  += 10;
@@ -466,7 +468,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				
 				r.left -= offs;
 				if (this->m_parm1)
-					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - iconSize) / 2, iconSize);
 			}
 			else if (this->m_buttonData.m_clicked)
 			{
@@ -481,7 +483,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				
 				if (this->m_parm1)
 				{
-					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - iconSize) / 2, iconSize);
 				}
 				
 				r.left += offs;
@@ -501,8 +503,8 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r.left -= offs;
 				if (this->m_parm1)
 				{
-					RenderIconForceSizeOutline (this->m_parm1, r.left + 5, r.top + (r.bottom - r.top - 16) / 2 + 1, 16, DARKEN(col));
-					RenderIconForceSize        (this->m_parm1, r.left + 3, r.top + (r.bottom - r.top - 16) / 2 - 1, 16);
+					RenderIconForceSizeOutline (this->m_parm1, r.left + 5, r.top + (r.bottom - r.top - iconSize) / 2 + 1, iconSize, DARKEN(col));
+					RenderIconForceSize        (this->m_parm1, r.left + 3, r.top + (r.bottom - r.top - iconSize) / 2 - 1, iconSize);
 				}
 			}
 			else
@@ -521,7 +523,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				
 				r.left -= offs;
 				if (this->m_parm1)
-					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - 16) / 2, 16);
+					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - iconSize) / 2, iconSize);
 			}
 			
 			break;

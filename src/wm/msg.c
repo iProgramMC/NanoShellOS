@@ -388,8 +388,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			pWindow->m_privFlags |= WPF_FLBRDFRC;
 		}
 		
-		if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
-		
 		ResizeWindow(
 			pWindow,
 			g_TaskbarMargins.left,
@@ -397,8 +395,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			GetScreenWidth() - g_TaskbarMargins.left - g_TaskbarMargins.right,
 			GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom
 		);
-		
-		if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -411,6 +407,77 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
 	}
+	else if (eventType == EVENT_SMARTSNAP)
+	{
+		// if the window is maximized, unmaximize it and deflect
+		if (pWindow->m_flags & WF_MAXIMIZE)
+		{
+			WindowAddEventToMasterQueue(pWindow, EVENT_UNMAXIMIZE, 0, 0);
+			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  0, 0);
+		}
+		else if (pWindow->m_flags & WF_MINIMIZE)
+		{
+			WindowAddEventToMasterQueue(pWindow, EVENT_UNMINIMIZE, 0, 0);
+			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  0, 0);
+		}
+		else
+		{
+			int x = -1, y, w, h;
+			
+			int screenW = GetScreenWidth()  - g_TaskbarMargins.left - g_TaskbarMargins.right;
+			int screenH = GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom;
+			
+			switch (parm1)
+			{
+				case 0: // UP
+					x = g_TaskbarMargins.left;
+					y = g_TaskbarMargins.top;
+					w = screenW;
+					h = screenH / 2;
+					break;
+				case 1: // DOWN
+					x = g_TaskbarMargins.left;
+					w = screenW;
+					y = h = screenH / 2;
+					break;
+				case 2: // LEFT
+					x = g_TaskbarMargins.left;
+					y = g_TaskbarMargins.top;
+					w = screenW / 2;
+					h = screenH;
+					break;
+				case 3: // RIGHT
+					y = g_TaskbarMargins.top;
+					x = w = screenW / 2;
+					h = screenH;
+					break;
+				case 4: // UP LEFT
+					x = g_TaskbarMargins.left;
+					y = g_TaskbarMargins.top;
+					w = screenW / 2;
+					h = screenH / 2;
+					break;
+				case 5: // UP RIGHT
+					y = g_TaskbarMargins.top;
+					x = w = screenW / 2;
+					h = screenH / 2;
+				case 6: // DOWN LEFT
+					x = g_TaskbarMargins.left;
+					w = screenW / 2;
+					y = h = screenH / 2;
+					break;
+				case 7: // DOWN RIGHT
+					x = w = screenW / 2;
+					y = h = screenH / 2;
+					break;
+			}
+			
+			if (x != -1)
+			{
+				ResizeWindow(pWindow, x, y, w, h);
+			}
+		}
+	}
 	else if (eventType == EVENT_UNMAXIMIZE)
 	{
 		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
@@ -419,11 +486,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		if (pWindow->m_flags & WF_MAXIMIZE)
 		{
-			if (IsWindowManagerTask()) LockFree(&pWindow->m_screenLock);
-			
 			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
-			
-			if (IsWindowManagerTask()) LockAcquire(&pWindow->m_screenLock);
 		}
 		
 		pWindow->m_flags &= ~WF_MAXIMIZE;
@@ -714,18 +777,28 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		{
 			if (parm1 == WINDOW_ACTION_MENU_ORIG_CID  &&  !pWindow->m_bWindowManagerUpdated)
 			{
-				int eventType = EVENT_NULL;
+				int eventType = EVENT_NULL, parm1 = 0;
+				SLogMsg("menu action %d", parm2);
 				switch (parm2)
 				{
+					// basic window actions.
 					case CID_RESTORE:  eventType = EVENT_UNMAXIMIZE; break;
 					case CID_MINIMIZE: eventType = EVENT_MINIMIZE;   break;
 					case CID_MAXIMIZE: eventType = EVENT_MAXIMIZE;   break;
 					case CID_CLOSE:    eventType = EVENT_CLOSE;      break;
+					
+					// SmartSnap stuff
+					case CID_SMARTSNAP_0: case CID_SMARTSNAP_1: case CID_SMARTSNAP_2: case CID_SMARTSNAP_3:
+					case CID_SMARTSNAP_4: case CID_SMARTSNAP_5: case CID_SMARTSNAP_6: case CID_SMARTSNAP_7:
+						eventType = EVENT_SMARTSNAP, parm1 = parm2 - CID_SMARTSNAP_0;
+						break;
+					
+					// default:
 					default: SLogMsg("Unknown menu action %d", parm2);
 				}
 				
 				if (eventType != EVENT_NULL)
-					WindowAddEventToMasterQueue(pWindow, eventType, 0, 0);
+					WindowAddEventToMasterQueue(pWindow, eventType, parm1, 0);
 			}
 			break;
 		}

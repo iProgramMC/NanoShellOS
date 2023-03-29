@@ -21,10 +21,22 @@ void CloseAnyOpenMenusOutside(int posX, int posY)
 		// this is a menu item.
 		Point p = { posX, posY };
 		
-		if (!RectangleContains(&pWnd->m_fullRect, &p))
+		// if this menu's rectangle contains the point:
+		if (RectangleContains(&pWnd->m_fullRect, &p))
 		{
-			WindowAddEventToMasterQueue(pWnd, EVENT_KILLFOCUS, 0, 0);
+			// we can't close any menus.
+			return;
 		}
+	}
+	for (int i = 0; i < WINDOWS_MAX; i++)
+	{
+		Window* pWnd = &g_windows[i];
+		
+		if (!pWnd->m_used) continue;
+		if (~pWnd->m_flags & WF_MENUITEM) continue;
+		
+		// this is a menu item.
+		WindowAddEventToMasterQueue(pWnd, EVENT_KILLFOCUS, 0, 0);
 	}
 }
 

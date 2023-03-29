@@ -162,12 +162,20 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 						if (pData->pMenuEntries[i].nItemY)
 							y = pData->pMenuEntries[i].nItemY;
 
-						RECT(r, xPos, y, width, height - 2);
+						RECT(r, xPos, y, width, height - 1);
 						
 						char buffer[110];
 						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
 						
-						AddControl (pWindow, CONTROL_BUTTON_LIST, r, buffer, MENU_ITEM_COMBOID+i, pData->pMenuEntries[i].nIconID, pData->pMenuEntries[i].nMenuEntries);
+						AddControl (
+							pWindow,
+							CONTROL_BUTTON_LIST,
+							r,
+							buffer,
+							MENU_ITEM_COMBOID+i,
+							pData->pMenuEntries[i].nIconID,
+							(pData->bHasIcons ? BTNLIST_HASICON : 0) | (pData->pMenuEntries[i].nMenuEntries ? BTNLIST_HASSUBS : 0)
+						);
 						
 						if (pData->pMenuEntries[i].bDisabled)
 							SetDisabledControl(pWindow, MENU_ITEM_COMBOID + i, true);
@@ -203,13 +211,12 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 		case EVENT_KILLFOCUS:
 		{
 			if (!pWindow->m_data) break;
+			
 			WindowMenu* pData = (WindowMenu*)pWindow->m_data;
-			if (!pData->bOpen)
+			
+			if (!(pData->pWindow->m_flags & WF_MENUITEM))//i.e. not a popup menu
 			{
-				if (!(pData->pWindow->m_flags & WF_MENUITEM))//i.e. not a popup menu
-				{
-					DestroyWindow(pWindow);//kill self
-				}
+				DestroyWindow(pWindow);//kill self
 			}
 			break;
 		}
@@ -239,10 +246,10 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 					int y_pos = 0;
 					if (p)
 					{
-						y_pos = p->m_rect.top - 2;
+						y_pos = p->m_rect.top;
 					}
 					
-					int newXPos = pWindow->m_rect.left + GetMenuWidth (pData),
+					int newXPos = pWindow->m_rect.left + GetMenuWidth (pData) + BORDER_SIZE_NORESIZE * 2,
 					    newYPos = pWindow->m_rect.top  + y_pos;
 					
 					if (newXPos < 0)
@@ -480,7 +487,7 @@ void OnRightClickShowMenu(Window* pWindow, int parm1)
 	
 	restoreEnt ->nMenuComboID = CID_RESTORE;
 	minimizeEnt->nMenuComboID = CID_MINIMIZE;
-	maximizeEnt->nMenuComboID = CID_MINIMIZE;
+	maximizeEnt->nMenuComboID = CID_MAXIMIZE;
 	spacerEnt  ->nMenuComboID = CID_SPACER;
 	closeEnt   ->nMenuComboID = CID_CLOSE;
 	smSnapEnt  ->nMenuComboID = CID_SMARTSNAP_PARENT;
