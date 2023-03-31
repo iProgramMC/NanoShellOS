@@ -263,14 +263,13 @@ void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			
 			pWindow->m_data = NULL;
 			
-			//HelpOpen(pWindow, "/Fat0/GettingStarted.md");
 			if (pOldData)
 			{
 				HelpOpen(pWindow, pOldData);
 				MmFree(pOldData);
 			}
 			else
-				HelpOpen(pWindow, "/Fat0/Help.md");
+				HelpOpen(pWindow, "/Help/Main.md");
 			
 			break;
 		}

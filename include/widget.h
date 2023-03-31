@@ -334,4 +334,9 @@ void ProgBarSetProgress(Window* pWindow, int comboID, int prog);
  */
 void ProgBarSetMaxProg(Window* pWindow, int comboID, int max_prog);
 
+/**
+ * Sets the font of a text input control.
+ */
+void TextInputSetFont(Window *pWindow, int comboID, unsigned font);
+
 #endif//_WIDGET_H

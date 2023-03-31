@@ -181,7 +181,7 @@ RESOURCE_STATUS LaunchResourceLauncher(const char* pResourceID)
 	else if (STREQ(pResourceID, "cabinet"))  return LaunchCabinet();
 	else if (STREQ(pResourceID, "magnify"))  return LaunchMagnifier();
 	else if (STREQ(pResourceID, "launcher")) return LaunchLauncher();
-	else if (STREQ(pResourceID, "help"))     return HelpOpenResource("/Fat0/Help.md");//LaunchHelp();
+	else if (STREQ(pResourceID, "help"))     return HelpOpenResource("/Help/Main.md");//LaunchHelp();
 	else return RESOURCE_LAUNCH_NOT_FOUND;
 }
 

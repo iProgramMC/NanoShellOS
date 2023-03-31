@@ -73,6 +73,7 @@ typedef struct
 	int       m_knownScrollBarY;
 	bool      m_bCursorFlash;
 	int       m_ignoreTicksTill;
+	unsigned  m_font;
 }
 TextInputDataEx;
 
@@ -81,17 +82,22 @@ static TextInputDataEx* TextInput_GetData(Control* this)
 	return (TextInputDataEx*)this->m_dataPtr;
 }
 
-static int TextInput_GetLineHeight()
+unsigned TextInput_GetFont(Control* this)
 {
-	unsigned old = VidSetFont(TEXT_EDIT_FONT);
+	return TextInput_GetData(this)->m_font;
+}
+
+static int TextInput_GetLineHeight(Control* this)
+{
+	unsigned old = VidSetFont(TextInput_GetFont(this));
 	int ch = GetLineHeight();
 	VidSetFont(old);
 	return ch;
 }
 
-UNUSED static int TextInput_GetCharWidth(char c)
+UNUSED static int TextInput_GetCharWidth(Control* this, char c)
 {
-	unsigned old = VidSetFont(TEXT_EDIT_FONT);
+	unsigned old = VidSetFont(TextInput_GetFont(this));
 	int ch = GetCharWidth(c);
 	VidSetFont(old);
 	return ch;
@@ -189,24 +195,37 @@ static void TextInput_UpdateScrollBars(Control* this)
 	TextInputDataEx* pData = TextInput_GetData(this);
 	Window* pWindow = pData->m_pWindow;
 	
-	int scrollMax;
+	int scrollPos, scrollMax;
 	
 	// Vertical Scroll bar
+	scrollPos = pData->m_scrollY;
 	scrollMax = (pData->m_maxScrollY) - (this->m_rect.bottom - this->m_rect.top) + 6;
+	if (scrollPos < 0) scrollPos = 0;
 	if (scrollMax < 1) scrollMax = 1;
+	bool rpVert = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID)) != scrollPos || GetScrollBarMax(pWindow, GetVertScrollBarComboID(this->m_comboID)) != scrollMax;
+	SetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID), scrollPos);
 	SetScrollBarMax(pWindow, GetVertScrollBarComboID(this->m_comboID), scrollMax);
 	
 	// Horizontal Scroll bar
+	scrollPos = pData->m_scrollX;
 	scrollMax = (pData->m_maxScrollX) - (this->m_rect.right - this->m_rect.left);
+	if (scrollPos < 0) scrollPos = 0;
 	if (scrollMax < 1) scrollMax = 1;
+	bool rpHorz = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID)) != scrollPos || GetScrollBarMax(pWindow, GetHorzScrollBarComboID(this->m_comboID)) != scrollMax;
+	SetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID), scrollPos);
 	SetScrollBarMax(pWindow, GetHorzScrollBarComboID(this->m_comboID), scrollMax);
+	
+	unsigned oldFont = VidSetFont(FONT_BASIC);
+	if (rpHorz) CallControlCallback(pWindow, GetHorzScrollBarComboID(this->m_comboID), EVENT_PAINT, 0, 0);
+	if (rpVert) CallControlCallback(pWindow, GetVertScrollBarComboID(this->m_comboID), EVENT_PAINT, 0, 0);
+	VidSetFont(oldFont);
 }
 
 static void TextInput_RecalcMaxScroll(Control* this)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	pData->m_maxScrollX = 0;
-	pData->m_maxScrollY = pData->m_num_lines * TextInput_GetLineHeight();
+	pData->m_maxScrollY = pData->m_num_lines * TextInput_GetLineHeight(this);
 	
 	for (size_t i = 0; i < pData->m_num_lines; i++)
 	{
@@ -214,11 +233,13 @@ static void TextInput_RecalcMaxScroll(Control* this)
 		if (pData->m_maxScrollX < line->m_lengthPixels)
 			pData->m_maxScrollX = line->m_lengthPixels;
 	}
+	
+	TextInput_UpdateScrollBars(this);
 }
 
-static void TextInput_CalculateLinePixelWidth(UNUSED Control* this, TextLine* line)
+static void TextInput_CalculateLinePixelWidth(Control* this, TextLine* line)
 {
-	unsigned oldFont = VidSetFont(TEXT_EDIT_FONT);
+	unsigned oldFont = VidSetFont(TextInput_GetFont(this));
 	
 	const size_t sz = line->m_length;
 	
@@ -266,7 +287,7 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	if (pData->m_maxScrollX < line->m_lengthPixels)
 		pData->m_maxScrollX = line->m_lengthPixels;
 	
-	pData->m_maxScrollY += TextInput_GetLineHeight();
+	pData->m_maxScrollY += TextInput_GetLineHeight(this);
 	
 	TextInput_UpdateScrollBars(this);
 	
@@ -352,7 +373,7 @@ static void TextInput_AppendText(Control* this, int line, int pos, const char* p
 	pLine->m_text[pLine->m_length] = 0;
 	
 	// Measure pText's width in characters.
-	unsigned oldFont = VidSetFont(TEXT_EDIT_FONT);
+	unsigned oldFont = VidSetFont(TextInput_GetFont(this));
 	int width = 0;
 	for (; *pText; pText++)
 	{
@@ -456,7 +477,7 @@ static void TextInput_InsertNewLines(Control* this, int linePos, int lineCount)
 		pLine->m_capacity = MIN_CAPACITY;
 	}
 	
-	pData->m_maxScrollY += TextInput_GetLineHeight() * lineCount;
+	pData->m_maxScrollY += TextInput_GetLineHeight(this) * lineCount;
 	
 	TextInput_UpdateScrollBars(this);
 	TextInput_RepaintLineAndBelow(this, linePos);
@@ -523,7 +544,7 @@ static void TextInput_EraseConsecutiveLines(Control* this, int lineStart, int li
 	memmove(&pData->m_lines[lineStart], &pData->m_lines[lineStart + lineCount], sizeof(TextLine) * (pData->m_num_lines - lineStart - lineCount));
 	
 	pData->m_num_lines  -= lineCount;
-	pData->m_maxScrollY -= lineCount * TextInput_GetLineHeight();
+	pData->m_maxScrollY -= lineCount * TextInput_GetLineHeight(this);
 	
 	TextInput_UpdateScrollBars(this);
 	TextInput_RepaintLineAndBelow(this, lineStart);
@@ -598,7 +619,7 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 	VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rect);
 	rect.right ++;
 	rect.bottom++;
-	unsigned oldFont = VidSetFont(TEXT_EDIT_FONT);
+	unsigned oldFont = VidSetFont(TextInput_GetFont(this));
 	VidSetClipRect(&rect);
 	
 	TextInputDataEx* pData = TextInput_GetData(this);
@@ -728,7 +749,7 @@ static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum)
 {
 	TextInputDataEx* this = TextInput_GetData(pCtl);
 	
-	int lineHeight = TextInput_GetLineHeight();
+	int lineHeight = TextInput_GetLineHeight(pCtl);
 	
 	Rectangle refreshRect = pCtl->m_rect;
 	refreshRect.left   += 2;
@@ -749,7 +770,7 @@ static void TextInput_RepaintLine(Control* pCtl, int lineNum)
 {
 	TextInputDataEx* this = TextInput_GetData(pCtl);
 	
-	int lineHeight = TextInput_GetLineHeight();
+	int lineHeight = TextInput_GetLineHeight(pCtl);
 	
 	Rectangle refreshRect = pCtl->m_rect;
 	refreshRect.left  += 2;
@@ -776,7 +797,7 @@ static void TextInput_ClampCursorWithinScrollBounds(Control* this)
 	
 	int rectWidth  = (this->m_rect.right  - this->m_rect.left) - 12;
 	int rectHeight = (this->m_rect.bottom - this->m_rect.top)  - 6;
-	int lineHeight = TextInput_GetLineHeight();
+	int lineHeight = TextInput_GetLineHeight(this);
 	
 	int newScrollY = lineHeight * pData->m_cursorY;
 	if (newScrollY < 0)
@@ -820,7 +841,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
-	unsigned oldFont = VidSetFont(TEXT_EDIT_FONT);
+	unsigned oldFont = VidSetFont(TextInput_GetFont(this));
 	
 	int nPageLines = (this->m_rect.bottom - this->m_rect.top - (GetLineHeight() * 2)) / GetLineHeight();
 	
@@ -847,6 +868,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			// Update the lines where the cursor was modified.
 			TextInput_RepaintLine(this, oldCursorY);
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_DOWN:
@@ -867,6 +889,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			// Update the lines where the cursor was modified.
 			TextInput_RepaintLine(this, oldCursorY);
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_PAGEUP:
@@ -883,6 +906,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			// Update the lines where the cursor was modified.
 			TextInput_RepaintLine(this, oldCursorY);
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_PAGEDOWN:
@@ -903,6 +927,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			// Update the lines where the cursor was modified.
 			TextInput_RepaintLine(this, oldCursorY);
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_LEFT:
@@ -932,6 +957,7 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			{
 				TextInput_RepaintLine(this, pData->m_cursorY);
 			}
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_RIGHT:
@@ -962,18 +988,22 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 				TextInput_RepaintLine(this, pData->m_cursorY);
 			}
 			
+			TextInput_UpdateScrollBars(this);
+			
 			break;
 		}
 		case DIR_HOME:
 		{
 			pData->m_cursorX = 0;
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 		case DIR_END:
 		{
 			pData->m_cursorX = (int)pData->m_lines[pData->m_cursorY].m_length;
 			TextInput_RepaintLine(this, pData->m_cursorY);
+			TextInput_UpdateScrollBars(this);
 			break;
 		}
 	}
@@ -1001,6 +1031,11 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			// Create two scroll bars.
 			if (this->m_parm1 & TEXTEDIT_MULTILINE)
 			{
+				pData->m_font = TEXT_EDIT_FONT;
+				
+				if (this->m_parm1 & TEXTEDIT_STYLING)
+					pData->m_font = SYSTEM_FONT;
+				
 				Rectangle horzSBRect, vertSBRect;
 				horzSBRect = vertSBRect = this->m_rect;
 				horzSBRect.right  -= SCROLL_BAR_SIZE;
@@ -1028,8 +1063,10 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					horzSBAnchor |= ANCHOR_LEFT_TO_RIGHT;
 				}
 				
-				AddControlEx(pWindow, CONTROL_VSCROLLBAR, vertSBAnchor, vertSBRect, NULL, GetVertScrollBarComboID(this->m_comboID), 100, 0);
-				AddControlEx(pWindow, CONTROL_HSCROLLBAR, horzSBAnchor, horzSBRect, NULL, GetHorzScrollBarComboID(this->m_comboID), 100, 0);
+				unsigned oldFont = VidSetFont(TextInput_GetFont(this));
+				AddControlEx(pWindow, CONTROL_VSCROLLBAR, vertSBAnchor, vertSBRect, NULL, GetVertScrollBarComboID(this->m_comboID), 100, GetLineHeight()   << 16);
+				AddControlEx(pWindow, CONTROL_HSCROLLBAR, horzSBAnchor, horzSBRect, NULL, GetHorzScrollBarComboID(this->m_comboID), 100, GetCharWidth('W') << 16);
+				VidSetFont(oldFont);
 				
 				// shrink ourselves
 				this->m_rect.right  -= SCROLL_BAR_SIZE;
@@ -1037,7 +1074,9 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			}
 			else
 			{
-				this->m_rect.bottom = this->m_rect.top + 6 + TextInput_GetLineHeight();
+				pData->m_font = TEXT_EDIT_FONT;
+				
+				this->m_rect.bottom = this->m_rect.top + 6 + TextInput_GetLineHeight(this);
 			}
 			
 			TextInput_SetText(this, "", false);
@@ -1050,7 +1089,9 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			if (pData->m_ignoreTicksTill > GetTickCount()) break;
 			
-			if (!this->m_bFocused)
+			if (this->m_parm1 & TEXTEDIT_READONLY) break;
+			
+			if (!this->m_bFocused || !pWindow->m_isSelected)
 			{
 				if (!pData->m_bCursorFlash)
 				{
@@ -1147,7 +1188,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			char inChar = (char)parm1;
 			
-			if (inChar == '\n' && (~this->m_parm1 & TEXTEDIT_MULTILINE))
+			if ((inChar == '\n' || inChar == '\r') && (~this->m_parm1 & TEXTEDIT_MULTILINE))
 				break;
 			
 			if ((char)parm1 == '\x7F')
@@ -1275,7 +1316,9 @@ void SetTextInputText(Window* pWindow, int comboID, const char* pText)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			TextInput_SetText(&pWindow->m_pControlArray[i], pText, true);
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return;
+			TextInput_SetText(p, pText, true);
 			return;
 		}
 	}
@@ -1287,7 +1330,9 @@ void TextInputClearDirtyFlag(Window* pWindow, int comboID)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			TextInput_GetData(&pWindow->m_pControlArray[i])->m_dirty = false;
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return;
+			TextInput_GetData(p)->m_dirty = false;
 			return;
 		}
 	}
@@ -1299,7 +1344,9 @@ bool TextInputQueryDirtyFlag(Window* pWindow, int comboID)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			return TextInput_GetData(&pWindow->m_pControlArray[i])->m_dirty;
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return false;
+			return TextInput_GetData(p)->m_dirty;
 		}
 	}
 	return false;
@@ -1311,7 +1358,9 @@ const char* TextInputGetRawText(Window* pWindow, int comboID)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			return TextInput_GetRawText(&pWindow->m_pControlArray[i]);
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return NULL;
+			return TextInput_GetRawText(p);
 		}
 	}
 	return NULL;
@@ -1324,9 +1373,28 @@ void TextInputSetMode (Window *pWindow, int comboID, int mode)
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
 			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return;
 			
 			p->m_parm1 = mode;
 			TextInput_UpdateMode(p);
+		}
+	}
+}
+
+void TextInputSetFont(Window *pWindow, int comboID, unsigned font)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return;
+			
+			TextInputDataEx* pData = TextInput_GetData(p);
+			if (pData)
+				pData->m_font = font;
+			
+			return;
 		}
 	}
 }
