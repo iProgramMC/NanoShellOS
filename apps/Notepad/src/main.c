@@ -50,7 +50,9 @@ typedef struct NotepadData
 }
 NotepadData;
 
-#define NOTEPDATA(Window) ((NotepadData*)(Window->m_data))
+NotepadData g_NotepadData;
+
+#define NOTEPDATA(Window) (&g_NotepadData)
 
 void NotepadUpdateTitle(Window* pWindow)
 {
@@ -294,16 +296,15 @@ void NotepadOnActionRedo(Window* pWindow)
 	NotepadNotImplemented(pWindow);
 }
 
+const char* g_Argument1 = NULL;
+
 void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 {
 	switch (msg)
 	{
 		case EVENT_CREATE:
 		{
-			void *pOldData = pWindow->m_data;
 			Rectangle r;
-			// Add a list view control.
-			pWindow->m_data = malloc (sizeof (NotepadData));
 			
 			#define PADDING_AROUND_TEXTVIEW 8
 			#define TOP_PADDING             TITLE_BAR_HEIGHT + COOLBAR_BUTTON_HEIGHT + 5
@@ -390,10 +391,10 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			NOTEPDATA(pWindow)->m_untitled = true;
 			NOTEPDATA(pWindow)->m_filename[0] = 0;
 			
-			if (pOldData)
+			if (g_Argument1)
 			{
 				//If we have a parameter (fed from argv)
-				NotepadOpenFile(pWindow, (const char*)pOldData);
+				NotepadOpenFile(pWindow, (const char*)g_Argument1);
 			}
 			
 			break;
@@ -511,11 +512,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 				if (result == MBID_YES)
 					NotepadOnSave(pWindow);
 			}
-			if (pWindow->m_data)
-			{
-				free(pWindow->m_data);
-				pWindow->m_data = NULL;
-			}
+			
 			DefaultWindowProc (pWindow, msg, parm1, parm2);
 			break;
 		}
@@ -549,9 +546,11 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 		return 1;
 	}
 	
-	//pWindow->m_iconID = ICON_NOTEPAD;
+	if (argc > 1) {
+		g_Argument1 = argv[1];
+	}
+	
 	SetWindowIcon (pWindow, ICON_NOTEPAD);
-	//pWindow->m_data   = NULL;//TODO
 	
 	while (HandleMessages (pWindow));
 	
