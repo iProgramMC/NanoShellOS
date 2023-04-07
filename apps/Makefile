@@ -7,6 +7,7 @@ PROJECTS :=         \
 	CrtDemo         \
 	Doom            \
 	Edit            \
+	Finder          \
 	Fireworks       \
 	GameTest        \
 	List            \
