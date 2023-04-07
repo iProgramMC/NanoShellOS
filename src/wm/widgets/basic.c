@@ -19,6 +19,7 @@ bool WidgetNone_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 {
 	return false;
 }
+
 bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -29,6 +30,7 @@ bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 	}
 	return false;
 }
+
 bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -36,15 +38,15 @@ bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 		case EVENT_PAINT:
 		{
 			if (this->m_parm2 & TEXTSTYLE_FORCEBGCOL)
-			{
-				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
-			}
+				VidFillRect(WINDOW_BACKGD_COLOR, this->m_rect.left, this->m_rect.top, this->m_rect.right - 1, this->m_rect.bottom - 1);
+			
 			VidDrawText(this->m_text, this->m_rect, this->m_parm2, this->m_parm1, TRANSPARENT);
 			break;
 		}
 	}
 	return false;
 }
+
 bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -53,6 +55,8 @@ bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			this->m_dataPtr = NULL;
 			break;
 		case EVENT_PAINT:
+			if (this->m_parm2 & TEXTSTYLE_FORCEBGCOL)
+				VidFillRect(WINDOW_BACKGD_COLOR, this->m_rect.left, this->m_rect.top, this->m_rect.right - 1, this->m_rect.bottom - 1);
 			if (this->m_dataPtr)
 				VidDrawText((const char*)this->m_dataPtr, this->m_rect, this->m_parm2, this->m_parm1, TRANSPARENT);
 			break;
@@ -64,16 +68,19 @@ bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	}
 	return false;
 }
+
 bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
 		case EVENT_PAINT:
+			VidFillRect(WINDOW_BACKGD_COLOR, this->m_rect.left, this->m_rect.top, this->m_rect.right - 1, this->m_rect.bottom - 1);
 			RenderIcon(this->m_parm1, this->m_rect.left + (this->m_rect.right - this->m_rect.left - 32) / 2, this->m_rect.top + (this->m_rect.bottom - this->m_rect.top - 32) / 2);
 			break;
 	}
 	return false;
 }
+
 bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -95,6 +102,7 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	}
 	return false;
 }
+
 bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -112,8 +120,6 @@ bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
-
-
 
 void SetHugeLabelText (Window *pWindow, int comboID, const char* pText)
 {
