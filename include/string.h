@@ -68,5 +68,7 @@ typedef struct {
 
 char* Tokenize (TokenState* pState, char* pString, char* separator);
 
+bool WildcardMatches(const char* pattern, const char* candidate);
+
 
 #endif//_STRING_H

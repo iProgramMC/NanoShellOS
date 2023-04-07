@@ -196,7 +196,7 @@ void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int par
 				if (parm1 == 5)
 				{
 					//actually run the thing
-					RESOURCE_STATUS status = LaunchResource(TextInputGetRawText(pWindow, 4));
+					RESOURCE_STATUS status = LaunchFileOrResource(TextInputGetRawText(pWindow, 4));
 					if (status != RESOURCE_LAUNCH_SUCCESS)
 					{
 						RunPopupError(pWindow, TextInputGetRawText(pWindow, 4), status);

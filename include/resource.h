@@ -11,6 +11,16 @@ typedef int RESOURCE_STATUS;
 typedef int RESOURCE_TYPE;
 typedef RESOURCE_STATUS (*RESOURCE_INVOKE)(const char* pArgument);
 
+typedef struct
+{
+	const char* match;
+	const char* protocol; // <protocol>:<file>
+	const char* description;
+	int         icon;
+	int         type_mask; // the whole type must match. Only use this with file type flags.
+}
+FileAssociation;
+
 enum
 {
 	RESOURCE_NONE,
@@ -37,5 +47,9 @@ enum
 
 RESOURCE_STATUS LaunchResource (const char* pResource);
 const char* GetResourceErrorText (RESOURCE_STATUS state);
+
+FileAssociation* ResolveAssociation(const char* fileName, int fileType);
+RESOURCE_STATUS LaunchFileOrResource(const char* filePath);
+
 
 #endif//_RESOURCE_H

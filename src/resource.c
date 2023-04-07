@@ -187,4 +187,71 @@ RESOURCE_STATUS LaunchResource (const char* pResource)
 		return RESOURCE_LAUNCH_INVALID_PROTOCOL;
 }
 
+// TODO: Allow loading these from a file.
+FileAssociation g_FileAssociations[] =
+{
+	// things that match everything with a certain flag.
+	{ "*", "", "Local Disk",  ICON_HARD_DRIVE,  FILE_TYPE_MOUNTPOINT },
+	{ "*", "", "File folder", ICON_FOLDER,      FILE_TYPE_DIRECTORY },
+	{ "*", "", "Character device", ICON_SERIAL, FILE_TYPE_CHAR_DEVICE }, // not all char devices are serial, but meh.
+	
+	{ "*.txt", "ted",      "Text Document",         ICON_TEXT_FILE,    0 },
+	{ "*.nse", "exwindow", "Application",           ICON_APPLICATION,  0 },
+	{ "*.c",   "exscript", "NanoShell Script File", ICON_FILE_CSCRIPT, 0 },
+	{ "*.md",  "help",     "Help Document",         ICON_FILE_MKDOWN,  0 },
+	{ "*.bmp", "image",    "BMP File",              ICON_FILE_IMAGE,   0 },
+	{ "*.tga", "image",    "TGA File",              ICON_FILE_IMAGE,   0 },
+	{ "*.tar", "unknown",  "Tape Archive File",     ICON_TAR_ARCHIVE,  0 },
+};
+
+FileAssociation g_DefaultAssociation = {
+	"*", "unknown", "File", ICON_FILE, 0
+};
+
+FileAssociation* ResolveAssociation(const char* fileName, int fileType)
+{
+	// a simple loop will do since there are (right now) few entries:
+	for (int i = 0; i < (int)ARRAY_COUNT(g_FileAssociations); i++)
+	{
+		FileAssociation* pAssoc = &g_FileAssociations[i];
+		
+		// In the case of pAssoc->type_mask being zero, this will return 'false' for any fileType.
+		if ((fileType & pAssoc->type_mask) != pAssoc->type_mask) continue;
+		
+		// check if the wildcard matches.
+		if (!WildcardMatches(pAssoc->match, fileName)) continue;
+		
+		// wildcard matches fine. So,  return
+		return pAssoc;
+	}
+	
+	return &g_DefaultAssociation;
+}
+
+RESOURCE_STATUS LaunchFileOrResource(const char* pResource)
+{
+	RESOURCE_STATUS state = LaunchResource(pResource);
+	
+	// If a protocol WAS specified, this MUST mean that we failed for a different reason, or succeeded.
+	if (state != RESOURCE_LAUNCH_NO_PROTOCOL) 
+		return state;
+	
+	// no protocol was specified:
+	StatResult sr;
+	int res = FiStat(pResource, &sr);
+	if (res < 0)
+		return RESOURCE_LAUNCH_NOT_FOUND;
+	
+	FileAssociation* pAssoc = ResolveAssociation(pResource, sr.m_type);
+	
+	RESOURCE_TYPE resourceType = ResolveProtocolString(pAssoc->protocol);
+	if (resourceType == RESOURCE_NONE)
+		return RESOURCE_LAUNCH_INVALID_PROTOCOL;
+	
+	if (!g_ResourceInvokes[resourceType])
+		return RESOURCE_LAUNCH_INVALID_PROTOCOL;
+	
+	return g_ResourceInvokes[resourceType](pResource);
+}
+
 #endif

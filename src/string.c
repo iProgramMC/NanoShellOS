@@ -367,3 +367,46 @@ char* SafeStringCopy(char *DestinationBuffer, size_t szDestinationBuffer, const 
 	DestinationBuffer[len] = 0;
 	return DestinationBuffer;
 }
+
+// note: This is an inefficient algorithm, and will lead to a stack overflow if the strings are too long.
+// Make sure to cap their lengths. However, for now, this will do.
+bool WildcardMatches(const char* pattern, const char* candidate)
+{
+	// if we have gone through all the characters in the pattern...
+	if (*pattern == '\0')
+	{
+		// check if we have also matched all of the candidate's characters.
+		return (*candidate == 0);
+	}
+	
+	// if we have a wildcard...
+	if (*pattern == '*')
+	{
+		pattern++;
+		
+		for (; *candidate; candidate++)
+		{
+			if (WildcardMatches(pattern, candidate))
+				return true;
+		}
+		
+		// also check the case where there's no string to match.
+		return WildcardMatches(pattern, candidate);
+	}
+	
+	// If this isn't a single character wildcard or a regular wildcard, this means that we should
+	// check if the current character in the pattern matches the current character in the candidate.
+	// If they don't match, we can easily discard the entire match as false.
+	if (*pattern != '?')
+	{
+		if (*pattern != *candidate) return false;
+	}
+	// If it is, we shouldn't have a null character.
+	else
+	{
+		if (*candidate == '\0')
+			return false;
+	}
+	
+	return WildcardMatches(pattern + 1, candidate + 1);
+}
