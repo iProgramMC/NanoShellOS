@@ -116,7 +116,7 @@ void        ReleaseCursor(int cursorID);
 Image*      GetIconImage(int iconType, int size /* = -1 */);
 Resource*   GetResource(int resID);
 Point       GetMousePos();
-void        SetImageCtlMde(Window* pWindow, int comboID, int mode);
+void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
 void        SetImageCtlColor(Window* pWindow, int comboID, uint32_t color);
 void        SetImageCtlCurrentImage(Window* pWindow, int comboID, Image* pImage);
 Image*      GetImageCtlCurrentImage(Window* pWindow, int comboID);
