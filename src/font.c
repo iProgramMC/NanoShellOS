@@ -595,6 +595,7 @@ void KillFont (int fontID)
 			case FONT_GLCD:                 return "GLCD font 6x8";
 			case FONT_FAMISANS:             return "Fami Sans font 8x8";
 			case FONT_PAPERM:               return "Paper M font 8x16";
+			case FONT_SYSTEM:               return "NanoShell System font 2";
 		}
 		return "Unknown Font";
 	}
