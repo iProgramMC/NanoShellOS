@@ -16,8 +16,9 @@
 #define CLogMsg(...)
 #endif
 
-#define MIN_CACHE_UNITS 256   // 1 MB minimum
-#define MAX_CACHE_UNITS 16384 // 64 MB before we start to evict pages
+// well, these are in storabs.c
+unsigned StGetMinCacheUnits();
+unsigned StGetMaxCacheUnits();
 
 #define EVICT_WHEN_REACHING_MAX (4096) // Evict 4096 cache units when we're about to reach the max.
 
@@ -26,8 +27,8 @@ void StCacheInit(CacheRegister* pReg, DriveID driveID)
 {
 	ASSERT (!pReg->m_bUsed);
 	pReg->m_bUsed              = true;
-	pReg->m_pCacheUnits        = MmAllocateK(sizeof(CacheUnit) * MIN_CACHE_UNITS);
-	pReg->m_nCacheUnitCapacity = MIN_CACHE_UNITS;
+	pReg->m_pCacheUnits        = MmAllocateK(sizeof(CacheUnit) * StGetMinCacheUnits());
+	pReg->m_nCacheUnitCapacity = StGetMinCacheUnits();
 	pReg->m_nCacheUnitCount    = 0;
 	pReg->m_driveID            = driveID;
 }
@@ -100,14 +101,13 @@ void StEvictLeastUsedCacheUnit(CacheRegister* pReg)
 	}
 
 	if ((int)unit < 0) return;
-
 	StEvictCacheUnit(pReg, unit);
 }
 
 void StExpandCacheUnitStorage(CacheRegister* pReg, size_t newSize)
 {
 	ASSERT(newSize >= pReg->m_nCacheUnitCapacity);
-	ASSERT(newSize < MAX_CACHE_UNITS);
+	ASSERT(newSize < StGetMaxCacheUnits());
 
 	pReg->m_pCacheUnits = MmReAllocateK(pReg->m_pCacheUnits, newSize * sizeof(CacheUnit));
 
@@ -206,14 +206,17 @@ CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData)
 	if (pReg->m_nCacheUnitCount == pReg->m_nCacheUnitCapacity)
 	{
 		// _should_ we expand it?
-		if (pReg->m_nCacheUnitCapacity + MIN_CACHE_UNITS > MAX_CACHE_UNITS)
+		if (pReg->m_nCacheUnitCapacity + StGetMinCacheUnits() >= StGetMaxCacheUnits())
 		{
 			// no, try evicting some less used cache units
 			// TODO: optimize, right now it's basically O(n^2).. get better man
 			for (int i = 0; i < EVICT_WHEN_REACHING_MAX; i++)
 				StEvictLeastUsedCacheUnit(pReg);
 		}
-		StExpandCacheUnitStorage(pReg, pReg->m_nCacheUnitCapacity + MIN_CACHE_UNITS);
+		else
+		{
+			StExpandCacheUnitStorage(pReg, pReg->m_nCacheUnitCapacity + StGetMinCacheUnits());
+		}
 	}
 
 	// Determine where we need to add the cache unit using a binary search

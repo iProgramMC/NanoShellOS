@@ -42,10 +42,16 @@ static SafeLock      s_driveLocks    [0x100];
 #ifdef ENABLE_CACHING
 static CacheRegister s_cacheRegisters[0x100];//max driveID = 0xFF.
 
+static int s_NumCacheRegisters;
+
 UNUSED static CacheRegister *GetCacheRegister(DriveID driveID)
 {
 	if (!s_cacheRegisters[driveID].m_bUsed)
+	{
+		++s_NumCacheRegisters;
+		
 		StCacheInit(&s_cacheRegisters[driveID], driveID);
+	}
 	
 	return &s_cacheRegisters[driveID];
 }
@@ -60,6 +66,37 @@ static DriveType StGetDriveType(DriveID driveNum)
 	if (driveNum >= 0x20 && driveNum <= 0x5F) return DEVICE_AHCI;
 	if (driveNum >= 0xF0)                     return DEVICE_RAMDISK;
 	return DEVICE_UNKNOWN;
+}
+
+int MpGetNumAvailablePages(); // mm/pmm.c
+
+unsigned StGetMaxCacheUnits()
+{
+	// a function of the amount of memory available.
+	// We never want this to exceed 1/4 of the available memory. (why? Good question)
+	// Since a cache unit stores a page's worth of data from the disk, this means that
+	// 16384 (the old default) units would correspond to 64 MB (!!) of memory at most
+	// used by the cache system. For each drive that has to cache stuff.
+	// So our new method will basically take the amount of pages we have available
+	// on the system, divide those by 4, and then by the amount of cache registers we have.
+	
+	int nCacheRegs = s_NumCacheRegisters;
+	if (nCacheRegs == 0)
+		nCacheRegs = 1; // Avoid a division by 0 error.
+	
+	return (unsigned int)MpGetNumAvailablePages() / 4 / nCacheRegs;
+}
+
+unsigned StGetMinCacheUnits()
+{
+	// The same as StGetMaxCacheUnits, but we have a maximum of 256, and we divide by 8.
+	// So basically, it's MIN(MAX_CACHE_UNITS / 8, 256).
+	
+	int num = StGetMaxCacheUnits() / 8;
+	if (num > 256)
+		num = 256;
+	
+	return num;
 }
 
 //note: driveID is internal.
@@ -256,6 +293,8 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 	
 	if (!pReg->m_bUsed)
 	{
+		++s_NumCacheRegisters;
+		
 		StCacheInit(pReg, driveId);
 	}
 	
@@ -303,6 +342,8 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 	
 	if (!pReg->m_bUsed)
 	{
+		++s_NumCacheRegisters;
+		
 		StCacheInit(pReg, driveId);
 	}
 	
@@ -351,6 +392,8 @@ void StFlushAllCaches()
 
 void StDebugDumpAll()
 {
+	LogMsg("Capacity min: %d max: %d", StGetMinCacheUnits(), StGetMaxCacheUnits());
+	
 	for (int id = 0; id < 0x100; id++)
 	{
 		CacheRegister *pReg = &s_cacheRegisters[id];
