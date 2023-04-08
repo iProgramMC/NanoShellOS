@@ -67,6 +67,7 @@ BitmapFont;
 		&g_TamsynBold7x14,
 		&g_TamsynRegu6x12,
 		&g_TamsynBold6x12,
+		&g_NewFontData,
 		//g_TestFont16x16,
 		//g_TestFont216x16,
 	};
@@ -670,7 +671,7 @@ void KillFont (int fontID)
 			for (int y = 0; y < height; y++)
 			{
 				int to = y * 2;
-				unsigned short test1 = pCharBytes[to + 1] | pCharBytes[to] << 8;
+				unsigned short test1 = pCharBytes[to] | pCharBytes[to + 1] << 8;
 				
 				for (int x = width - 1, bitmask = (1 << (width - 1)); x >= 0; x--, bitmask >>= 1)
 				{

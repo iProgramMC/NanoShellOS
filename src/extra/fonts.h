@@ -12,5 +12,6 @@
 #include "glcd.h"
 #include "tamsyn7x14.h"
 #include "tamsyn6x12.h"
+#include "newfont.h"
 //#include "testa.h"
 //#include "testb.h"
