@@ -36,7 +36,7 @@ void CoVbePlotChar (Console *this, int x, int y, char c)
 	VBEData* backup = g_vbeData;
 	g_vbeData = &g_mainScreenVBEData;
 	
-	VidPlotChar (c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
+	VidPlotChar ((uint8_t)c, this->offX + (x << 3), this->offY + (y << (3 + (g_uses8by16Font))), g_vgaColorsToRGB[this->color & 0xF], g_vgaColorsToRGB[this->color >> 4]);
 	g_vbeData = backup;
 }
 
