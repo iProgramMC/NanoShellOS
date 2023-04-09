@@ -4,16 +4,7 @@
 
            Shell widget module
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "wi.h"
 
 bool g_GlowOnHover = true;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
@@ -263,4 +254,91 @@ WidgetEventHandler GetWidgetOnEventFunction (int type)
 	if (type < 0 || type >= CONTROL_COUNT)
 		return NULL;
 	return g_widgetEventHandlerLUT[type];
+}
+
+void DrawEdge(Rectangle rect, int style, unsigned bg)
+{
+	// adjust the rectangle so we can simply use VidFillRectangle and VidDrawRectangle.
+	rect.right--;
+	rect.bottom--;
+	
+	if (style & DRE_FLAT)
+	{
+		style &= ~DRE_FLAT;
+		style &= ~(DRE_INNER | DRE_OUTER);
+		style |=  DRE_BLACKOUTER;
+	}
+	
+	// the depth levels are as follows:
+	// 6 - BUTTON_HILITE_COLOR
+	// 5 - Avg(BUTTON_HILITE_COLOR, BUTTON_MIDDLE_COLOR)
+	// 4 - BUTTON_MIDDLE_COLOR
+	// 3 - WINDOW_BORDER_COLOR
+	// 2 - BUTTON_SHADOW_COLOR
+	// 1 - BUTTON_XSHADOW_COLOR
+	// 0 - BUTTON_EDGE_COLOR
+	
+	uint32_t tl = 0, br = 0;
+	
+	// the flags we need to check, in order of priority.
+	// These match up with their definitions in window.h and represent the amount 1 is shifted by.
+	static const int flags[] = { 4, 1, 3, 2, 0 };
+	
+	int colors[] =
+	{
+		BUTTON_EDGE_COLOR,
+		0x404040,
+		BUTTON_SHADOW_COLOR,
+		WINDOW_BORDER_COLOR,
+		0,
+		0,
+		BUTTON_HILITE_COLOR,
+	};
+	
+	if (style & DRE_HOT)
+		colors[4] = BUTTON_HOVER_COLOR;
+	else
+		colors[4] = BUTTON_MIDDLE_COLOR;
+	
+	// get color #5.
+	unsigned colorAvg = 0;
+	colorAvg |= ((colors[6] & 0xff0000) + (colors[4] & 0xff0000)) >> 1;
+	colorAvg |= ((colors[6] & 0x00ff00) + (colors[4] & 0x00ff00)) >> 1;
+	colorAvg |= ((colors[6] & 0x0000ff) + (colors[4] & 0x0000ff)) >> 1;
+	colors[5] = colorAvg;
+	
+	// 4 pairs of ints corresponding to the border type. These ints are
+	// indices into the colors array.
+	static const int color_indices[] =
+	{
+		6, 2, // raised inner
+		1, 2, // sunken inner
+		5, 1, // raised outer
+		2, 6,
+		0, 0,
+	};
+	
+	for (int i = 0; i < (int)ARRAY_COUNT(flags); i++)
+	{
+		if (~style & (1 << flags[i])) continue;
+		
+		tl = colors[color_indices[0 + 2 * flags[i]]];
+		br = colors[color_indices[1 + 2 * flags[i]]];
+		
+		// top left
+		VidDrawHLine(tl, rect.left, rect.right, rect.top);
+		VidDrawVLine(tl, rect.top, rect.bottom, rect.left);
+		
+		// bottom right
+		VidDrawHLine(br, rect.left, rect.right, rect.bottom);
+		VidDrawVLine(br, rect.top, rect.bottom, rect.right);
+		
+		rect.left++;
+		rect.top++;
+		rect.right--;
+		rect.bottom--;
+	}
+	
+	if (style & DRE_FILLED)
+		VidFillRectangle(bg, rect);
 }

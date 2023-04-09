@@ -175,5 +175,6 @@ Rectangle GetMarginsWindowFlags(uint32_t flags);
 Rectangle GetWindowMargins(Window* pWindow);
 Rectangle GetWindowClientRect(Window* pWindow, bool offset);
 MenuBarData* WmCreateMenuBar();
+void DrawEdge(Rectangle rect, int style, unsigned bg);
 
 #endif//INT_WI_H

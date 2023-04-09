@@ -1043,4 +1043,32 @@ int GetWindowFlags(Window* pWindow);
  */
 void SetWindowFlags(Window* pWindow, int flags);
 
+/**
+ * Draws one or more edges of a rectangle.
+ *
+ * Available flags are below this function prototype.
+ *
+ * If DRE_FILLED is not specified, the 'bg' parameter is ignored.
+ */
+void DrawEdge(Rectangle rect, int style, unsigned bg);
+
+#define DRE_RAISEDINNER (1 << 0)
+#define DRE_SUNKENINNER (1 << 1)
+#define DRE_RAISEDOUTER (1 << 2)
+#define DRE_SUNKENOUTER (1 << 3)
+#define DRE_BLACKOUTER  (1 << 4) // takes priority over all these
+
+#define DRE_OUTER (DRE_RAISEDOUTER | DRE_SUNKENOUTER)
+#define DRE_INNER (DRE_RAISEDINNER | DRE_SUNKENINNER)
+
+#define DRE_FILLED (1 << 5) // 'bg' is ignored if this is not set
+#define DRE_FLAT   (1 << 6) // flat border.
+#define DRE_HOT    (1 << 7) // the button is hovered
+
+#define DRE_LEFT   (1  <<  8)
+#define DRE_TOP    (1  <<  9)
+#define DRE_RIGHT  (1  << 10)
+#define DRE_BOTTOM (1  << 11)
+#define DRE_RECT   (15 <<  8)
+
 #endif//_WINDOW_H
