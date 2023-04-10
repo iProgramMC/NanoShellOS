@@ -48,20 +48,25 @@ static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle
 	uint32_t flgs = 0;
 	if (g_windows[windowID].m_isSelected)
 	{
-		RenderButtonShape(r, BUTTONLITE, BUTTONDARK, BUTTONMIDD);
+		if (hovered)
+			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+		else
+			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 		
 		flgs |= TEXT_RENDER_BOLD;
 	}
 	else if (clicked)
 	{
-		RenderButtonShape(r, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+		DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_SUNKENINNER, BUTTONMIDC);
 	}
 	else if (hovered)
 	{
-		RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
+		DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
 	}
 	else
-		RenderButtonShape(r, BUTTONDARK, BUTTONLITE, BUTTON_MIDDLE_COLOR);
+	{
+		DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+	}
 	
 	// hmm.
 	Rectangle rt = r;

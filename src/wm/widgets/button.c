@@ -137,11 +137,11 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 			VidSetClipRect (&this->m_rect);
 			
 			if (this->m_buttonData.m_clicked)
-				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_SUNKENINNER, BUTTONMIDC);
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTON_HOVER_COLOR);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
 			else
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
 			if (this->m_buttonData.m_clicked)
 			{
@@ -225,11 +225,11 @@ bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 			if (this->m_buttonData.m_clicked)
 			{
 				x++, y++;
-				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_SUNKENINNER, BUTTONMIDC);
 			}
 			else
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			}
 			
 			if (!this->m_bDisabled)
@@ -339,7 +339,6 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 				
 				x--, y--;
 				bRenderOutlineToo = true;
-				//RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
 			}
 			else
 			{
@@ -572,12 +571,12 @@ bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 				Rectangle r = this->m_rect;
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
-				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, this->m_parm2);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_SUNKENINNER, this->m_parm2);
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, this->m_parm1, TRANSPARENT);
 			}
 			else
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, this->m_parm2);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, this->m_parm2);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, this->m_parm1, TRANSPARENT);
 			}
 			
@@ -630,14 +629,12 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 				Rectangle r = this->m_rect;
 				//draw the button as slightly pushed in
 				r.left++; r.right++; r.bottom++; r.top++;
-				RenderButtonShapeSmall (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(this->m_rect, DRE_SUNKENINNER | DRE_FILLED, BUTTONMIDD);
 				VidDrawText(this->m_text, r, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			else
 			{
-				this->m_rect.right--;
-				RenderButtonShapeSmall (this->m_rect, BUTTONDARK, BUTTONLITE, BUTTONMIDD);
-				this->m_rect.right++;//ugly hack
+				DrawEdge(this->m_rect, DRE_RAISED | DRE_FILLED, BUTTONMIDD);
 				VidDrawText(this->m_text, this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			

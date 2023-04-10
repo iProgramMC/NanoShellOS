@@ -8,17 +8,22 @@
 
 extern const unsigned char* g_pCurrentFont;
 
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-
 static void WindowBorderDrawButton(Rectangle rectBtn, uint32_t privFlags, int hoverMask, int clickMask, int icon)
 {
 	bool pressed = privFlags & clickMask, hovered = privFlags & hoverMask;
 	
-	uint32_t     dark = BUTTONDARK, light = BUTTONLITE, midd = BUTTONMIDC;
-	if (hovered) midd = BUTTONMIDD;
-	if (pressed) dark = BUTTONLITE, light = BUTTONDARK;
+	uint32_t style1 = DRE_BLACKOUTER, style2 = DRE_RAISEDINNER | DRE_FILLED, midd = BUTTONMIDC;
+	if (hovered)
+		midd = BUTTONMIDD;
+	if (pressed)
+		style1 = DRE_SUNKENINNER | DRE_FILLED, style2 = 0, midd = BUTTONDARK;
 	
-	RenderButtonShapeSmallBorder(rectBtn, BUTTON_XSHADOW_COLOR, dark, light, midd);
+	DrawEdge(rectBtn, style1, midd);
+	rectBtn.right--;
+	rectBtn.bottom--;
+	DrawEdge(rectBtn, style2, midd);
+	rectBtn.right++;
+	rectBtn.bottom++;
 	
 	// draw the icon
 	int rectWidth = (rectBtn.right - rectBtn.left);
@@ -242,7 +247,9 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		//draw the window title:
 		if (bTitleHas3dShape)
 		{
-			RenderButtonShapeSmallInsideOut (titleRect, BUTTONLITE, BUTTONDARK, TRANSPARENT);
+			titleRect.right++;
+			DrawEdge(titleRect, DRE_SUNKENOUTER, 0);
+			titleRect.right--;
 		}
 		
 		VidFillRectHGradient(

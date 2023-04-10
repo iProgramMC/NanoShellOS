@@ -19,7 +19,6 @@ extern Console *g_currentConsole, *g_focusedOnConsole, g_debugConsole, g_debugSe
 extern uint32_t g_vgaColorsToRGB[];
 
 void CoRefreshChar (Console *this, int x, int y);
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 void KeKillThreadsByConsole(Console *pConsole);
 
 int g_ConsoleDefaultWidth = 80, g_ConsoleDefaultHeight = 25;
@@ -104,9 +103,9 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 				VidSetFont(g_TerminalFont);//we like this font right here
 				int charWidth = GetCharWidth('W'), charHeite = GetLineHeight();
 				VidSetFont(SYSTEM_FONT);
-				RECT (r, 0, 0, pConsole->width * charWidth + 3, pConsole->height * charHeite + 4);
+				RECT (r, 0, 0, pConsole->width * charWidth + 4, pConsole->height * charHeite + 4);
 				
-				RenderButtonShapeSmallInsideOut (r, 0xBFBFBF, 0x808080, TRANSPARENT);
+				DrawEdge(r, DRE_SUNKEN, 0);
 			}
 		case EVENT_UPDATE:
 		{

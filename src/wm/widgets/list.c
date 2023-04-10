@@ -20,7 +20,6 @@
 #define ICON_ITEM_HEIGHT (IsLowResolutionMode() ? 50 : 60)
 
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 
 // List View.
 #if 1
@@ -230,9 +229,8 @@ go_back:
 				VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
 			}
 			
-			Rectangle inRect = this->m_rect;
-			inRect.right--;
-			RenderButtonShapeSmallInsideOut (inRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(this->m_rect, DRE_SUNKEN, 0);
+			
 			VidSetClipRect(NULL);
 			
 			break;
@@ -485,7 +483,7 @@ go_back:
 				}
 			}
 			
-			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(this->m_rect, DRE_SUNKEN, 0);
 			
 			VidSetClipRect(NULL);
 			
@@ -919,9 +917,8 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				VidDrawText (pData->m_pItems[i].m_contentsShown, br, TEXTSTYLE_HCENTERED, color, TRANSPARENT);
 			}
 			
-			Rectangle ir = this->m_rect;
-			ir.right--;
-			RenderButtonShapeSmallInsideOut (ir, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(this->m_rect, DRE_SUNKEN, 0);
+			
 			VidSetClipRect(NULL);
 			
 			break;

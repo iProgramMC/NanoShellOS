@@ -109,7 +109,7 @@ bool WidgetHScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;
-	basic_rectangle.bottom = basic_rectangle.top + SCROLL_BAR_WIDTH-1;
+	basic_rectangle.bottom = basic_rectangle.top + SCROLL_BAR_WIDTH;
 	
 	Rectangle left_button = basic_rectangle;
 	left_button.right = left_button.left + SCROLL_BAR_WIDTH;
@@ -216,23 +216,35 @@ go_back:;
 		}
 		case EVENT_PAINT:
 		{
-			VidFillRectangle (SCROLL_BAR_BACKGD_COLOR, basic_rectangle);
-		
+			VidFillRect(SCROLL_BAR_BACKGD_COLOR, clickable_rect.left, clickable_rect.top, clickable_rect.right - 1, clickable_rect.bottom - 1);
+			
 			if (this->m_scrollBarData.m_yMinButton)
-				RenderButtonShapeSmall (left_button,   BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(left_button, DRE_FILLED | DRE_SUNKENINNER, BUTTONMIDC);
 			else
-				RenderButtonShapeSmall (left_button,   BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(left_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
 			if (this->m_scrollBarData.m_yMaxButton)
-				RenderButtonShapeSmall (right_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(right_button, DRE_FILLED | DRE_SUNKENINNER, BUTTONMIDC);
 			else
-				RenderButtonShapeSmall (right_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(right_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, this->m_scrollBarData.m_isBeingDragged ? BUTTON_HOVER_COLOR : BUTTON_MIDDLE_COLOR);
+			if (this->m_scrollBarData.m_isBeingDragged)
+				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+			else
+				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			left_button .left++; left_button .right++; left_button .bottom++; left_button .top++;
-			right_button.left++; right_button.right++; right_button.bottom++; right_button.top++;
-			scroller    .left++; scroller    .right++; scroller    .bottom++; scroller    .top++;
+			left_button.top++;
+			right_button.top++;
+			scroller.top++;
+			left_button.bottom++;
+			right_button.bottom++;
+			scroller.bottom++;
+			
+			if (this->m_scrollBarData.m_yMinButton)
+				left_button .left++, left_button .right++, left_button .bottom++, left_button .top++;
+				
+			if (this->m_scrollBarData.m_yMaxButton)
+				right_button.left++, right_button.right++, right_button.bottom++, right_button.top++;
 			
 			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
@@ -246,7 +258,7 @@ bool WidgetVScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;
-	basic_rectangle.right = basic_rectangle.left + SCROLL_BAR_WIDTH-1;
+	basic_rectangle.right = basic_rectangle.left + SCROLL_BAR_WIDTH;
 	
 	Rectangle top_button = basic_rectangle;
 	top_button.bottom = top_button.top + SCROLL_BAR_WIDTH;
@@ -351,22 +363,35 @@ go_back:;
 		}
 		case EVENT_PAINT:
 		{
-			VidFillRectangle (SCROLL_BAR_BACKGD_COLOR, clickable_rect);
+			VidFillRect(SCROLL_BAR_BACKGD_COLOR, clickable_rect.left, clickable_rect.top, clickable_rect.right - 1, clickable_rect.bottom - 1);
+			
 			if (this->m_scrollBarData.m_yMinButton)
-				RenderButtonShapeSmall (top_button,     BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(top_button, DRE_FILLED | DRE_SUNKENINNER, BUTTONMIDC);
 			else
-				RenderButtonShapeSmall (top_button,     BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(top_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
 			if (this->m_scrollBarData.m_yMaxButton)
-				RenderButtonShapeSmall (bottom_button,  BUTTONLITE, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(bottom_button, DRE_FILLED | DRE_SUNKENINNER, BUTTONMIDC);
 			else
-				RenderButtonShapeSmall (bottom_button,  BUTTONDARK, BUTTONLITE, BUTTONMIDD);
+				DrawEdge(bottom_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			RenderButtonShapeSmall (scroller, BUTTONDARK, BUTTONLITE, this->m_scrollBarData.m_isBeingDragged ? BUTTON_HOVER_COLOR : BUTTON_MIDDLE_COLOR); // Green
+			if (this->m_scrollBarData.m_isBeingDragged)
+				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+			else
+				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			top_button   .left++; top_button   .right++; top_button   .bottom++; top_button   .top++;
-			bottom_button.left++; bottom_button.right++; bottom_button.bottom++; bottom_button.top++;
-			scroller     .left++; scroller     .right++; scroller     .bottom++; scroller     .top++;
+			top_button.top++;
+			bottom_button.top++;
+			scroller.top++;
+			top_button.bottom++;
+			bottom_button.bottom++;
+			scroller.bottom++;
+			
+			if (this->m_scrollBarData.m_yMinButton)
+				top_button   .left++, top_button   .right++, top_button   .bottom++, top_button   .top++;
+				
+			if (this->m_scrollBarData.m_yMaxButton)
+				bottom_button.left++, bottom_button.right++, bottom_button.bottom++, bottom_button.top++;
 			
 			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);

@@ -20,8 +20,6 @@
 
 #define TAB_WIDTH 4
 
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-
 void CtlTextInputUpdateScrollSize(Control* this, Window* pWindow)
 {
 	int c = CountLinesInText(this->m_textInputData.m_pText);
@@ -1031,7 +1029,7 @@ bool WidgetTextEditView_OnEvent(Control* this, int eventType, int parm1, UNUSED 
 			else
 				VidTextOut("NOTHING!", this->m_rect.left, this->m_rect.top, 0xFF0000, WINDOW_TEXT_COLOR);
 			
-			RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(this->m_rect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
 			
 			break;
 		}

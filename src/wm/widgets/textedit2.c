@@ -17,8 +17,6 @@
 
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
 
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-
 typedef enum
 {
 	DIR_UP,
@@ -1147,9 +1145,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			// Paint a border around the control.
 			Rectangle rect = this->m_rect, borderRect;
 			
-			rect.right--;
 			borderRect = rect;
-			rect.right++;
 			
 			rect.left += 2;
 			rect.top  += 2;
@@ -1158,7 +1154,8 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			TextInput_PartialDraw(this, rect);
 			
-			RenderButtonShapeSmallInsideOut (borderRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(borderRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
+			
 			break;
 		}
 		case EVENT_RELEASECURSOR:

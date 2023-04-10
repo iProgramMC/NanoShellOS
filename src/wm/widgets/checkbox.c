@@ -16,7 +16,6 @@
 #include <string.h>
 
 #define CHECKBOX_SIZE 14
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
 
 bool CheckboxGetChecked(Window* pWindow, int comboID)
 {
@@ -55,12 +54,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	{
 		case EVENT_PAINT:
 		{
-			//VidFillRectangle(this->m_checkBoxData.m_clicked ? 0xcccccc : WINDOW_TEXT_COLOR_LIGHT, check_rect);
-			//VidDrawRectangle(WINDOW_TEXT_COLOR,  
-			//RenderButtonShapeSmallInsideOut (this->m_rect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
-			check_rect.right--;
-			//check_rect.bottom--;
-			RenderButtonShapeSmallInsideOut (check_rect, WINDOW_BACKGD_COLOR, BUTTONDARK, this->m_checkBoxData.m_clicked ? TABLE_VIEW_ALT_ROW_COLOR : LIST_BACKGD_COLOR);
+			DrawEdge(check_rect, DRE_SUNKENINNER | DRE_SUNKENOUTER | DRE_FILLED, this->m_checkBoxData.m_clicked ? TABLE_VIEW_ALT_ROW_COLOR : LIST_BACKGD_COLOR);
 			
 			//if checked, mark it as "checked"
 			if (this->m_checkBoxData.m_checked)
@@ -158,11 +152,11 @@ bool WidgetButtonIconChk_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			if (this->m_checkBoxData.m_clicked)
 			{
 				x++, y++;
-				RenderButtonShape (this->m_rect, BUTTONMIDC, BUTTONDARK, BUTTONMIDC);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_SUNKENINNER, BUTTONMIDC);
 			}
 			else
 			{
-				RenderButtonShape (this->m_rect, BUTTONDARK, BUTTONLITE, color);
+				DrawEdge(this->m_rect, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, color);
 			}
 			
 			if (!this->m_bDisabled)

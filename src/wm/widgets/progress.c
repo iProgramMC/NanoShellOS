@@ -39,8 +39,6 @@ void ProgBarSetMaxProg(Window* pWindow, int comboID, int prog)
 	}
 }
 
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-
 bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -48,11 +46,8 @@ bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 		case EVENT_PAINT:
 		{
 			VidSetClipRect(&this->m_rect);
-			//VidDrawRect(BUTTON_EDGE_COLOR, this->m_rect.left, this->m_rect.top, this->m_rect.right - 1, this->m_rect.bottom - 1); 
 			
-			Rectangle borderRect = this->m_rect;
-			borderRect.right--;
-			RenderButtonShapeSmallInsideOut (borderRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
+			DrawEdge(this->m_rect, DRE_SUNKEN, 0);
 			
 			int max = this->m_parm2;
 			int pro = this->m_parm1;
@@ -75,8 +70,6 @@ bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 			VidSetClipRect(&rect1);
 			VidFillRect(WINDOW_TEXT_COLOR_LIGHT, this->m_rect.left + 2 + width, this->m_rect.top + 2, this->m_rect.right - 2, this->m_rect.bottom - 3);
 			VidDrawText(buffer, this->m_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR | TEXT_RENDER_BOLD, WINDOW_TEXT_COLOR_LIGHT);
-			
-			
 			
 			VidSetClipRect(NULL);
 			break;

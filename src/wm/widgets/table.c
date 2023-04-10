@@ -8,8 +8,6 @@
 #include <keyboard.h>
 #include <icon.h>
 
-void RenderButtonShapeSmallInsideOut(Rectangle rectb, unsigned colorLight, unsigned colorDark, unsigned colorMiddle);
-
 // NOTE: Damn, this is a pretty heavy control. 144 KB for 34 entries.
 // This is probably a sign we need to optimize the memory allocator for sub-page-size allocations!
 
@@ -539,9 +537,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			VidFillRectangle(LIST_BACKGD_COLOR, this->m_rect);
 			
 			Rectangle inRect = this->m_rect;
-			inRect.right--;
-			RenderButtonShapeSmallInsideOut (inRect, 0xBFBFBF, BUTTONDARK, TRANSPARENT);
-			inRect.right++;
+			DrawEdge(inRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
 			
 			inRect.left += 2;
 			inRect.top  += 2;
@@ -556,7 +552,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			topBar.bottom = topBar.top + TITLE_BAR_HEIGHT - 2;
 			
 			Rectangle columnBar = topBar;
-			columnBar.right = columnBar.left - 1;
+			columnBar.right = columnBar.left;
 			
 			int defaultStartX = 22;
 			if (this->m_parm2 & TABLEVIEW_NOICONCOLUMN)
@@ -580,11 +576,11 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 					}
 					else
 					{
-						colWidth = inRect.right - columnBar.right - 1;
+						colWidth = inRect.right - columnBar.right;
 					}
 				}
 				
-				columnBar.left  = columnBar.right + 1;
+				columnBar.left  = columnBar.right;
 				columnBar.right = columnBar.left + colWidth;
 				
 				Rectangle columnBarClip = columnBar;
@@ -593,9 +589,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				
 				VidSetClipRect(&columnBarClip);
 				
-				columnBar.right--;
+				DrawEdge(columnBar, DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_FILLED, BUTTONMIDC);
 				
-				RenderButtonShapeSmall (columnBar, BUTTONDARK, BUTTONLITE, BUTTONMIDC);
 				VidTextOutLimit(text, columnBar.left + 4, columnBar.top + topOffset, WINDOW_TEXT_COLOR, TRANSPARENT, colWidth);
 			}
 			

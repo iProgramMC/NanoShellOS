@@ -96,7 +96,6 @@ g_shutdownDoneAll;
 
 extern Cursor* const g_CursorLUT[];
 
-void RenderButtonShapeSmallBorder(Rectangle rect, unsigned colorDarker, unsigned colorDark, unsigned colorLight, unsigned colorMiddle);
 void* WmCAllocate(size_t sz);
 void KeTaskDone(void);
 WindowAction* ActionQueueAdd(WindowAction action);
