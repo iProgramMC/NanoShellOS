@@ -76,6 +76,21 @@ void TemporaryTask(__attribute__((unused)) int arg)
 	}
 }
 
+void ElfOnExecuteFail(int errorCode, const char* fileName, bool bAsync)
+{
+	char buffer[1024 + PATH_MAX];
+	
+	snprintf(buffer, sizeof buffer, ElfGetErrorMsg(errorCode), fileName);
+	
+	if (bAsync)
+	{
+		MessageBox(NULL, buffer, "Application Execution Error", MB_OK | ICON_ERROR << 16);
+		return;
+	}
+	
+	// we assume the shell handles this.
+}
+
 extern void KeTaskDone();
 
 typedef void (*Pointer)(unsigned color, int left, int top, int right, int bottom);

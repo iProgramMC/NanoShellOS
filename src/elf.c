@@ -518,6 +518,8 @@ const char *ElfGetErrorMsg (int error_code)
 
 extern Console* g_currentConsole, g_debugSerialConsole;
 
+void ElfOnExecuteFail(int errorCode, const char* fileName, bool bAsync);
+
 static void ElfExecThread(int pnLoaderBlock)
 {
 	// Load the pLoaderBlock
@@ -539,6 +541,8 @@ static void ElfExecThread(int pnLoaderBlock)
 	{
 		// Show an error code, depending on the bRunFromGui
 		SLogMsg("ELF Execution Error: %d", erc);
+		
+		ElfOnExecuteFail (erc, block.sFileName, block.bAsync);
 	}
 	
 	// free it ourselves, so that ElfOnDeath doesn't try to free this again
