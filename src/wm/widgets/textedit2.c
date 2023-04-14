@@ -74,12 +74,43 @@ typedef struct
 	bool      m_bCursorFlash;
 	int       m_ignoreTicksTill;
 	unsigned  m_font;
+	int       m_selectX1, m_selectY1; // The position of the first selected character
+	int       m_selectX2, m_selectY2; // The position of the first unselected character. After m_select*1
+	int       m_grabbedX, m_grabbedY; // used internally in the PreUpdateSelection function
 }
 TextInputDataEx;
 
 static TextInputDataEx* TextInput_GetData(Control* this)
 {
 	return (TextInputDataEx*)this->m_dataPtr;
+}
+
+static bool TextInput_IsWithinSelectionBounds(Control* this, int x, int y)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	int64_t max_int = 0x7FFFFFFFLL;
+	
+	// Note: This is really hacky, however, this is quick to write, so we will just do it.
+	int64_t limit1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
+	int64_t limit2 = (int64_t)pData->m_selectY2 * max_int + pData->m_selectX2;
+	
+	int64_t check  = (int64_t)y * max_int + x;
+	
+	return limit1 <= check && check < limit2;
+}
+
+static bool TextInput_SelectedAnything(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	int64_t max_int = 0x7FFFFFFFLL;
+	
+	// Note: This is really hacky, however, this is quick to write, so we will just do it.
+	int64_t limit1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
+	int64_t limit2 = (int64_t)pData->m_selectY2 * max_int + pData->m_selectX2;
+	
+	return limit2 > limit1;
 }
 
 unsigned TextInput_GetFont(Control* this)
@@ -566,6 +597,62 @@ static void TextInput_EraseChar(Control* this, int line, int pos)
 	return TextInput_EraseChars(this, line, pos, 1);
 }
 
+SAI void Swap(int* a1, int* a2)
+{
+	int temp = *a1;
+	*a1 = *a2;
+	*a2 = temp;
+}
+
+static void OrderTwo(int* a1, int* a2)
+{
+	if (*a1 > *a2)
+		Swap(a1, a2);
+}
+
+// Ensures that selectX1,selectY1 < selectX2,selectY2
+static void TextInput_EnsureSelectionCorrectness(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	int64_t max_int = 0x7FFFFFFFLL;
+	int64_t idx1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
+	int64_t idx2 = (int64_t)pData->m_selectY2 * max_int + pData->m_selectX2;
+	
+	if (idx1 > idx2)
+	{
+		Swap(&pData->m_selectX1, &pData->m_selectX2);
+		Swap(&pData->m_selectY1, &pData->m_selectY2);
+	}
+}
+
+static void TextInput_Select(Control* this, int startY, int startX, int endY, int endX)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	int selectY1 = pData->m_selectY1;
+	int selectY2 = pData->m_selectY2;
+	
+	pData->m_selectX1 = startX;
+	pData->m_selectY1 = startY;
+	pData->m_selectX2 = endX;
+	pData->m_selectY2 = endY;
+	
+	TextInput_EnsureSelectionCorrectness(this);
+	
+	for (int i = selectY1; i <= selectY2; i++)
+	{
+		TextInput_RepaintLine(this, i);
+	}
+	
+	for (int i = pData->m_selectY1; i <= pData->m_selectY2; i++)
+	{
+		// only repaint this line if it's never been repainted before
+		if (i < selectY1 || selectY2 < i)
+			TextInput_RepaintLine(this, i);
+	}
+}
+
 static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 {
 	TextInput_Clear(this);
@@ -631,9 +718,13 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 	int start = (pData->m_scrollY + rect.top - this->m_rect.top);
 	int end   = (start + (rect.bottom - rect.top) + GetLineHeight());
 	
-	start /= GetLineHeight();
+	bool drawSelected = false;
+	
+	int lineHeight = GetLineHeight();
+	
+	start /= lineHeight;
 	start--;
-	end   /= GetLineHeight();
+	end   /= lineHeight;
 	end++;
 	
 	if (start < 0) start = 0;
@@ -641,14 +732,16 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 	if (end < 0) end = 0;
 	if (end >= (int)pData->m_num_lines) end = (int)pData->m_num_lines;
 	
-	lineY += start * GetLineHeight();
+	lineY += start * lineHeight;
 	
 	for (size_t i = start; i < (size_t)end; i++)
 	{
 		//VidTextOut(pData->m_lines[i].m_text, lineX, lineY, WINDOW_TEXT_COLOR, WINDOW_TEXT_COLOR_LIGHT);
 		int charX = lineX;
-		for (size_t j = 0; j < pData->m_lines[i].m_length && lineY + GetLineHeight() > rect.top; j++)
+		for (size_t j = 0; j < pData->m_lines[i].m_length && lineY + lineHeight > rect.top; j++)
 		{
+			drawSelected = TextInput_IsWithinSelectionBounds(this, j, i);
+			
 			char chr = pData->m_lines[i].m_text[j];
 			
 			// well, we reached the end of the line right now
@@ -661,26 +754,43 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 			{
 				chrWidth = GetCharWidth('W') * TAB_WIDTH;
 			}
-			else if (isWithinScreenBounds)
+			
+			uint32_t textColor = WINDOW_TEXT_COLOR, backgdColor = WINDOW_TEXT_COLOR_LIGHT;
+			
+			if (drawSelected)
 			{
-				VidPlotChar(chr, charX, lineY, WINDOW_TEXT_COLOR, WINDOW_TEXT_COLOR_LIGHT);
+				VidFillRect(SELECTED_ITEM_COLOR, charX, lineY, charX + chrWidth - 1, lineY + lineHeight - 1);
+				textColor   = SELECTED_TEXT_COLOR;
+				backgdColor = TRANSPARENT;
+			}
+			
+			if (isWithinScreenBounds && chr != '\t')
+			{
+				VidPlotChar(chr, charX, lineY, textColor, backgdColor);
 			}
 			
 			if (isWithinScreenBounds && pData->m_cursorX == (int)j && pData->m_cursorY == (int)i && !pData->m_bCursorFlash)
 			{
-				VidFillRect(0xFF, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + GetLineHeight() - 1);
+				VidFillRect(textColor, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + lineHeight - 1);
 			}
 			
 			charX += chrWidth;
 		}
 		
+		uint32_t cursorColor = WINDOW_TEXT_COLOR;
+		if (TextInput_IsWithinSelectionBounds(this, -1, i + 1)) // kind of hacky
+		{
+			cursorColor = SELECTED_TEXT_COLOR;
+			VidFillRect(SELECTED_ITEM_COLOR, charX, lineY, charX + GetCharWidth('W') - 1, lineY + lineHeight - 1);
+		}
+		
 		const bool isWithinScreenBounds = rect.left <= charX && charX < rect.right;
 		if (isWithinScreenBounds && pData->m_cursorX == (int)pData->m_lines[i].m_length && pData->m_cursorY == (int)i && !pData->m_bCursorFlash)
 		{
-			VidFillRect(0xFF, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + GetLineHeight() - 1);
+			VidFillRect(cursorColor, charX, lineY, charX + CURSOR_THICKNESS - 1, lineY + lineHeight - 1);
 		}
 		
-		lineY += GetLineHeight();
+		lineY += lineHeight;
 		
 		if (lineY >= rect.bottom) break;
 	}
@@ -745,6 +855,8 @@ static void TextInput_OnScrollDone(Control* pCtl)
 
 static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum)
 {
+	if (lineNum < 0) lineNum = 0;
+	
 	TextInputDataEx* this = TextInput_GetData(pCtl);
 	
 	int lineHeight = TextInput_GetLineHeight(pCtl);
@@ -766,6 +878,8 @@ static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum)
 
 static void TextInput_RepaintLine(Control* pCtl, int lineNum)
 {
+	if (lineNum < 0) return;
+	
 	TextInputDataEx* this = TextInput_GetData(pCtl);
 	
 	int lineHeight = TextInput_GetLineHeight(pCtl);
@@ -835,6 +949,66 @@ static void TextInput_ClampCursorWithinScrollBounds(Control* this)
 	TextInput_OnScrollDone(this);
 }
 
+void TextInput_PreUpdateSelection(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	// if 'shift' is not held, we should release our selection immediately
+	if (!pData->m_bShiftHeld)
+	{
+		TextInput_Select(this, -1, -1, -1, -1);
+		return;
+	}
+	
+	pData->m_grabbedX = pData->m_cursorX;
+	pData->m_grabbedY = pData->m_cursorY;
+}
+
+void TextInput_PostUpdateSelection(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	if (!pData->m_bShiftHeld)
+		// we already discarded our selection in the pre-update, don't do anything here
+		return;
+	
+	bool bHadSelectedAnything = TextInput_SelectedAnything(this);
+	
+	int minY = pData->m_grabbedY, maxY = pData->m_cursorY;
+	OrderTwo(&minY, &maxY);
+	
+	if (!bHadSelectedAnything)
+	{
+		pData->m_selectX1 = pData->m_grabbedX;
+		pData->m_selectY1 = pData->m_grabbedY;
+		pData->m_selectX2 = pData->m_cursorX;
+		pData->m_selectY2 = pData->m_cursorY;
+		
+		TextInput_EnsureSelectionCorrectness(this);
+	}
+	else
+	{
+		// which extent did we 'grab'?
+		if (pData->m_grabbedX == pData->m_selectX2 && pData->m_grabbedY == pData->m_selectY2)
+		{
+			pData->m_selectX2 = pData->m_cursorX;
+			pData->m_selectY2 = pData->m_cursorY;
+		}
+		if (pData->m_grabbedX == pData->m_selectX1 && pData->m_grabbedY == pData->m_selectY1)
+		{
+			pData->m_selectX1 = pData->m_cursorX;
+			pData->m_selectY1 = pData->m_cursorY;
+		}
+		
+		TextInput_EnsureSelectionCorrectness(this);
+	}
+	
+	for (int y = minY; y <= maxY; y++)
+	{
+		TextInput_RepaintLine(this, y);
+	}
+}
+
 void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
@@ -845,6 +1019,9 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 	
 	if (nPageLines < 1)
 		nPageLines = 1;
+	
+	if (dir != DIR_NONE)
+		TextInput_PreUpdateSelection(this);
 	
 	switch (dir)
 	{
@@ -1008,7 +1185,11 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			break;
 	}
 	
-	TextInput_MakeCursorStayUpFor(this, 500);
+	if (dir != DIR_NONE)
+	{
+		TextInput_MakeCursorStayUpFor(this, 500);
+		TextInput_PostUpdateSelection(this);
+	}
 	
 	TextInput_UpdateScrollBars(this);
 	TextInput_ClampCursorWithinScrollBounds(this);
@@ -1027,6 +1208,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			this->m_dataPtr = pData;
 			
 			pData->m_pWindow = pWindow;
+			pData->m_selectX1 = pData->m_selectX2 = pData->m_selectY1 = pData->m_selectY2 = -1;
 			
 			// Create two scroll bars.
 			if (this->m_parm1 & TEXTEDIT_MULTILINE)
@@ -1412,6 +1594,55 @@ static char* TextInput_FetchClipboardContents()
 	CbRelease(pClip);
 	
 	return pOut;
+}
+
+void TextInput_GoToXY(Control* pCtl, int x, int y)
+{
+	TextInputDataEx* this = TextInput_GetData(pCtl);
+	
+	int oldCursorY = this->m_cursorY;
+	// put it somewhere invalid, so it doesn't draw when we do...
+	this->m_cursorY = -1;
+	TextInput_RepaintLine(pCtl, oldCursorY);
+	
+	// make sure to keep them within bounds
+	if (y >= (int)this->m_num_lines) y = (int)this->m_num_lines - 1;
+	if (x < 0) x = 0;
+	if (y < 0) y = 0;
+	if (x >= (int)this->m_lines[y].m_length) x = (int)this->m_lines[y].m_length;
+	
+	// now set the x/y coords:
+	this->m_cursorX = x;
+	this->m_cursorY = y;
+	
+	// and hackily trigger a no op OnNavPressed:
+	TextInput_OnNavPressed(pCtl, DIR_NONE);
+}
+
+void TextInput_OffsetToXY(Control* pCtl, int* xOut, int* yOut, int offset)
+{
+	TextInputDataEx* this = TextInput_GetData(pCtl);
+	
+	int xo = 0, yo = 0;
+	
+	while (true)
+	{
+		if ((int)this->m_num_lines <= yo) break;
+		
+		int line_length = (int)this->m_lines[yo].m_length;
+		
+		if (offset <= line_length)
+		{
+			xo = offset;
+			break;
+		}
+		
+		offset -= line_length + 1;
+		yo++;
+	}
+	
+	*xOut = xo;
+	*yOut = yo;
 }
 
 void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
