@@ -16,6 +16,8 @@
 
 #define MIN_CAPACITY     (4096)
 
+#define INT_MAX          (0x7FFFFFFF)
+
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
 
 typedef enum
@@ -89,7 +91,7 @@ static bool TextInput_IsWithinSelectionBounds(Control* this, int x, int y)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
-	int64_t max_int = 0x7FFFFFFFLL;
+	int64_t max_int = INT_MAX;
 	
 	// Note: This is really hacky, however, this is quick to write, so we will just do it.
 	int64_t limit1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
@@ -104,7 +106,7 @@ static bool TextInput_SelectedAnything(Control* this)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
-	int64_t max_int = 0x7FFFFFFFLL;
+	int64_t max_int = INT_MAX;
 	
 	// Note: This is really hacky, however, this is quick to write, so we will just do it.
 	int64_t limit1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
@@ -442,7 +444,7 @@ static void TextInput_EraseChars(Control* this, int line, int pos, int sLen)
 	if (pos >= (int)pLine->m_length) return;
 	if (sLen < 0) return;
 	
-	if (pos + sLen >= (int)pLine->m_length)
+	if ((uint32_t)pos + sLen >= pLine->m_length)
 	{
 		sLen = (int)pLine->m_length - pos;
 	}
@@ -615,7 +617,7 @@ static void TextInput_EnsureSelectionCorrectness(Control* this)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
-	int64_t max_int = 0x7FFFFFFFLL;
+	int64_t max_int = INT_MAX;
 	int64_t idx1 = (int64_t)pData->m_selectY1 * max_int + pData->m_selectX1;
 	int64_t idx2 = (int64_t)pData->m_selectY2 * max_int + pData->m_selectX2;
 	
@@ -709,11 +711,11 @@ static void TextInput_PartialDraw(Control* this, Rectangle rect)
 	
 	TextInputDataEx* pData = TextInput_GetData(this);
 	
-	int scrollX = pData->m_scrollX - 1;
-	int scrollY = pData->m_scrollY - 1;
+	int scrollX = pData->m_scrollX;
+	int scrollY = pData->m_scrollY;
 	
-	int lineX = this->m_rect.left + 2 - scrollX;
-	int lineY = this->m_rect.top  + 2 - scrollY;
+	int lineX = this->m_rect.left + 3 - scrollX;
+	int lineY = this->m_rect.top  + 3 - scrollY;
 	
 	int start = (pData->m_scrollY + rect.top - this->m_rect.top);
 	int end   = (start + (rect.bottom - rect.top) + GetLineHeight());
@@ -817,10 +819,10 @@ static void TextInput_OnScrollDone(Control* pCtl)
 	if (diffX == 0 && diffY == 0) return;
 	
 	Rectangle rect = pCtl->m_rect;
-	rect.left   += 2;
-	rect.top    += 2;
-	rect.right  -= 2;
-	rect.bottom -= 2;
+	rect.left   += 3;
+	rect.top    += 3;
+	rect.right  -= 3;
+	rect.bottom -= 3;
 	
 	Rectangle redraw1, redraw2;
 	redraw1 = redraw2 = rect;
@@ -862,9 +864,9 @@ static void TextInput_RepaintLineAndBelow(Control* pCtl, int lineNum)
 	int lineHeight = TextInput_GetLineHeight(pCtl);
 	
 	Rectangle refreshRect = pCtl->m_rect;
-	refreshRect.left   += 2;
-	refreshRect.right  -= 2;
-	refreshRect.bottom -= 2;
+	refreshRect.left   += 3;
+	refreshRect.right  -= 3;
+	refreshRect.bottom -= 3;
 	
 	refreshRect.top += 3 + lineNum * lineHeight - this->m_scrollY;
 	
@@ -885,8 +887,8 @@ static void TextInput_RepaintLine(Control* pCtl, int lineNum)
 	int lineHeight = TextInput_GetLineHeight(pCtl);
 	
 	Rectangle refreshRect = pCtl->m_rect;
-	refreshRect.left  += 2;
-	refreshRect.right -= 2;
+	refreshRect.left  += 3;
+	refreshRect.right -= 3;
 	
 	refreshRect.top += 3 + lineNum * lineHeight - this->m_scrollY;
 	refreshRect.bottom = refreshRect.top + lineHeight;
@@ -1197,300 +1199,32 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 	VidSetFont(oldFont);
 }
 
-bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
-{
-	switch (eventType)
-	{
-		case EVENT_CREATE:
-		{
-			TextInputDataEx* pData = MmAllocate(sizeof(TextInputDataEx));
-			memset(pData, 0, sizeof *pData);
-			this->m_dataPtr = pData;
-			
-			pData->m_pWindow = pWindow;
-			pData->m_selectX1 = pData->m_selectX2 = pData->m_selectY1 = pData->m_selectY2 = -1;
-			
-			// Create two scroll bars.
-			if (this->m_parm1 & TEXTEDIT_MULTILINE)
-			{
-				pData->m_font = TEXT_EDIT_FONT;
-				
-				if (this->m_parm1 & TEXTEDIT_STYLING)
-					pData->m_font = SYSTEM_FONT;
-				
-				Rectangle horzSBRect, vertSBRect;
-				horzSBRect = vertSBRect = this->m_rect;
-				horzSBRect.right  -= SCROLL_BAR_SIZE;
-				vertSBRect.bottom -= SCROLL_BAR_SIZE;
-				horzSBRect.top  = horzSBRect.bottom - SCROLL_BAR_SIZE;
-				vertSBRect.left = vertSBRect.right  - SCROLL_BAR_SIZE;
-				
-				int horzSBAnchor = 0, vertSBAnchor = 0;
-				if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
-				{
-					horzSBAnchor |= ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM;
-					vertSBAnchor |= ANCHOR_BOTTOM_TO_BOTTOM;
-				}
-				if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
-				{
-					horzSBAnchor |= ANCHOR_RIGHT_TO_RIGHT;
-					vertSBAnchor |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
-				}
-				if (this->m_anchorMode & ANCHOR_TOP_TO_BOTTOM)
-				{
-					vertSBAnchor |= ANCHOR_TOP_TO_BOTTOM;
-				}
-				if (this->m_anchorMode & ANCHOR_LEFT_TO_RIGHT)
-				{
-					horzSBAnchor |= ANCHOR_LEFT_TO_RIGHT;
-				}
-				
-				unsigned oldFont = VidSetFont(TextInput_GetFont(this));
-				AddControlEx(pWindow, CONTROL_VSCROLLBAR, vertSBAnchor, vertSBRect, NULL, GetVertScrollBarComboID(this->m_comboID), 100, GetLineHeight()   << 16);
-				AddControlEx(pWindow, CONTROL_HSCROLLBAR, horzSBAnchor, horzSBRect, NULL, GetHorzScrollBarComboID(this->m_comboID), 100, GetCharWidth('W') << 16);
-				VidSetFont(oldFont);
-				
-				// shrink ourselves
-				this->m_rect.right  -= SCROLL_BAR_SIZE;
-				this->m_rect.bottom -= SCROLL_BAR_SIZE;
-			}
-			else
-			{
-				pData->m_font = TEXT_EDIT_FONT;
-				
-				this->m_rect.bottom = this->m_rect.top + 6 + TextInput_GetLineHeight(this);
-			}
-			
-			TextInput_SetText(this, "", false);
-			
-			break;
-		}
-		case EVENT_TICK:
-		{
-			TextInputDataEx* pData = TextInput_GetData(this);
-			
-			if (pData->m_ignoreTicksTill > GetTickCount()) break;
-			
-			if (this->m_parm1 & TEXTEDIT_READONLY) break;
-			
-			if (!this->m_bFocused || !pWindow->m_isSelected)
-			{
-				if (!pData->m_bCursorFlash)
-				{
-					pData->m_bCursorFlash = true;
-					TextInput_RepaintLine(this, pData->m_cursorY);
-				}
-			}
-			else
-			{
-				pData->m_bCursorFlash ^= 1;
-				TextInput_RepaintLine(this, pData->m_cursorY); // TODO: More efficient way.
-			}
-			
-			break;
-		}
-		case EVENT_CLICKCURSOR:
-		case EVENT_SCROLLDONE:
-		{
-			TextInputDataEx* pData = TextInput_GetData(this);
-			
-			// if we're a single line text control, break.
-			if (~this->m_parm1 & TEXTEDIT_MULTILINE) break;
-			
-			int lkX = pData->m_knownScrollBarX;
-			int lkY = pData->m_knownScrollBarY;
-			pData->m_knownScrollBarX = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID));
-			pData->m_knownScrollBarY = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID));
-			
-			if (lkX != pData->m_knownScrollBarX || lkY != pData->m_knownScrollBarY)
-			{
-				pData->m_scrollX = pData->m_knownScrollBarX;
-				pData->m_scrollY = pData->m_knownScrollBarY;
-				TextInput_OnScrollDone(this);
-			}
-			break;
-		}
-		case EVENT_DESTROY:
-		{
-			TextInputDataEx* pData = TextInput_GetData(this);
-			if (pData->m_cachedData)
-			{
-				MmFree(pData->m_cachedData);
-				pData->m_cachedData = NULL;
-			}
-			
-			TextInput_Clear(this);
-			
-			MmFree(this->m_dataPtr);
-			break;
-		}
-		case EVENT_PAINT:
-		{
-			// Paint a border around the control.
-			Rectangle rect = this->m_rect, borderRect;
-			
-			borderRect = rect;
-			
-			rect.left += 2;
-			rect.top  += 2;
-			rect.right  -= 2;
-			rect.bottom -= 2;
-			
-			TextInput_PartialDraw(this, rect);
-			
-			DrawEdge(borderRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
-			
-			break;
-		}
-		case EVENT_RELEASECURSOR:
-		{
-			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (!RectangleContains(&this->m_rect, &mouseClickPos))
-			{
-				// if no one took focus from us before us, make us not focused at all
-				//if (this->m_bFocused)
-				//	SetFocusedControl(pWindow, -1);
-				break;
-			}
-			
-			// set ourself as the focus
-			SetFocusedControl(pWindow, this->m_comboID);
-			
-			// TODO text selection and stuff
-			
-			break;
-		}
-		case EVENT_KEYPRESS:
-		{
-			if (!this->m_bFocused) break;
-			if (this->m_parm1 & TEXTEDIT_READONLY) break;
-			
-			TextInputDataEx* pData = TextInput_GetData(this);
-			
-			char inChar = (char)parm1;
-			
-			if ((inChar == '\n' || inChar == '\r') && (~this->m_parm1 & TEXTEDIT_MULTILINE))
-				break;
-			
-			if ((char)parm1 == '\x7F')
-			{
-				if (pData->m_cursorX == 0)
-				{
-					if (pData->m_cursorY > 0)
-					{
-						TextInput_OnNavPressed(this, DIR_LEFT);
-						TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
-					}
-				}
-				else
-				{
-					TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX - 1);
-					TextInput_OnNavPressed(this, DIR_LEFT);
-				}
-			}
-			else if (parm1 == '\r' || parm1 == '\n')
-			{
-				TextInput_SplitLines(this, pData->m_cursorY, pData->m_cursorX);
-				TextInput_OnNavPressed(this, DIR_RIGHT);
-			}
-			else
-			{
-				TextInput_AppendChar(this, pData->m_cursorY, pData->m_cursorX, parm1);
-				TextInput_OnNavPressed(this, DIR_RIGHT);
-			}
-			
-			
-			break;
-		}
-		case EVENT_KEYRAW:
-		{
-			if (!this->m_bFocused) break;
-			
-			TextInputDataEx* pData = TextInput_GetData(this);
-			
-			// If the key was released, break; we don't really need to process release events
-			if (parm1 & 0x80)
-			{
-				int code = (int)(unsigned char)parm1;
-				if ((code & 0x7F) == KEY_LSHIFT || (code & 0x7F) == KEY_RSHIFT)
-					pData->m_bShiftHeld = false;
-				break;
-			}
-			
-			int code = parm1;
-			
-			switch (code)
-			{
-				case KEY_DELETE:
-				{
-					TextLine* pCurrentLine = &pData->m_lines[pData->m_cursorY];
-					if (pData->m_cursorX == (int)pCurrentLine->m_length)
-					{
-						TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
-					}
-					else
-					{
-						TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX);
-					}
-					TextInput_MakeCursorStayUpFor(this, 500);
-					
-					break;
-				}
-				case KEY_LSHIFT:
-				case KEY_RSHIFT:
-				{
-					pData->m_bShiftHeld = true;
-					break;
-				}
-				case KEY_UP:
-				{
-					TextInput_OnNavPressed(this, DIR_UP);
-					break;
-				}
-				case KEY_DOWN:
-				{
-					TextInput_OnNavPressed(this, DIR_DOWN);
-					break;
-				}
-				case KEY_LEFT:
-				{
-					TextInput_OnNavPressed(this, DIR_LEFT);
-					break;
-				}
-				case KEY_RIGHT:
-				{
-					TextInput_OnNavPressed(this, DIR_RIGHT);
-					break;
-				}
-				case KEY_PAGEUP:
-				{
-					TextInput_OnNavPressed(this, DIR_PAGEUP);
-					break;
-				}
-				case KEY_PAGEDOWN:
-				{
-					TextInput_OnNavPressed(this, DIR_PAGEDOWN);
-					break;
-				}
-				case KEY_HOME:
-				{
-					TextInput_OnNavPressed(this, DIR_HOME);
-					break;
-				}
-				case KEY_END:
-				{
-					TextInput_OnNavPressed(this, DIR_END);
-					break;
-				}
-			}
-			
-			break;
-		}
-	}
-	return false;
-}
+void TextInput_GoToXY(Control* pCtl, int x, int y);
 
-void TextInput_OnNavPressed(Control* this, eNavDirection dir);
+void TextInput_RemoveArbitrarySection(Control* pCtl, int startX, int startY, int endX, int endY)
+{
+	int y1 = startY + 1, y2 = endY - 1;
+	
+	TextInput_GoToXY(pCtl, startX, startY);
+	
+	// everything on the same line:
+	if (startY == endY)
+	{
+		TextInput_EraseChars(pCtl, startY, startX, endX - startX);
+	}
+	else
+	{
+		TextInput_EraseChars(pCtl, startY, startX, INT_MAX);
+		TextInput_EraseChars(pCtl, endY, 0, endX);
+		
+		//OPTIMIZE: don't erase the line...
+		TextInput_JoinLines(pCtl, startY, endY);
+		
+		// if there are any lines in the middle to remove:
+		if (y1 <= y2)
+			TextInput_EraseConsecutiveLines(pCtl, y1, y2 - y1 + 1);
+	}
+}
 
 void TextInput_InsertArbitraryText(Control* pCtl, const char* pText)
 {
@@ -1662,6 +1396,318 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 			break;
 		}
 	}
+}
+
+bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{
+	switch (eventType)
+	{
+		case EVENT_CREATE:
+		{
+			TextInputDataEx* pData = MmAllocate(sizeof(TextInputDataEx));
+			memset(pData, 0, sizeof *pData);
+			this->m_dataPtr = pData;
+			
+			pData->m_pWindow = pWindow;
+			pData->m_selectX1 = pData->m_selectX2 = pData->m_selectY1 = pData->m_selectY2 = -1;
+			
+			// Create two scroll bars.
+			if (this->m_parm1 & TEXTEDIT_MULTILINE)
+			{
+				pData->m_font = TEXT_EDIT_FONT;
+				
+				if (this->m_parm1 & TEXTEDIT_STYLING)
+					pData->m_font = SYSTEM_FONT;
+				
+				Rectangle horzSBRect, vertSBRect;
+				horzSBRect = vertSBRect = this->m_rect;
+				horzSBRect.right  -= SCROLL_BAR_SIZE;
+				vertSBRect.bottom -= SCROLL_BAR_SIZE;
+				horzSBRect.top  = horzSBRect.bottom - SCROLL_BAR_SIZE;
+				vertSBRect.left = vertSBRect.right  - SCROLL_BAR_SIZE;
+				
+				int horzSBAnchor = 0, vertSBAnchor = 0;
+				if (this->m_anchorMode & ANCHOR_BOTTOM_TO_BOTTOM)
+				{
+					horzSBAnchor |= ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM;
+					vertSBAnchor |= ANCHOR_BOTTOM_TO_BOTTOM;
+				}
+				if (this->m_anchorMode & ANCHOR_RIGHT_TO_RIGHT)
+				{
+					horzSBAnchor |= ANCHOR_RIGHT_TO_RIGHT;
+					vertSBAnchor |= ANCHOR_RIGHT_TO_RIGHT | ANCHOR_LEFT_TO_RIGHT;
+				}
+				if (this->m_anchorMode & ANCHOR_TOP_TO_BOTTOM)
+				{
+					vertSBAnchor |= ANCHOR_TOP_TO_BOTTOM;
+				}
+				if (this->m_anchorMode & ANCHOR_LEFT_TO_RIGHT)
+				{
+					horzSBAnchor |= ANCHOR_LEFT_TO_RIGHT;
+				}
+				
+				unsigned oldFont = VidSetFont(TextInput_GetFont(this));
+				AddControlEx(pWindow, CONTROL_VSCROLLBAR, vertSBAnchor, vertSBRect, NULL, GetVertScrollBarComboID(this->m_comboID), 100, GetLineHeight()   << 16);
+				AddControlEx(pWindow, CONTROL_HSCROLLBAR, horzSBAnchor, horzSBRect, NULL, GetHorzScrollBarComboID(this->m_comboID), 100, GetCharWidth('W') << 16);
+				VidSetFont(oldFont);
+				
+				// shrink ourselves
+				this->m_rect.right  -= SCROLL_BAR_SIZE;
+				this->m_rect.bottom -= SCROLL_BAR_SIZE;
+			}
+			else
+			{
+				pData->m_font = TEXT_EDIT_FONT;
+				
+				this->m_rect.bottom = this->m_rect.top + 6 + TextInput_GetLineHeight(this);
+			}
+			
+			TextInput_SetText(this, "", false);
+			
+			break;
+		}
+		case EVENT_TICK:
+		{
+			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			if (pData->m_ignoreTicksTill > GetTickCount()) break;
+			
+			if (this->m_parm1 & TEXTEDIT_READONLY) break;
+			
+			if (!this->m_bFocused || !pWindow->m_isSelected)
+			{
+				if (!pData->m_bCursorFlash)
+				{
+					pData->m_bCursorFlash = true;
+					TextInput_RepaintLine(this, pData->m_cursorY);
+				}
+			}
+			else
+			{
+				pData->m_bCursorFlash ^= 1;
+				TextInput_RepaintLine(this, pData->m_cursorY); // TODO: More efficient way.
+			}
+			
+			break;
+		}
+		case EVENT_CLICKCURSOR:
+		case EVENT_SCROLLDONE:
+		{
+			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			// if we're a single line text control, break.
+			if (~this->m_parm1 & TEXTEDIT_MULTILINE) break;
+			
+			int lkX = pData->m_knownScrollBarX;
+			int lkY = pData->m_knownScrollBarY;
+			pData->m_knownScrollBarX = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID));
+			pData->m_knownScrollBarY = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID));
+			
+			if (lkX != pData->m_knownScrollBarX || lkY != pData->m_knownScrollBarY)
+			{
+				pData->m_scrollX = pData->m_knownScrollBarX;
+				pData->m_scrollY = pData->m_knownScrollBarY;
+				TextInput_OnScrollDone(this);
+			}
+			break;
+		}
+		case EVENT_DESTROY:
+		{
+			TextInputDataEx* pData = TextInput_GetData(this);
+			if (pData->m_cachedData)
+			{
+				MmFree(pData->m_cachedData);
+				pData->m_cachedData = NULL;
+			}
+			
+			TextInput_Clear(this);
+			
+			MmFree(this->m_dataPtr);
+			break;
+		}
+		case EVENT_PAINT:
+		{
+			// Paint a border around the control.
+			Rectangle rect = this->m_rect, borderRect;
+			
+			borderRect = rect;
+			
+			rect.left += 2;
+			rect.top  += 2;
+			rect.right  -= 2;
+			rect.bottom -= 2;
+			
+			TextInput_PartialDraw(this, rect);
+			
+			DrawEdge(borderRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
+			
+			break;
+		}
+		case EVENT_RELEASECURSOR:
+		{
+			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (!RectangleContains(&this->m_rect, &mouseClickPos))
+			{
+				// if no one took focus from us before us, make us not focused at all
+				//if (this->m_bFocused)
+				//	SetFocusedControl(pWindow, -1);
+				break;
+			}
+			
+			// set ourself as the focus
+			SetFocusedControl(pWindow, this->m_comboID);
+			
+			// TODO text selection and stuff
+			
+			break;
+		}
+		case EVENT_KEYPRESS:
+		{
+			if (!this->m_bFocused) break;
+			if (this->m_parm1 & TEXTEDIT_READONLY) break;
+			
+			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			if (TextInput_SelectedAnything(this))
+			{
+				TextInput_RemoveArbitrarySection(this, pData->m_selectX1, pData->m_selectY1, pData->m_selectX2, pData->m_selectY2);
+				TextInput_Select(this, -1, -1, -1, -1);
+			}
+			
+			// kind of hacky.. Make it so shift is disabled so we don't accidentally select the character(s) we just wrote
+			bool bIsShiftHeld = pData->m_bShiftHeld;
+			pData->m_bShiftHeld = false;
+			
+			char inChar = (char)parm1;
+			
+			if ((inChar == '\n' || inChar == '\r') && (~this->m_parm1 & TEXTEDIT_MULTILINE))
+				break;
+			
+			if ((char)parm1 == '\x7F')
+			{
+				if (pData->m_cursorX == 0)
+				{
+					if (pData->m_cursorY > 0)
+					{
+						TextInput_OnNavPressed(this, DIR_LEFT);
+						TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
+					}
+				}
+				else
+				{
+					TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX - 1);
+					TextInput_OnNavPressed(this, DIR_LEFT);
+				}
+			}
+			else if (parm1 == '\r' || parm1 == '\n')
+			{
+				TextInput_SplitLines(this, pData->m_cursorY, pData->m_cursorX);
+				TextInput_OnNavPressed(this, DIR_RIGHT);
+			}
+			else
+			{
+				TextInput_AppendChar(this, pData->m_cursorY, pData->m_cursorX, parm1);
+				TextInput_OnNavPressed(this, DIR_RIGHT);
+			}
+			
+			pData->m_bShiftHeld = bIsShiftHeld;
+			
+			break;
+		}
+		case EVENT_KEYRAW:
+		{
+			if (!this->m_bFocused) break;
+			
+			TextInputDataEx* pData = TextInput_GetData(this);
+			
+			// If the key was released, break; we don't really need to process release events
+			if (parm1 & 0x80)
+			{
+				int code = (int)(unsigned char)parm1;
+				if ((code & 0x7F) == KEY_LSHIFT || (code & 0x7F) == KEY_RSHIFT)
+					pData->m_bShiftHeld = false;
+				break;
+			}
+			
+			int code = parm1;
+			
+			switch (code)
+			{
+				case KEY_DELETE:
+				{
+					if (TextInput_SelectedAnything(this))
+					{
+						TextInput_RemoveArbitrarySection(this, pData->m_selectX1, pData->m_selectY1, pData->m_selectX2, pData->m_selectY2);
+						TextInput_Select(this, -1, -1, -1, -1);
+					}
+					else
+					{
+						TextLine* pCurrentLine = &pData->m_lines[pData->m_cursorY];
+						if (pData->m_cursorX == (int)pCurrentLine->m_length)
+						{
+							TextInput_JoinLines(this, pData->m_cursorY, pData->m_cursorY + 1);
+						}
+						else
+						{
+							TextInput_EraseChar(this, pData->m_cursorY, pData->m_cursorX);
+						}
+						TextInput_MakeCursorStayUpFor(this, 500);
+					}
+					
+					break;
+				}
+				case KEY_LSHIFT:
+				case KEY_RSHIFT:
+				{
+					pData->m_bShiftHeld = true;
+					break;
+				}
+				case KEY_UP:
+				{
+					TextInput_OnNavPressed(this, DIR_UP);
+					break;
+				}
+				case KEY_DOWN:
+				{
+					TextInput_OnNavPressed(this, DIR_DOWN);
+					break;
+				}
+				case KEY_LEFT:
+				{
+					TextInput_OnNavPressed(this, DIR_LEFT);
+					break;
+				}
+				case KEY_RIGHT:
+				{
+					TextInput_OnNavPressed(this, DIR_RIGHT);
+					break;
+				}
+				case KEY_PAGEUP:
+				{
+					TextInput_OnNavPressed(this, DIR_PAGEUP);
+					break;
+				}
+				case KEY_PAGEDOWN:
+				{
+					TextInput_OnNavPressed(this, DIR_PAGEDOWN);
+					break;
+				}
+				case KEY_HOME:
+				{
+					TextInput_OnNavPressed(this, DIR_HOME);
+					break;
+				}
+				case KEY_END:
+				{
+					TextInput_OnNavPressed(this, DIR_END);
+					break;
+				}
+			}
+			
+			break;
+		}
+	}
+	return false;
 }
 
 // Exposed API functions
