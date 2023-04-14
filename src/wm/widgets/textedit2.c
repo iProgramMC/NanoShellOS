@@ -6,6 +6,7 @@
 ******************************************/
 
 #include "../wi.h"
+#include <clip.h>
 
 // maybe these properties should be controlled by system metrics
 #define TAB_WIDTH        (4)
@@ -19,6 +20,7 @@
 
 typedef enum
 {
+	DIR_NONE,
 	DIR_UP,
 	DIR_DOWN,
 	DIR_LEFT,
@@ -197,7 +199,7 @@ static void TextInput_UpdateScrollBars(Control* this)
 	
 	// Vertical Scroll bar
 	scrollPos = pData->m_scrollY;
-	scrollMax = (pData->m_maxScrollY) - (this->m_rect.bottom - this->m_rect.top) + 6;
+	scrollMax = (pData->m_maxScrollY) - (this->m_rect.bottom - this->m_rect.top) + 7;
 	if (scrollPos < 0) scrollPos = 0;
 	if (scrollMax < 1) scrollMax = 1;
 	bool rpVert = GetScrollBarPos(pWindow, GetVertScrollBarComboID(this->m_comboID)) != scrollPos || GetScrollBarMax(pWindow, GetVertScrollBarComboID(this->m_comboID)) != scrollMax;
@@ -206,7 +208,7 @@ static void TextInput_UpdateScrollBars(Control* this)
 	
 	// Horizontal Scroll bar
 	scrollPos = pData->m_scrollX;
-	scrollMax = (pData->m_maxScrollX) - (this->m_rect.right - this->m_rect.left);
+	scrollMax = (pData->m_maxScrollX) - (this->m_rect.right - this->m_rect.left) + 1;
 	if (scrollPos < 0) scrollPos = 0;
 	if (scrollMax < 1) scrollMax = 1;
 	bool rpHorz = GetScrollBarPos(pWindow, GetHorzScrollBarComboID(this->m_comboID)) != scrollPos || GetScrollBarMax(pWindow, GetHorzScrollBarComboID(this->m_comboID)) != scrollMax;
@@ -303,7 +305,7 @@ static void TextInput_MakeCursorStayUpFor(Control* this, int ms)
 	TextInput_RepaintLine(this, pData->m_cursorY);
 }
 
-static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
+static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText, size_t sLen)
 {
 	TextInputDataEx* pData = TextInput_GetData(pCtl);
 	TextLine* pLine = &pData->m_lines[lineNum];
@@ -313,8 +315,6 @@ static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
 	{
 		MmFree(pLine->m_text);
 	}
-	
-	size_t sLen = strlen(pText);
 	
 	pLine->m_text     = MmAllocate(sLen + 1);
 	pLine->m_capacity = sLen + 1;
@@ -329,14 +329,12 @@ static void TextInput_SetLineText(Control* pCtl, int lineNum, const char* pText)
 	pData->m_dirty = true;
 }
 
-static void TextInput_AppendText(Control* this, int line, int pos, const char* pText)
+static void TextInput_AppendText(Control* this, int line, int pos, const char* pText, size_t sLen)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
 	TextLine* pLine = &pData->m_lines[line];
 	
 	pData->m_dirty = true;
-	
-	size_t sLen = strlen(pText);
 	
 	// Ensure that 'pos' is within bounds.
 	if (pos < 0)
@@ -505,7 +503,9 @@ static void TextInput_SplitLines(Control* this, int line, int splitAt)
 	// (if the split is in front of the string, we've created a new line!)
 	if (splitAt >= (int)pSrcLine->m_length) return;
 	
-	TextInput_SetLineText(this, line + 1, pSrcLine->m_text + splitAt);
+	const char* pNewText = pSrcLine->m_text + splitAt;
+	
+	TextInput_SetLineText(this, line + 1, pNewText, strlen(pNewText));
 	
 	pSrcLine->m_text[splitAt] = 0;
 	pSrcLine->m_length = splitAt;
@@ -558,7 +558,7 @@ static void TextInput_AppendChar(Control* this, int line, int pos, char c)
 	char str[2];
 	str[0] = c;
 	str[1] = 0;
-	return TextInput_AppendText(this, line, pos, str);
+	return TextInput_AppendText(this, line, pos, str, 1);
 }
 
 static void TextInput_EraseChar(Control* this, int line, int pos)
@@ -600,7 +600,7 @@ static void TextInput_JoinLines(Control* pCtl, int lineDst, int lineSrc)
 	if (lineSrc < 0 || lineSrc >= (int)pData->m_num_lines) return;
 	if (lineDst < 0 || lineDst >= (int)pData->m_num_lines) return;
 	
-	TextInput_AppendText(pCtl, lineDst, (int)pData->m_lines[lineDst].m_length, pData->m_lines[lineSrc].m_text);
+	TextInput_AppendText(pCtl, lineDst, (int)pData->m_lines[lineDst].m_length, pData->m_lines[lineSrc].m_text, strlen(pData->m_lines[lineSrc].m_text));
 	TextInput_EraseLine(pCtl, lineSrc);
 }
 
@@ -1004,6 +1004,8 @@ void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 			TextInput_UpdateScrollBars(this);
 			break;
 		}
+		case DIR_NONE:
+			break;
 	}
 	
 	TextInput_MakeCursorStayUpFor(this, 500);
@@ -1306,6 +1308,131 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	return false;
 }
 
+void TextInput_OnNavPressed(Control* this, eNavDirection dir);
+
+void TextInput_InsertArbitraryText(Control* pCtl, const char* pText)
+{
+	if (!pText) return;
+	if (*pText == '\0') return;
+	
+	TextInputDataEx* this = TextInput_GetData(pCtl);
+	
+	// Step 0. Update the dirty flag, if needed
+	
+	// There are up to three parts to a piece of text:
+	// [Part before the first new line] [Middle of the text] [Last line of the text]
+	
+	// Step 1. Check if there are any new lines at all.
+	const char* pFirstNewLine = strchr(pText, '\n');
+	
+	// If not, we can simply insert the text.
+	if (!pFirstNewLine)
+	{
+		int len = (int)strlen(pText);
+		TextInput_AppendText(pCtl, this->m_cursorY, this->m_cursorX, pText, len);
+		this->m_cursorX += len;
+		TextInput_RepaintLine(pCtl, this->m_cursorY);
+		
+		return;
+	}
+	
+	bool bIsMultiLine = (pCtl->m_parm1 & TEXTEDIT_MULTILINE);
+	
+	// Step 2. Split the line down m_cursorX.
+	if (bIsMultiLine)
+		TextInput_SplitLines(pCtl, this->m_cursorY, this->m_cursorX);
+	
+	// Step 3. Insert the first part of the text.
+	TextInput_AppendText(pCtl, this->m_cursorY, this->m_cursorX, pText, pFirstNewLine - pText);
+	
+	if (!bIsMultiLine)
+		return;
+	
+	const char* pTextAfter = pFirstNewLine + 1;
+	
+	// Step 4. Count the number of new lines:
+	int nNewLines = 0;
+	const char* pTextWork = pTextAfter;
+	while (*pTextWork)
+	{
+		if (*pTextWork == '\n') nNewLines++;
+		pTextWork++;
+	}
+	
+	// Step 5. Insert as many new lines as needed.
+	TextInput_InsertNewLines(pCtl, this->m_cursorY + 1, nNewLines);
+	
+	// Step 6. Set the text of these lines accordingly.
+	int nLineNum = this->m_cursorY + 1;
+	pTextWork = pTextAfter;
+	
+	int nDestPos = 0;
+	
+	while (*pTextWork)
+	{
+		const char* pNewLine = strchr(pTextWork, '\n');
+		if (!pNewLine)
+		{
+			// this is the last line.
+			nDestPos = (int)strlen(pTextWork);
+			TextInput_AppendText(pCtl, nLineNum, 0, pTextWork, nDestPos);
+			break;
+		}
+		
+		TextInput_SetLineText(pCtl, nLineNum++, pTextWork, pNewLine - pTextWork);
+		pTextWork = pNewLine + 1;
+	}
+	
+	// Step 7. Go to the end of the pasted text.
+	int oldCursorY = this->m_cursorY;
+	this->m_cursorY = nLineNum;
+	this->m_cursorX = nDestPos;
+	// repaint the old line
+	TextInput_RepaintLine(pCtl, oldCursorY);
+	// this is hacky, but OnNavPressed a no op key
+	TextInput_OnNavPressed(pCtl, DIR_NONE);
+}
+
+static char* TextInput_FetchClipboardContents()
+{
+	ClipboardVariant* pClip = CbGetCurrentVariant();
+	
+	char* pOut = NULL;
+	
+	switch (pClip->m_type)
+	{
+		case CLIPBOARD_DATA_TEXT:
+			pOut = MmStringDuplicate(pClip->m_short_str);
+			break;
+		case CLIPBOARD_DATA_LARGE_TEXT:
+			pOut = MmStringDuplicate(pClip->m_char_str);
+			break;
+	}
+	
+	CbRelease(pClip);
+	
+	return pOut;
+}
+
+void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
+{
+	switch (command)
+	{
+		case TEDC_PASTE:
+		{
+			char* pThing = TextInput_FetchClipboardContents();
+			TextInput_InsertArbitraryText(pCtl, pThing);
+			if (pThing) MmFree(pThing);
+			break;
+		}
+		case TEDC_INSERT:
+		{
+			TextInput_InsertArbitraryText(pCtl, parm);
+			break;
+		}
+	}
+}
+
 // Exposed API functions
 void SetTextInputText(Window* pWindow, int comboID, const char* pText)
 {
@@ -1390,6 +1517,22 @@ void TextInputSetFont(Window *pWindow, int comboID, unsigned font)
 			TextInputDataEx* pData = TextInput_GetData(p);
 			if (pData)
 				pData->m_font = font;
+			
+			return;
+		}
+	}
+}
+
+void TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			Control *p = &pWindow->m_pControlArray[i];
+			if (p->OnEvent != WidgetTextEditView2_OnEvent) return;
+			
+			TextInput_PerformCommand(p, command, parm);
 			
 			return;
 		}

@@ -295,6 +295,25 @@ void NotepadOnActionRedo(Window* pWindow)
 {
 	NotepadNotImplemented(pWindow);
 }
+void NotepadOnTextInputAction(Window* pWindow, int parm1)
+{
+	int cmd = 0;
+	
+	switch (parm1)
+	{
+		case CB$COPY:
+			cmd = TEDC_COPY;
+			break;
+		case CB$PASTE:
+			cmd = TEDC_PASTE;
+			break;
+		default:
+			NotepadNotImplemented(pWindow);
+			return;
+	}
+	
+	TextInputRequestCommand(pWindow, NOTEP_TEXTVIEW, cmd, NULL);
+}
 
 void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 {
@@ -426,17 +445,15 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 				case CB$CUT:
 					NotepadOnActionCut(pWindow);
 					break;
-				case CB$COPY:
-					NotepadOnActionCopy(pWindow);
-					break;
-				case CB$PASTE:
-					NotepadOnActionPaste(pWindow);
-					break;
 				case CB$UNDO:
 					NotepadOnActionUndo(pWindow);
 					break;
 				case CB$REDO:
 					NotepadOnActionRedo(pWindow);
+					break;
+				case CB$COPY:
+				case CB$PASTE:
+					NotepadOnTextInputAction(pWindow, parm1);
 					break;
 				case NOTEP_MENUBAR:
 				{

@@ -15,6 +15,20 @@
 #define TEXTEDIT_STYLING   (8)
 #define TEXTEDIT_SYNTHILT  (16)
 
+// Text Edit commands. TextInputRequestCommand
+enum
+{
+	// clipboard commands. `parm` is ignored.
+	TEDC_PASTE,
+	TEDC_CUT,
+	TEDC_COPY,
+	
+	TEDC_INSERT,     // inserts an arbitrary piece of text. Requires a parameter in `parm`.
+	
+	TEDC_GOTOLINE,   // `parm` is here treated as a pointer to an integer
+	TEDC_GOTOOFFSET, // same here
+};
+
 #define IMAGECTL_PAN  (1)
 #define IMAGECTL_ZOOM (2)
 #define IMAGECTL_PEN  (4)
@@ -338,5 +352,10 @@ void ProgBarSetMaxProg(Window* pWindow, int comboID, int max_prog);
  * Sets the font of a text input control.
  */
 void TextInputSetFont(Window *pWindow, int comboID, unsigned font);
+
+/**
+ * Requests a command from a text input control.
+ */
+void TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm);
 
 #endif//_WIDGET_H
