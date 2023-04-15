@@ -177,6 +177,74 @@ static const char* TextInput_GetRawText(Control* this)
 	return pData->m_cachedData;
 }
 
+// note: you MUST free this!!
+static char* TextInput_GetSelectedText(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	// if we have nothing selected
+	if (!TextInput_SelectedAnything(this)) return NULL;
+	
+	// note: This will end up allocating some bytes more. This is fine, I'm not going
+	// to change it unless it proves problematic
+	size_t sz = 1;
+	
+	for (int i = pData->m_selectY1; i <= pData->m_selectY2; i++)
+	{
+		sz += pData->m_lines[i].m_length + (i != 0);
+	}
+	
+	char* pMem = MmAllocate(sz);
+	if (!pMem) return NULL;
+	*pMem = 0;
+	char* pHead = pMem;
+	
+	// all on one line
+	if (pData->m_selectY1 == pData->m_selectY2)
+	{
+		int length = pData->m_selectX2 - pData->m_selectX1;
+		memcpy(pHead, &pData->m_lines[pData->m_selectY1].m_text[pData->m_selectX1], (size_t)length);
+		pHead += length;
+		
+		// make sure we also add the null terminator
+		*pHead = '\0';
+		pHead++;
+	}
+	else
+	{
+		// add the first line:
+		TextLine*
+		pLine = &pData->m_lines[pData->m_selectY1];
+		
+		size_t len = pLine->m_length - pData->m_selectX1;
+		memcpy(pHead, &pLine->m_text[pData->m_selectX1], len);
+		pHead += len;
+		// add a new line
+		*pHead = '\n';
+		pHead++;
+		
+		// for each line between selectY1 and selectY2
+		for (int ln = pData->m_selectY1 + 1; ln < pData->m_selectY2; ln++)
+		{
+			pLine = &pData->m_lines[ln];
+			memcpy(pHead, pLine->m_text, pLine->m_length);
+			pHead += pLine->m_length;
+			*pHead = '\n';
+			pHead++;
+		}
+		
+		// finally, add selectY2
+		pLine = &pData->m_lines[pData->m_selectY2];
+		memcpy(pHead, pLine->m_text, (size_t)pData->m_selectX2);
+		
+		// don't forget the null terminator
+		pHead += pData->m_selectX2;
+		*pHead = '\0';
+	}
+	
+	return pMem;
+}
+
 static void TextInput_RequestRepaint(Control* this)
 {
 	WindowAddEventToMasterQueue(TextInput_GetData(this)->m_pWindow, EVENT_CTLREPAINT, this->m_comboID, 0);
@@ -1011,6 +1079,19 @@ void TextInput_PostUpdateSelection(Control* this)
 	}
 }
 
+void TextInput_RemoveArbitrarySection(Control* pCtl, int startX, int startY, int endX, int endY);
+
+void TextInput_RemoveSelectedText(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	if (!TextInput_SelectedAnything(this))
+		return;
+	
+	TextInput_RemoveArbitrarySection(this, pData->m_selectX1, pData->m_selectY1, pData->m_selectX2, pData->m_selectY2);
+	TextInput_Select(this, -1, -1, -1, -1);
+}
+
 void TextInput_OnNavPressed(Control* this, eNavDirection dir)
 {
 	TextInputDataEx* pData = TextInput_GetData(this);
@@ -1390,6 +1471,19 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 			if (pThing) MmFree(pThing);
 			break;
 		}
+		case TEDC_COPY:
+		case TEDC_CUT:
+		{
+			char* pThing = TextInput_GetSelectedText(pCtl);
+			CbCopyText(pThing);
+			MmFree(pThing);
+			
+			// note: aside from copying the text to the clipboard, we also remove it
+			if (command == TEDC_CUT)
+				TextInput_RemoveSelectedText(pCtl);
+			
+			break;
+		}
 		case TEDC_INSERT:
 		{
 			TextInput_InsertArbitraryText(pCtl, parm);
@@ -1568,11 +1662,8 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			TextInputDataEx* pData = TextInput_GetData(this);
 			
-			if (TextInput_SelectedAnything(this))
-			{
-				TextInput_RemoveArbitrarySection(this, pData->m_selectX1, pData->m_selectY1, pData->m_selectX2, pData->m_selectY2);
-				TextInput_Select(this, -1, -1, -1, -1);
-			}
+			bool bWasAnythingSelected = TextInput_SelectedAnything(this);
+			TextInput_RemoveSelectedText(this);
 			
 			// kind of hacky.. Make it so shift is disabled so we don't accidentally select the character(s) we just wrote
 			bool bIsShiftHeld = pData->m_bShiftHeld;
@@ -1585,7 +1676,10 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			
 			if ((char)parm1 == '\x7F')
 			{
-				if (pData->m_cursorX == 0)
+				if (bWasAnythingSelected)
+				{
+				}
+				else if (pData->m_cursorX == 0)
 				{
 					if (pData->m_cursorY > 0)
 					{
@@ -1637,8 +1731,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 				{
 					if (TextInput_SelectedAnything(this))
 					{
-						TextInput_RemoveArbitrarySection(this, pData->m_selectX1, pData->m_selectY1, pData->m_selectX2, pData->m_selectY2);
-						TextInput_Select(this, -1, -1, -1, -1);
+						TextInput_RemoveSelectedText(this);
 					}
 					else
 					{

@@ -175,7 +175,7 @@ void DtDrawIcon(DesktopIcon* pIcon)
 	if (pIcon->m_bSelected)
 	{
 		bg = SELECTED_ITEM_COLOR;
-		fg = WINDOW_TEXT_COLOR_LIGHT;
+		fg = SELECTED_TEXT_COLOR;
 	}
 	
 	if (bg == TRANSPARENT)

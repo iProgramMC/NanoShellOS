@@ -28,7 +28,8 @@ void* strcpy(const char* ds, const char* ss);
 void strtolower(char* as);
 void strtoupper(char* as);
 int strcmp(const char* as, const char* bs);
-void strcat(char* dest, const char* after);
+char* strcat(char* dest, const char* after);
+char* strpcat(char* dest, const char* after);
 char* strchr (const char* stringToSearch, const char characterToSearchFor);
 char* strrchr (const char* stringToSearch, const char characterToSearchFor);
 char* strdup (const char* pText);//! Make sure to free this.

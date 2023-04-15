@@ -262,10 +262,20 @@ int strcmp(const char* as, const char* bs)
 	}
 	return 0;
 }
-void strcat(char* dest, const char* after)
+
+char* strcat(char* dest, const char* after)
 {
 	char* end = strlen(dest) + dest;
 	memcpy(end, after, strlen(after) + 1);
+	return dest;
+}
+
+char* strpcat(char* dest, const char* after)
+{
+	char* end = strlen(dest) + dest;
+	size_t sz = strlen(after) + 1;
+	memcpy(end, after, sz);
+	return end + sz - 1;
 }
 
 char* strchr (const char* stringToSearch1, const char characterToSearchFor)
