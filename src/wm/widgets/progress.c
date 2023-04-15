@@ -62,9 +62,9 @@ bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 			
 			Rectangle rect = { this->m_rect.left + 2, this->m_rect.top + 2, this->m_rect.left + 2 + width, this->m_rect.bottom - 2 };
 			VidSetClipRect(&rect);
-			VidFillRect(WINDOW_TITLE_ACTIVE_COLOR, this->m_rect.left + 2, this->m_rect.top + 2, this->m_rect.left + 2 + width, this->m_rect.bottom - 3);
+			VidFillRect(SELECTED_ITEM_COLOR, this->m_rect.left + 2, this->m_rect.top + 2, this->m_rect.left + 2 + width, this->m_rect.bottom - 3);
 			
-			VidDrawText(buffer, this->m_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR_LIGHT | TEXT_RENDER_BOLD, WINDOW_TITLE_ACTIVE_COLOR);
+			VidDrawText(buffer, this->m_rect, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED, SELECTED_TEXT_COLOR | TEXT_RENDER_BOLD, SELECTED_ITEM_COLOR);
 			
 			Rectangle rect1 = { this->m_rect.left + 2 + width, this->m_rect.top + 2, this->m_rect.right - 2, this->m_rect.bottom - 2 };
 			VidSetClipRect(&rect1);
