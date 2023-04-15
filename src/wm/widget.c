@@ -155,7 +155,7 @@ void DrawEdge(Rectangle rect, int style, unsigned bg)
 	int colors[] =
 	{
 		BUTTON_EDGE_COLOR,
-		0x404040,
+		BUTTON_XSHADOW_COLOR,
 		BUTTON_SHADOW_COLOR,
 		WINDOW_BORDER_COLOR,
 		0,
