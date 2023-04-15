@@ -70,9 +70,9 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 						rect.top    = menu_bar_rect.top  + 1;
 						rect.bottom = menu_bar_rect.bottom - 2;
 						
-						VidFillRectangle (0x7F, rect);
+						VidFillRectangle (MENU_BAR_SELECTION_COLOR, rect);
 						
-						VidTextOut (pText, menu_bar_rect.left + current_x + 8, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, WINDOW_TEXT_COLOR_LIGHT, TRANSPARENT);
+						VidTextOut (pText, menu_bar_rect.left + current_x + 8, menu_bar_rect.top + 2 + (MENU_BAR_HEIGHT - GetLineHeight()) / 2, SELECTED_TEXT_COLOR, TRANSPARENT);
 						//render the child menu as well:
 						
 						/*WmMenuRenderSubMenu (pChild, rect.left, rect.bottom);*/

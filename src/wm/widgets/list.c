@@ -219,7 +219,7 @@ go_back:
 					/*int l = this->m_rect.left + 4, t = this->m_rect.top + 2 + j * LIST_ITEM_HEIGHT, 
 						r = this->m_rect.right - 4, b = t + LIST_ITEM_HEIGHT - 1;
 					VidFillRect (0x7F, l, t, r, b);*/
-					color = WINDOW_TEXT_COLOR_LIGHT, colorT = 0x7F;
+					color = SELECTED_TEXT_COLOR, colorT = SELECTED_ITEM_COLOR;
 				}
 				if (pData->m_hasIcons)
 				{
@@ -456,14 +456,14 @@ go_back:
 				Rectangle br = { x, y, x + ICON_ITEM_WIDTH, y + ICON_ITEM_HEIGHT };
 				if (pData->m_highlightedElementIdx == i)
 				{
-					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
+					color = SELECTED_TEXT_COLOR;//, colorT = 0x7F;
 					
 					int w, h;
 					VidTextOutInternal(pData->m_pItems[i].m_contentsShown, 0, 0, 0, 0, true, &w, &h);
 					
 					int mid = (br.left + br.right) / 2;
 					
-					VidFillRect(0x7F, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
+					VidFillRect(SELECTED_ITEM_COLOR, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
 				}
 				if (pData->m_hasIcons)
 				{
@@ -899,14 +899,14 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				
 				if (pData->m_highlightedElementIdx == i || pData->m_trackedListItem == i)
 				{
-					color = WINDOW_TEXT_COLOR_LIGHT;//, colorT = 0x7F;
+					color = SELECTED_TEXT_COLOR;//, colorT = 0x7F;
 					
 					int w, h;
 					VidTextOutInternal(pData->m_pItems[i].m_contentsShown, 0, 0, 0, 0, true, &w, &h);
 					
 					int mid = (br.left + br.right) / 2;
 					
-					VidFillRect(0x7F, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
+					VidFillRect(SELECTED_ITEM_COLOR, mid - w/2 - 2, br.top - 1, mid + w/2, br.top + h + 1);
 				}
 				if (pData->m_hasIcons)
 				{
