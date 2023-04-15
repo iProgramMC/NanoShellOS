@@ -31,8 +31,8 @@ bool StartsWith(const char* pText, const char* pCheck)
 
 int memcmp(const void* ap, const void* bp, size_t size)
 {
-	const BYTE* a = (const BYTE*) ap;
-	const BYTE* b = (const BYTE*) bp;
+	const uint8_t* a = (const uint8_t*) ap;
+	const uint8_t* b = (const uint8_t*) bp;
 	for(size_t i = 0; i < size; i++)
 	{
 		if(a[i] < b[i])
@@ -42,10 +42,10 @@ int memcmp(const void* ap, const void* bp, size_t size)
 	}
 	return 0;
 }
-void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size)
+void* memcpy(void* dstptr, const void* srcptr, size_t size)
 {
-	BYTE* restrict dst = (BYTE*) dstptr;
-	const BYTE* restrict src = (const BYTE*) srcptr;
+	uint8_t* dst = (uint8_t*) dstptr;
+	const uint8_t* src = (const uint8_t*) srcptr;
 	for(size_t i = 0; i < size; i++)
 	{
 		dst[i] = src[i];
@@ -53,7 +53,7 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size)
 	return dstptr;
 }
 // Moves in increments of four
-void fmemcpy32 (void* restrict dest, const void* restrict src, int size) {
+void fmemcpy32 (void* dest, const void* src, int size) {
 	uint32_t* dst = (uint32_t*)dest;
 	uint32_t* ser = (uint32_t*)src;
 	
@@ -63,7 +63,7 @@ void fmemcpy32 (void* restrict dest, const void* restrict src, int size) {
 		size -= 4;
 	}
 }
-void fmemcpy128 (void* restrict dest, const void* restrict src, int size) {
+void fmemcpy128 (void* dest, const void* src, int size) {
 	uint32_t* dst = (uint32_t*)dest;
 	uint32_t* ser = (uint32_t*)src;
 	
@@ -102,10 +102,10 @@ void memmove_ints(void* pMemOut, const void* pMemIn, int nSize)
 	}
 }
 
-void* memmove(void* restrict dstptr, const void* restrict srcptr, size_t size)
+void* memmove(void* dstptr, const void* srcptr, size_t size)
 {
-	BYTE* dst = (BYTE*) dstptr;
-	const BYTE* src = (const BYTE*) srcptr;
+	uint8_t* dst = (uint8_t*) dstptr;
+	const uint8_t* src = (const uint8_t*) srcptr;
 	if (dst < src) {
 		for (size_t i = 0; i < size; i++)
 			dst[i] = src[i];
@@ -115,16 +115,16 @@ void* memmove(void* restrict dstptr, const void* restrict srcptr, size_t size)
 	}
 	return dstptr;
 }
-void* memset(void* bufptr, BYTE val, size_t size)
+void* memset(void* bufptr, int val, size_t size)
 {
-	BYTE* buf = (BYTE*) bufptr;
+	uint8_t* buf = (uint8_t*) bufptr;
 	for(size_t i = 0; i < size; i++)
 	{
 		buf[i] = val;
 	}
 	return bufptr;
 }
-void* fast_memset(void* bufptr, BYTE val, size_t size);
+void* fast_memset(void* bufptr, int val, size_t size);
 //NOTE: size must be 4 byte aligned!!
 void ZeroMemory (void* bufptr1, size_t size)
 {
