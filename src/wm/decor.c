@@ -223,19 +223,19 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		{
 			Rectangle rectb = windowRect;
 			
-			VidDrawHLine(0x000000, rectb.left, rectb.right,  rectb.bottom-1);
-			VidDrawVLine(0x000000, rectb.top , rectb.bottom, rectb.right -1);
+			VidDrawHLine(BUTTON_XSHADOW_COLOR, rectb.left, rectb.right,  rectb.bottom-1);
+			VidDrawVLine(BUTTON_XSHADOW_COLOR, rectb.top , rectb.bottom, rectb.right -1);
 			
 			rectb.left  ++;
 			rectb.top   ++;
 			rectb.right --;
 			rectb.bottom--;
 			
-			VidDrawHLine(0x808080, rectb.left-1, rectb.right -1, rectb.bottom-1);
-			VidDrawVLine(0x808080, rectb.top -1, rectb.bottom-1, rectb.right -1);
+			VidDrawHLine(BUTTON_SHADOW_COLOR, rectb.left-1, rectb.right -1, rectb.bottom-1);
+			VidDrawVLine(BUTTON_SHADOW_COLOR, rectb.top -1, rectb.bottom-1, rectb.right -1);
 			
-			VidDrawHLine(0xFFFFFF, rectb.left, rectb.right -2, rectb.top );
-			VidDrawVLine(0xFFFFFF, rectb.top , rectb.bottom-2, rectb.left);
+			VidDrawHLine(BUTTON_HILITE_COLOR, rectb.left, rectb.right -2, rectb.top );
+			VidDrawVLine(BUTTON_HILITE_COLOR, rectb.top , rectb.bottom-2, rectb.left);
 		}
 	}
 	

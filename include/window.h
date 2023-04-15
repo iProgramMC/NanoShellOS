@@ -1064,14 +1064,14 @@ void DrawEdge(Rectangle rect, int style, unsigned bg);
 #define DRE_RAISED (DRE_RAISEDINNER | DRE_RAISEDOUTER)
 #define DRE_SUNKEN (DRE_SUNKENINNER | DRE_SUNKENOUTER)
 
-#define DRE_FILLED (1 << 5) // 'bg' is ignored if this is not set
-#define DRE_FLAT   (1 << 6) // flat border.
-#define DRE_HOT    (1 << 7) // the button is hovered
+#define DRE_FILLED (1 << 24) // 'bg' is ignored if this is not set
+#define DRE_FLAT   (1 << 25) // flat border.
+#define DRE_HOT    (1 << 26) // the button is hovered
 
-#define DRE_LEFT   (1  <<  8)
-#define DRE_TOP    (1  <<  9)
-#define DRE_RIGHT  (1  << 10)
-#define DRE_BOTTOM (1  << 11)
-#define DRE_RECT   (15 <<  8)
+#define DRE_LEFT   (1  << 27)
+#define DRE_TOP    (1  << 28)
+#define DRE_RIGHT  (1  << 29)
+#define DRE_BOTTOM (1  << 30)
+#define DRE_RECT   (15 << 27)
 
 #endif//_WINDOW_H
