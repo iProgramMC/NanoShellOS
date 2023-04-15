@@ -1478,8 +1478,12 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 		case TEDC_CUT:
 		{
 			char* pThing = TextInput_GetSelectedText(pCtl);
-			CbCopyText(pThing);
-			MmFree(pThing);
+			
+			if (pThing)
+			{
+				CbCopyText(pThing);
+				MmFree(pThing);
+			}
 			
 			// note: aside from copying the text to the clipboard, we also remove it
 			if (command == TEDC_CUT)
