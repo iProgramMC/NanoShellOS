@@ -1467,6 +1467,7 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 		case TEDC_PASTE:
 		{
 			char* pThing = TextInput_FetchClipboardContents();
+			TextInput_RemoveSelectedText(pCtl);
 			TextInput_InsertArbitraryText(pCtl, pThing);
 			if (pThing) MmFree(pThing);
 			break;
@@ -1480,7 +1481,10 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 			
 			// note: aside from copying the text to the clipboard, we also remove it
 			if (command == TEDC_CUT)
+			{
+			case TEDC_DELETE:
 				TextInput_RemoveSelectedText(pCtl);
+			}
 			
 			break;
 		}
@@ -1489,7 +1493,99 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 			TextInput_InsertArbitraryText(pCtl, parm);
 			break;
 		}
+		default:
+		{
+			SLogMsg("TextInput: The command %d is not implemented", command);
+			break;
+		}
 	}
+}
+
+void TextInput_ShowContextMenu(Control* this, Window* pWindow, int x, int y)
+{
+	// manually construct a context menu.
+	WindowMenu rootEnt;
+	WindowMenu items[8];
+	WindowMenu *undoEnt, *spacerEnt, *cutEnt, *copyEnt, *pasteEnt, *deleteEnt, *selectAllEnt, *spacer2Ent;
+	undoEnt      = &items[0];
+	spacerEnt    = &items[1];
+	cutEnt       = &items[2];
+	copyEnt      = &items[3];
+	pasteEnt     = &items[4];
+	deleteEnt    = &items[5];
+	spacer2Ent   = &items[6];
+	selectAllEnt = &items[7];
+	
+	memset(items, 0, sizeof items);
+	memset(&rootEnt, 0, sizeof rootEnt);
+	
+	strcpy(rootEnt.sText, "Menu");
+	rootEnt.pMenuEntries = items;
+	rootEnt.nMenuEntries = (int)ARRAY_COUNT(items);
+	rootEnt.nLineSeparators = 2;
+	rootEnt.nWidth       = 100;
+	rootEnt.pWindow      = pWindow;
+	
+	// fill in one of the entries, then copy it to others
+	memset(undoEnt, 0, sizeof *undoEnt);
+	undoEnt->pWindow         = pWindow;
+	undoEnt->pMenuEntries    = NULL;
+	undoEnt->nMenuEntries    = 0;
+	undoEnt->nMenuComboID    = TEDC_UNDO;
+	undoEnt->nOrigCtlComboID = this->m_comboID;
+	undoEnt->bOpen           = false;
+	undoEnt->bHasIcons       = false;
+	undoEnt->nLineSeparators = 0;
+	undoEnt->pOpenWindow     = NULL;
+	undoEnt->nIconID         = ICON_NULL;
+	undoEnt->nWidth          = rootEnt.nWidth;
+	
+	// TODO: if (TextInput_CanUndo(this))
+	undoEnt->bDisabled = true;
+	
+	for (int i = 1; i < (int)ARRAY_COUNT(items); i++)
+		memcpy(&items[i], undoEnt, sizeof *undoEnt);
+	
+	strcpy(spacerEnt   ->sText, "");
+	strcpy(spacer2Ent  ->sText, "");
+	strcpy(undoEnt     ->sText, "Undo");
+	strcpy(cutEnt      ->sText, "Cut");
+	strcpy(copyEnt     ->sText, "Copy");
+	strcpy(pasteEnt    ->sText, "Paste");
+	strcpy(deleteEnt   ->sText, "Delete");
+	strcpy(selectAllEnt->sText, "Select all");
+	
+	spacerEnt   ->nMenuComboID = -1;
+	spacer2Ent  ->nMenuComboID = -2;
+	undoEnt     ->nMenuComboID = TEDC_UNDO;
+	cutEnt      ->nMenuComboID = TEDC_CUT;
+	copyEnt     ->nMenuComboID = TEDC_COPY;
+	pasteEnt    ->nMenuComboID = TEDC_PASTE;
+	deleteEnt   ->nMenuComboID = TEDC_DELETE;
+	selectAllEnt->nMenuComboID = TEDC_SELECT_ALL;
+	
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	// the "select all" is enabled if there is text:
+	if (pData->m_num_lines > 1 || pData->m_lines[0].m_length > 0)
+		selectAllEnt->bDisabled = false;
+	
+	// the 'cut', 'copy' and 'delete' items are enabled if there's a selection
+	if (TextInput_SelectedAnything(this))
+		copyEnt->bDisabled = cutEnt->bDisabled = deleteEnt->bDisabled = false;
+	
+	// the 'paste' item is enabled if there's anything in the clipboard
+	ClipboardVariant* pVar = CbGetCurrentVariant();
+	bool bAnythingInClip = pVar->m_type == CLIPBOARD_DATA_LARGE_TEXT || pVar->m_type == CLIPBOARD_DATA_TEXT;
+	CbRelease(pVar);
+	if (bAnythingInClip)
+		pasteEnt->bDisabled = false;
+	
+	// the separators probably shouldn't be disabled
+	spacerEnt->bDisabled = spacer2Ent->bDisabled = false;
+	
+	// spawn the menu now!
+	SpawnMenu(pWindow, &rootEnt, x, y);
 }
 
 bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
@@ -1634,6 +1730,21 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			TextInput_PartialDraw(this, rect);
 			
 			DrawEdge(borderRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
+			
+			break;
+		}
+		case EVENT_RIGHTCLICKRELEASE:
+		{
+			Point mouseClickPos  = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (!RectangleContains(&this->m_rect, &mouseClickPos))
+				break;
+			
+			Rectangle rect = GetWindowClientRect(pWindow, true);
+			
+			mouseClickPos.x += rect.left;
+			mouseClickPos.y += rect.top;
+			
+			TextInput_ShowContextMenu(this, pWindow, mouseClickPos.x, mouseClickPos.y);
 			
 			break;
 		}
@@ -1796,6 +1907,14 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 					break;
 				}
 			}
+			
+			break;
+		}
+		case EVENT_COMMAND:
+		{
+			if (parm1 != this->m_comboID) break;
+			
+			TextInput_PerformCommand(this, parm2, NULL);
 			
 			break;
 		}

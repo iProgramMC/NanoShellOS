@@ -27,6 +27,9 @@ enum
 	
 	TEDC_GOTOLINE,   // `parm` is here treated as a pointer to an integer
 	TEDC_GOTOOFFSET, // same here
+	TEDC_UNDO,
+	TEDC_SELECT_ALL,
+	TEDC_DELETE,
 };
 
 #define IMAGECTL_PAN  (1)

@@ -128,7 +128,6 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_MOVE:
 		case EVENT_ACTIVATE:
 		case EVENT_UPDATE:
-		case EVENT_COMMAND:
 		case EVENT_CLOSE:
 		case EVENT_MINIMIZE:
 		case EVENT_UNMINIMIZE:
