@@ -747,6 +747,8 @@ static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 	{
 		TextInput_RequestRepaint(this);
 	}
+	
+	TextInput_Select(this, -1, -1, -1, -1);
 }
 
 // This concatenates 'lineSrc' to the end of 'lineDst'.
@@ -1486,6 +1488,13 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 				TextInput_RemoveSelectedText(pCtl);
 			}
 			
+			break;
+		}
+		case TEDC_SELECT_ALL:
+		{
+			TextInputDataEx* pData = TextInput_GetData(pCtl);
+			
+			TextInput_Select(pCtl, 0, 0, pData->m_num_lines - 1, pData->m_lines[pData->m_num_lines - 1].m_length);
 			break;
 		}
 		case TEDC_INSERT:
