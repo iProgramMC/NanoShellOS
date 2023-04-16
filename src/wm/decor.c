@@ -252,14 +252,31 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 			titleRect.right--;
 		}
 		
-		VidFillRectHGradient(
-			selected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR, 
-			selected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B, 
-			titleGradRect.left,
-			titleGradRect.top,
-			titleGradRect.right,
-			titleGradRect.bottom
-		);
+		uint32_t
+		color1 = selected ? WINDOW_TITLE_ACTIVE_COLOR   : WINDOW_TITLE_INACTIVE_COLOR,
+		color2 = selected ? WINDOW_TITLE_ACTIVE_COLOR_B : WINDOW_TITLE_INACTIVE_COLOR_B;
+		
+		if (color1 == color2)
+		{
+			VidFillRect(
+				color1,
+				titleGradRect.left,
+				titleGradRect.top,
+				titleGradRect.right,
+				titleGradRect.bottom
+			);
+		}
+		else
+		{
+			VidFillRectHGradient(
+				color1,
+				color2,
+				titleGradRect.left,
+				titleGradRect.top,
+				titleGradRect.right,
+				titleGradRect.bottom
+			);
+		}
 		
 		int textwidth, height;
 		VidSetFont(TITLE_BAR_FONT);

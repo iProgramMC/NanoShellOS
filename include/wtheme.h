@@ -14,13 +14,15 @@ enum
 {
 	TH_DEFAULT,
 	TH_DARK,
-	TH_REDMOND,
-	TH_CALM,
 	TH_BLACK,
+	TH_REDMOND,
+	TH_VGA,
+	TH_SANDY,
 	//TH_WHITE,//--fix edges pls
 	TH_ROSE,
 	TH_DESERT,
-	TH_RAINYDAY,
+	//TH_RAINYDAY,
+	//TH_CALM,
 	
 };
 

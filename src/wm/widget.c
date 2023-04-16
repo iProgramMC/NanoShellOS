@@ -163,6 +163,9 @@ void DrawEdge(Rectangle rect, int style, unsigned bg)
 		BUTTON_HILITE_COLOR,
 	};
 	
+	if ((style & DRE_BLACKOUTER) && BUTTON_XSHADOW_COLOR == 0)
+		colors[1] = colors[2];
+	
 	if (style & DRE_HOT)
 		colors[4] = BUTTON_HOVER_COLOR;
 	else

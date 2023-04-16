@@ -10,6 +10,24 @@
 #include <main.h>
 #include <video.h>
 
+#define COLR_BLACK 0x00000000
+#define COLR_DBLUE 0x00000080
+#define CLR_DGREEN 0x00008000
+#define COLOR_TEAL 0x00008080
+#define COLOR_DRED 0x00800000
+#define C_DMAGENTA 0x00800080
+#define CL_DYELLOW 0x00808000
+#define COLR_DGRAY 0x00808080
+
+#define COLR_LGRAY 0x00C0C0C0
+#define COLOR_BLUE 0x000000FF
+#define COLR_GREEN 0x0000FF00
+#define COLOR_CYAN 0x0000FFFF
+#define COLOR__RED 0x00FF0000
+#define CL_MAGENTA 0x00FF00FF
+#define CLR_YELLOW 0x00FFFF00
+#define COLR_WHITE 0x00FFFFFF
+
 //WORK: Add in your icons here in this enum:
 enum 
 {
