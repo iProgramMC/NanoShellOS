@@ -306,8 +306,6 @@ void CreatePropertiesWindow(Window * parent, const char* path, const char* justN
 
 #define TABLE_COLUMNS (3)
 
-#define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
-
 //TODO: Move this to its own space.
 typedef struct
 {
@@ -928,9 +926,9 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				else
 				{
 					RECT(r, x_pos, PADDING_AROUND_LISTVIEW + TITLE_BAR_HEIGHT, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
-					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
+					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, "", button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
-					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);
+					x_pos += (COOLBAR_BUTTON_HEIGHT + 1);
 				}
 			}
 			

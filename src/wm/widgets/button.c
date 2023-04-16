@@ -317,32 +317,40 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 		}
 		case EVENT_PAINT:
 		{
+			VidSetClipRect(&this->m_rect);
+			
 			uint32_t blue = SELECTED_MENU_ITEM_COLOR_B;
 			
-			int x = this->m_rect.left + (this->m_rect.right  - this->m_rect.left - this->m_parm2) / 2;
+			int x = this->m_rect.left + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
 			int y = this->m_rect.top  + (this->m_rect.bottom - this->m_rect.top  - this->m_parm2) / 2;
 			x++, y++;
 			
+			int xText = x;
+			
 			bool bRenderOutlineToo = false;
+			
+			Rectangle rect = this->m_rect;
+			rect.right--;
+			rect.bottom--;
 			
 			if (this->m_buttonData.m_clicked)
 			{
-				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, this->m_rect);
-				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   this->m_rect);
+				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, rect);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   rect);
 				
 				x++, y++;
 			}
 			else if (this->m_buttonData.m_hovered && g_GlowOnHover)
 			{
-				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, this->m_rect);
-				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   this->m_rect);
+				VidFillRectangle(SELECTED_MENU_ITEM_COLOR_B, rect);
+				VidDrawRectangle(SELECTED_MENU_ITEM_COLOR,   rect);
 				
 				x--, y--;
 				bRenderOutlineToo = true;
 			}
 			else
 			{
-				VidFillRectangle(WINDOW_BACKGD_COLOR, this->m_rect);
+				VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
 			}
 			
 			if (!this->m_bDisabled)
@@ -362,6 +370,14 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 				RenderIconForceSizeOutline(this->m_parm1, x+1, y+1, this->m_parm2, WINDOW_TEXT_COLOR_LIGHT);
 				RenderIconForceSizeOutline(this->m_parm1, x+0, y+0, this->m_parm2, *((uint32_t*)b));
 			}
+			
+			Rectangle textRect = rect;
+			textRect.left = xText + this->m_parm2 + 4;
+			textRect.top++;
+			textRect.bottom++;
+			VidDrawText(this->m_text, textRect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			
+			VidSetClipRect(NULL);
 			
 			break;
 		}

@@ -168,6 +168,8 @@ void     SetThemingParameter(int type, uint32_t);
 
 #endif
 
+#define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 9)
+
 // This flag tells the operating system that it may choose where to place a window.
 // If the xPos and yPos are bigger than or equal to zero, the application tells the OS where it should place the window.
 // The OS will use this as a guideline, for example, if an application wants to go off the screen, the OS

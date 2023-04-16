@@ -8,8 +8,6 @@
 #include <widget.h>
 #include <vfs.h>
 
-#define COOLBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT - 6 + 8)
-
 enum
 {
 	NOTEP_MENUBAR_ROOT,//=0, Start by adding to comboid 0
@@ -327,7 +325,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			pWindow->m_data = MmAllocate (sizeof (NotepadData));
 			
 			#define PADDING_AROUND_TEXTVIEW 8
-			#define TOP_PADDING             COOLBAR_BUTTON_HEIGHT + 5
+			#define TOP_PADDING             COOLBAR_BUTTON_HEIGHT + 4
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_TEXTVIEW, 
 				/*Y Coord*/ PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT + TOP_PADDING, 
@@ -401,7 +399,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 					RECT(r, x_pos, PADDING_AROUND_TEXTVIEW + TITLE_BAR_HEIGHT, COOLBAR_BUTTON_HEIGHT, COOLBAR_BUTTON_HEIGHT);
 					AddControl(pWindow, CONTROL_BUTTON_ICON_BAR, r, NULL, button_actions[i], button_icons[i], COOLBAR_BUTTON_HEIGHT > 36 ? 32 : 16);
 					
-					x_pos += (COOLBAR_BUTTON_HEIGHT + 2);
+					x_pos += (COOLBAR_BUTTON_HEIGHT + 1);
 				}
 			}
 			
