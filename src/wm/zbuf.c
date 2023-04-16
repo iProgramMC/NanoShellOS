@@ -162,10 +162,12 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 	
 	//redraw the background, if needed
 	Rectangle* pStart = NULL, *pEnd = NULL;
-	WmSplitRectangle(rect, NULL, &pStart, &pEnd);
+	WmSplitRectWithWindows(rect, NULL, &pStart, &pEnd);
 	
 	for (Rectangle* pRect = pStart; pRect != pEnd; pRect++)
 		RedrawBackground(*pRect);
+	
+	WmSplitDone();
 	
 	LockFree (&g_BackgdLock);
 	

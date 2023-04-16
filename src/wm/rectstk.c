@@ -33,23 +33,23 @@ void WmFreeRectangleStack()
 	g_WmRectangleStack = NULL;
 }
 
-void WmClearRectangleStack()
+static void WmClearRectangleStack()
 {
 	g_WmRectangleStackIndex = 0;
 }
 
-void WmRemoveRectangleInStack(int spot)
+static void WmRemoveRectangleInStack(int spot)
 {
 	g_WmRectangleStack[spot] = g_WmRectangleStack[--g_WmRectangleStackIndex];
 }
 
 //note: the rectangle MUST be from the stack.
-void WmRemoveRectangleFromStack(Rectangle* rect)
+static void WmRemoveRectangleFromStack(Rectangle* rect)
 {
 	WmRemoveRectangleInStack((int)(rect - g_WmRectangleStack));
 }
 
-int WmAddRectangle(Rectangle* rect)
+static int WmAddRectangle(Rectangle* rect)
 {
 	if (rect->left > rect->right || rect->top > rect->bottom)
 	{
@@ -67,7 +67,7 @@ int WmAddRectangle(Rectangle* rect)
 	return g_WmRectangleStackIndex++;
 }
 
-void WmSplitAlongHoriz(Rectangle* rectToSplit, int left, int right, Rectangle* origRect)
+static void WmSplitAlongHoriz(Rectangle* rectToSplit, int left, int right, Rectangle* origRect)
 {
 	Rectangle* rects[3] = { NULL };
 	int rectcnt = 0;
@@ -118,7 +118,7 @@ void WmSplitAlongHoriz(Rectangle* rectToSplit, int left, int right, Rectangle* o
 	}
 }
 
-void WmSplitAlong(Rectangle* rectToSplit, int top, int bottom, int left, int right, Rectangle* origRect)
+static void WmSplitAlong(Rectangle* rectToSplit, int top, int bottom, int left, int right, Rectangle* origRect)
 {
 	Rectangle* rects[3] = { NULL };
 	int rectcnt = 0;
@@ -171,10 +171,8 @@ void WmSplitAlong(Rectangle* rectToSplit, int top, int bottom, int left, int rig
 	}
 }
 
-void WmSplitRectangleStackByWindow(Window* pWindow)
+static void WmSplitRectStackByRect(Rectangle rect)
 {
-	Rectangle rect = pWindow->m_fullRect;
-
 	for (int i = 0; i < g_WmRectangleStackIndex; i++)
 	{
 		Rectangle* rectToSplit = &g_WmRectangleStack[i];
@@ -192,8 +190,17 @@ void WmSplitRectangleStackByWindow(Window* pWindow)
 	}
 }
 
-void WmSplitRectangle(Rectangle ogRect, const Window* pThisWindow, Rectangle** pStartOut, Rectangle** pEndOut)
+static void WmSplitRectStackByWindow(Window* pWindow)
 {
+	WmSplitRectStackByRect(pWindow->m_fullRect);
+}
+
+SafeLock g_RectSplitLock;
+
+void WmSplitRectWithWindows(Rectangle ogRect, const Window* pThisWindow, Rectangle** pStartOut, Rectangle** pEndOut)
+{
+	LockAcquire(&g_RectSplitLock);
+	
 	WmClearRectangleStack();
 	WmAddRectangle(&ogRect);
 	
@@ -218,11 +225,34 @@ void WmSplitRectangle(Rectangle ogRect, const Window* pThisWindow, Rectangle** p
 		
 		if (bReachedThisWindow && !bFilledIn[order])
 		{
-			WmSplitRectangleStackByWindow(&g_windows[order]);
+			WmSplitRectStackByWindow(&g_windows[order]);
 			bFilledIn[order] = true;
 		}
 	}
 	
 	*pStartOut = &g_WmRectangleStack[0];
 	*pEndOut   = &g_WmRectangleStack[g_WmRectangleStackIndex];
+}
+
+void WmSplitRectWithRectList(Rectangle ogRect, const Rectangle* rectList, int nRectangles, Rectangle** pStartOut, Rectangle** pEndOut)
+{
+	LockAcquire(&g_RectSplitLock);
+	
+	WmClearRectangleStack();
+	WmAddRectangle(&ogRect);
+	
+	for (int i = 0; i < nRectangles; i++)
+	{
+		WmSplitRectStackByRect(rectList[i]);
+	}
+	
+	*pStartOut = &g_WmRectangleStack[0];
+	*pEndOut   = &g_WmRectangleStack[g_WmRectangleStackIndex];
+}
+
+// call this when you are done processing the results of a successful WmSplitRect.
+
+void WmSplitDone()
+{
+	LockFree(&g_RectSplitLock);
 }

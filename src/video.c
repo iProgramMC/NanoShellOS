@@ -913,6 +913,28 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 	
 	DirtyRectLogger(gx, gy, width, height);
 }
+void VidBlitImageResizeForceOpaque(Image* p, int gx, int gy, int width, int height)
+{
+	if (!p) return;
+	if (width == p->width && height == p->height)
+	{
+		VidBlitImage (p, gx, gy);
+		return;
+	}
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+			int xgrab = x * p->width / width;
+			int ygrab = y * p->height/ height;
+			
+			uint32_t pixel = p->framebuffer[xgrab + p->width * ygrab];
+			VidPlotPixelInline (gx+x, gy+y, pixel);
+		}
+	}
+	
+	DirtyRectLogger(gx, gy, width, height);
+}
 void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, uint32_t outline)
 {
 	if (!p) return;

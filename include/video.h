@@ -281,6 +281,7 @@ void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color);
  * Blits an image onto the screen, re-sizing it to widthXheight pixels.
  */
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height);
+void VidBlitImageResizeForceOpaque(Image* p, int gx, int gy, int width, int height);
 
 /**
  * Blits an outline of PImage onto the screen, of the specified color, resizing it to widthXheight pixels.

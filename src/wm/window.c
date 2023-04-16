@@ -852,10 +852,9 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 // Main loop thread.
 void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 {
-	//WmSplitRectangle
 	Rectangle* pRect = NULL, *end = NULL;
 	
-	WmSplitRectangle(e, pWindow, &pRect, &end);
+	WmSplitRectWithWindows(e, pWindow, &pRect, &end);
 	
 	for (; pRect != end; pRect++)
 	{
@@ -874,6 +873,8 @@ void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 			BOP_SRCCOPY
 		);
 	}
+	
+	WmSplitDone();
 }
 
 //extern void VidPlotPixelCheckCursor(unsigned x, unsigned y, unsigned color);

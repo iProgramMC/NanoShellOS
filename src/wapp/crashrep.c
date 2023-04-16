@@ -132,7 +132,7 @@ void CrashReporterCheck()
 		FiReleaseResourcesFromTask(crashInfo.m_pTaskKilled);
 		
 		// Close the windows that have been opened by this task.
-		WmOnTaskCrashed(crashInfo.m_pTaskKilled);
+		//WmOnTaskCrashed(crashInfo.m_pTaskKilled);
 		
 		if (!pCrashInfo)
 		{
