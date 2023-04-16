@@ -73,7 +73,7 @@ void ImageCtlZoomToFill (Window *pWindow, int comboID)
 	}
 }
 
-void SupBlitMeThisImageFaster(Image* pImage, int x, int y, int width, int height, int ogSize, Rectangle clipRect)
+void WidgetImage_BlitImageFast(Image* pImage, int x, int y, int width, int height, Rectangle clipRect)
 {
 	VBEData *pData = g_vbeData;
 	int imgWidth = pImage->width, imgHeight = pImage->height;
@@ -107,15 +107,13 @@ void SupBlitMeThisImageFaster(Image* pImage, int x, int y, int width, int height
 	if (xEnd > clipRect.right)
 		xEnd = clipRect.right;
 	
-	if (xEnd < xStart || yEnd < yStart) return;
+	if (xEnd <= xStart || yEnd <= yStart) return;
 	
 	bool bIsStretchedVertically = imgHeight != height;
 	bool bIsStretchedHorizontally = imgWidth != width;
 	
 	int offsetSrc = imgWidth * yStartBmp + xStartBmp;
 	int offsetDst = pData->m_pitch32 * yStart + xStart;
-	int offsetSrcStart = offsetSrc;
-	int offsetDstStart = offsetDst;
 	int imageY = yStartBmp;
 	
 	int ysStart = 0, xsStart = 0;
@@ -201,10 +199,86 @@ void SupBlitMeThisImageFaster(Image* pImage, int x, int y, int width, int height
 		offsetSrc += imgWidth;
 	}
 	
-	DirtyRectLogger(x, y, width, height);
+	DirtyRectLogger(xStart, yStart, xEnd - xStart, yEnd - yStart);
 }
 
-bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow)
+void WidgetImage_PartialPaint(Control* this, Rectangle paintRect)
+{
+	VidSetClipRect(&paintRect);
+	
+	Image *pImage = (Image*)this->m_imageCtlData.pImage;
+	if (pImage)
+	{
+		int  width  = pImage->width;
+		int  height = pImage->height;
+		
+		if (this->m_imageCtlData.nZoomedWidth != this->m_imageCtlData.pImage->width)
+		{
+			width  = this->m_imageCtlData.nZoomedWidth;
+			
+			uint32_t  tmp = height;
+			tmp *= this->m_imageCtlData.nZoomedWidth;
+			tmp /= this->m_imageCtlData.pImage->width;
+			
+			height = (int)tmp;
+		}
+		
+		int x = (GetWidth (&this->m_rect) - width)  / 2;
+		int y = (GetHeight(&this->m_rect) - height) / 2;
+		
+		if (this->m_parm2 & IMAGECTL_PAN)
+		{
+			x += this->m_imageCtlData.nCurPosX;
+			y += this->m_imageCtlData.nCurPosY;
+		}
+		
+		x += this->m_rect.left;
+		y += this->m_rect.top;
+		
+		Rectangle *start = NULL, *end = NULL;
+		
+		Rectangle imageRect = { x, y, x + width, y + height };
+		
+		WmSplitRectWithRectList(paintRect, &imageRect, 1, &start, &end);
+		
+		for (Rectangle* prect = start; prect != end; prect++)
+		{
+			VidFillRect(0x3f0000, prect->left, prect->top, prect->right - 1, prect->bottom - 1);
+		}
+		
+		WmSplitDone();
+		
+		if (x <= paintRect.right && y <= paintRect.bottom && x + width >= paintRect.left && y + height >= paintRect.top)
+		{
+			WidgetImage_BlitImageFast(pImage, x, y, width, height, paintRect);
+		}
+	}
+	else
+	{
+		VidFillRectangle(0x3f0000, paintRect);
+		
+		VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
+	}
+	
+	DrawEdge(this->m_rect, DRE_SUNKEN, 0);
+	
+	VidSetClipRect(NULL);
+}
+
+SAI void Swap(int* a1, int* a2)
+{
+	int temp = *a1;
+	*a1 = *a2;
+	*a2 = temp;
+}
+
+static void OrderTwo(int* a1, int* a2)
+{
+	if (*a1 > *a2)
+		Swap(a1, a2);
+}
+
+bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -228,10 +302,13 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 				
 				this->m_imageCtlData.pImage = pNewImage;
 				
-				this->m_imageCtlData.nZoomedWidth = pNewImage->width * 2;
+				this->m_imageCtlData.nZoomedWidth = pNewImage->width;
 			}
 			this->m_imageCtlData.nLastXGot = -1;
 			this->m_imageCtlData.nLastYGot = -1;
+			
+			WidgetImage_PartialPaint(this, this->m_rect);
+			
 			break;
 		}
 		case EVENT_DESTROY:
@@ -245,98 +322,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 		}
 		case EVENT_PAINT:
 		{
-			// Draw a rectangle to surround the things we put inside
-			//VidDrawHLine(WINDOW_BACKGD_COLOR - 0x0F0F0F, this->m_rect.left + 8, this->m_rect.right - 8, (this->m_rect.top + this->m_rect.bottom) / 2);
-			//int tickCount1 = GetTickCount();
-			
-			VidSetClipRect(&this->m_rect);
-			
-			Image *pImage = (Image*)this->m_imageCtlData.pImage;
-			if (pImage)
-			{
-				bool ogSize = false;
-				int  width  = pImage->width;
-				int  height = pImage->height;
-				
-				if (this->m_imageCtlData.nZoomedWidth != this->m_imageCtlData.pImage->width)
-				{
-					ogSize = false;
-					width  = this->m_imageCtlData.nZoomedWidth;
-					
-					uint32_t  tmp = height;
-					tmp *= this->m_imageCtlData.nZoomedWidth;
-					tmp /= this->m_imageCtlData.pImage->width;
-					
-					height = (int)tmp;
-				}
-				
-				int x = (GetWidth (&this->m_rect) - width)  / 2;
-				int y = (GetHeight(&this->m_rect) - height) / 2;
-				
-				if (this->m_parm2 & IMAGECTL_PAN)
-				{
-					x += this->m_imageCtlData.nCurPosX;
-					y += this->m_imageCtlData.nCurPosY;
-				}
-				
-				x += this->m_rect.left;
-				y += this->m_rect.top;
-				
-				Rectangle *start = NULL, *end = NULL;
-				
-				Rectangle imageRect = { x, y, x + width, y + height };
-				
-				if (!parm2)
-				{
-					WmSplitRectWithRectList(this->m_rect, &imageRect, 1, &start, &end);
-					
-					for (Rectangle* prect = start; prect != end; prect++)
-					{
-						VidFillRect(0x3f0000, prect->left, prect->top, prect->right - 1, prect->bottom - 1);
-					}
-					
-					WmSplitDone();
-				}
-				
-				if (x <= this->m_rect.right && y <= this->m_rect.bottom && x + width >= this->m_rect.left && y + height >= this->m_rect.top)
-				{
-					SupBlitMeThisImageFaster(pImage, x, y, width, height, ogSize, this->m_rect);
-				}
-				
-				/*
-					if (GetWidth(&this->m_rect) > this->m_imageCtlData.nZoomedWidth)
-					{
-						VidFillRectangle(0x3f0000, this->m_rect);
-					}
-					if (ogSize)
-						VidBlitImage (pImage, x, y);
-					else
-						VidBlitImageResize(pImage, x, y, width, height);
-				}
-				else
-				{
-					if (!parm2)
-					{
-						VidFillRectangle(0x3f0000, this->m_rect);
-					}
-					VidDrawText ("(Out of View)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
-				}
-				*/
-			}
-			else
-			{
-				if (!parm2)
-				{
-					VidFillRectangle(0x3f0000, this->m_rect);
-				}
-				VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
-			}
-			
-			VidSetClipRect(NULL);
-	
-			//int tickCount2 = GetTickCount();
-			
-			//SLogMsg("diff= %d", tickCount2 - tickCount1);
+			WidgetImage_PartialPaint(this, this->m_rect);
 			
 			break;
 		}
@@ -367,7 +353,27 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 							this->m_imageCtlData.nCurPosX += deltaX;
 							this->m_imageCtlData.nCurPosY += deltaY;
 							
-							dragged = true;
+							Rectangle rect = this->m_rect;
+							rect.left   += 2;
+							rect.top    += 2;
+							rect.right  -= 2;
+							rect.bottom -= 2;
+							
+							ScrollRect(&rect, deltaX, deltaY);
+							
+							Rectangle repaintH, repaintV;
+							repaintH = repaintV = rect;
+							
+							// horizontal repaint
+							if (deltaX < 0) repaintH.left  = repaintH.right + deltaX;
+							else            repaintH.right = repaintH.left  + deltaX;
+							// vertical repaint
+							if (deltaY < 0) repaintV.top    = repaintV.bottom + deltaY;
+							else            repaintV.bottom = repaintV.top    + deltaY;
+							
+							// TODO: ensure that the rectangles don't overlap. Repaints are kind of expensive..
+							WidgetImage_PartialPaint(this, repaintH);
+							WidgetImage_PartialPaint(this, repaintV);
 						}
 					}
 					if ((this->m_parm2 & IMAGECTL_PEN) && !dragged)
@@ -384,22 +390,37 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 						lx += this->m_rect.left;
 						ly += this->m_rect.top;
 						
-						VBEData *pBackup = g_vbeData, m_gdc;
+						VBEData m_gdc;
 						
 						BuildGraphCtxBasedOnImage(&m_gdc, this->m_imageCtlData.pImage);
 						
-						VidSetVBEData(&m_gdc);
+						VBEData *pBackup = VidSetVBEData(&m_gdc);
+						
+						int x1 = this->m_imageCtlData.nLastXGot - lx, y1 = this->m_imageCtlData.nLastYGot - ly;
+						int x2 = p.x - lx, y2 = p.y - ly;
 						
 						//VidBlitImage(GetIconImage (ICON_COMPUTER_PANIC, 96),50, 50);
-						VidDrawLine(this->m_imageCtlData.nCurrentColor, this->m_imageCtlData.nLastXGot - lx, this->m_imageCtlData.nLastYGot - ly, p.x - lx, p.y - ly);
+						VidDrawLine(this->m_imageCtlData.nCurrentColor, x1, y1, x2, y2);
 						
 						VidSetVBEData(pBackup);
+						
+						// repaint from nLastXGot to p.
+						Rectangle rpRect;
+						rpRect.left   = this->m_imageCtlData.nLastXGot;
+						rpRect.top    = this->m_imageCtlData.nLastYGot;
+						rpRect.right  = p.x;
+						rpRect.bottom = p.y;
+						
+						OrderTwo(&rpRect.left, &rpRect.right);
+						OrderTwo(&rpRect.top, &rpRect.bottom);
+						rpRect.right++;
+						rpRect.bottom++;
+						
+						WidgetImage_PartialPaint(this, rpRect);
 					}
 					
 					this->m_imageCtlData.nLastXGot = p.x;
 					this->m_imageCtlData.nLastYGot = p.y;
-					
-					WidgetImage_OnEvent(this, EVENT_PAINT, 0, !dragged, pWindow);
 				}
 			}
 			else
