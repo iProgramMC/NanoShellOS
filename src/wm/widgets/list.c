@@ -130,11 +130,76 @@ static const char* CtlGetElementStringFromList (Control *pCtl, int index)
 	
 	return pData->m_pItems[index].m_contents;
 }
-bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+
+void WidgetListView_GetViewableArea(Control* this, int* pElemStart, int* pElemEnd, bool bCapByElemCount)
 {
-go_back:;
-	bool bChangedAnything = false;
+	ListViewData* pData = &this->m_listViewData;
 	
+	int elementStart =   pData->m_scrollY;
+	int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top + LIST_ITEM_HEIGHT - 1) / LIST_ITEM_HEIGHT - 1;
+	
+	if (elementStart >= pData->m_elementCount && bCapByElemCount) elementStart = pData->m_elementCount-1;
+	if (elementStart < 0) elementStart = 0;
+	
+	if (elementEnd < 0) elementEnd = 0;
+	if (elementEnd >= pData->m_elementCount && bCapByElemCount) elementEnd = pData->m_elementCount-1;
+	
+	*pElemStart = elementStart;
+	*pElemEnd   = elementEnd;
+}
+
+void WidgetListView_DrawElement(Control* this, int index)
+{
+	ListViewData* pData = &this->m_listViewData;
+	
+	int elementStart, elementEnd;
+	WidgetListView_GetViewableArea(this, &elementStart, &elementEnd, false);
+	
+	if (elementStart > elementEnd)
+		return;
+	
+	if (index < elementStart || elementEnd < index)
+		return;
+	
+	Rectangle rect = this->m_rect;
+	
+	int offsetLeft = 0, offsetTop = 0;
+	
+	if (~this->m_parm1 & LISTVIEW_NOBORDER)
+	{
+		rect.left += 2;
+		rect.right -= 2;
+		
+		offsetLeft = 2;
+		offsetTop = 2;
+	}
+	
+	bool bSelected = pData->m_highlightedElementIdx == index;
+	
+	rect.top = this->m_rect.top + offsetTop + LIST_ITEM_HEIGHT * (index - pData->m_scrollY);
+	rect.bottom = rect.top + LIST_ITEM_HEIGHT;
+	
+	// draw the background rectangle
+	VidFillRect(bSelected ? SELECTED_ITEM_COLOR : WINDOW_TEXT_COLOR_LIGHT, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+	
+	// if we don't actually have an element here, return
+	if (index < 0 || index >= pData->m_elementCount)
+		return;
+	
+	rect.left += offsetLeft + 2;
+	
+	ListItem* pItem = &pData->m_pItems[index];
+	if (pItem->m_icon)
+	{
+		RenderIconForceSize(pItem->m_icon, rect.left, rect.top + (rect.bottom - rect.top - 16) / 2, 16);
+		rect.left += 22;
+	}
+	
+	VidDrawText(pItem->m_contentsShown, rect, TEXTSTYLE_VCENTERED, bSelected ? SELECTED_TEXT_COLOR : WINDOW_TEXT_COLOR, TRANSPARENT);
+}
+
+bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+{	
 	switch (eventType)
 	{
 		case EVENT_SIZE:
@@ -142,64 +207,66 @@ go_back:;
 			CtlUpdateScrollBarSize (this, pWindow);
 			break;
 		}
-	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-		case EVENT_RELEASECURSOR:
 		case EVENT_CLICKCURSOR:
-		{
-			if (eventType == EVENT_RELEASECURSOR || (eventType == EVENT_CLICKCURSOR && (this->m_parm1 & LISTVIEW_SINGLECLICK)))
-			{
-				ListViewData* pData = &this->m_listViewData;
-				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-				if (RectangleContains(&this->m_rect, &p))
-				{
-					// Highlight some element.
-					int elementStart =   pData->m_scrollY;
-					int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top) / LIST_ITEM_HEIGHT - 1;
-					
-					if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
-					if (elementStart < 0) elementStart = 0;
-					
-					if (elementEnd < 0) elementEnd = 0;
-					if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
-					
-					int yPos = (p.y - 2 - this->m_rect.top) / LIST_ITEM_HEIGHT;
-					int elementHighlightAttempt = elementStart + yPos;
-					
-					if (elementHighlightAttempt >= pData->m_elementCount || elementHighlightAttempt < 0)
-						elementHighlightAttempt = -1;
-					
-					bool isDoubleClick = pData->m_highlightedElementIdx == elementHighlightAttempt;
-					pData->m_highlightedElementIdx = elementHighlightAttempt;
-					
-					if (!isDoubleClick)
-						bChangedAnything = true;
-					
-					// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
-					if (eventType == EVENT_RELEASECURSOR && ((this->m_parm1 & LISTVIEW_SINGLECLICK) || (isDoubleClick && elementHighlightAttempt != -1)))
-						CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
-					
-					eventType = EVENT_PAINT;
-					goto go_back;
-				}
-			}
-		}
-		//fallthrough intentional
-		//case EVENT_CLICKCURSOR:
+		case EVENT_RELEASECURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
 			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
 			if (pData->m_scrollY != pos)
 			{
 				pData->m_scrollY  = pos;
-			}
-			else if (!bChangedAnything)
-			{
+				WidgetListView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
 				break;
 			}
 			
-			// fallthrough intended
+			if (!(eventType == EVENT_RELEASECURSOR || (eventType == EVENT_CLICKCURSOR && (this->m_parm1 & LISTVIEW_SINGLECLICK)))) break;
+			
+			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (!RectangleContains(&this->m_rect, &pt))
+				break;
+			
+			pt.x -= this->m_rect.left;
+			pt.y -= this->m_rect.top;
+			
+			if (~this->m_parm1 & LISTVIEW_NOBORDER)
+			{
+				pt.x -= 2;
+				pt.y -= 2;
+			}
+			
+			if (pt.y < 0) break;
+	
+			int elementStart, elementEnd;
+			WidgetListView_GetViewableArea(this, &elementStart, &elementEnd, true);
+			
+			pos = pt.y / LIST_ITEM_HEIGHT + pData->m_scrollY;
+			if (pos < elementStart || elementEnd < pos) break;
+			
+			int old = pData->m_highlightedElementIdx;
+			pData->m_highlightedElementIdx = pos;
+			
+			if (old != pos)
+			{
+				WidgetListView_DrawElement(this, old);
+				WidgetListView_DrawElement(this, pos);
+			}
+			
+			bool bShouldActivate = (this->m_parm1 & LISTVIEW_SINGLECLICK);
+			
+			if (old == pos)
+			{
+				// double click!
+				bShouldActivate = true;
+			}
+			
+			if (eventType != EVENT_RELEASECURSOR)
+				bShouldActivate = false;
+			
+			if (bShouldActivate)
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, pos);
+			
+			break;
 		}
-	//#pragma GCC diagnostic pop
 		case EVENT_PAINT:
 		{
 			VidSetClipRect(&this->m_rect);
@@ -219,45 +286,16 @@ go_back:;
 				offsetLeft = offsetTop = 0;
 			
 			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
-			ListViewData* pData = &this->m_listViewData;
 			
-			int elementStart =   pData->m_scrollY;
-			int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top + LIST_ITEM_HEIGHT - 1) / LIST_ITEM_HEIGHT - 1;
-			
-			if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
-			if (elementStart < 0) elementStart = 0;
-			
-			if (elementEnd < 0) elementEnd = 0;
-			if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
+			int elementStart, elementEnd;
+			WidgetListView_GetViewableArea(this, &elementStart, &elementEnd, true);
 			
 			if (elementStart > elementEnd)
 				VidDrawText ("(Empty)", rk, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0x7F7F7F, TRANSPARENT);
 			
 			for (int i = elementStart, j = 0; i <= elementEnd; i++, j++)
 			{
-				uint32_t color = WINDOW_TEXT_COLOR, colorT = TRANSPARENT;
-				if (pData->m_highlightedElementIdx == i)
-				{
-					/*int l = this->m_rect.left + 4, t = this->m_rect.top + 2 + j * LIST_ITEM_HEIGHT, 
-						r = this->m_rect.right - 4, b = t + LIST_ITEM_HEIGHT - 1;
-					VidFillRect (0x7F, l, t, r, b);*/
-					color = SELECTED_TEXT_COLOR, colorT = SELECTED_ITEM_COLOR;
-				}
-				
-				bool hasIcon = pData->m_pItems[i].m_icon != 0;
-				
-				if (hasIcon)
-				{
-					RenderIconForceSize (pData->m_pItems[i].m_icon, this->m_rect.left + offsetLeft, this->m_rect.top + offsetTop + j * LIST_ITEM_HEIGHT + (LIST_ITEM_HEIGHT - 16) / 2, 16);
-				}
-				
-				Rectangle textRect = this->m_rect;
-				textRect.left = this->m_rect.left + offsetLeft + hasIcon * 22 + 2;
-				textRect.top  = this->m_rect.top + offsetTop + j * LIST_ITEM_HEIGHT;
-				textRect.bottom = textRect.top + LIST_ITEM_HEIGHT;
-				
-				//VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + offsetLeft + pData->m_hasIcons * 24, this->m_rect.top + 4 + offsetTop + j * LIST_ITEM_HEIGHT, color, colorT);
-				VidDrawText(pData->m_pItems[i].m_contentsShown, textRect, TEXTSTYLE_VCENTERED | TEXTSTYLE_FORCEBGCOL, color, colorT);
+				WidgetListView_DrawElement(this, i);
 			}
 			
 			if (~this->m_parm1 & LISTVIEW_NOBORDER)
