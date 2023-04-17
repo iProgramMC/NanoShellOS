@@ -20,6 +20,8 @@
 
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
 
+int g_TextCursorFlashSpeed = 500; // 2 hz.
+
 typedef enum
 {
 	DIR_NONE,
@@ -1601,7 +1603,7 @@ void TextInput_ShowContextMenu(Control* this, Window* pWindow, int x, int y)
 	SpawnMenu(pWindow, &rootEnt, x, y);
 }
 
-bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -1687,6 +1689,7 @@ bool WidgetTextEditView2_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 			}
 			else
 			{
+				pData->m_ignoreTicksTill = GetTickCount() + g_TextCursorFlashSpeed;
 				pData->m_bCursorFlash ^= 1;
 				TextInput_RepaintLine(this, pData->m_cursorY); // TODO: More efficient way.
 			}

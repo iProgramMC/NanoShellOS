@@ -28,8 +28,11 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			Rectangle r;
 			// Add a list view control.
 			
-			RECT(r, 8, 8, LISTTEST_WIDTH - 16, 40);
-			AddControlEx(pWindow, CONTROL_TAB_PICKER, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 2, 0, 0);
+			//RECT(r, 8, 8, LISTTEST_WIDTH - 16, 40);
+			//AddControlEx(pWindow, CONTROL_TAB_PICKER, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 2, 0, 0);
+			
+			RECT(r, 8, 8, LISTTEST_WIDTH - 16, 20);
+			AddControlEx(pWindow, CONTROL_COMBOBOX, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 2, 0, 0);
 			
 			RECT(r, 8, 8 + 40, LISTTEST_WIDTH - 16, 30);
 			AddControlEx(pWindow, CONTROL_PROGRESS_BAR, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 3, 84, 200);
@@ -40,6 +43,12 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			pWindow->m_data = (void*)42;
 			
 			AddTimer(pWindow, 10, EVENT_USER);
+			
+			ComboBoxAddItem(pWindow, 2, "Item #1", 1, 0);
+			ComboBoxAddItem(pWindow, 2, "Item #2", 2, 0);
+			ComboBoxAddItem(pWindow, 2, "Item #3", 3, 0);
+			ComboBoxAddItem(pWindow, 2, "Item #4", 4, 0);
+			ComboBoxAddItem(pWindow, 2, "Item #5", 5, 0);
 			
 			/*RECT (r, 20, 20, 1, 240-40);
 			//goes from 0-99

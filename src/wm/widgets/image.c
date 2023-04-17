@@ -243,7 +243,7 @@ void WidgetImage_PartialPaint(Control* this, Rectangle paintRect)
 		
 		for (Rectangle* prect = start; prect != end; prect++)
 		{
-			VidFillRect(0x3f0000, prect->left, prect->top, prect->right - 1, prect->bottom - 1);
+			VidFillRect(SCROLL_BAR_BACKGD_COLOR, prect->left, prect->top, prect->right - 1, prect->bottom - 1);
 		}
 		
 		WmSplitDone();
@@ -255,7 +255,7 @@ void WidgetImage_PartialPaint(Control* this, Rectangle paintRect)
 	}
 	else
 	{
-		VidFillRectangle(0x3f0000, paintRect);
+		VidFillRectangle(SCROLL_BAR_BACKGD_COLOR, paintRect);
 		
 		VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
 	}

@@ -48,6 +48,10 @@ enum
 #define BUTTONLITE BUTTON_HILITE_COLOR
 #define BUTTONMIDC WINDOW_BACKGD_COLOR
 
+// single click activation
+#define LISTVIEW_SINGLECLICK (1)
+#define LISTVIEW_NOBORDER    (2)
+
 #define SCROLL_BAR_WIDTH 16
 
 #define LINE_NUM_GAP 56
@@ -360,5 +364,10 @@ void TextInputSetFont(Window *pWindow, int comboID, unsigned font);
  * Requests a command from a text input control.
  */
 void TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm);
+
+/**
+ * TODO
+ */
+void ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID, int iconID);
 
 #endif//_WIDGET_H

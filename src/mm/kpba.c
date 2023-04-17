@@ -330,6 +330,12 @@ void* MhReAllocate(void *oldPtr, size_t newSize)
 {
 	KeVerifyInterruptsDisabled;
 	
+	if (newSize == 0)
+	{
+		SLogMsg("Warning: MhReAllocate with a size of 0 is considered error");
+		newSize = 4096;
+	}
+	
 	// step 1: If the pointer is null, just allocate a new array of size `size`.
 	if (!oldPtr)
 		return MhAllocate(newSize, NULL);

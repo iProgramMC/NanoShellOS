@@ -6,7 +6,7 @@
 ******************************************/
 #include "wi.h"
 
-int g_TextCursorFlashSpeed = 500; // 2 hz.
+int g_TickSpeed = 20; // 50 hz
 
 static bool IsEventPrivate(int eventType)
 {
@@ -136,6 +136,7 @@ bool IsEventDestinedForControlsToo(int type)
 		case EVENT_MAXIMIZE:
 		case EVENT_UNMAXIMIZE:
 		case EVENT_CHECKBOX:
+		case EVENT_COMBOSELCHANGED:
 		case EVENT_MAX:
 			return false;
 	}
@@ -265,7 +266,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	//setup paint stuff so the window can only paint in their little box
-	VidSetVBEData (&pWindow->m_vbeData);
+	
+	VBEData* pBackup = VidSetVBEData (&pWindow->m_vbeData);
+	
 	VidSetFont(SYSTEM_FONT);
 	pWindow->m_fullVbeData.m_dirty = 0;
 	//pWindow->m_renderFinished = false;
@@ -291,7 +294,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
 		
-		VidSetVBEData (NULL);
+		VidSetVBEData (pBackup);
 		HideWindow (pWindow);
 		if (~pWindow->m_flags & WF_MINIMIZE)
 		{
@@ -310,8 +313,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		//ShowWindow (pWindow);
 		
-		
-		VidSetVBEData (&pWindow->m_vbeData);
+		pBackup = VidSetVBEData (&pWindow->m_vbeData);
 		
 		Rectangle new_title_rect = pWindow->m_rect;
 		
@@ -326,7 +328,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		//if a taskbar is running:
 		old_title_rect = pWindow->m_taskbarRect;
 		
-		VidSetVBEData (NULL);
+		VidSetVBEData (pBackup);
 		HideWindow (pWindow);
 		
 		pWindow->m_flags &= ~WF_MINIMIZE;
@@ -334,7 +336,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		ShowWindow (pWindow);
 		
-		VidSetVBEData (&pWindow->m_vbeData);
+		pBackup = VidSetVBEData (&pWindow->m_vbeData);
 		WmRepaintBorderAndBackground(pWindow);
 		
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
@@ -524,7 +526,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	
 	// Reset to main screen data.
-	VidSetVBEData (NULL);
+	VidSetVBEData (pBackup);
 	
 	// Perform operations after calling into the user application.
 	
@@ -724,7 +726,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			pWindow->m_privFlags |= WPF_INITGOOD;
 			
-			AddTimer(pWindow, g_TextCursorFlashSpeed, EVENT_TICK);
+			AddTimer(pWindow, g_TickSpeed, EVENT_TICK);
 			
 			break;
 		}

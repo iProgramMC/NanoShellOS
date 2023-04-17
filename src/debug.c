@@ -16,6 +16,8 @@ bool g_bAreInterruptsEnabled       = false;
 bool g_bAreInterruptsEnabledBackup = false;
 int  g_nInterruptRecursionCount    = 0;
 
+uintptr_t g_InterruptDisabler = 0;
+
 extern Console *g_focusedOnConsole, *g_currentConsole, g_debugConsole;
 
 NO_RETURN void KeStopSystem()
@@ -343,7 +345,7 @@ void KeVerifyInterruptsEnabledD(const char *file, int line)
 {
 	if (KeCheckInterruptsDisabled())
 	{
-		SLogMsg("Interrupts are disabled, but they should be enabled! (called from %s:%d)", file, line);
+		SLogMsg("Interrupts are disabled, but they should be enabled! (called from %s:%d) (disabled from %p)", file, line, g_InterruptDisabler);
 		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
 		ASSERT(!"Hmm, interrupts should be enabled here");
 	}
@@ -361,6 +363,7 @@ void KeDisableInterrupts()
 	
 	asm("cli");
 	g_bAreInterruptsEnabled = false;
+	g_InterruptDisabler = __builtin_return_address(0);
 }
 
 void KeEnableInterrupts()
@@ -374,6 +377,7 @@ void KeEnableInterrupts()
 	}
 	
 	g_bAreInterruptsEnabled = true;
+	g_InterruptDisabler = 0;
 	asm("sti");
 }
 

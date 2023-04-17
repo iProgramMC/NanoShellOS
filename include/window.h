@@ -218,6 +218,8 @@ enum {
 	EVENT_CTLUPDATEVISIBLE,
 	EVENT_TICK, // used for blinking text controls.
 	EVENT_SMARTSNAP,
+	EVENT_COMBOSELCHANGED,
+	EVENT_COMBOSELCHANGED_PTE, // the message that the sub window will send
 	EVENT_MAX,
 	
 	EVENT_PRIVATE_START = 0xF00,
@@ -302,6 +304,8 @@ enum {
 	CONTROL_TAB_PICKER,
 	//Progress bar control.
 	CONTROL_PROGRESS_BAR,
+	//Combo box control.
+	CONTROL_COMBOBOX,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.

@@ -132,7 +132,9 @@ static const char* CtlGetElementStringFromList (Control *pCtl, int index)
 }
 bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
-go_back:
+go_back:;
+	bool bChangedAnything = false;
+	
 	switch (eventType)
 	{
 		case EVENT_SIZE:
@@ -142,40 +144,47 @@ go_back:
 		}
 	//#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 		case EVENT_RELEASECURSOR:
+		case EVENT_CLICKCURSOR:
 		{
-			ListViewData* pData = &this->m_listViewData;
-			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-			if (RectangleContains(&this->m_rect, &p))
+			if (eventType == EVENT_RELEASECURSOR || (eventType == EVENT_CLICKCURSOR && (this->m_parm1 & LISTVIEW_SINGLECLICK)))
 			{
-				// Highlight some element.
-				int elementStart =   pData->m_scrollY;
-				int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top) / LIST_ITEM_HEIGHT - 1;
-				
-				if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
-				if (elementStart < 0) elementStart = 0;
-				
-				if (elementEnd < 0) elementEnd = 0;
-				if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
-				
-				int yPos = (p.y - 2 - this->m_rect.top) / LIST_ITEM_HEIGHT;
-				int elementHighlightAttempt = elementStart + yPos;
-				
-				if (elementHighlightAttempt >= pData->m_elementCount || elementHighlightAttempt < 0)
-					elementHighlightAttempt = -1;
-				
-				bool isDoubleClick = pData->m_highlightedElementIdx == elementHighlightAttempt;
-				pData->m_highlightedElementIdx = elementHighlightAttempt;
-				
-				// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
-				if (isDoubleClick && elementHighlightAttempt != -1)
-					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
-				
-				eventType = EVENT_PAINT;
-				goto go_back;
+				ListViewData* pData = &this->m_listViewData;
+				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+				if (RectangleContains(&this->m_rect, &p))
+				{
+					// Highlight some element.
+					int elementStart =   pData->m_scrollY;
+					int elementEnd   =   pData->m_scrollY + (this->m_rect.bottom - this->m_rect.top) / LIST_ITEM_HEIGHT - 1;
+					
+					if (elementStart >= pData->m_elementCount) elementStart = pData->m_elementCount-1;
+					if (elementStart < 0) elementStart = 0;
+					
+					if (elementEnd < 0) elementEnd = 0;
+					if (elementEnd >= pData->m_elementCount) elementEnd = pData->m_elementCount-1;
+					
+					int yPos = (p.y - 2 - this->m_rect.top) / LIST_ITEM_HEIGHT;
+					int elementHighlightAttempt = elementStart + yPos;
+					
+					if (elementHighlightAttempt >= pData->m_elementCount || elementHighlightAttempt < 0)
+						elementHighlightAttempt = -1;
+					
+					bool isDoubleClick = pData->m_highlightedElementIdx == elementHighlightAttempt;
+					pData->m_highlightedElementIdx = elementHighlightAttempt;
+					
+					if (!isDoubleClick)
+						bChangedAnything = true;
+					
+					// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
+					if (eventType == EVENT_RELEASECURSOR && ((this->m_parm1 & LISTVIEW_SINGLECLICK) || (isDoubleClick && elementHighlightAttempt != -1)))
+						CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
+					
+					eventType = EVENT_PAINT;
+					goto go_back;
+				}
 			}
 		}
 		//fallthrough intentional
-		case EVENT_CLICKCURSOR:
+		//case EVENT_CLICKCURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
 			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
@@ -183,7 +192,11 @@ go_back:
 			{
 				pData->m_scrollY  = pos;
 			}
-			else break;
+			else if (!bChangedAnything)
+			{
+				break;
+			}
+			
 			// fallthrough intended
 		}
 	//#pragma GCC diagnostic pop
@@ -192,10 +205,19 @@ go_back:
 			VidSetClipRect(&this->m_rect);
 			//draw a green rectangle:
 			Rectangle rk = this->m_rect;
-			rk.left   += 2;
-			rk.top    += 2;
-			rk.right  -= 2;
-			rk.bottom -= 2;
+			
+			int offsetLeft = 4, offsetTop = 2;
+			
+			if (~this->m_parm1 & LISTVIEW_NOBORDER)
+			{
+				rk.left   += 2;
+				rk.top    += 2;
+				rk.right  -= 2;
+				rk.bottom -= 2;
+			}
+			else
+				offsetLeft = offsetTop = 0;
+			
 			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			ListViewData* pData = &this->m_listViewData;
 			
@@ -221,15 +243,25 @@ go_back:
 					VidFillRect (0x7F, l, t, r, b);*/
 					color = SELECTED_TEXT_COLOR, colorT = SELECTED_ITEM_COLOR;
 				}
-				if (pData->m_hasIcons)
+				
+				bool hasIcon = pData->m_pItems[i].m_icon != 0;
+				
+				if (hasIcon)
 				{
-					if (pData->m_pItems[i].m_icon)
-						RenderIconForceSize (pData->m_pItems[i].m_icon, this->m_rect.left + 4, this->m_rect.top + 2 + j * LIST_ITEM_HEIGHT + (LIST_ITEM_HEIGHT - 16) / 2, 16);
+					RenderIconForceSize (pData->m_pItems[i].m_icon, this->m_rect.left + offsetLeft, this->m_rect.top + offsetTop + j * LIST_ITEM_HEIGHT + (LIST_ITEM_HEIGHT - 16) / 2, 16);
 				}
-				VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + 4 + pData->m_hasIcons * 24, this->m_rect.top + 4 + 2 + j * LIST_ITEM_HEIGHT, color, colorT);
+				
+				Rectangle textRect = this->m_rect;
+				textRect.left = this->m_rect.left + offsetLeft + hasIcon * 22 + 2;
+				textRect.top  = this->m_rect.top + offsetTop + j * LIST_ITEM_HEIGHT;
+				textRect.bottom = textRect.top + LIST_ITEM_HEIGHT;
+				
+				//VidTextOut (pData->m_pItems[i].m_contentsShown, this->m_rect.left + offsetLeft + pData->m_hasIcons * 24, this->m_rect.top + 4 + offsetTop + j * LIST_ITEM_HEIGHT, color, colorT);
+				VidDrawText(pData->m_pItems[i].m_contentsShown, textRect, TEXTSTYLE_VCENTERED | TEXTSTYLE_FORCEBGCOL, color, colorT);
 			}
 			
-			DrawEdge(this->m_rect, DRE_SUNKEN, 0);
+			if (~this->m_parm1 & LISTVIEW_NOBORDER)
+				DrawEdge(this->m_rect, DRE_SUNKEN, 0);
 			
 			VidSetClipRect(NULL);
 			
@@ -242,7 +274,7 @@ go_back:
 			pData->m_elementCount = 0;
 			pData->m_capacity     = 10;
 			pData->m_scrollY      = 0;
-			pData->m_hasIcons     = true;
+			//pData->m_hasIcons     = true;
 			int itemsSize         = sizeof (ListItem) * pData->m_capacity;
 			pData->m_pItems       = MmAllocateK (itemsSize);
 			if (!pData->m_pItems)
@@ -269,7 +301,10 @@ go_back:
 			AddControlEx (pWindow, CONTROL_VSCROLLBAR, flags, r, NULL, -this->m_comboID, c, 1);
 			
 			//shrink our rectangle:
-			this->m_rect.right -= SCROLL_BAR_WIDTH + 4;
+			this->m_rect.right -= SCROLL_BAR_WIDTH;
+			
+			if (~this->m_parm1 & LISTVIEW_NOBORDER)
+				this->m_rect.right -= 4;
 			
 			break;
 		}
@@ -400,7 +435,7 @@ go_back:
 				pData->m_highlightedElementIdx = elementHighlightAttempt;
 				
 				// Allow double clicking of elements inside the list.  Will call EVENT_COMMAND to the parent window.
-				if (isDoubleClick && elementHighlightAttempt != -1)
+				if ((this->m_parm1 & LISTVIEW_SINGLECLICK) || (isDoubleClick && elementHighlightAttempt != -1))
 					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, elementHighlightAttempt);
 				
 				eventType = EVENT_PAINT;
@@ -832,6 +867,8 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 					}
 				}
 				
+				bool shouldActivate = (this->m_parm1 & LISTVIEW_SINGLECLICK);
+				
 				if (pData->m_highlightedElementIdx != nSelectedIcon)
 				{
 					pData->m_highlightedElementIdx = nSelectedIcon;
@@ -839,8 +876,11 @@ bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int 
 				}
 				else if (nSelectedIcon != -1)
 				{
-					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, nSelectedIcon);
+					shouldActivate = true;
 				}
+				
+				if (shouldActivate)
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, nSelectedIcon);
 			}
 			
 			pData->m_trackedListItem = -1;
