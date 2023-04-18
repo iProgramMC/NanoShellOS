@@ -118,6 +118,9 @@ bool RefreshMouse()
 			int newX = QueueMouseUpdateTo.newX;
 			int newY = QueueMouseUpdateTo.newY;
 			
+			const int minWidth = 200;
+			const int minHeight = 50;//TODO: BORDER_SIZE * 2 + TITLE_BAR_HEIGHT + 1;
+			
 			if (~g_currentCursor->m_flags & CUR_LOCK_X)
 			{
 				g_mouseX += newX;
@@ -125,6 +128,13 @@ bool RefreshMouse()
 					g_currentCursor->boundsWidth -= newX;
 				else
 					g_currentCursor->boundsWidth += newX, g_currentCursor->leftOffs += newX;
+				
+				if (g_currentCursor->boundsWidth < minWidth && (g_currentCursor->m_flags & CUR_RESIZE_MOVE_X))
+				{
+					int diff = minWidth - g_currentCursor->boundsWidth;
+					g_currentCursor->boundsWidth = minWidth;
+					g_mouseX -= diff;
+				}
 			}
 			if (~g_currentCursor->m_flags & CUR_LOCK_Y)
 			{
@@ -133,12 +143,17 @@ bool RefreshMouse()
 					g_currentCursor->boundsHeight -= newY;
 				else
 					g_currentCursor->boundsHeight += newY, g_currentCursor->topOffs += newY;
+				
+				if (g_currentCursor->boundsHeight < minHeight && (g_currentCursor->m_flags & CUR_RESIZE_MOVE_Y))
+				{
+					int diff = minHeight - g_currentCursor->boundsHeight;
+					g_currentCursor->boundsHeight = minHeight;
+					g_mouseY -= diff;
+				}
 			}
 			
-			const int minHeight = 50;//TODO: BORDER_SIZE * 2 + TITLE_BAR_HEIGHT + 1;
-			
-			if (g_currentCursor->boundsWidth  < 200)
-				g_currentCursor->boundsWidth  = 200;
+			if (g_currentCursor->boundsWidth  < minWidth)
+				g_currentCursor->boundsWidth  = minWidth;
 			if (g_currentCursor->boundsHeight < minHeight)
 				g_currentCursor->boundsHeight = minHeight;
 			if (g_currentCursor->boundsWidth  >= GetScreenSizeX())
