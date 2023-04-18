@@ -82,6 +82,7 @@ void RefreshEverything();
 		DESKTOP_ENABLE_BACKGD = 4000,
 		DESKTOP_SHOW_WINDOW_CONTENTS,
 		DESKTOP_APPLY_CHANGES,
+		DESKTOP_OK,
 		DESKTOP_CHANGE_BACKGD,
 		DESKTOP_CHOOSETHEMETEXT,
 		DESKTOP_ORMAKEYOUROWNTEXT,
@@ -90,8 +91,7 @@ void RefreshEverything();
 		
 		DESKTOP_CANCEL,
 		
-		DESKTOP_THEME_DEFAULT = 5000,
-		DESKTOP_THEME_DARK,
+		DESKTOP_THEMECOMBO,
 	};
 	extern bool g_GlowOnHover;
 	extern bool g_TaskListCompact;
@@ -101,6 +101,7 @@ void RefreshEverything();
 	#define DESKTOP_POPUP_HEITE 400
 	void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected);
 	void WmOnChangedBorderSize();
+	bool WouldThemeChange(int thNum);
 	void CALLBACK Cpl$DesktopPopupWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 	{
 		switch (messageType)
@@ -111,6 +112,8 @@ void RefreshEverything();
 				RECT (r, DESKTOP_POPUP_WIDTH/2+10, 3+10, DESKTOP_POPUP_WIDTH/2-20, 150);
 				
 				DrawEdge(r, DRE_SUNKEN | DRE_FILLED, BACKGROUND_COLOR);
+				
+				// TODO: Allow theme specification in this function
 				
 				RECT (r, DESKTOP_POPUP_WIDTH/2+20, 3+20, 250-1, 100-1);
 				VidFillRectangle(WINDOW_BACKGD_COLOR, r);
@@ -147,36 +150,26 @@ void RefreshEverything();
 				RECT(r,10, 75, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_CHECKBOX, r, "Make task bar buttons compact", DESKTOP_TASKBAR_COMPACT, g_TaskListCompact, 0);
 				
-				RECT(r, 10, 95, DESKTOP_POPUP_WIDTH/2 - 20, 15);
-				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
+				RECT(r, 10, 100, DESKTOP_POPUP_WIDTH/2 - 20, 20);
+				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
 				
-				#define THEMES_PER_ROW 4
+				RECT(r, 10, 120, DESKTOP_POPUP_WIDTH/2 - 20, 20);
+				AddControl(pWindow, CONTROL_COMBOBOX, r, NULL, DESKTOP_THEMECOMBO, 0, 0);
 				
-				#define ADD_THEME(themenum) \
-					RECT(r, \
-					     10 + ((DESKTOP_POPUP_WIDTH/2 - 20) * ((themenum) % THEMES_PER_ROW) / THEMES_PER_ROW),\
-						 115 + ((themenum) / THEMES_PER_ROW) * 25,\
-						 (DESKTOP_POPUP_WIDTH/2 - 20-5*THEMES_PER_ROW) / THEMES_PER_ROW,\
-						 20);\
-					AddControl(pWindow, CONTROL_BUTTON, r, GetThemeName(themenum), DESKTOP_THEME_DEFAULT + (themenum), 0, 0);
-				
-				ADD_THEME(TH_DEFAULT);
-				ADD_THEME(TH_DARK);
-				ADD_THEME(TH_REDMOND);
-				ADD_THEME(TH_CALM);
-				ADD_THEME(TH_BLACK);
-				//ADD_THEME(TH_WHITE);
-				ADD_THEME(TH_ROSE);
-				ADD_THEME(TH_DESERT);
-				ADD_THEME(TH_RAINYDAY);
+				for (int i = TH_DEFAULT; i < TH_MAX; i++)
+				{
+					ComboBoxAddItem(pWindow, DESKTOP_THEMECOMBO, GetThemeName(i), i, 0);
+				}
 				
 				RECT(r, 10, 195, DESKTOP_POPUP_WIDTH/2 - 20, 15);
 				AddControl(pWindow, CONTROL_TEXTCENTER, r, "Or make your own: (TODO)", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 				
-				RECT(r,(DESKTOP_POPUP_WIDTH/2-200)/2, DESKTOP_POPUP_HEITE - 30 ,95,20);
+				RECT(r,(DESKTOP_POPUP_WIDTH/2-210)/2, DESKTOP_POPUP_HEITE - 30,70,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "OK",     DESKTOP_OK, 0, 0);
+				RECT(r,(DESKTOP_POPUP_WIDTH/2-210)/2+80, DESKTOP_POPUP_HEITE - 30 ,70,20);
 				AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
-				RECT(r,(DESKTOP_POPUP_WIDTH/2-200)/2+95, DESKTOP_POPUP_HEITE - 30 ,95,20);
-				AddControl(pWindow, CONTROL_BUTTON, r, "OK",  DESKTOP_APPLY_CHANGES, 0, 0);
+				RECT(r,(DESKTOP_POPUP_WIDTH/2-210)/2+160, DESKTOP_POPUP_HEITE - 30 ,70,20);
+				AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  DESKTOP_APPLY_CHANGES, 0, 0);
 				
 				break;
 			}
@@ -191,30 +184,32 @@ void RefreshEverything();
 					}
 					break;
 				}
-				else if (parm1 >= DESKTOP_THEME_DEFAULT)
-				{
-					int borderSize = BORDER_SIZE, titleBarHeight = TITLE_BAR_HEIGHT;
-					pWindow->m_data = (void*)borderSize;
-					
-					ApplyTheme(parm1 - DESKTOP_THEME_DEFAULT);
-					
-					if (borderSize != BORDER_SIZE || titleBarHeight != TITLE_BAR_HEIGHT)
-					{
-						WmOnChangedBorderSize();
-					}
-					
-					RefreshEverything();
-					break;
-				}
-				else if (parm1 == DESKTOP_APPLY_CHANGES)
+				else if (parm1 == DESKTOP_APPLY_CHANGES || parm1 == DESKTOP_OK)
 				{
 					g_BackgroundSolidColorActive = CheckboxGetChecked(pWindow, DESKTOP_ENABLE_BACKGD);
 					g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);
 					g_GlowOnHover                = CheckboxGetChecked(pWindow, DESKTOP_GLOW_ON_HOVER);
 					g_TaskListCompact            = CheckboxGetChecked(pWindow, DESKTOP_TASKBAR_COMPACT);
+					
+					int item = ComboBoxGetSelectedItemID(pWindow, DESKTOP_THEMECOMBO);
+					
+					if (item >= 0 && WouldThemeChange(item))
+					{
+						int borderSize = BORDER_SIZE, titleBarHeight = TITLE_BAR_HEIGHT;
+						ApplyTheme(item);
+						
+						if (borderSize != BORDER_SIZE || titleBarHeight != TITLE_BAR_HEIGHT)
+							WmOnChangedBorderSize();
+						
+						RefreshEverything();
+					}
+					
 					RefreshScreen();
 				}
-				DestroyWindow(pWindow);
+				
+				if (parm1 == DESKTOP_OK || parm1 == DESKTOP_CANCEL)
+					DestroyWindow(pWindow);
+				
 				break;
 			case EVENT_RELEASECURSOR:
 				

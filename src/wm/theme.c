@@ -510,7 +510,18 @@ const Theme g_themes[] = {
 
 
 
-
+bool WouldThemeChange(int themeNumber)
+{
+	if (themeNumber < 0 || themeNumber >= (int)ARRAY_COUNT(g_themes)) return false;
+	
+	for (int i = P_BLACK; i < P_THEME_PARM_COUNT; i++)
+	{
+		if (GetThemingParameter(i) != g_themes[themeNumber].m_data.m_raw_data[i])
+			return true;
+	}
+	
+	return false;
+}
 
 void ApplyTheme(int themeNumber)
 {

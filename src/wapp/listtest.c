@@ -44,11 +44,11 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			
 			AddTimer(pWindow, 10, EVENT_USER);
 			
-			ComboBoxAddItem(pWindow, 2, "Item #1", 1, 0);
-			ComboBoxAddItem(pWindow, 2, "Item #2", 2, 0);
-			ComboBoxAddItem(pWindow, 2, "Item #3", 3, 0);
-			ComboBoxAddItem(pWindow, 2, "Item #4", 4, 0);
-			ComboBoxAddItem(pWindow, 2, "Item #5", 5, 0);
+			ComboBoxAddItem(pWindow, 2, "Item #1", 1, 1);
+			ComboBoxAddItem(pWindow, 2, "Item #2", 2, 2);
+			ComboBoxAddItem(pWindow, 2, "Item #3", 3, 3);
+			ComboBoxAddItem(pWindow, 2, "Item #4", 4, 4);
+			ComboBoxAddItem(pWindow, 2, "Item #5", 5, 5);
 			
 			/*RECT (r, 20, 20, 1, 240-40);
 			//goes from 0-99

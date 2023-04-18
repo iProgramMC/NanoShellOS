@@ -23,7 +23,7 @@ enum
 	TH_DESERT,
 	//TH_RAINYDAY,
 	//TH_CALM,
-	
+	TH_MAX,
 };
 
 typedef union
