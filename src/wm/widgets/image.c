@@ -202,7 +202,7 @@ void WidgetImage_BlitImageFast(Image* pImage, int x, int y, int width, int heigh
 	DirtyRectLogger(xStart, yStart, xEnd - xStart, yEnd - yStart);
 }
 
-void WidgetImage_PartialPaint(Control* this, Rectangle paintRect)
+void WidgetImage_PartialPaint(Control* this, Rectangle paintRect, bool bDrawEdge)
 {
 	VidSetClipRect(&paintRect);
 	
@@ -260,7 +260,8 @@ void WidgetImage_PartialPaint(Control* this, Rectangle paintRect)
 		VidDrawText ("(No Image)", this->m_rect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, 0xFF0000, TRANSPARENT);
 	}
 	
-	DrawEdge(this->m_rect, DRE_SUNKEN, 0);
+	if (bDrawEdge)
+		DrawEdge(this->m_rect, DRE_SUNKEN, 0);
 	
 	VidSetClipRect(NULL);
 }
@@ -307,7 +308,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 			this->m_imageCtlData.nLastXGot = -1;
 			this->m_imageCtlData.nLastYGot = -1;
 			
-			WidgetImage_PartialPaint(this, this->m_rect);
+			WidgetImage_PartialPaint(this, this->m_rect, true);
 			
 			break;
 		}
@@ -322,7 +323,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 		}
 		case EVENT_PAINT:
 		{
-			WidgetImage_PartialPaint(this, this->m_rect);
+			WidgetImage_PartialPaint(this, this->m_rect, true);
 			
 			break;
 		}
@@ -364,6 +365,8 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 							Rectangle repaintH, repaintV;
 							repaintH = repaintV = rect;
 							
+							dragged = true;
+							
 							// horizontal repaint
 							if (deltaX < 0) repaintH.left  = repaintH.right + deltaX;
 							else            repaintH.right = repaintH.left  + deltaX;
@@ -372,8 +375,8 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 							else            repaintV.bottom = repaintV.top    + deltaY;
 							
 							// TODO: ensure that the rectangles don't overlap. Repaints are kind of expensive..
-							WidgetImage_PartialPaint(this, repaintH);
-							WidgetImage_PartialPaint(this, repaintV);
+							WidgetImage_PartialPaint(this, repaintH, false);
+							WidgetImage_PartialPaint(this, repaintV, false);
 						}
 					}
 					if ((this->m_parm2 & IMAGECTL_PEN) && !dragged)
@@ -416,7 +419,7 @@ bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int par
 						rpRect.right++;
 						rpRect.bottom++;
 						
-						WidgetImage_PartialPaint(this, rpRect);
+						WidgetImage_PartialPaint(this, rpRect, false);
 					}
 					
 					this->m_imageCtlData.nLastXGot = p.x;

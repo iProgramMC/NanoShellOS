@@ -164,9 +164,6 @@ void RedrawBackground (Rectangle rect)
 		
 		return;
 	}
-	
-	
-	
 }
 
 void RefreshScreen()

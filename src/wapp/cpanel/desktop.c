@@ -11,10 +11,19 @@
 #define DESKTOP_POPUP_WIDTH 600
 #define DESKTOP_POPUP_HEITE 400
 
+typedef struct
+{
+	int m_SelectedTheme;
+}
+CplDesktopData;
+
 extern bool g_GlowOnHover;
 extern bool g_TaskListCompact;
 extern bool     g_BackgroundSolidColorActive, g_RenderWindowContents;
 extern uint32_t g_BackgroundSolidColor;
+
+uint32_t* GetThemingParameters();
+uint32_t* GetThemeParms(int themeNumber);
 
 void RefreshScreen();
 void RefreshEverything();
@@ -39,6 +48,10 @@ enum
 	DESKTOP_THEMECOMBO,
 };
 
+CplDesktopData* CplDesktopGetData(Window* pWindow)
+{
+	return (CplDesktopData*)pWindow->m_data;
+}
 
 void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 {
@@ -46,12 +59,25 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 	{
 		case EVENT_PAINT:
 		{
+			CplDesktopData * pData = CplDesktopGetData(pWindow);
+			
+			// note: this is incredibly hacky... but it works, I think
+			cli;
+			uint32_t* pNewParms = GetThemingParameters();
+			if (pData->m_SelectedTheme >= 0)
+				pNewParms = GetThemeParms(pData->m_SelectedTheme);
+			
+			uint32_t* pParms = GetThemingParameters();
+			uint32_t ParmsBackup[P_THEME_PARM_COUNT];
+			
+			memcpy(ParmsBackup, pParms, sizeof ParmsBackup);
+			memcpy(pParms, pNewParms, sizeof ParmsBackup);
+			
+			
 			Rectangle r;
 			RECT (r, DESKTOP_POPUP_WIDTH/2+10, 3+10, DESKTOP_POPUP_WIDTH/2-20, 150);
 			
 			DrawEdge(r, DRE_SUNKEN | DRE_FILLED, BACKGROUND_COLOR);
-			
-			// TODO: Allow theme specification in this function
 			
 			RECT (r, DESKTOP_POPUP_WIDTH/2+20, 3+20, 250-1, 100-1);
 			VidFillRectangle(WINDOW_BACKGD_COLOR, r);
@@ -69,11 +95,21 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			r.right++, r.bottom++;
 			
 			PaintWindowBorderStandard(r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, 0, ICON_APP_DEMO, true);
+			
+			memcpy(pParms, ParmsBackup, sizeof ParmsBackup);
+			
+			sti;
+			
 			break;
 		}
 		case EVENT_CREATE:
 		{
 			pWindow->m_iconID = ICON_DESKTOP;//TODO
+			CplDesktopData * pData = 
+			pWindow->m_data = MmAllocate(sizeof(CplDesktopData));
+			memset(pWindow->m_data, 0, sizeof(CplDesktopData));
+			
+			pData->m_SelectedTheme = -1;
 			
 			//add a button
 			Rectangle r;
@@ -108,6 +144,19 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
 			RECT(r,(DESKTOP_POPUP_WIDTH/2-210)/2+160, DESKTOP_POPUP_HEITE - 30 ,70,20);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  DESKTOP_APPLY_CHANGES, 0, 0);
+			
+			break;
+		}
+		case EVENT_COMBOSELCHANGED:
+		{
+			CplDesktopData* pData = CplDesktopGetData(pWindow);
+			int item = ComboBoxGetSelectedItemID(pWindow, DESKTOP_THEMECOMBO);
+			
+			if (pData->m_SelectedTheme != item)
+			{
+				pData->m_SelectedTheme = item;
+				CplDesktopWndProc(pWindow, EVENT_PAINT, 0, 0);
+			}
 			
 			break;
 		}

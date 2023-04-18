@@ -2106,7 +2106,7 @@ void DisjointRectSetClear (DsjRectSet *pSet)
 void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 {
 	if (!pSet) return;
-	//TODO FIXME: Fix this crap
+	
 #ifdef DIRTY_RECT_TRACK
 	int ox = 0, oy = 0;
 	if (g_vbeData->m_version >= VBEDATA_VERSION_3)
@@ -2122,10 +2122,13 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 	rect.left += ox; rect.right += ox;
 	rect.top += oy; rect.bottom += oy;
 	
-	cli;
+	bool bIntsEnabled = !KeCheckInterruptsDisabled();
+	
+	if (bIntsEnabled) cli;
+	
 	if (pSet->m_bIgnoreAndDrawAll)
 	{
-		sti;
+		if (bIntsEnabled) sti;
 		return;
 	}
 	
@@ -2134,7 +2137,7 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 		Rectangle* arect = &pSet->m_rects[i];
 		if (RectangleFullyInside(arect, &rect))
 		{
-			sti;
+			if (bIntsEnabled) sti;
 			return; //nothing changed
 		}
 
@@ -2152,7 +2155,7 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 			arect->right  = right;
 			arect->bottom = bottom;
 			
-			sti;
+			if (bIntsEnabled) sti;
 			
 			return;
 		}
@@ -2166,12 +2169,17 @@ void DisjointRectSetAdd (DsjRectSet* pSet, Rectangle rect)
 		// Bail and draw everything.
 		pSet->m_bIgnoreAndDrawAll = true;
 		DisjointRectSetClear(pSet);
-		sti;
+		
+		if (bIntsEnabled) sti;
+		
 		return;
 	}
+	
 	//merging will be done by the window manager itself
 	pSet->m_rects[pSet->m_rectCount++] = rect;
-	sti;
+	
+	if (bIntsEnabled) sti;
+	
 #endif
 }
 

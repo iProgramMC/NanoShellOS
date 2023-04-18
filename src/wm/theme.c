@@ -507,8 +507,20 @@ const Theme g_themes[] = {
 },*/
 };
 
+uint32_t g_ThemingParms[P_THEME_PARM_COUNT];
 
+const uint32_t* GetThemingParameters()
+{
+	return g_ThemingParms;
+}
 
+const uint32_t* GetThemeParms(int themeNumber)
+{
+	if (themeNumber < 0 || themeNumber >= (int)ARRAY_COUNT(g_themes))
+		themeNumber = 0;
+	
+	return g_themes[themeNumber].m_data.m_raw_data;
+}
 
 bool WouldThemeChange(int themeNumber)
 {
@@ -527,6 +539,7 @@ void ApplyTheme(int themeNumber)
 {
 	if (themeNumber < 0 || themeNumber >= (int)ARRAY_COUNT(g_themes)) return;
 	SLogMsg("Applying theme %s", g_themes[themeNumber].m_name);
+	
 	for (int i = P_BLACK; i < P_THEME_PARM_COUNT; i++)
 	{
 		SetThemingParameter(i, g_themes[themeNumber].m_data.m_raw_data[i]);
@@ -550,11 +563,10 @@ void SetDarkTheme()
 	ApplyTheme(TH_DARK);
 }
 
-uint32_t g_ThemingParms[P_THEME_PARM_COUNT];
-
 uint32_t GetThemingParameter(int type)
 {
 	if (type < 0 || type >= P_THEME_PARM_COUNT) return 0;
+	
 	return g_ThemingParms[type];
 }
 
