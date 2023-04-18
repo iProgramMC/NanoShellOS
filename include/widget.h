@@ -370,4 +370,19 @@ void TextInputRequestCommand(Window *pWindow, int comboID, int command, void* pa
  */
 void ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID, int iconID);
 
+/**
+ * TODO
+ */
+int ComboBoxGetSelectedItemID(Window* pWindow, int comboID);
+
+/**
+ * TODO
+ */
+void ComboBoxSetSelectedItem(Window* pWindow, int comboID, int itemID);
+
+/**
+ * TODO
+ */
+void ComboBoxClearItems(Window* pWindow, int comboID);
+
 #endif//_WIDGET_H

@@ -207,7 +207,7 @@ bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 			CtlUpdateScrollBarSize (this, pWindow);
 			break;
 		}
-		case EVENT_CLICKCURSOR:
+		case EVENT_MOVECURSOR:
 		case EVENT_RELEASECURSOR:
 		{
 			ListViewData* pData = &this->m_listViewData;
@@ -219,7 +219,7 @@ bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 				break;
 			}
 			
-			if (!(eventType == EVENT_RELEASECURSOR || (eventType == EVENT_CLICKCURSOR && (this->m_parm1 & LISTVIEW_SINGLECLICK)))) break;
+			if (!(eventType == EVENT_RELEASECURSOR || (eventType == EVENT_MOVECURSOR && (this->m_parm1 & LISTVIEW_SINGLECLICK)))) break;
 			
 			Point pt = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			if (!RectangleContains(&this->m_rect, &pt))

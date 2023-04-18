@@ -270,6 +270,43 @@ void ComboBox_OpenSubWindow(Control* this)
 		pData->m_pSubWindow = NULL;
 }
 
+int ComboBox_GetSelectedItemID(Control* this)
+{
+	ComboBoxData* pData = ComboBox_GetData(this);
+	
+	if (pData->m_ShownItem >= pData->m_ItemCount)
+		return -1;
+	
+	return pData->m_Items[pData->m_ShownItem].id;
+}
+
+void ComboBox_SetSelectedItemID(Control* this, int iid)
+{
+	ComboBoxData* pData = ComboBox_GetData(this);
+	
+	for (size_t i = 0; i < pData->m_ItemCount; i++)
+	{
+		if (pData->m_Items[i].id == iid)
+		{
+			pData->m_ShownItem = i;
+			
+			ComboBox_Paint(this, true, false, false);
+		}
+	}
+}
+
+void ComboBox_ClearItems(Control* this)
+{
+	ComboBoxData* pData = ComboBox_GetData(this);
+	
+	MmFree(pData->m_Items);
+	pData->m_ItemCount    = 0;
+	pData->m_ItemCapacity = 0;
+	pData->m_ShownItem    = 0;
+	
+	ComboBox_Paint(this, true, false, false);
+}
+
 bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -365,8 +402,6 @@ bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUS
 			
 			ComboBoxData* pData = ComboBox_GetData(this);
 			
-			SLogMsg("Message arrived here, repainting... %d", parm2);
-			
 			ComboBox_Paint(this, true, false, false);
 			
 			WindowAddEventToMasterQueue(pWindow, EVENT_COMBOSELCHANGED, this->m_comboID, pData->m_Items[pData->m_ShownItem].id);
@@ -406,5 +441,43 @@ void ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID,
 		if (pCtl->OnEvent != WidgetComboBox_OnEvent) continue;
 		
 		ComboBox_AddItem(pCtl, item, itemID, iconID);
+	}
+}
+
+int ComboBoxGetSelectedItemID(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* pCtl = &pWindow->m_pControlArray[i];
+		if (pCtl->m_comboID != comboID) continue;
+		if (pCtl->OnEvent != WidgetComboBox_OnEvent) continue;
+		
+		return ComboBox_GetSelectedItemID(pCtl);
+	}
+	
+	return 0;
+}
+
+void ComboBoxSetSelectedItemID(Window* pWindow, int comboID, int itemID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* pCtl = &pWindow->m_pControlArray[i];
+		if (pCtl->m_comboID != comboID) continue;
+		if (pCtl->OnEvent != WidgetComboBox_OnEvent) continue;
+		
+		return ComboBox_SetSelectedItemID(pCtl, itemID);
+	}
+}
+
+void ComboBoxClearItems(Window* pWindow, int comboID)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		Control* pCtl = &pWindow->m_pControlArray[i];
+		if (pCtl->m_comboID != comboID) continue;
+		if (pCtl->OnEvent != WidgetComboBox_OnEvent) continue;
+		
+		return ComboBox_ClearItems(pCtl);
 	}
 }
