@@ -524,7 +524,7 @@ const uint32_t* GetThemeParms(int themeNumber)
 
 bool WouldThemeChange(int themeNumber)
 {
-	if (themeNumber < 0 || themeNumber >= (int)ARRAY_COUNT(g_themes)) return false;
+	if (themeNumber < 0 || themeNumber >= (int)ARRAY_COUNT(g_themes)) return true;
 	
 	for (int i = P_BLACK; i < P_THEME_PARM_COUNT; i++)
 	{
