@@ -306,6 +306,8 @@ enum {
 	CONTROL_PROGRESS_BAR,
 	//Combo box control.
 	CONTROL_COMBOBOX,
+	//Color picker control.
+	CONTROL_COLORPICKER,
 	//This control is purely to identify how many controls we support
 	//currently.  This control is unsupported and will crash your application
 	//if you use this.

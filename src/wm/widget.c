@@ -84,6 +84,7 @@ bool WidgetTextEditView2_OnEvent(C_PARMS);
 bool WidgetTabPicker_OnEvent    (C_PARMS);
 bool WidgetProgressBar_OnEvent  (C_PARMS);
 bool WidgetComboBox_OnEvent     (C_PARMS);
+bool WidgetColorPicker_OnEvent  (C_PARMS);
 
 WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetNone_OnEvent,
@@ -115,6 +116,7 @@ WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetTabPicker_OnEvent,
 	WidgetProgressBar_OnEvent,
 	WidgetComboBox_OnEvent,
+	WidgetColorPicker_OnEvent,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_widgetEventHandlerLUT) == CONTROL_COUNT, "Change this array if adding widgets");

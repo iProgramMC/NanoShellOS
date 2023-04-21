@@ -38,7 +38,7 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 			AddControlEx(pWindow, CONTROL_PROGRESS_BAR, ANCHOR_RIGHT_TO_RIGHT, r, NULL, 3, 84, 200);
 			
 			RECT(r, 8, 8 + 40 + 40, LISTTEST_WIDTH - 16, LISTTEST_HEIGHT - 16 - 40 - 40);
-			AddControlEx(pWindow, CONTROL_TABLEVIEW, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1, 0, 0);
+			AddControlEx(pWindow, CONTROL_COLORPICKER, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1, 0, 0);
 			
 			pWindow->m_data = (void*)42;
 			
