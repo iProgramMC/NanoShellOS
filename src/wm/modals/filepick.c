@@ -17,7 +17,7 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmRepaintBorder(Window* pWindow);
+extern void WmPaintWindowTitle(Window* pWindow);
 extern void SelectWindow(Window* pWindow);
 extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
@@ -288,7 +288,7 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			WmRepaintBorder (pWindow);
+			WmPaintWindowTitle (pWindow);
 		}
 	}
 	
@@ -388,7 +388,7 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		WmRepaintBorder (pWindow);
+		WmPaintWindowTitle (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

@@ -90,7 +90,7 @@ void WindowCheckButton(Window* pWindow, int eventType, int x, int y, int btnInde
 	
 	if (pWindow->m_privFlags != oldFlags)
 	{
-		WindowAddEventToMasterQueue(pWindow, EVENT_REPAINT_BORDER_PRIVATE, 0, 0);
+		WindowAddEventToMasterQueue(pWindow, EVENT_REPAINT_TITLE_PRIVATE, 0, 0);
 	}
 }
 

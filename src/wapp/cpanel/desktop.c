@@ -34,7 +34,7 @@ uint32_t* GetThemeParms(int themeNumber);
 
 void RefreshScreen();
 void RefreshEverything();
-void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected);
+void PaintWindowDecorStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected, bool bDrawBorder, bool bDrawTitle);
 void WmOnChangedBorderSize();
 bool WouldThemeChange(int thNum);
 
@@ -139,19 +139,19 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			RECT (r, 20, y+3+20, 250-1, 100-1);
 			VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 			r.right++, r.bottom++;
-			PaintWindowBorderStandard(r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, false);
+			PaintWindowDecorStandard(r, "Inactive window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, false, true, true);
 			
 			RECT (r, 30, y+3+50, 250-1, 100-1);
 			VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 			r.right++, r.bottom++;
 			
-			PaintWindowBorderStandard(r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, true);
+			PaintWindowDecorStandard(r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ, 0, ICON_APP_DEMO, true, true, true);
 			
 			RECT (r, 40, y+3+75, 180-1, 70-1);
 			VidFillRectangle(WINDOW_BACKGD_COLOR, r);
 			r.right++, r.bottom++;
 			
-			PaintWindowBorderStandard(r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, 0, ICON_APP_DEMO, true);
+			PaintWindowDecorStandard(r, "Active window", WF_NOCLOSE | WF_NOMINIMZ | WF_NOMAXIMZ | WF_FLATBORD, 0, ICON_APP_DEMO, true, true, true);
 			
 			memcpy(pParms, ParmsBackup, sizeof ParmsBackup);
 			

@@ -31,7 +31,7 @@ void OnWindowHung(Window *pWindow)
 	// draw the window title bar and say that it's not responding
 	if (!(pWindow->m_flags & WF_NOBORDER))
 	{
-		WmRepaintBorder (pWindow);
+		WmPaintWindowTitle(pWindow);
 		pWindow->m_renderFinished = true;
 	}
 	
@@ -111,12 +111,13 @@ void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int 
 
 void RequestRepaint (Window* pWindow)
 {
-	WindowRegisterEventUnsafe(pWindow, EVENT_PAINT, 0, 0);
+	WindowAddEventToMasterQueue(pWindow, EVENT_PAINT, 0, 0);
 }
 
 void RequestRepaintNew (Window* pWindow)
 {
-	WmRepaintBorder (pWindow);
+	WmPaintWindowBorder(pWindow);
+	WmPaintWindowTitle(pWindow);
 	CallWindowCallbackAndControls  (pWindow, EVENT_PAINT, 0, 0);
 }
 
@@ -283,7 +284,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 			pWindow->m_flags &= ~WF_FROZEN;
 		
 		// Un-hang the window
-		WmRepaintBorder(pWindow);
+		WmPaintWindowTitle(pWindow);
 		
 		pWindow->m_cursorID = pWindow->m_cursorID_backup;
 	}
@@ -337,7 +338,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		ShowWindow (pWindow);
 		
 		pBackup = VidSetVBEData (&pWindow->m_vbeData);
-		WmRepaintBorderAndBackground(pWindow);
+		WmPaintWindowBackgd(pWindow);
+		WmPaintWindowBorder(pWindow);
+		WmPaintWindowTitle(pWindow);
 		
 		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
 		
@@ -351,14 +354,18 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		DirtyRectInvalidateAll();
 		
-		WmRepaintBorderAndBackground(pWindow);
+		WmPaintWindowBackgd(pWindow);
+		WmPaintWindowBorder(pWindow);
+		WmPaintWindowTitle(pWindow);
 		
 		// Update controls based on their anchoring modes.
 		UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
 	}
 	else if (eventType == EVENT_REPAINT_PRIVATE)
 	{
-		WmRepaintBorderAndBackground(pWindow);
+		WmPaintWindowBackgd(pWindow);
+		WmPaintWindowBorder(pWindow);
+		WmPaintWindowTitle(pWindow);
 		DirtyRectInvalidateAll();
 	}
 	else if (eventType == EVENT_MAXIMIZE)
@@ -505,12 +512,12 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	else if (eventType == EVENT_CREATE)
 	{
 		VidSetVBEData (&pWindow->m_vbeData);
-		WmRepaintBorderAndBackground(pWindow);
+		
+		WmPaintWindowBackgd(pWindow);
+		WmPaintWindowBorder(pWindow);
+		WmPaintWindowTitle(pWindow);
+		
 		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
-	}
-	else if (eventType == EVENT_KILLFOCUS || eventType == EVENT_SETFOCUS)
-	{
-		//WmRepaintBorder(pWindow);
 	}
 	
 	// Perform the actual call to the user application here.
@@ -746,9 +753,9 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 		case EVENT_SETFOCUS:
 		case EVENT_KILLFOCUS:
-		case EVENT_REPAINT_BORDER_PRIVATE:
+		case EVENT_REPAINT_TITLE_PRIVATE:
 		{
-			WmRepaintBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
 			pWindow->m_vbeData.m_dirty = true;
 			break;
 		}
@@ -812,7 +819,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			pWindow->m_title[sz] = 0;
 			
 			//paint the window border:
-			WmRepaintBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
 			break;
 		}
 		default:

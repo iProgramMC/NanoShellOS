@@ -8,7 +8,6 @@
 
 //Forward declarations
 void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
-void WmRepaintBorder(Window* pWindow);
 
 void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* data)
 {
@@ -27,7 +26,7 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			WmRepaintBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
 		}
 	}
 	
@@ -67,7 +66,7 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		WmRepaintBorder (pWindow);
+		WmPaintWindowTitle (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

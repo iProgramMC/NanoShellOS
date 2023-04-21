@@ -201,7 +201,7 @@ bool GetWindowTitleRect(Window* pWindow, Rectangle* pRectOut)
 	return true;
 }
 
-void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected)
+void PaintWindowDecorStandard(Rectangle windowRect, const char* pTitle, uint32_t flags, uint32_t privflags, int iconID, bool selected, bool bDrawBorder, bool bDrawTitle)
 {
 	Rectangle titleRect, titleGradRect, minimBtnRect, maximBtnRect, closeBtnRect, iconBtnRect;
 	bool bTitleHas3dShape;
@@ -209,7 +209,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 	
 	bool maximized = flags & WF_MAXIMIZE;
 	
-	if (~flags & WF_NOBORDER)
+	if ((~flags & WF_NOBORDER) && bDrawBorder)
 	{
 		if (flags & WF_FLATBORD)
 		{
@@ -239,7 +239,7 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 		}
 	}
 	
-	if (!(flags & WF_NOTITLE))
+	if ((~flags & WF_NOTITLE) && bDrawTitle)
 	{
 		//Cut out the gap stuff so that the animation looks good
 		//int iconGap = 0;
@@ -311,8 +311,10 @@ void PaintWindowBorderStandard(Rectangle windowRect, const char* pTitle, uint32_
 #undef X
 }
 
-void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
-{	
+void WmPaintWindowTitle(Window* pWindow)
+{
+	VBEData* bkp = VidSetVBEData(&pWindow->m_fullVbeData);
+	
 	Rectangle recta = pWindow->m_fullRect;
 	recta.right  -= recta.left; recta.left = 0;
 	recta.bottom -= recta.top;  recta.top  = 0;
@@ -322,33 +324,21 @@ void WmPaintWindowBorderNoBackgroundOverpaint(Window* pWindow)
 		char windowtitle_copy[WINDOW_TITLE_MAX + 100];
 		strcpy (windowtitle_copy, pWindow->m_title);
 		strcat (windowtitle_copy, " (not responding)");
-		PaintWindowBorderStandard(recta, windowtitle_copy, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
+		PaintWindowDecorStandard(recta, windowtitle_copy, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, false, true);
 	}
 	else
-		PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
+		PaintWindowDecorStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, false, true);
 	
-	/*char thing[32];
-	sprintf(thing, "ID : %d", (int)(pWindow - g_windows));
-	VidTextOut(thing, 0, 0, 0xFFFFFF, 0x000000);*/
+	VidSetVBEData(bkp);
 }
 
-void WmPaintWindowBorder(Window* pWindow)
-{
-	Rectangle recta = pWindow->m_fullRect;
-	recta.right  -= recta.left; recta.left = 0;
-	recta.bottom -= recta.top;  recta.top  = 0;
-	
-	VidFillRectangle(WINDOW_BACKGD_COLOR, recta);
-	PaintWindowBorderStandard(recta, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected);
-}
-
-void WmRepaintBackground(Window* pWindow)
+void WmPaintWindowBackgd(Window* pWindow)
 {
 	Rectangle rect = GetWindowClientRect(pWindow, false);
 	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
 }
 
-void WmRepaintBorder(Window* pWindow)
+void WmPaintWindowBorder(Window* pWindow)
 {
 	VBEData* bkp = VidSetVBEData(&pWindow->m_fullVbeData);
 	
@@ -375,14 +365,7 @@ void WmRepaintBorder(Window* pWindow)
 		VidFillRect(WINDOW_BORDER_COLOR, rect.left + margins.left, rect.bottom - margins.bottom, rect.right - margins.right, rect.bottom - 1);
 	}
 	
-	WmPaintWindowBorderNoBackgroundOverpaint(pWindow);
+	PaintWindowDecorStandard(rect, pWindow->m_title, pWindow->m_flags, pWindow->m_privFlags, pWindow->m_iconID, pWindow->m_isSelected, true, false);
 	
 	VidSetVBEData(bkp);
 }
-
-void WmRepaintBorderAndBackground(Window* pWindow)
-{
-	WmRepaintBorder(pWindow);
-	WmRepaintBackground(pWindow);
-}
-

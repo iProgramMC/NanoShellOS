@@ -15,7 +15,6 @@
 //EXTERN FUNCTIONS//
 void NukeWindow (Window* pWindow);
 void SelectWindow (Window* pWindow);
-void WmRepaintBorder (Window* pWindow);
 
 //EXTERNS//
 extern Window  g_windows        [WINDOWS_MAX];
@@ -79,8 +78,6 @@ void AltTabProc(Window* pWindow, int messageType, int parm1, int parm2)
 		}
 		case EVENT_PAINT:
 		{
-			WmRepaintBorder(pWindow);
-			
 			//get info about the selected application:
 			Window* pSelWnd = NULL;
 			if (!g_windows[g_windowIndexOrder[g_windowDrawOrderIndex]].m_used) break;

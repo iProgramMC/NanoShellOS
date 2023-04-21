@@ -16,7 +16,7 @@ g_BufferLock,
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmRepaintBorder(Window* pWindow);
+extern void WmPaintWindowTitle(Window* pWindow);
 extern void SelectWindow(Window* pWindow);
 extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
@@ -68,7 +68,7 @@ int ShutdownBox (Window* pWindow)
 		if (wasSelectedBefore)
 		{
 			pWindow->m_isSelected = false;
-			WmRepaintBorder (pWindow);
+			WmPaintWindowTitle (pWindow);
 		}
 	}
 	
@@ -146,7 +146,7 @@ int ShutdownBox (Window* pWindow)
 	{
 		//pWindow->m_isSelected = true;
 		SelectWindow (pWindow);
-		WmRepaintBorder (pWindow);
+		WmPaintWindowTitle (pWindow);
 	}
 	
 	// Re-acquire the locks that have been freed before.

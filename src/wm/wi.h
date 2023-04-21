@@ -162,9 +162,6 @@ void WmSplitDone();
 void WmTakeOverWindow(Window* pWindow);
 void WmDeleteMenuBar(MenuBarData* pData);
 bool WmMenuTryAddItemTo (MenuBarTreeItem* this, int comboID_to, int comboID_as, const char* text);
-void WmRepaintBorder(Window* pWindow);
-void WmRepaintBorderAndBackground(Window* pWindow);
-void WmRepaintWindowBorder(Window* pWindow);
 void WmRecalculateClientRect(Window* pWindow);
 void WmOnChangedBorderParms(Window* pWindow);
 void WmOnChangedBorderSize();
@@ -175,5 +172,9 @@ Rectangle GetWindowMargins(Window* pWindow);
 Rectangle GetWindowClientRect(Window* pWindow, bool offset);
 MenuBarData* WmCreateMenuBar();
 void DrawEdge(Rectangle rect, int style, unsigned bg);
+
+void WmPaintWindowBackgd(Window* pWindow);
+void WmPaintWindowTitle (Window* pWindow);
+void WmPaintWindowBorder(Window* pWindow);
 
 #endif//INT_WI_H
