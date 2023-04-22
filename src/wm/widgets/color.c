@@ -8,20 +8,24 @@
 
 typedef int FixedPoint;
 
+#define BOTTOM_BAR_HEIGHT 60
+
 typedef struct
 {
 	uint32_t m_SelectedColor; // to be grabbed by the user of this control
 	
 	FixedPoint m_SelectedHue; // 0-360
-	FixedPoint m_SelectedSat; // 0-255
-	FixedPoint m_SelectedVal; // 0-255
+	FixedPoint m_SelectedSat; // 0-1
+	FixedPoint m_SelectedVal; // 0-1
 	
 	FixedPoint m_PrevSelectedHue; // 0-360
-	FixedPoint m_PrevSelectedSat; // 0-255
-	FixedPoint m_PrevSelectedVal; // 0-255
+	FixedPoint m_PrevSelectedSat; // 0-1
+	FixedPoint m_PrevSelectedVal; // 0-1
 	
 	Rectangle m_HVRect; // hue-val 2D picker
 	Rectangle m_SRect;  // sat 1D picker
+	Rectangle m_CPrevRect;
+	Rectangle m_PropRects[6];
 }
 ColorPickerData;
 
@@ -139,7 +143,7 @@ uint32_t HSVToColor(FixedPoint hue, FixedPoint sat, FixedPoint val)
 	return col;
 }
 
-void WidgetColorPicker_DrawHueValRect(Rectangle rect, Rectangle clipRect, FixedPoint saturation)
+void WidgetColorPicker_SubDrawHueValRect(Rectangle rect, Rectangle clipRect, FixedPoint saturation)
 {
 	int c_width  = rect.right - rect.left;
 	int c_height = rect.bottom - rect.top;
@@ -272,9 +276,9 @@ void WidgetColorPicker_DrawHVHighlight(int x, int y, int top, int bottom)
 {
 	int mid = (top + bottom) / 2;
 	
-	uint32_t color = WINDOW_TEXT_COLOR;
+	uint32_t color = 0x000000;
 	if (y > mid)
-		color = WINDOW_TEXT_COLOR_LIGHT;
+		color = 0xFFFFFF;
 	
 	VidDrawHLine(color, x - 1, x + 1, y - 2);
 	VidDrawHLine(color, x - 1, x + 1, y + 2);
@@ -335,6 +339,105 @@ FixedPoint WidgetColorPicker_GetSatByY(Control* this, int y)
 	return fp;
 }
 
+void WidgetColorPicker_DrawHueValRect(Control* this)
+{
+	ColorPickerData* pData = ColorPicker_GetData(this);
+	
+	Rectangle hsPickerRect = pData->m_HVRect;
+	
+	WidgetColorPicker_SubDrawHueValRect(hsPickerRect, hsPickerRect, pData->m_SelectedSat);
+	
+	int x = 0, y = 0;
+	WidgetColorPicker_GetHVSelectionXY(this, &x, &y);
+	
+	// to avoid it drawing the highlight out of bounds and us having to redraw the edge
+	VidSetClipRect(&hsPickerRect);
+	WidgetColorPicker_DrawHVHighlight(hsPickerRect.left + x, hsPickerRect.top + y, hsPickerRect.top, hsPickerRect.bottom);
+	VidSetClipRect(&this->m_rect);
+}
+
+void WidgetColorPicker_DrawSatRect(Control* this)
+{
+	ColorPickerData* pData = ColorPicker_GetData(this);
+	
+	Rectangle valPickerRect = pData->m_SRect;
+	
+	WidgetColorPicker_DrawSatPickerRect(valPickerRect, valPickerRect, pData->m_SelectedHue, pData->m_SelectedVal);
+	
+	int y = WidgetColorPicker_GetSatSelectionY(this);
+	if (y > valPickerRect.bottom - 1)
+		y = valPickerRect.bottom - 1;
+	
+	WidgetColorPicker_DrawRightArrow(valPickerRect.left, valPickerRect.right + 2, y + valPickerRect.top, valPickerRect.top, valPickerRect.bottom);
+}
+
+void WidgetColorPicker_DrawColPrev(Control* this)
+{
+	ColorPickerData* pData = ColorPicker_GetData(this);
+	
+	Rectangle cRect = pData->m_CPrevRect;
+	
+	uint32_t color = HSVToColor(pData->m_SelectedHue, pData->m_SelectedSat, pData->m_SelectedVal);
+	VidFillRect(color, cRect.left, cRect.top, cRect.right - 1, cRect.bottom - 1);
+	
+	pData->m_SelectedColor = color;
+}
+
+void WidgetColorPicker_DrawPropertyField(Control *this, int propName)
+{
+	ColorPickerData* pData = ColorPicker_GetData(this);
+	Rectangle cRect = pData->m_PropRects[propName];
+	
+	VidFillRect(WINDOW_TEXT_COLOR_LIGHT, cRect.left, cRect.top, cRect.right - 1, cRect.bottom - 1);
+	
+	cRect.left++;
+	cRect.top++;
+	
+	union
+	{
+		uint32_t col;
+		struct
+		{
+			unsigned b : 8;
+			unsigned g : 8;
+			unsigned r : 8;
+		}
+		x;
+	}
+	y;
+	
+	y.col = pData->m_SelectedColor;
+	
+	int valueShown = 0;
+	
+	switch (propName)
+	{
+		case 0: // hue
+			valueShown = ColPick_FPRoundDown(pData->m_SelectedHue);
+			break;
+		case 1: // sat
+			valueShown = ColPick_FPRoundDown(pData->m_SelectedSat * 100);
+			break;
+		case 2: // val
+			valueShown = ColPick_FPRoundDown(pData->m_SelectedVal * 100);
+			break;
+		case 3: // red
+			valueShown = y.x.r;
+			break;
+		case 4: // green
+			valueShown = y.x.g;
+			break;
+		case 5: // blue
+			valueShown = y.x.b;
+			break;
+	}
+	
+	char buffer[10];
+	snprintf(buffer, sizeof buffer, "%d", valueShown);
+	
+	VidDrawText(buffer, cRect, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+}
+
 bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -347,6 +450,7 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 			this->m_dataPtr = pData;
 			
 			pData->m_SelectedSat = COLPICK_TO_FP(1); // 100% saturated
+			pData->m_SelectedVal = COLPICK_TO_FP(1); // 100% value
 			
 			break;
 		}
@@ -362,37 +466,25 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 		case EVENT_RELEASECURSOR:
 		{
 			ColorPickerData* pData = ColorPicker_GetData(this);
+			if (pData->m_SelectedHue != pData->m_PrevSelectedHue || pData->m_SelectedVal != pData->m_PrevSelectedVal || pData->m_SelectedSat != pData->m_PrevSelectedSat)
+			{
+				WidgetColorPicker_DrawColPrev(this);
+				
+				for (int i = 0; i < 6; i++)
+					WidgetColorPicker_DrawPropertyField(this, i);
+			}
 			if (pData->m_SelectedHue != pData->m_PrevSelectedHue || pData->m_SelectedVal != pData->m_PrevSelectedVal)
 			{
 				pData->m_PrevSelectedHue = pData->m_SelectedHue;
 				pData->m_PrevSelectedVal = pData->m_SelectedVal;
 				
-				Rectangle valPickerRect = pData->m_SRect;
-				
-				WidgetColorPicker_DrawSatPickerRect(valPickerRect, valPickerRect, pData->m_SelectedHue, pData->m_SelectedVal);
-				
-				int y = WidgetColorPicker_GetSatSelectionY(this);
-				if (y > valPickerRect.bottom - 1)
-					y = valPickerRect.bottom - 1;
-				
-				WidgetColorPicker_DrawRightArrow(valPickerRect.left, valPickerRect.right + 2, y + valPickerRect.top, valPickerRect.top, valPickerRect.bottom);
+				WidgetColorPicker_DrawSatRect(this);
 			}
 			if (pData->m_SelectedSat != pData->m_PrevSelectedSat)
 			{
 				pData->m_PrevSelectedSat = pData->m_SelectedSat;
 				
-				Rectangle hsPickerRect = pData->m_HVRect;
-				
-				WidgetColorPicker_DrawHueValRect(hsPickerRect, hsPickerRect, pData->m_SelectedSat);
-				
-				int x = 0, y = 0;
-				WidgetColorPicker_GetHVSelectionXY(this, &x, &y);
-				
-				// to avoid it drawing the highlight out of bounds and us having to redraw the edge
-				VidSetClipRect(&hsPickerRect);
-				WidgetColorPicker_DrawHVHighlight(hsPickerRect.left + x, hsPickerRect.top + y, hsPickerRect.top, hsPickerRect.bottom);
-				VidSetClipRect(&this->m_rect);
-				
+				WidgetColorPicker_DrawHueValRect(this);
 			}
 			
 			break;
@@ -418,15 +510,15 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 					rect.left = hvRect.left;
 				if (rect.top  < hvRect.top)
 					rect.top  = hvRect.top;
-				if (rect.right > hvRect.right - 1)
-					rect.right = hvRect.right - 1;
-				if (rect.bottom > hvRect.bottom - 1)
-					rect.bottom = hvRect.bottom - 1;
+				if (rect.right > hvRect.right)
+					rect.right = hvRect.right;
+				if (rect.bottom > hvRect.bottom)
+					rect.bottom = hvRect.bottom;
 				
 				VidSetClipRect(&rect);
 				
 				// draw the HV rect where the old cursor was
-				WidgetColorPicker_DrawHueValRect(hvRect, rect, pData->m_SelectedSat);
+				WidgetColorPicker_SubDrawHueValRect(hvRect, rect, pData->m_SelectedSat);
 				
 				VidSetClipRect(&hvRect);
 				
@@ -498,13 +590,16 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 			
 			Rectangle hsPickerRect = this->m_rect;
 			hsPickerRect.top    += 6;
-			hsPickerRect.right  -= 40;
-			hsPickerRect.bottom -= 40;
+			hsPickerRect.right  -= BOTTOM_BAR_HEIGHT;
+			hsPickerRect.bottom -= BOTTOM_BAR_HEIGHT + 6;
 			Rectangle valPickerRect = this->m_rect;
 			valPickerRect.top    += 6;
 			valPickerRect.left    = valPickerRect.right - 30;
 			valPickerRect.right  -= 7;
-			valPickerRect.bottom -= 40;
+			valPickerRect.bottom -= BOTTOM_BAR_HEIGHT + 6;
+			Rectangle colPrevRect   = this->m_rect;
+			colPrevRect.left = colPrevRect.right  - 40;
+			colPrevRect.top  = colPrevRect.bottom - 30;
 			
 			int ms1 = GetTickCount();
 			
@@ -524,8 +619,9 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 			emptyGapRect.right--;
 			VidFillRectangle(WINDOW_BACKGD_COLOR, emptyGapRect);
 			
-			DrawEdge(hsPickerRect, DRE_SUNKEN, 0);
+			DrawEdge(hsPickerRect,  DRE_SUNKEN, 0);
 			DrawEdge(valPickerRect, DRE_SUNKEN, 0);
+			DrawEdge(colPrevRect,   DRE_SUNKEN, 0);
 			
 			hsPickerRect.left += 2;
 			hsPickerRect.top += 2;
@@ -535,26 +631,78 @@ bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, U
 			valPickerRect.top += 2;
 			valPickerRect.right -= 2;
 			valPickerRect.bottom -= 2;
+			colPrevRect.left += 2;
+			colPrevRect.top += 2;
+			colPrevRect.right -= 2;
+			colPrevRect.bottom -= 2;
 			
-			pData->m_HVRect = hsPickerRect;
-			pData->m_SRect = valPickerRect;
+			pData->m_HVRect    = hsPickerRect;
+			pData->m_SRect     = valPickerRect;
+			pData->m_CPrevRect = colPrevRect;
 			
-			WidgetColorPicker_DrawHueValRect(hsPickerRect, hsPickerRect, pData->m_SelectedSat);
-			WidgetColorPicker_DrawSatPickerRect(valPickerRect, valPickerRect, pData->m_SelectedHue, pData->m_SelectedVal);
+			static const char* const arr1[] = { "Hue", "Sat", "Lum",   "Red", "Green", "Blue" };
 			
-			int x = 0, y = 0;
-			WidgetColorPicker_GetHVSelectionXY(this, &x, &y);
+			// generate the first three property rectangles for the hue, sat, val
+			for (int i = 0; i < 3; i++)
+			{
+				Rectangle rect = this->m_rect;
+				rect.left += 40;
+				rect.top = this->m_rect.bottom + (i - 3) * (BOTTOM_BAR_HEIGHT / 3);
+				rect.right = rect.left + 40;
+				rect.bottom = rect.top + (BOTTOM_BAR_HEIGHT / 3);
+				
+				DrawEdge(rect, DRE_SUNKEN, 0);
+				rect.left   += 2;
+				rect.top    += 2;
+				rect.right  -= 2;
+				rect.bottom -= 2;
+				
+				// set the rect
+				pData->m_PropRects[i] = rect;
+				// draw the initial text too
+				Rectangle textRect = rect;
+				textRect.left -= 40;
+				textRect.right -= 41;
+				textRect.bottom--;
+				
+				VidDrawText(arr1[i], textRect, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				
+				WidgetColorPicker_DrawPropertyField(this, i);
+			}
 			
-			// to avoid it drawing the highlight out of bounds and us having to redraw the edge
-			VidSetClipRect(&hsPickerRect);
-			WidgetColorPicker_DrawHVHighlight(hsPickerRect.left + x, hsPickerRect.top + y, hsPickerRect.top, hsPickerRect.bottom);
-			VidSetClipRect(&this->m_rect);
+			// generate the next three property rectangles for the red, green, blue
+			for (int i = 0; i < 3; i++)
+			{
+				Rectangle rect = this->m_rect;
+				rect.left += 40 * 3;
+				rect.top = this->m_rect.bottom + (i - 3) * (BOTTOM_BAR_HEIGHT / 3);
+				rect.right = rect.left + 40;
+				rect.bottom = rect.top + (BOTTOM_BAR_HEIGHT / 3);
+				
+				DrawEdge(rect, DRE_SUNKEN, 0);
+				rect.left   += 2;
+				rect.top    += 2;
+				rect.right  -= 2;
+				rect.bottom -= 2;
+				
+				// set the rect
+				pData->m_PropRects[i + 3] = rect;
+				// draw the initial text too
+				Rectangle textRect = rect;
+				textRect.left -= 40;
+				textRect.right -= 41;
+				textRect.bottom--;
+				
+				VidDrawText(arr1[i + 3], textRect, TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+				
+				WidgetColorPicker_DrawPropertyField(this, i + 3);
+			}
 			
-			y = WidgetColorPicker_GetSatSelectionY(this);
-			if (y > valPickerRect.bottom - 1)
-				y = valPickerRect.bottom - 1;
 			
-			WidgetColorPicker_DrawRightArrow(valPickerRect.left, valPickerRect.right + 2, y + valPickerRect.top, valPickerRect.top, valPickerRect.bottom);
+			
+			WidgetColorPicker_DrawHueValRect(this);
+			WidgetColorPicker_DrawSatRect(this);
+			WidgetColorPicker_DrawColPrev(this);
 			
 			int ms2 = GetTickCount();
 			
