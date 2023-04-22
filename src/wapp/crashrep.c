@@ -128,12 +128,6 @@ void CrashReporterCheck()
 		// Allocate the registers so we can pass them onto the new task.
 		CrashInfo* pCrashInfo = MmAllocate (sizeof (CrashInfo));
 		
-		// Close the file resources opened by this task.
-		FiReleaseResourcesFromTask(crashInfo.m_pTaskKilled);
-		
-		// Close the windows that have been opened by this task.
-		//WmOnTaskCrashed(crashInfo.m_pTaskKilled);
-		
 		if (!pCrashInfo)
 		{
 			ILogMsg("Could not create crash report task.");

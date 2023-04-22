@@ -398,7 +398,9 @@ void KeUnsuspendTasksWaitingForWM()
 		KeReviveTask(pCurTask);
 	}
 }
-void WmOnTaskDied(Task *pTask); // 💀
+
+void WmOnTaskDied(Task *pTask);
+
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt)
@@ -468,6 +470,11 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		}
 	}
 }
+
+void WmOnTaskCrashed(Task *pTask);
+
+void FiReleaseResourcesFromTask(Task *pTask);
+
 bool KeKillTask(Task* pTask)
 {
 	if (pTask == KeGetRunningTask())
@@ -478,6 +485,12 @@ bool KeKillTask(Task* pTask)
 	
 	if (!pTask->m_bExists)
 		return false;
+	
+	// Close the file resources opened by this task.
+	FiReleaseResourcesFromTask(pTask);
+	
+	// Close the windows that have been opened by this task.
+	WmOnTaskCrashed(pTask);
 	
 	KeVerifyInterruptsEnabled;
 	cli;
