@@ -8,8 +8,8 @@
 #include <wbuiltin.h>
 #include <wtheme.h>
 
-#define DESKTOP_POPUP_WIDTH 300
-#define DESKTOP_POPUP_HEITE 500
+#define COLORS_POPUP_WIDTH 300
+#define COLORS_POPUP_HEITE 500
 
 typedef struct
 {
@@ -22,7 +22,7 @@ typedef struct
 	
 	uint32_t m_CustomParms[P_THEME_PARM_COUNT];
 }
-CplDesktopData;
+CplColorsData;
 
 extern bool g_GlowOnHover;
 extern bool g_TaskListCompact;
@@ -40,33 +40,33 @@ bool WouldThemeChange(int thNum);
 
 enum
 {
-	DESKTOP_ENABLE_BACKGD = 4000,
-	DESKTOP_SHOW_WINDOW_CONTENTS,
-	DESKTOP_APPLY_CHANGES,
-	DESKTOP_OK,
-	DESKTOP_CHANGE_BACKGD,
-	DESKTOP_CHOOSETHEMETEXT,
-	DESKTOP_ORMAKEYOUROWNTEXT,
-	DESKTOP_GLOW_ON_HOVER,
-	DESKTOP_TASKBAR_COMPACT,
-	DESKTOP_CANCEL,
-	DESKTOP_THEMECOMBO,
-	DESKTOP_COLORCOMBO,
+	COLORS_ENABLE_BACKGD = 4000,
+	COLORS_SHOW_WINDOW_CONTENTS,
+	COLORS_APPLY_CHANGES,
+	COLORS_OK,
+	COLORS_CHANGE_BACKGD,
+	COLORS_CHOOSETHEMETEXT,
+	COLORS_ORMAKEYOUROWNTEXT,
+	COLORS_GLOW_ON_HOVER,
+	COLORS_TASKBAR_COMPACT,
+	COLORS_CANCEL,
+	COLORS_THEMECOMBO,
+	COLORS_COLORCOMBO,
 	
-	DESKTOP_R_TEXT,
-	DESKTOP_G_TEXT,
-	DESKTOP_B_TEXT,
-	DESKTOP_R_BAR,
-	DESKTOP_G_BAR,
-	DESKTOP_B_BAR,
+	COLORS_R_TEXT,
+	COLORS_G_TEXT,
+	COLORS_B_TEXT,
+	COLORS_R_BAR,
+	COLORS_G_BAR,
+	COLORS_B_BAR,
 };
 
-CplDesktopData* CplDesktopGetData(Window* pWindow)
+CplColorsData* CplColorsGetData(Window* pWindow)
 {
-	return (CplDesktopData*)pWindow->m_data;
+	return (CplColorsData*)pWindow->m_data;
 }
 
-static const uint32_t* CplDesktopGetThemeBasedOnID(CplDesktopData* pData, int id)
+static const uint32_t* CplColorsGetThemeBasedOnID(CplColorsData* pData, int id)
 {
 	if (id < -1)
 		return pData->m_CustomParms;
@@ -76,18 +76,18 @@ static const uint32_t* CplDesktopGetThemeBasedOnID(CplDesktopData* pData, int id
 	return GetThemingParameters();
 }
 
-uint32_t CplDesktopGetScrollBarColor(Window* pWindow)
+uint32_t CplColorsGetScrollBarColor(Window* pWindow)
 {
 	uint32_t color = 0;
 	
-	color |= GetScrollBarPos(pWindow, DESKTOP_R_BAR) << 16;
-	color |= GetScrollBarPos(pWindow, DESKTOP_G_BAR) << 8;
-	color |= GetScrollBarPos(pWindow, DESKTOP_B_BAR);
+	color |= GetScrollBarPos(pWindow, COLORS_R_BAR) << 16;
+	color |= GetScrollBarPos(pWindow, COLORS_G_BAR) << 8;
+	color |= GetScrollBarPos(pWindow, COLORS_B_BAR);
 	
 	return color;
 }
 
-void CplDesktopSetScrollBarColor(Window* pWindow, uint32_t color)
+void CplColorsSetScrollBarColor(Window* pWindow, uint32_t color)
 {
 	union
 	{
@@ -103,25 +103,25 @@ void CplDesktopSetScrollBarColor(Window* pWindow, uint32_t color)
 	
 	col.x = color;
 	
-	SetScrollBarPos(pWindow, DESKTOP_R_BAR, col.r);
-	SetScrollBarPos(pWindow, DESKTOP_G_BAR, col.g);
-	SetScrollBarPos(pWindow, DESKTOP_B_BAR, col.b);
+	SetScrollBarPos(pWindow, COLORS_R_BAR, col.r);
+	SetScrollBarPos(pWindow, COLORS_G_BAR, col.g);
+	SetScrollBarPos(pWindow, COLORS_B_BAR, col.b);
 	
 	for (int i = 0; i < 3; i++)
-		CallControlCallback(pWindow, DESKTOP_R_BAR + i, EVENT_PAINT, 0, 0);
+		CallControlCallback(pWindow, COLORS_R_BAR + i, EVENT_PAINT, 0, 0);
 }
 
-void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
 		case EVENT_PAINT:
 		{
-			CplDesktopData * pData = CplDesktopGetData(pWindow);
+			CplColorsData * pData = CplColorsGetData(pWindow);
 			
 			// note: this is incredibly hacky... but it works, I think
 			cli;
-			const uint32_t* pNewParms = CplDesktopGetThemeBasedOnID(pData, pData->m_SelectedTheme);
+			const uint32_t* pNewParms = CplColorsGetThemeBasedOnID(pData, pData->m_SelectedTheme);
 			
 			uint32_t* pParms = GetThemingParameters();
 			uint32_t ParmsBackup[P_THEME_PARM_COUNT];
@@ -129,10 +129,10 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			memcpy(ParmsBackup, pParms, sizeof ParmsBackup);
 			memcpy(pParms, pNewParms, sizeof ParmsBackup);
 			
-			int y = DESKTOP_POPUP_HEITE - 40 - 150 - 20;
+			int y = COLORS_POPUP_HEITE - 40 - 150 - 20;
 			
 			Rectangle r;
-			RECT (r, 10, y+3+10, DESKTOP_POPUP_WIDTH-20, 150);
+			RECT (r, 10, y+3+10, COLORS_POPUP_WIDTH-20, 150);
 			
 			DrawEdge(r, DRE_SUNKEN | DRE_FILLED, pData->m_BgColor);
 			
@@ -161,10 +161,10 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 		}
 		case EVENT_CREATE:
 		{
-			pWindow->m_iconID = ICON_DESKTOP;//TODO
-			CplDesktopData * pData = 
-			pWindow->m_data = MmAllocate(sizeof(CplDesktopData));
-			memset(pWindow->m_data, 0, sizeof(CplDesktopData));
+			pWindow->m_iconID = ICON_HAND;//TODO: ICON_CRAYONS
+			CplColorsData * pData = 
+			pWindow->m_data = MmAllocate(sizeof(CplColorsData));
+			memset(pWindow->m_data, 0, sizeof(CplColorsData));
 			
 			pData->m_SelectedTheme = -1;
 			pData->m_SelectedParm  = P_BLACK;
@@ -173,43 +173,43 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			
 			//add a button
 			Rectangle r;
-			RECT(r,10, 15, DESKTOP_POPUP_WIDTH - 150, 15);
-			AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", DESKTOP_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
-			RECT(r,DESKTOP_POPUP_WIDTH-80, 10, 70, 20);
-			AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", DESKTOP_CHANGE_BACKGD, 0, 0);
-			RECT(r,10, 35, DESKTOP_POPUP_WIDTH - 20, 15);
-			AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", DESKTOP_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
-			RECT(r,10, 55, DESKTOP_POPUP_WIDTH - 20, 15);
-			AddControl(pWindow, CONTROL_CHECKBOX, r, "Make buttons glow when hovering over them", DESKTOP_GLOW_ON_HOVER, g_GlowOnHover, 0);
-			RECT(r,10, 75, DESKTOP_POPUP_WIDTH - 20, 15);
-			AddControl(pWindow, CONTROL_CHECKBOX, r, "Make task bar buttons compact", DESKTOP_TASKBAR_COMPACT, g_TaskListCompact, 0);
+			RECT(r,10, 15, COLORS_POPUP_WIDTH - 150, 15);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Solid color background", COLORS_ENABLE_BACKGD, g_BackgroundSolidColorActive, 0);
+			RECT(r,COLORS_POPUP_WIDTH-80, 10, 70, 20);
+			AddControl(pWindow, CONTROL_BUTTON,   r, "Change...", COLORS_CHANGE_BACKGD, 0, 0);
+			RECT(r,10, 35, COLORS_POPUP_WIDTH - 20, 15);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Show window contents while moving", COLORS_SHOW_WINDOW_CONTENTS, g_RenderWindowContents, 0);
+			RECT(r,10, 55, COLORS_POPUP_WIDTH - 20, 15);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Make buttons glow when hovering over them", COLORS_GLOW_ON_HOVER, g_GlowOnHover, 0);
+			RECT(r,10, 75, COLORS_POPUP_WIDTH - 20, 15);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Make task bar buttons compact", COLORS_TASKBAR_COMPACT, g_TaskListCompact, 0);
 			
-			RECT(r, 10, 100, DESKTOP_POPUP_WIDTH - 20, 20);
-			AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", DESKTOP_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
+			RECT(r, 10, 100, COLORS_POPUP_WIDTH - 20, 20);
+			AddControl(pWindow, CONTROL_TEXTCENTER, r, "Choose a default theme:", COLORS_CHOOSETHEMETEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
 			
-			RECT(r, 10, 120, DESKTOP_POPUP_WIDTH - 20, 20);
-			AddControl(pWindow, CONTROL_COMBOBOX, r, NULL, DESKTOP_THEMECOMBO, 0, 0);
+			RECT(r, 10, 120, COLORS_POPUP_WIDTH - 20, 20);
+			AddControl(pWindow, CONTROL_COMBOBOX, r, NULL, COLORS_THEMECOMBO, 0, 0);
 			
 			for (int i = TH_DEFAULT; i < TH_MAX; i++)
 			{
-				ComboBoxAddItem(pWindow, DESKTOP_THEMECOMBO, GetThemeName(i), i, 0);
+				ComboBoxAddItem(pWindow, COLORS_THEMECOMBO, GetThemeName(i), i, 0);
 			}
 			
-			RECT(r, 5, 150, DESKTOP_POPUP_WIDTH - 10, DESKTOP_POPUP_HEITE - 40 - 150 - 180);
-			AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Custom Color Scheme", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
+			RECT(r, 5, 150, COLORS_POPUP_WIDTH - 10, COLORS_POPUP_HEITE - 40 - 150 - 180);
+			AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Custom Color Scheme", COLORS_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 			
-			RECT(r, 5, DESKTOP_POPUP_HEITE - 40 - 170, DESKTOP_POPUP_WIDTH - 10, 170);
-			AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Preview", DESKTOP_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
+			RECT(r, 5, COLORS_POPUP_HEITE - 40 - 170, COLORS_POPUP_WIDTH - 10, 170);
+			AddControl(pWindow, CONTROL_SURROUND_RECT, r, "Preview", COLORS_ORMAKEYOUROWNTEXT, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED);
 			
-			RECT(r, 10, 165, DESKTOP_POPUP_WIDTH - 20, 20);
-			AddControl(pWindow, CONTROL_COMBOBOX, r, NULL, DESKTOP_COLORCOMBO, 0, 0);
+			RECT(r, 10, 165, COLORS_POPUP_WIDTH - 20, 20);
+			AddControl(pWindow, CONTROL_COMBOBOX, r, NULL, COLORS_COLORCOMBO, 0, 0);
 			
-			RECT(r,(DESKTOP_POPUP_WIDTH-230)/2, DESKTOP_POPUP_HEITE - 30,70,20);
-			AddControl(pWindow, CONTROL_BUTTON, r, "OK",     DESKTOP_OK, 0, 0);
-			RECT(r,(DESKTOP_POPUP_WIDTH-230)/2+80, DESKTOP_POPUP_HEITE - 30 ,70,20);
-			AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", DESKTOP_CANCEL, 0, 0);
-			RECT(r,(DESKTOP_POPUP_WIDTH-230)/2+160, DESKTOP_POPUP_HEITE - 30 ,70,20);
-			AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  DESKTOP_APPLY_CHANGES, 0, 0);
+			RECT(r,(COLORS_POPUP_WIDTH-230)/2, COLORS_POPUP_HEITE - 30,70,20);
+			AddControl(pWindow, CONTROL_BUTTON, r, "OK",     COLORS_OK, 0, 0);
+			RECT(r,(COLORS_POPUP_WIDTH-230)/2+80, COLORS_POPUP_HEITE - 30 ,70,20);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Cancel", COLORS_CANCEL, 0, 0);
+			RECT(r,(COLORS_POPUP_WIDTH-230)/2+160, COLORS_POPUP_HEITE - 30 ,70,20);
+			AddControl(pWindow, CONTROL_BUTTON, r, "Apply",  COLORS_APPLY_CHANGES, 0, 0);
 			
 			static struct {
 				const char* m_name;
@@ -252,7 +252,7 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 			
 			for (size_t i = 0; i < ARRAY_COUNT(s_ColorComboItems); i++)
 			{
-				ComboBoxAddItem(pWindow, DESKTOP_COLORCOMBO, s_ColorComboItems[i].m_name, s_ColorComboItems[i].m_id, 0);
+				ComboBoxAddItem(pWindow, COLORS_COLORCOMBO, s_ColorComboItems[i].m_name, s_ColorComboItems[i].m_id, 0);
 			}
 			
 			// In the 'custom color scheme' rect, add three scroll bars that adjust the R, G, B components of the current color.
@@ -266,33 +266,33 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 				int y = 190 + height * i;
 				
 				RECT(r, x, y, 15, height);
-				AddControl(pWindow, CONTROL_TEXTCENTER, r, s_ColorComponentText[i], DESKTOP_R_TEXT + i, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
+				AddControl(pWindow, CONTROL_TEXTCENTER, r, s_ColorComponentText[i], COLORS_R_TEXT + i, WINDOW_TEXT_COLOR, TEXTSTYLE_VCENTERED);
 				
-				RECT(r, x + 10, y + (height - SCROLL_BAR_WIDTH) / 2, DESKTOP_POPUP_WIDTH - 10 - x - 10, SCROLL_BAR_WIDTH);
-				AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, DESKTOP_R_BAR + i, 256, 0);
+				RECT(r, x + 10, y + (height - SCROLL_BAR_WIDTH) / 2, COLORS_POPUP_WIDTH - 10 - x - 10, SCROLL_BAR_WIDTH);
+				AddControl(pWindow, CONTROL_HSCROLLBAR, r, NULL, COLORS_R_BAR + i, 256, 0);
 			}
 			
 			break;
 		}
 		case EVENT_COMBOSELCHANGED:
 		{
-			CplDesktopData* pData = CplDesktopGetData(pWindow);
+			CplColorsData* pData = CplColorsGetData(pWindow);
 			
-			if (parm1 == DESKTOP_THEMECOMBO)
+			if (parm1 == COLORS_THEMECOMBO)
 			{
-				int item = ComboBoxGetSelectedItemID(pWindow, DESKTOP_THEMECOMBO);
+				int item = ComboBoxGetSelectedItemID(pWindow, COLORS_THEMECOMBO);
 				
 				if (pData->m_SelectedTheme != item)
 				{
 					pData->m_SelectedTheme = item;
 					pData->m_BgColor = GetThemeParms(item)[P_BACKGROUND_COLOR];
 					
-					CplDesktopWndProc(pWindow, EVENT_PAINT, 0, 0);
+					CplColorsWndProc(pWindow, EVENT_PAINT, 0, 0);
 				}
 			}
-			else if (parm1 == DESKTOP_COLORCOMBO)
+			else if (parm1 == COLORS_COLORCOMBO)
 			{
-				int selectedItem = ComboBoxGetSelectedItemID(pWindow, DESKTOP_COLORCOMBO);
+				int selectedItem = ComboBoxGetSelectedItemID(pWindow, COLORS_COLORCOMBO);
 				
 				if (pData->m_SelectedParm == P_BLACK)
 				{
@@ -300,7 +300,7 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 					if (pData->m_SelectedTheme != -2)
 					{
 						// copy the parameters from the selected theme over
-						const uint32_t* pThm = CplDesktopGetThemeBasedOnID(pData, pData->m_SelectedTheme);
+						const uint32_t* pThm = CplColorsGetThemeBasedOnID(pData, pData->m_SelectedTheme);
 						
 						memcpy(pData->m_CustomParms, pThm, sizeof pData->m_CustomParms);
 						
@@ -311,43 +311,43 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 				else if (pData->m_SelectedParm != selectedItem)
 				{
 					// commit the change
-					pData->m_CustomParms[pData->m_SelectedParm] = CplDesktopGetScrollBarColor(pWindow);
+					pData->m_CustomParms[pData->m_SelectedParm] = CplColorsGetScrollBarColor(pWindow);
 				}
 				
 				// set the new selected parm
 				pData->m_SelectedParm = selectedItem;
 				
 				// load the color in
-				CplDesktopSetScrollBarColor(pWindow, pData->m_CustomParms[pData->m_SelectedParm]);
+				CplColorsSetScrollBarColor(pWindow, pData->m_CustomParms[pData->m_SelectedParm]);
 			}
 			
 			break;
 		}
 		case EVENT_SCROLLDONE:
 		{
-			CplDesktopData* pData = CplDesktopGetData(pWindow);
+			CplColorsData* pData = CplColorsGetData(pWindow);
 			
 			if (pData->m_SelectedTheme < -1)
 			{
-				pData->m_CustomParms[pData->m_SelectedParm] = CplDesktopGetScrollBarColor(pWindow);
+				pData->m_CustomParms[pData->m_SelectedParm] = CplColorsGetScrollBarColor(pWindow);
 				
-				CplDesktopWndProc(pWindow, EVENT_PAINT, 0, 0);
+				CplColorsWndProc(pWindow, EVENT_PAINT, 0, 0);
 			}
 			
 			break;
 		}
 		case EVENT_CHECKBOX:
 		{
-			CplDesktopData* pData = CplDesktopGetData(pWindow);
+			CplColorsData* pData = CplColorsGetData(pWindow);
 			
-			pData->m_BgIsSolid = CheckboxGetChecked(pWindow, DESKTOP_ENABLE_BACKGD);
+			pData->m_BgIsSolid = CheckboxGetChecked(pWindow, COLORS_ENABLE_BACKGD);
 			
 			break;
 		}
 		case EVENT_COMMAND:
 		{
-			CplDesktopData* pData = CplDesktopGetData(pWindow);
-			if (parm1 == DESKTOP_CHANGE_BACKGD)
+			CplColorsData* pData = CplColorsGetData(pWindow);
+			if (parm1 == COLORS_CHANGE_BACKGD)
 			{
 				uint32_t data = ColorInputBox(pWindow, "Choose a new background color:", "Background color");
 				if (data != TRANSPARENT)
@@ -355,20 +355,20 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 					//SetThemingParameter(P_BACKGROUND_COLOR, data & 0xffffff);
 					pData->m_BgColor = data & 0xFFFFFF;
 					
-					CplDesktopWndProc(pWindow, EVENT_PAINT, 0, 0);
+					CplColorsWndProc(pWindow, EVENT_PAINT, 0, 0);
 				}
 				break;
 			}
-			else if (parm1 == DESKTOP_APPLY_CHANGES || parm1 == DESKTOP_OK)
+			else if (parm1 == COLORS_APPLY_CHANGES || parm1 == COLORS_OK)
 			{
 				bool bBgChanged = (g_BackgroundSolidColorActive != pData->m_BgIsSolid) || (GetThemingParameter(P_BACKGROUND_COLOR) != pData->m_BgColor);
 				
 				g_BackgroundSolidColorActive = pData->m_BgIsSolid;
-				g_RenderWindowContents       = CheckboxGetChecked(pWindow, DESKTOP_SHOW_WINDOW_CONTENTS);
-				g_GlowOnHover                = CheckboxGetChecked(pWindow, DESKTOP_GLOW_ON_HOVER);
-				g_TaskListCompact            = CheckboxGetChecked(pWindow, DESKTOP_TASKBAR_COMPACT);
+				g_RenderWindowContents       = CheckboxGetChecked(pWindow, COLORS_SHOW_WINDOW_CONTENTS);
+				g_GlowOnHover                = CheckboxGetChecked(pWindow, COLORS_GLOW_ON_HOVER);
+				g_TaskListCompact            = CheckboxGetChecked(pWindow, COLORS_TASKBAR_COMPACT);
 				
-				int item = pData->m_SelectedTheme;//ComboBoxGetSelectedItemID(pWindow, DESKTOP_THEMECOMBO);
+				int item = pData->m_SelectedTheme;//ComboBoxGetSelectedItemID(pWindow, COLORS_THEMECOMBO);
 				
 				bool bRefresh = true;
 				if (item != -1 && WouldThemeChange(item))
@@ -402,7 +402,7 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 				RefreshEverything();
 			}
 			
-			if (parm1 == DESKTOP_OK || parm1 == DESKTOP_CANCEL)
+			if (parm1 == COLORS_OK || parm1 == COLORS_CANCEL)
 				DestroyWindow(pWindow);
 			
 			break;
@@ -413,16 +413,16 @@ void CALLBACK CplDesktopWndProc(Window* pWindow, int messageType, int parm1, int
 	}
 }
 
-void CplDesktop(Window* pWindow)
+void CplColors(Window* pWindow)
 {
 	PopupWindow(
 		pWindow,
-		"Desktop",
+		"Colors",
 		pWindow->m_rect.left + 50,
 		pWindow->m_rect.top  + 50,
-		DESKTOP_POPUP_WIDTH,
-		DESKTOP_POPUP_HEITE,
-		CplDesktopWndProc,
+		COLORS_POPUP_WIDTH,
+		COLORS_POPUP_HEITE,
+		CplColorsWndProc,
 		WF_NOMINIMZ
 	);
 }

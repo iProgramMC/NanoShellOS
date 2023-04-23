@@ -14,7 +14,7 @@
 
 void CplMouse   (Window* pWindow);
 void CplDisplay (Window* pWindow);
-void CplDesktop (Window* pWindow);
+void CplColors  (Window* pWindow);
 void CplTaskbar (Window* pWindow);
 void CplTerminal(Window* pWindow);
 void CplKeyboard(Window* pWindow);
@@ -67,9 +67,9 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Display",             ICON_ADAPTER);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Keyboard",            ICON_KEYBOARD);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Mouse",               ICON_MOUSE);
-			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_DESKTOP);
+			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Colors",              ICON_HAND); // ICON_CRAYONS?
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Terminal settings",   ICON_COMMAND);
-			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Launcher",            ICON_HOME);
+			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_HOME);
 			/*
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Environment Paths",   ICON_DIRECTIONS);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Permissions",         ICON_RESTRICTED);
@@ -109,7 +109,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 						CplMouse(pWindow);
 						break;
 					case 3:
-						CplDesktop(pWindow);
+						CplColors(pWindow);
 						break;
 					case 4:
 						CplTerminal(pWindow);
