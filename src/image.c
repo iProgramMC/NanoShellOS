@@ -136,6 +136,12 @@ Image *LoadTarga (void* pTgaData, int *error)
 	uint32_t* fb = (uint32_t*)(&pImage[1]);
 	pImage->framebuffer = fb;//Get the pointer to data after the image struct.
 	
+	int width  = pStruct->width;
+	int height = pStruct->height;
+	int imageBpp = pStruct->imageBpp;
+	
+	bool bRightSideUp = (pStruct->pixelType & (1 << 5));
+	
 	uint8_t* dataPtr = (uint8_t*)pTgaData + 18;
 	
 	switch (pStruct->encoding)
@@ -143,22 +149,22 @@ Image *LoadTarga (void* pTgaData, int *error)
 		//TODO: more
 		case TGA_UNCOMPRESSED: // 2
 		{
-			if ((pStruct->imageBpp != 24 && pStruct->imageBpp != 32))
+			if ((imageBpp != 24 && imageBpp != 32))
 			{
 				*error = BMPERR_BAD_BPP;
 				MmFree(pImage);
 				return NULL;
 			}
-			for (int i = 0, y = 0; y < pStruct->height; y++)
+			for (int i = 0, y = 0; y < height; y++)
 			{
-				int lineOffset = (pStruct->y ? y : (pStruct->height - y - 1)) * pStruct->width * (pStruct->imageBpp >> 3);
-				for (int x = 0; x < pStruct->width; x++)
+				int lineOffset = (bRightSideUp ? y : (height - y - 1)) * width * (imageBpp >> 3);
+				for (int x = 0; x < width; x++)
 				{
-					fb[i++] = ((pStruct->imageBpp == 32 ? (255 - dataPtr[lineOffset + 3]) : 0x00) << 24) + 
+					fb[i++] = ((imageBpp == 32 ? (255 - dataPtr[lineOffset + 3]) : 0x00) << 24) + 
 							  (dataPtr[lineOffset + 2] << 16) + 
 							  (dataPtr[lineOffset + 1] << 8) +
 							  (dataPtr[lineOffset]);
-					lineOffset += pStruct->imageBpp >> 3;
+					lineOffset += imageBpp >> 3;
 				}
 			}
 			
@@ -166,16 +172,16 @@ Image *LoadTarga (void* pTgaData, int *error)
 		}
 		case TGA_UNCOMPRESSED_GRAYSCALE: // 3
 		{
-			if (pStruct->imageBpp != 8)
+			if (imageBpp != 8)
 			{
 				*error = BMPERR_BAD_BPP;
 				MmFree(pImage);
 				return NULL;
 			}
-			for (int i = 0, y = 0; y < pStruct->height; y++)
+			for (int i = 0, y = 0; y < height; y++)
 			{
-				int lineOffset = (pStruct->y ? y : (pStruct->height - y - 1)) * pStruct->width;
-				for (int x = 0; x < pStruct->width; x++)
+				int lineOffset = (bRightSideUp ? y : (height - y - 1)) * width;
+				for (int x = 0; x < width; x++)
 				{
 					const uint8_t b = dataPtr[lineOffset];
 					fb[i++] = (b << 16) | (b << 8) | b;
@@ -195,14 +201,14 @@ Image *LoadTarga (void* pTgaData, int *error)
 				MmFree(pImage);
 				return NULL;
 			}
-			if (pStruct->imageBpp != 24 && pStruct->imageBpp != 32)
+			if (imageBpp != 24 && imageBpp != 32)
 			{
 				*error = BMPERR_BAD_BPP;
 				MmFree(pImage);
 				return NULL;
 			}
             int y = 0, i = 0;
-            for (int x = 0; x < pStruct->width * pStruct->height; )
+            for (int x = 0; x < width * height; )
 			{
                 int k = dataPtr[byteOffset++];
                 if (k > 127)
@@ -210,33 +216,33 @@ Image *LoadTarga (void* pTgaData, int *error)
                     k -= 127; x += k;
                     while (k--)
 					{
-                        if (i % pStruct->width == 0)
+                        if (i % width == 0)
 						{
-							i = ((pStruct->y ? y : pStruct->height - y - 1) * pStruct->width);
+							i = ((bRightSideUp ? y : (height - y - 1)) * width);
 							y++;
 						}
-						fb[i++] = ((pStruct->imageBpp == 32 ? dataPtr[byteOffset + 3] : 0xFF) << 24) + 
+						fb[i++] = ((imageBpp == 32 ? dataPtr[byteOffset + 3] : 0xFF) << 24) + 
 								  (dataPtr[byteOffset + 2] << 16) + 
 								  (dataPtr[byteOffset + 1] << 8) +
 								  (dataPtr[byteOffset]);
                     }
-                    byteOffset += pStruct->imageBpp >> 3;
+                    byteOffset += imageBpp >> 3;
                 }
 				else
 				{
                     k++; x += k;
                     while (k--)
 					{
-                        if (i % pStruct->width == 0)
+                        if (i % width == 0)
 						{
-							i = ((pStruct->y ? y : pStruct->height - y - 1) * pStruct->width);
+							i = ((bRightSideUp ? y : (height - y - 1)) * width);
 							y++;
 						}
-						fb[i++] = ((pStruct->imageBpp == 32 ? dataPtr[byteOffset + 3] : 0xFF) << 24) + 
+						fb[i++] = ((imageBpp == 32 ? dataPtr[byteOffset + 3] : 0xFF) << 24) + 
 								  (dataPtr[byteOffset + 2] << 16) + 
 								  (dataPtr[byteOffset + 1] << 8) +
 								  (dataPtr[byteOffset]);
-                        byteOffset += pStruct->imageBpp >> 3;
+                        byteOffset += imageBpp >> 3;
                     }
                 }
             }
