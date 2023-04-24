@@ -161,7 +161,7 @@ void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, int parm1, int 
 		}
 		case EVENT_CREATE:
 		{
-			pWindow->m_iconID = ICON_HAND;//TODO: ICON_CRAYONS
+			pWindow->m_iconID = ICON_CRAYONS;//TODO: ICON_CRAYONS
 			CplColorsData * pData = 
 			pWindow->m_data = MmAllocate(sizeof(CplColorsData));
 			memset(pWindow->m_data, 0, sizeof(CplColorsData));

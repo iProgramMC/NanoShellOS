@@ -553,12 +553,15 @@ void TaskbarRemoveControls(Window *pWindow)
 	}
 }
 
-void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs)
+extern bool g_TaskListCompact;
+
+void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList)
 {
-	if (bShowDate != g_bShowDate || bShowTimeSecs != g_bShowTimeSeconds)
+	if (bShowDate != g_bShowDate || bShowTimeSecs != g_bShowTimeSeconds || bCompactTaskList != g_TaskListCompact)
 	{
-		g_bShowDate = bShowDate;
+		g_bShowDate        = bShowDate;
 		g_bShowTimeSeconds = bShowTimeSecs;
+		g_TaskListCompact  = bCompactTaskList;
 		WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE_TASKBAR_CTLS, 0, 0);
 	}
 }

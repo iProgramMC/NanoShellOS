@@ -67,7 +67,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Display",             ICON_ADAPTER);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Keyboard",            ICON_KEYBOARD);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Mouse",               ICON_MOUSE);
-			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Colors",              ICON_HAND); // ICON_CRAYONS?
+			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Colors",              ICON_CRAYONS); // ICON_CRAYONS?
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Terminal settings",   ICON_COMMAND);
 			AddElementToList(pWindow, CONTPNL_LISTVIEW, "Desktop",             ICON_HOME);
 			/*

@@ -57,7 +57,7 @@ Tooltip;
 typedef struct
 {
 	char m_text[61];
-	char m_resourceID[31];
+	char m_resourceID[127];
 	int  m_icon;
 	bool m_addToQuickLaunch;
 }

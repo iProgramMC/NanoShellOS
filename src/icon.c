@@ -255,6 +255,16 @@ typedef uint32_t IconColor;
 #include <icons/snap_dr.h>
 #include <icons/taskbar_popout.h>
 #include <icons/taskbar_dock.h>
+// Icons V2.0
+#include <icons/chess.h>
+#include <icons/chess16.h>
+#include <icons/crayons.h>
+#include <icons/crayons16.h>
+#include <icons/setting_hover_glow.h>
+#include <icons/setting_tb_show_date.h>
+#include <icons/setting_tb_show_secs.h>
+#include <icons/setting_window_drag.h>
+#include <icons/setting_solid_bg.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -483,6 +493,15 @@ Image * g_iconTable[] = {
 	&g_snap_dr_icon,
 	&g_taskbar_popout_icon,
 	&g_taskbar_dock_icon,
+	&g_chess_icon,
+	&g_chess16_icon,
+	&g_crayons_icon,
+	&g_crayons16_icon,
+	&g_hover_glow_icon,
+	&g_tb_show_date_icon,
+	&g_tb_show_secs_icon,
+	&g_window_drag_icon,
+	&g_solid_bg_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -564,6 +583,8 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(PACKAGER)
 			CASE(FOLDER_SETTINGS)
 			CASE(PIPE)
+			CASE(CHESS)
+			CASE(CRAYONS)
 			#undef CASE
 		}
 	}
