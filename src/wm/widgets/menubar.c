@@ -52,7 +52,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			
 			if (pData->m_root.m_childrenArray)
 			{
-				int current_x = 8;
+				int current_x = 0;
 				for (int i = 0; i < pData->m_root.m_childrenCount; i++)
 				{
 					int width, height;
@@ -97,7 +97,7 @@ bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED in
 			// if we already have a menu open, don't open another
 			if (pWindow->m_privFlags & WPF_OPENMENU) break;
 			
-			int  current_x = 8;
+			int  current_x = 0;
 			bool needsUpdate = false;
 			for (int i = 0; i < pData->m_root.m_childrenCount; i++)
 			{
