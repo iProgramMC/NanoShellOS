@@ -18,6 +18,15 @@
 
 typedef enum
 {
+	CASTLE_NONE,
+	CASTLE_KINGSIDE,
+	CASTLE_QUEENSIDE,
+	CASTLE_TYPES,
+}
+eCastleType;
+
+typedef enum
+{
 	PIECE_NONE,
 	PIECE_PAWN,
 	PIECE_KING,
@@ -38,6 +47,7 @@ typedef enum
 	ERROR_MOVE_ILLEGAL,
 	ERROR_MOVE_WOULD_PUT_US_IN_CHECK,
 	ERROR_OUT_OF_BOUNDS,
+	ERROR_CANT_OVERWRITE_HISTORY,
 	
 	ERROR_STALEMATE = 1000,
 	ERROR_CHECKMATE,
@@ -76,23 +86,58 @@ typedef struct
 }
 BoardPos;
 
+typedef struct
+{
+	bool m_bCastleAllowed[CASTLE_TYPES];
+	
+	BoardPiece m_Captures[BOARD_SIZE * BOARD_SIZE];
+	int m_nCaptures;
+	
+	int m_nEnPassantColumn;
+	
+	bool m_bKingInCheck;
+	
+	BoardPos m_KingPos;
+}
+PlayerState;
+
+typedef struct
+{
+	PlayerState m_PlayerState[NPLAYERS];
+	
+	BoardPiece m_Pieces[BOARD_SIZE][BOARD_SIZE];
+	
+	// the current player's turn
+	eColor m_Player;
+}
+BoardState;
+
+extern BoardState* g_CurrentState;
+
+
 extern BoardPiece g_pieces[BOARD_SIZE][BOARD_SIZE];
 extern Window* g_pWindow;
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst);
 
 // Check if a color is in checkmate or stalemate.
-eMateType ChessCheckmateOrStalemate(eColor color);
+eMateType ChessCheckmateOrStalemate(BoardState* pState, eColor color);
 
 void PaintTile(int row, int column);
-void SetPiece(int row, int column, ePiece pc, eColor col);
-BoardPiece* GetPiece(int row, int column);
+void SetPiece(BoardState* pState, int row, int column, ePiece pc, eColor col);
+BoardPiece* GetPiece(BoardState* pState, int row, int column);
 
 void FlashTile(int row, int column);
+
+void ResetGame();
 
 eColor GetNextPlayer(eColor curPlr);
 
 void ChessAddMoveToUI(const char* moveList);
 void ChessClearGUI();
+
+void SetupBoard(BoardState* pState);
+
+int ChessMessageBox(const char* text, const char* caption, int flags);
 
 #endif//CHESS_H

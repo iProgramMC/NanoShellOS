@@ -20,6 +20,8 @@
 Window* g_pWindow;
 int g_BoardX = 0, g_BoardY = TOP_BAR_HEIGHT;
 
+extern BoardState* g_CurrentState;
+
 // note: The row number is flipped, so 1 is the bottom-most row.
 
 Image* g_pPieceImages[14];
@@ -52,9 +54,6 @@ void DrawFrameAroundBoard()
 		VidDrawVLine(BUTTON_HILITE_COLOR, rect.top, rect.bottom, rect.right);
 	}
 }
-
-// white gets the first turn every time
-eColor g_playingPlayer = WHITE;
 
 void GetBoardCoords(int mouseX, int mouseY, int * boardRow, int * boardCol)
 {
@@ -134,7 +133,7 @@ void PaintTile(int row, int column)
 	
 	VidFillRectangle(bc, rect);
 	
-	BoardPiece* pPiece = GetPiece(row, column);
+	BoardPiece* pPiece = GetPiece(g_CurrentState, row, column);
 	
 	Image* pImg = GetPieceImage(pPiece->piece, pPiece->color);
 	
@@ -179,7 +178,7 @@ void PaintBoard()
 	}
 }
 
-void SetupBoard();
+void SetupBoard(BoardState* pState);
 
 // Mouse.
 bool g_bDragging = false;
@@ -194,7 +193,7 @@ void ChessStartDrag(int x, int y)
 	int boardRow = -1, boardCol = -1;
 	GetBoardCoords(x, y, &boardRow, &boardCol);
 	
-	BoardPiece* pPc = GetPiece(boardRow, boardCol);
+	BoardPiece* pPc = GetPiece(g_CurrentState, boardRow, boardCol);
 	if (!pPc) return;
 	
 	if (pPc->piece == PIECE_NONE)
@@ -256,7 +255,8 @@ void ChessOnGameEnd(eErrorCode errCode, eColor col)
 				MB_YESNO | ICON_TROPHY << 16
 			) == MBID_YES)
 			{
-				SetupBoard();
+				//SetupBoard(g_CurrentState);
+				ResetGame();
 				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
 			}
 			
@@ -271,7 +271,7 @@ void ChessOnGameEnd(eErrorCode errCode, eColor col)
 				MB_YESNO | ICON_SCALE << 16
 			) == MBID_YES)
 			{
-				SetupBoard();
+				ResetGame();
 				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
 			}
 			break;
@@ -288,7 +288,7 @@ void ChessOnGameEnd(eErrorCode errCode, eColor col)
 				MB_YESNO | ICON_TROPHY << 16
 			) == MBID_YES)
 			{
-				SetupBoard();
+				ResetGame();
 				RegisterEvent(g_pWindow, EVENT_PAINT, 0, 0);
 			}
 			
@@ -314,7 +314,7 @@ void ChessReleaseCursor(int x, int y)
 		int boardRow = -1, boardCol = -1;
 		GetBoardCoords(x, y, &boardRow, &boardCol);
 		
-		BoardPiece* pPc = GetPiece(g_DraggedPieceRow, g_DraggedPieceCol);
+		BoardPiece* pPc = GetPiece(g_CurrentState, g_DraggedPieceRow, g_DraggedPieceCol);
 		if (pPc)
 		{
 			eColor col = pPc->color;
@@ -349,7 +349,7 @@ void ChessReleaseCursor(int x, int y)
 void UpdatePlayerTurn()
 {
 	char buffer[100];
-	sprintf(buffer, "It's %s's turn", GetPlayerName(g_playingPlayer));
+	sprintf(buffer, "It's %s's turn", GetPlayerName(g_CurrentState->m_Player));
 	SetLabelText(g_pWindow, CHESS_TURN_LABEL, buffer);
 	CallControlCallback(g_pWindow, CHESS_TURN_LABEL, EVENT_PAINT, 0, 0);
 }
@@ -373,7 +373,7 @@ void UpdateFlashingTiles()
 void ChessAddMoveToUI(const char* moveList)
 {
 	static char buffer[128];
-	if (g_playingPlayer == WHITE)
+	if (g_CurrentState->m_Player == WHITE)
 	{
 		snprintf(buffer, sizeof buffer, "%d. %s", ++g_nMoveNumber, moveList);
 		AddElementToList(g_pWindow, CHESS_MOVE_LIST, buffer, ICON_NULL);
@@ -418,7 +418,7 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			
 			g_BoardY = (CHESS_HEIGHT - BOARD_SIZE * PIECE_SIZE) / 2;
 			g_BoardX = LEFT_BAR_WIDTH;
-			SetupBoard();
+			ResetGame();
 			
 			Rectangle rect;
 			RECT(rect, g_BoardX, g_BoardY - 15, BOARD_SIZE * PIECE_SIZE, 10);
@@ -474,7 +474,7 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			{
 				case CHESS_RESIGN_WHITE:
 				{
-					if (g_playingPlayer != WHITE)
+					if (g_CurrentState->m_Player != WHITE)
 					{
 						MessageBox(pWindow, "You can't resign. It's not your turn!", "Chess", MB_OK | ICON_WARNING << 16);
 						break;
@@ -488,7 +488,7 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 				}
 				case CHESS_RESIGN_BLACK:
 				{
-					if (g_playingPlayer != BLACK)
+					if (g_CurrentState->m_Player != BLACK)
 					{
 						MessageBox(pWindow, "You can't resign. It's not your turn!", "Chess", MB_OK | ICON_WARNING << 16);
 						break;
@@ -532,4 +532,9 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 	while (HandleMessages (g_pWindow));
 	
 	return 0;
+}
+
+int ChessMessageBox(const char* text, const char* caption, int flags)
+{
+	return MessageBox(g_pWindow, text, caption, flags);
 }

@@ -7,66 +7,92 @@
 ******************************************/
 #include "chess.h"
 
-typedef enum
+BoardState* g_History;
+int g_HistorySize;
+int g_HistoryCapacity;
+
+BoardState* g_CurrentState;
+
+void InitializeHistory()
 {
-	CASTLE_NONE,
-	CASTLE_KINGSIDE,
-	CASTLE_QUEENSIDE,
-	CASTLE_TYPES,
-}
-eCastleType;
-
-bool g_bCastleAllowed[CASTLE_TYPES][NPLAYERS]; // king side = 0, queen side = 1
-
-BoardPiece g_Captures[NPLAYERS][BOARD_SIZE * BOARD_SIZE];
-int g_nCaptures[NPLAYERS];
-
-int g_nEnPassantColumn[NPLAYERS];
-
-bool g_bIsKingInCheck[NPLAYERS];
-
-BoardPos g_KingPositions[NPLAYERS];
-
-extern eColor g_playingPlayer;
-
-BoardPiece g_pieces[BOARD_SIZE][BOARD_SIZE];
-
-void AddCapture(eColor player, BoardPiece piece)
-{
-	g_Captures[player][g_nCaptures[player]++] = piece;
+	g_HistoryCapacity = 16;
+	g_HistorySize = 0;
+	g_History = calloc (sizeof(BoardState), g_HistoryCapacity);
 }
 
-BoardPiece* GetPiece(int row, int column)
+// Adds a new frame to the move history.
+// If there's nothing, set up the default state of the board.
+// Otherwise, copy the last history frame.
+void AddHistoryFrame()
+{
+	if (g_HistorySize == g_HistoryCapacity)
+	{
+		// need to expand. Realloc
+		g_History = realloc(g_History, sizeof(BoardState) * g_HistoryCapacity * 2);
+		g_HistoryCapacity *= 2;
+	}
+	
+	BoardState *pState = &g_History[g_HistorySize++];
+	
+	if (g_HistorySize > 1)
+	{
+		*pState = g_History[g_HistorySize - 2];
+	}
+	else
+	{
+		memset(pState, 0, sizeof* pState);
+		
+		// generate a fresh new state.
+		SetupBoard(pState);
+	}
+	
+	g_CurrentState = pState;
+}
+
+PlayerState* GetCurrPlayerState(eColor col)
+{
+	return &g_CurrentState->m_PlayerState[col];
+}
+
+void AddCapture(BoardState* pState, eColor player, BoardPiece piece)
+{
+	pState->m_PlayerState[player].m_Captures[pState->m_PlayerState[player].m_nCaptures++] = piece;
+}
+
+BoardPiece* GetPiece(BoardState* pState, int row, int column)
 {
 	if (row < 0 || column < 0 || row >= BOARD_SIZE || column >= BOARD_SIZE) return NULL;
-	return &g_pieces[row][column];
+	return &pState->m_Pieces[row][column];
 }
 
-void SetPiece(int row, int column, ePiece pc, eColor col)
+void SetPiece(BoardState* pState, int row, int column, ePiece pc, eColor col)
 {
-	BoardPiece* piece = GetPiece(row, column);
+	BoardPiece* piece = GetPiece(pState, row, column);
+	if (!piece) return;
+	
 	piece->piece = pc;
 	piece->color = col;
 	
 	if (pc == PIECE_KING)
 	{
 		BoardPos pos = { row, column };
-		g_KingPositions[col] = pos;
+		pState->m_PlayerState[col].m_KingPos = pos;
 	}
 	
-	PaintTile(row, column);
+	if (g_CurrentState == pState)
+		PaintTile(row, column);
 }
 
 BoardPiece g_emptyPiece;
 
 // Returns a piece with an optional ignorable piece, and never returns NULL.
-BoardPiece* GetPieceIgnore(int row, int col, int rowIgn, int colIgn)
+BoardPiece* GetPieceIgnore(BoardState* pState, int row, int col, int rowIgn, int colIgn)
 {
 	if (row == rowIgn && col == colIgn) return &g_emptyPiece;
 	
 	if (row < 0 || col < 0 || row >= BOARD_SIZE || col >= BOARD_SIZE) return &g_emptyPiece;
 	
-	return &g_pieces[row][col];
+	return &pState->m_Pieces[row][col];
 }
 
 int GetHomeRow(eColor col)
@@ -81,7 +107,7 @@ int Normalize(int x)
 }
 
 // note: this 'ray shooting' only works in 8 directions, and is only intended for ChessCheckLegalBasedOnRank.
-bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
+bool ChessShootRay(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst)
 {
 	int absRowDiff = abs(rowDst - rowSrc);
 	int absColDiff = abs(colDst - colSrc);
@@ -101,14 +127,13 @@ bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
 		// if we have reached the piece we're in:
 		if (rowCur == rowDst && colCur == colDst) return true;
 		
-		BoardPiece * pPiece = GetPiece(rowCur, colCur);
+		BoardPiece * pPiece = GetPiece(pState, rowCur, colCur);
 		
 		//LogMsg("checking piece: %c%d %c%d  %d  %d", colCur+'a', rowCur+1, colSrc+'a', rowSrc+1, rowDiffUnit, colDiffUnit);
 		
 		// we're OOB. seems like we overshot or something
 		if (!pPiece)
 		{
-			LogMsg("oob");
 			return false;
 		}
 		
@@ -126,14 +151,14 @@ bool ChessShootRay(int rowSrc, int colSrc, int rowDst, int colDst)
 	return false;
 }
 
-bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles);
+bool ChessIsBeingThreatened(BoardState* pState, int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles);
 
-bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* pCastleTypeOut, bool* bWouldDoEP)
+bool ChessCheckLegalBasedOnRank(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* pCastleTypeOut, bool* bWouldDoEP)
 {
 	*pCastleTypeOut = CASTLE_NONE;
 	
-	BoardPiece* pcSrc = GetPiece(rowSrc, colSrc);
-	BoardPiece* pcDst = GetPiece(rowDst, colDst);
+	BoardPiece* pcSrc = GetPiece(pState, rowSrc, colSrc);
+	BoardPiece* pcDst = GetPiece(pState, rowDst, colDst);
 	
 	int homeRow = GetHomeRow(pcSrc->color);
 	
@@ -164,7 +189,7 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 			if (colDst == colSrc)
 			{
 				// if there's a single step advance, instead of a double step, then pcDst should equal to pcInFront
-				BoardPiece* pcInFront = GetPiece(rowSrc + (pcSrc->color == WHITE ? (1) : (-1)), colSrc);
+				BoardPiece* pcInFront = GetPiece(pState, rowSrc + (pcSrc->color == WHITE ? (1) : (-1)), colSrc);
 				
 				return (pcDst->piece == PIECE_NONE && pcInFront->piece == PIECE_NONE);
 			}
@@ -177,7 +202,7 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 					for (int i = 0; i < NPLAYERS; i++)
 					{
 						if (pcSrc->color == (eColor)i) continue;
-						if (g_nEnPassantColumn[i] == colDst)
+						if (pState->m_PlayerState[i].m_nEnPassantColumn == colDst)
 						{
 							// would do en passant
 							*bWouldDoEP = true;
@@ -212,7 +237,7 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 			if (absRowDiff != absColDiff) return false;
 			
 			// shoot a 'ray' and see if we hit any pieces before this.
-			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
+			return ChessShootRay(pState, rowSrc, colSrc, rowDst, colDst);
 		}
 		// A rook must move on a row or column.
 		case PIECE_ROOK:
@@ -222,7 +247,7 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 			if (absRowDiff != 0 && absColDiff != 0) return false;
 			
 			// shoot a 'ray' and see if we hit any pieces before this.
-			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
+			return ChessShootRay(pState, rowSrc, colSrc, rowDst, colDst);
 		}
 		// A queen may move in diagonals, rows or columns.
 		case PIECE_QUEEN:
@@ -233,7 +258,7 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 			if (absRowDiff != absColDiff && absRowDiff != 0 && absColDiff != 0) return false;
 			
 			// shoot a 'ray' and see if we hit any pieces before this.
-			return ChessShootRay(rowSrc, colSrc, rowDst, colDst);
+			return ChessShootRay(pState, rowSrc, colSrc, rowDst, colDst);
 		}
 		// A king may move in any of the 8 neighboring tiles, so long as his distance is no less than 1.
 		case PIECE_KING:
@@ -259,23 +284,23 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 				
 				*pCastleTypeOut = type;
 				
-				if (!g_bCastleAllowed[type][pcSrc->color]) return false;
+				if (!pState->m_PlayerState[pcSrc->color].m_bCastleAllowed[type]) return false;
 				
 				if (type == CASTLE_QUEENSIDE)
 				{
-					BoardPiece* pPiece = GetPiece(homeRow, 0);
+					BoardPiece* pPiece = GetPiece(pState, homeRow, 0);
 					if (pPiece->piece != PIECE_ROOK || pPiece->color != pcSrc->color) // we don't have a rook to castle with
 						return false;
 					
 					for (int i = 1; i < BOARD_SIZE / 2; i++)
 					{
-						pPiece = GetPieceIgnore(homeRow, i, -1, -1);
+						pPiece = GetPieceIgnore(pState, homeRow, i, -1, -1);
 						if (pPiece->piece != PIECE_NONE) return false; // this square is blocked
 						
 						// check if this position would put us in check
 						if (i >= 2)
 						{
-							if (ChessIsBeingThreatened(homeRow, i, pcSrc->color, -1, -1, false))
+							if (ChessIsBeingThreatened(pState, homeRow, i, pcSrc->color, -1, -1, false))
 								return false;
 						}
 					}
@@ -285,19 +310,19 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 				}
 				else
 				{
-					BoardPiece* pPiece = GetPiece(homeRow, BOARD_SIZE - 1);
+					BoardPiece* pPiece = GetPiece(pState, homeRow, BOARD_SIZE - 1);
 					if (pPiece->piece != PIECE_ROOK || pPiece->color != pcSrc->color) // we don't have a rook to castle with
 						return false;
 					
 					for (int i = BOARD_SIZE / 2 + 1; i < BOARD_SIZE - 1; i++)
 					{
-						pPiece = GetPieceIgnore(homeRow, i, -1, -1);
+						pPiece = GetPieceIgnore(pState, homeRow, i, -1, -1);
 						if (pPiece->piece != PIECE_NONE) return false; // this square is blocked
 						
 						// check if this position would put us in check
 						if (i < BOARD_SIZE / 2 + 2)
 						{
-							if (ChessIsBeingThreatened(homeRow, i, pcSrc->color, -1, -1, false))
+							if (ChessIsBeingThreatened(pState, homeRow, i, pcSrc->color, -1, -1, false))
 								return false;
 						}
 					}
@@ -319,9 +344,12 @@ bool ChessCheckLegalBasedOnRank(int rowSrc, int colSrc, int rowDst, int colDst, 
 }
 
 // row, col - The position of a king
-bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles)
+bool ChessIsBeingThreatened(BoardState* pState, int row, int col, eColor color, int rowIgn, int colIgn, bool bFlashTiles)
 {
 	bool bFinalResult = false;
+	
+	if (pState != g_CurrentState)
+		bFlashTiles = false;
 	
 	int rows[8], cols[8];
 	rows[0] = row + 1, cols[0] = col - 1;
@@ -332,7 +360,7 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 	// Check for attacking pawns
 	BoardPiece* pcs[8];
 	for (int i = 0; i < 4; i++)
-		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+		pcs[i] = GetPieceIgnore(pState, rows[i], cols[i], rowIgn, colIgn);
 	
 	// king is white, so check for black pawns above
 	if (color == WHITE)
@@ -380,7 +408,7 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+			pcs[i] = GetPieceIgnore(pState, rows[i], cols[i], rowIgn, colIgn);
 			
 			// this is a different-color bishop or queen. In check
 			if ((pcs[i]->piece == PIECE_BISHOP || pcs[i]->piece == PIECE_QUEEN) && pcs[i]->color != color)
@@ -415,7 +443,7 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 	{
 		for (int i = 0; i < 4; i++)
 		{
-			pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+			pcs[i] = GetPieceIgnore(pState, rows[i], cols[i], rowIgn, colIgn);
 			
 			// this is a different-color rook or queen. In check
 			if ((pcs[i]->piece == PIECE_ROOK || pcs[i]->piece == PIECE_QUEEN) && pcs[i]->color != color)
@@ -444,7 +472,7 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 		rows[i] = row + deltaKingRow[i];
 		cols[i] = col + deltaKingCol[i];
 		
-		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+		pcs[i] = GetPieceIgnore(pState, rows[i], cols[i], rowIgn, colIgn);
 		
 		// this is a different-color rook or queen. You can't move two kings right next to each other.
 		if (pcs[i]->piece == PIECE_KING && pcs[i]->color != color)
@@ -466,7 +494,7 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 	rows[7] = row + 2, cols[7] = col - 1;
 	for (int i = 0; i < 8; i++)
 	{
-		pcs[i] = GetPieceIgnore(rows[i], cols[i], rowIgn, colIgn);
+		pcs[i] = GetPieceIgnore(pState, rows[i], cols[i], rowIgn, colIgn);
 		
 		if (pcs[i]->piece == PIECE_KNIGHT && pcs[i]->color != color)
 		{
@@ -480,13 +508,16 @@ bool ChessIsBeingThreatened(int row, int col, eColor color, int rowIgn, int colI
 	return bFinalResult;
 }
 
-eErrorCode ChessCheckMove(int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* castleType, bool * bWouldDoEP, bool bFlashTiles)
+eErrorCode ChessCheckMove(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* castleType, bool * bWouldDoEP, bool bFlashTiles)
 {
-	BoardPiece* pcSrc = GetPiece(rowSrc, colSrc);
-	BoardPiece* pcDst = GetPiece(rowDst, colDst);
+	BoardPiece* pcSrc = GetPiece(pState, rowSrc, colSrc);
+	BoardPiece* pcDst = GetPiece(pState, rowDst, colDst);
 	
 	if (!pcSrc || !pcDst)
 		return ERROR_OUT_OF_BOUNDS;
+	
+	if (pState != g_CurrentState)
+		bFlashTiles = false;
 	
 	// Check if it even makes sense to move here
 	if (pcDst->piece == PIECE_KING)
@@ -495,11 +526,11 @@ eErrorCode ChessCheckMove(int rowSrc, int colSrc, int rowDst, int colDst, eCastl
 	if (pcDst->piece != PIECE_NONE && pcDst->color == pcSrc->color)
 		return ERROR_CANNOT_MOVE_ON_SAME_COLOR;
 	
-	if (pcSrc->color != g_playingPlayer)
+	if (pcSrc->color != pState->m_Player)
 		return ERROR_NOT_YOUR_TURN;
 	
 	// Check if the move is valid, based on the rank.
-	if (!ChessCheckLegalBasedOnRank(rowSrc, colSrc, rowDst, colDst, castleType, bWouldDoEP))
+	if (!ChessCheckLegalBasedOnRank(pState, rowSrc, colSrc, rowDst, colDst, castleType, bWouldDoEP))
 		return ERROR_MOVE_ILLEGAL;
 	
 	// Check if the move would put us in check.
@@ -516,16 +547,16 @@ eErrorCode ChessCheckMove(int rowSrc, int colSrc, int rowDst, int colDst, eCastl
 		
 		*pcDst = pcSrcT;
 		
-		GetPiece(rowSrc, colSrc)->piece = PIECE_NONE;
+		GetPiece(pState, rowSrc, colSrc)->piece = PIECE_NONE;
 		
-		BoardPos pos = g_KingPositions[colr];
+		BoardPos pos = pState->m_PlayerState[colr].m_KingPos;
 		// If we're moving the king, see if _THAT_ position puts us in check
 		if (piece == PIECE_KING)
 		{
 			BoardPos pos2 = { rowDst, colDst };
 			pos = pos2;
 		}
-		bool wouldPutUsInCheck = ChessIsBeingThreatened(pos.row, pos.col, colr, -1, -1, piece == PIECE_KING);
+		bool wouldPutUsInCheck = ChessIsBeingThreatened(pState, pos.row, pos.col, colr, -1, -1, piece == PIECE_KING);
 		
 		if (piece != PIECE_KING && wouldPutUsInCheck)
 		{
@@ -544,20 +575,20 @@ eErrorCode ChessCheckMove(int rowSrc, int colSrc, int rowDst, int colDst, eCastl
 }
 
 // Check if a color is in checkmate.
-eMateType ChessCheckmateOrStalemate(eColor color)
+eMateType ChessCheckmateOrStalemate(BoardState* pState, eColor color)
 {
 	// if there's no king, it's the end of the game
-	BoardPos kingPos = g_KingPositions[color];
+	BoardPos kingPos = pState->m_PlayerState[color].m_KingPos;
 	
-	BoardPiece* pKing = GetPiece(kingPos.row, kingPos.col);
+	BoardPiece* pKing = GetPiece(pState, kingPos.row, kingPos.col);
 	bool bIsKingThreatened = false;
 	
 	if (pKing)
-		bIsKingThreatened = ChessIsBeingThreatened(kingPos.row, kingPos.col, pKing->color, -1, -1, false);
+		bIsKingThreatened = ChessIsBeingThreatened(pState, kingPos.row, kingPos.col, pKing->color, -1, -1, false);
 	
 	// set the turn as the color
-	eColor backup = g_playingPlayer;
-	g_playingPlayer = color;
+	eColor backup = pState->m_Player;
+	pState->m_Player = color;
 	
 	// check all 64*64 moves. There's only 4096 combinations to try.
 	// This doesn't scale well, since ChessCheckMove() is O(N) or something,
@@ -566,7 +597,7 @@ eMateType ChessCheckmateOrStalemate(eColor color)
 	{
 		int iCol = i % BOARD_SIZE, iRow = i / BOARD_SIZE;
 		
-		BoardPiece* pPiece = GetPiece(iRow, iCol);
+		BoardPiece* pPiece = GetPiece(pState, iRow, iCol);
 		if (pPiece->piece == PIECE_NONE) continue;
 		if (pPiece->color != color) continue;
 		
@@ -583,24 +614,24 @@ eMateType ChessCheckmateOrStalemate(eColor color)
 			
 			UNUSED eCastleType castleType;
 			UNUSED bool bEnPassant;
-			if (ChessCheckMove(iRow, iCol, jRow, jCol, &castleType, &bEnPassant, false) == ERROR_SUCCESS)
+			if (ChessCheckMove(pState, iRow, iCol, jRow, jCol, &castleType, &bEnPassant, false) == ERROR_SUCCESS)
 			{
 				//LogMsg("Move from %c%d to %c%d works", iCol+'a', iRow+1, jCol+'a', jRow+1);
-				g_playingPlayer = backup;
+				pState->m_Player = backup;
 				return MATE_NONE;
 			}
 		}
 	}
 	
-	g_playingPlayer = backup;
+	pState->m_Player = backup;
 	
 	return bIsKingThreatened ? MATE_CHECK : MATE_STALE;
 }
 
-void ChessPerformMoveUnchecked(int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool * pbCapture, bool bEnPassant)
+void ChessPerformMoveUnchecked(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool * pbCapture, bool bEnPassant)
 {
-	BoardPiece* pcSrc = GetPiece(rowSrc, colSrc);
-	BoardPiece* pcDst = GetPiece(rowDst, colDst);
+	BoardPiece* pcSrc = GetPiece(pState, rowSrc, colSrc);
+	BoardPiece* pcDst = GetPiece(pState, rowDst, colDst);
 	
 	eColor col = pcSrc->color;
 	
@@ -619,36 +650,36 @@ void ChessPerformMoveUnchecked(int rowSrc, int colSrc, int rowDst, int colDst, e
 		case CASTLE_KINGSIDE:
 			
 			// set the square right next to the king to the rook.
-			SetPiece(GetHomeRow(col), kingPos + 1, PIECE_ROOK, col);
+			SetPiece(pState, GetHomeRow(col), kingPos + 1, PIECE_ROOK, col);
 			// and then, the king
-			SetPiece(GetHomeRow(col), kingPos + 2, PIECE_KING, col);
+			SetPiece(pState, GetHomeRow(col), kingPos + 2, PIECE_KING, col);
 			
 			// clear the rook's square
-			SetPiece(GetHomeRow(col), BOARD_SIZE - 1, PIECE_NONE, BLACK);
+			SetPiece(pState, GetHomeRow(col), BOARD_SIZE - 1, PIECE_NONE, BLACK);
 			// clear the king's square
-			SetPiece(GetHomeRow(col), kingPos, PIECE_NONE, BLACK);
+			SetPiece(pState, GetHomeRow(col), kingPos, PIECE_NONE, BLACK);
 			
 			// no more castling!!
-			g_bCastleAllowed[CASTLE_KINGSIDE ][col] = false;
-			g_bCastleAllowed[CASTLE_QUEENSIDE][col] = false;
+			pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_KINGSIDE ] = false;
+			pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_QUEENSIDE] = false;
 			
 			break;
 			
 		case CASTLE_QUEENSIDE:
 			
 			// set the square right next to the king to the rook.
-			SetPiece(GetHomeRow(col), kingPos - 1, PIECE_ROOK, col);
+			SetPiece(pState, GetHomeRow(col), kingPos - 1, PIECE_ROOK, col);
 			// and then, the king
-			SetPiece(GetHomeRow(col), kingPos - 2, PIECE_KING, col);
+			SetPiece(pState, GetHomeRow(col), kingPos - 2, PIECE_KING, col);
 			
 			// clear the rook's square
-			SetPiece(GetHomeRow(col), 0, PIECE_NONE, BLACK);
+			SetPiece(pState, GetHomeRow(col), 0, PIECE_NONE, BLACK);
 			// clear the king's square
-			SetPiece(GetHomeRow(col), kingPos, PIECE_NONE, BLACK);
+			SetPiece(pState, GetHomeRow(col), kingPos, PIECE_NONE, BLACK);
 			
 			// no more castling!!
-			g_bCastleAllowed[CASTLE_KINGSIDE ][col] = false;
-			g_bCastleAllowed[CASTLE_QUEENSIDE][col] = false;
+			pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_KINGSIDE ] = false;
+			pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_QUEENSIDE] = false;
 			
 			break;
 		
@@ -659,14 +690,14 @@ void ChessPerformMoveUnchecked(int rowSrc, int colSrc, int rowDst, int colDst, e
 				// move the pcDst piece away from our home row, towards their home row
 				int diff = col == WHITE ? -1 : +1;
 				rowCap += diff;
-				pcDst = GetPiece(rowCap, colCap);
+				pcDst = GetPiece(pState, rowCap, colCap);
 			}
 			
 			// if the king was moved:
 			if (pcSrc->piece == PIECE_KING)
 			{
-				g_bCastleAllowed[CASTLE_KINGSIDE ][col] = false;
-				g_bCastleAllowed[CASTLE_QUEENSIDE][col] = false;
+				pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_KINGSIDE ] = false;
+				pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_QUEENSIDE] = false;
 			}
 			
 			// if the piece moved was a rook
@@ -674,25 +705,25 @@ void ChessPerformMoveUnchecked(int rowSrc, int colSrc, int rowDst, int colDst, e
 			{
 				// if it was the queenside rook
 				if (colSrc == 0)
-					g_bCastleAllowed[CASTLE_QUEENSIDE][col] = false;
+					pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_QUEENSIDE] = false;
 				else if (colDst == BOARD_SIZE - 1)
-					g_bCastleAllowed[CASTLE_KINGSIDE][col] = false;
+					pState->m_PlayerState[col].m_bCastleAllowed[CASTLE_KINGSIDE ] = false;
 			}
 			
 			// if the piece moved was a pawn, and it moved two steps:
 			if (pcSrc->piece == PIECE_PAWN && abs(rowDst - rowSrc) == 2)
-				g_nEnPassantColumn[pcSrc->color] = colDst;
+				pState->m_PlayerState[pcSrc->color].m_nEnPassantColumn = colDst;
 			
 			// Capture whatever was here before.
 			if (pcDst->piece != PIECE_NONE)
 			{
-				AddCapture(col, *pcDst);
+				AddCapture(pState, col, *pcDst);
 				*pbCapture = true;
 			}
 			
-			SetPiece(rowCap, colCap, PIECE_NONE, BLACK);
-			SetPiece(rowDst, colDst, pcSrc->piece, col);
-			SetPiece(rowSrc, colSrc, PIECE_NONE, BLACK);
+			SetPiece(pState, rowCap, colCap, PIECE_NONE, BLACK);
+			SetPiece(pState, rowDst, colDst, pcSrc->piece, col);
+			SetPiece(pState, rowSrc, colSrc, PIECE_NONE, BLACK);
 			
 			break;
 	}
@@ -714,9 +745,9 @@ char GetPieceNotation(ePiece piece, int col)
 }
 
 // This formats a move into PGN and lets the UI know about it.
-void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool bCheck, bool bCapture, bool bEnPassant, eMateType mateType)
+void ChessGeneratePGN(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool bCheck, bool bCapture, bool bEnPassant, eMateType mateType)
 {
-	BoardPiece* pcDst = GetPiece(rowDst, colDst);
+	BoardPiece* pcDst = GetPiece(pState, rowDst, colDst);
 	
 	char moveList[20];
 	strcpy(moveList, "???");
@@ -779,7 +810,7 @@ void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleTyp
 			{
 				int row = ind / BOARD_SIZE, clm = ind % BOARD_SIZE;
 				
-				BoardPiece* pPiece = GetPiece(row, clm);
+				BoardPiece* pPiece = GetPiece(pState, row, clm);
 				//if (row == rowDst && clm == colDst) continue;
 				
 				if (pPiece->piece != pie || pPiece->color != col) continue;
@@ -788,7 +819,7 @@ void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleTyp
 				// see if the piece can move here
 				UNUSED eCastleType castleType;
 				UNUSED bool bEnPassant;
-				if (ChessCheckMove(row, clm, rowDst, colDst, &castleType, &bEnPassant, true) == ERROR_SUCCESS)
+				if (ChessCheckMove(pState, row, clm, rowDst, colDst, &castleType, &bEnPassant, true) == ERROR_SUCCESS)
 				{
 					//LogMsg("ChessGeneratePGN: move from %c%d is also valid", clm+'a', row+1);
 					
@@ -831,7 +862,9 @@ void ChessGeneratePGN(int rowSrc, int colSrc, int rowDst, int colDst, eCastleTyp
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 {
-	BoardPiece* pcSrc = GetPiece(rowSrc, colSrc);
+	BoardState* pState = g_CurrentState;
+	
+	BoardPiece* pcSrc = GetPiece(pState, rowSrc, colSrc);
 	
 	eColor col = pcSrc->color;
 	
@@ -842,16 +875,37 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	eCastleType castleType = CASTLE_NONE;
 	bool bEnPassant = false;
 	
-	eErrorCode errCode = ChessCheckMove(rowSrc, colSrc, rowDst, colDst, &castleType, &bEnPassant, true);
+	eErrorCode errCode = ChessCheckMove(pState, rowSrc, colSrc, rowDst, colDst, &castleType, &bEnPassant, true);
 	if (errCode != ERROR_SUCCESS)
 		return errCode;
 	
-	g_nEnPassantColumn[pcSrc->color] = -1;
+	if (g_CurrentState != &g_History[g_HistorySize - 1])
+	{
+		if (g_History < g_CurrentState || g_CurrentState <= g_History + g_HistorySize)
+		{
+			return ERROR_CANT_OVERWRITE_HISTORY;
+		}
+		// Show a message box asking whether the user wants to overwrite the history.
+		if (ChessMessageBox("Performing this move will overwrite the move history.\n\nDo you wish to perform the move?", "Chess", MB_YESNO | ICON_WARNING << 16) != MBID_YES)
+		{
+			return ERROR_CANT_OVERWRITE_HISTORY;
+		}
+		
+		// this ptr diff should be fine, since we already check the bounds...
+		g_HistorySize = (int)(g_CurrentState - g_History);
+	}
 	
-	g_bIsKingInCheck[pcSrc->color] = false;
+	// commit the move!!
+	AddHistoryFrame();
+	
+	pState = g_CurrentState;
+	
+	pState->m_PlayerState[pcSrc->color].m_nEnPassantColumn = -1;
+	
+	pState->m_PlayerState[pcSrc->color].m_bKingInCheck = false;
 	
 	bool bCapture = false;
-	ChessPerformMoveUnchecked(rowSrc, colSrc, rowDst, colDst, castleType, &bCapture, bEnPassant);
+	ChessPerformMoveUnchecked(pState, rowSrc, colSrc, rowDst, colDst, castleType, &bCapture, bEnPassant);
 	
 	bool bCheck = false;
 	
@@ -860,10 +914,10 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	// Check if any other players are in check, and update their state.
 	for (int i = FIRST_PLAYER; i < NPLAYERS; i++)
 	{
-		BoardPos pos = g_KingPositions[i];
-		g_bIsKingInCheck[i] = ChessIsBeingThreatened(pos.row, pos.col, i, -1, -1, false);
+		BoardPos pos = pState->m_PlayerState[i].m_KingPos;
+		pState->m_PlayerState[i].m_bKingInCheck = ChessIsBeingThreatened(pState, pos.row, pos.col, i, -1, -1, false);
 		
-		if (g_bIsKingInCheck[i])
+		if (pState->m_PlayerState[i].m_bKingInCheck)
 		{
 			bCheck = true;
 			//LogMsg("%d's in check!", i);
@@ -871,12 +925,12 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 		
 		// TODO: handle other players properly
 		if ((eColor)i != col)
-			mateType = ChessCheckmateOrStalemate(i);
+			mateType = ChessCheckmateOrStalemate(pState, i);
 	}
 	
-	ChessGeneratePGN(rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
+	ChessGeneratePGN(pState, rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
 	
-	g_playingPlayer = GetNextPlayer(g_playingPlayer);
+	pState->m_Player = GetNextPlayer(pState->m_Player);
 	
 	switch (mateType)
 	{
@@ -887,61 +941,72 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 }
 
 extern int g_nMoveNumber;
-void SetupBoard()
+void SetupBoard(BoardState* pState)
 {
-	ChessClearGUI();
-	memset(&g_pieces, 0, sizeof g_pieces);
+	if (pState == g_CurrentState)
+		ChessClearGUI();
+	
+	memset(&pState->m_Pieces, 0, sizeof pState->m_Pieces);
 	
 	// allow castling initially
 	for (int i = 0; i < NPLAYERS; i++)
 	{
-		g_bCastleAllowed[CASTLE_KINGSIDE] [i] = true;
-		g_bCastleAllowed[CASTLE_QUEENSIDE][i] = true;
+		pState->m_PlayerState[i].m_bCastleAllowed[CASTLE_KINGSIDE]  = true;
+		pState->m_PlayerState[i].m_bCastleAllowed[CASTLE_QUEENSIDE] = true;
 	}
 	
-	g_playingPlayer = WHITE;
+	pState->m_Player = WHITE;
 	
 	// clear other resources, such as checks, and captures
 	for (int i = 0; i < NPLAYERS; i++)
 	{
 		BoardPos emptyPos = { 0, 0 };
 		
-		g_bIsKingInCheck[i] = false;
-		g_nCaptures     [i] = 0;
-		g_KingPositions [i] = emptyPos;
-		g_nEnPassantColumn[i] = -1;
+		PlayerState* ppState = &pState->m_PlayerState[i];
+		ppState->m_bKingInCheck     = false;
+		ppState->m_nCaptures        = 0;
+		ppState->m_KingPos          = emptyPos;
+		ppState->m_nEnPassantColumn = -1;
 	}
 	
 	for (int i = 0; i < BOARD_SIZE; i++)
 	{
 		// set a2..g2 and a7..g7 to pawns. a2..g2 has the color white, a7..g7 has the color black.
-		SetPiece(1, i, PIECE_PAWN, WHITE);
-		SetPiece(6, i, PIECE_PAWN, BLACK);
+		SetPiece(pState, 1, i, PIECE_PAWN, WHITE);
+		SetPiece(pState, 6, i, PIECE_PAWN, BLACK);
 	}
 	
 	// Rooks
-	SetPiece(0, 0, PIECE_ROOK, WHITE);
-	SetPiece(0, 7, PIECE_ROOK, WHITE);
-	SetPiece(7, 0, PIECE_ROOK, BLACK);
-	SetPiece(7, 7, PIECE_ROOK, BLACK);
+	SetPiece(pState, 0, 0, PIECE_ROOK, WHITE);
+	SetPiece(pState, 0, 7, PIECE_ROOK, WHITE);
+	SetPiece(pState, 7, 0, PIECE_ROOK, BLACK);
+	SetPiece(pState, 7, 7, PIECE_ROOK, BLACK);
 	
 	// Knights
-	SetPiece(0, 1, PIECE_KNIGHT, WHITE);
-	SetPiece(0, 6, PIECE_KNIGHT, WHITE);
-	SetPiece(7, 1, PIECE_KNIGHT, BLACK);
-	SetPiece(7, 6, PIECE_KNIGHT, BLACK);
+	SetPiece(pState, 0, 1, PIECE_KNIGHT, WHITE);
+	SetPiece(pState, 0, 6, PIECE_KNIGHT, WHITE);
+	SetPiece(pState, 7, 1, PIECE_KNIGHT, BLACK);
+	SetPiece(pState, 7, 6, PIECE_KNIGHT, BLACK);
 	
 	// Bishops
-	SetPiece(0, 2, PIECE_BISHOP, WHITE);
-	SetPiece(0, 5, PIECE_BISHOP, WHITE);
-	SetPiece(7, 2, PIECE_BISHOP, BLACK);
-	SetPiece(7, 5, PIECE_BISHOP, BLACK);
+	SetPiece(pState, 0, 2, PIECE_BISHOP, WHITE);
+	SetPiece(pState, 0, 5, PIECE_BISHOP, WHITE);
+	SetPiece(pState, 7, 2, PIECE_BISHOP, BLACK);
+	SetPiece(pState, 7, 5, PIECE_BISHOP, BLACK);
 	
 	// Queens
-	SetPiece(0, 3, PIECE_QUEEN, WHITE);
-	SetPiece(7, 3, PIECE_QUEEN, BLACK);
+	SetPiece(pState, 0, 3, PIECE_QUEEN, WHITE);
+	SetPiece(pState, 7, 3, PIECE_QUEEN, BLACK);
 	
 	// Kings
-	SetPiece(0, 4, PIECE_KING, WHITE);
-	SetPiece(7, 4, PIECE_KING, BLACK);
+	SetPiece(pState, 0, 4, PIECE_KING, WHITE);
+	SetPiece(pState, 7, 4, PIECE_KING, BLACK);
 }
+
+void ResetGame()
+{
+	//LogMsg("TODO: ResetGame!");
+	InitializeHistory();
+	AddHistoryFrame();
+}
+
