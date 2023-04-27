@@ -309,6 +309,11 @@ void ChessClearGUI()
 
 void ChessReleaseCursor(int x, int y)
 {
+	eErrorCode err = ERROR_SUCCESS;
+	
+	bool bPromotePawn = false;
+	int nPawnPromotedFile = 0;
+	
 	if (g_DraggedPieceRow != -1 && g_DraggedPieceCol != -1)
 	{
 		int boardRow = -1, boardCol = -1;
@@ -317,18 +322,11 @@ void ChessReleaseCursor(int x, int y)
 		BoardPiece* pPc = GetPiece(g_CurrentState, g_DraggedPieceRow, g_DraggedPieceCol);
 		if (pPc)
 		{
-			eColor col = pPc->color;
-			eErrorCode err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
+			nPawnPromotedFile = boardCol;
+			bPromotePawn = true;
 			
-			if (err != ERROR_SUCCESS) switch (err)
-			{
-				case ERROR_STALEMATE:
-				case ERROR_CHECKMATE:
-					ChessOnGameEnd(err, col);
-					break;
-				default:
-					LogMsg("Cannot commit move: %d", err);
-			}
+			eColor col = pPc->color;
+			err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
 		}
 	}
 	
@@ -344,6 +342,16 @@ void ChessReleaseCursor(int x, int y)
 		PaintTile(odpr, odpc);
 	
 	ChangeCursor(g_pWindow, CURSOR_DEFAULT);
+	
+	if (err != ERROR_SUCCESS) switch (err)
+	{
+		case ERROR_STALEMATE:
+		case ERROR_CHECKMATE:
+			ChessOnGameEnd(err, col);
+			break;
+		default:
+			LogMsg("Cannot commit move: %d", err);
+	}
 }
 
 void UpdatePlayerTurn()
