@@ -7,6 +7,7 @@
 typedef struct
 {
 	void *esp, *eax, *ebp;
+	void *ebx, *esi, *edi;
 }
 JumpBufferTag;
 

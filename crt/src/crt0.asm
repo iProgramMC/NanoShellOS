@@ -65,11 +65,14 @@ global longjmp
 SetJump:
 setjmp:
 	mov  edx, [esp + 4]
-	mov  [edx], esp
+	mov  [edx],      esp
 	add  dword [edx], 4
-	mov  [edx + 4], ebp
+	mov  [edx + 4],  ebp
 	mov  eax, [esp]
-	mov  [edx + 8], eax
+	mov  [edx + 8],  eax
+	mov  [edx + 12], ebx
+	mov  [edx + 16], esi
+	mov  [edx + 20], edi
 	xor  eax, eax
 	retn
 	
@@ -84,5 +87,8 @@ longjmp:
 	mov  edx, [esp + 4]
 	mov  esp, [edx]
 	mov  ebp, [edx + 4]
+	mov  ebx, [edx + 12]
+	mov  esi, [edx + 16]
+	mov  edi, [edx + 20]
 	mov  edx, [edx + 8]
 	jmp  edx
