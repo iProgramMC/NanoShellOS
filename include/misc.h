@@ -7,6 +7,8 @@
 #ifndef _MISC_H
 #define _MISC_H
 
+#include <multiboot.h>
+
 #define RTC_TICKS_PER_SECOND 8
 
 #define C_UPDATE_IN_PROGRESS_FLAG  0X80

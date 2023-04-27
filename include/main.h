@@ -94,9 +94,21 @@ void KeVerifyInterruptsDisabledD(const char * file, int line);
 void KeVerifyInterruptsEnabledD(const char * file, int line);
 #define KeVerifyInterruptsEnabled KeVerifyInterruptsEnabledD(__FILE__, __LINE__)
 
-#include <console.h>
-
 void StopwatchStart();
 int  StopwatchEnd();
+
+
+
+// LogMsg - Log a message to the current console. Must have interrupts enabled.
+void LogMsg (const char* fmt, ...);
+void LogMsgNoCr (const char* fmt, ...);
+
+// LogMsg - Log a message to the screen. Can have interrupts disabled.
+void ILogMsg (const char* fmt, ...);
+void ILogMsgNoCr (const char* fmt, ...);
+
+// SLogMsg - Log a message to the debug console (0xE9 port). Can have interrupts disabled.
+void SLogMsg (const char* fmt, ...);
+void SLogMsgNoCr (const char* fmt, ...);
 
 #endif//_MAIN_H

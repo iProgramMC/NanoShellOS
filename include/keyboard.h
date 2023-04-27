@@ -8,6 +8,7 @@
 #define _KEYBOARD_H
 
 #include <main.h>
+#include <console.h>
 
 typedef uint8_t KeyState;
 #define KEY_PRESSED ((KeyState) 1)
