@@ -19,6 +19,7 @@
 #include <config.h>
 #include <idt.h>
 #include <process.h>
+#include <resource.h>
 
 /*****************************************************
  * These calls are different from the Syscalls,
@@ -124,16 +125,29 @@ void GetWindowRect(Window* pWindow, Rectangle * pRectOut)
 	*pRectOut = pWindow->m_rect;
 }
 
+void ShellExecuteCommand(char* p, bool* pbExit); // shell.c
+
 int ShellExecute(const char *pCommand)
 {
-	SLogMsg("TODO ShellExecute(\"%s\")", pCommand);
-	return -1;
+	char buffer[256];
+	
+	size_t len = strlen(pCommand);
+	
+	if (len > 255)
+		return -ENAMETOOLONG;
+	
+	UNUSED bool bExit = false;
+	
+	strcpy(buffer, pCommand);
+	ShellExecuteCommand(buffer, &bExit);
+	
+	return 0;
 }
 
 int ShellExecuteResource(const char *pResource)
 {
-	SLogMsg("TODO ShellExecuteResource(\"%s\")", pResource);
-	return -1;
+	RESOURCE_STATUS status = LaunchFileOrResource(pResource);
+	return status;
 }
 
 // System call interface
