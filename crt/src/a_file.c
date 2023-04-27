@@ -428,6 +428,9 @@ int FiChDir(const char *pfn)
 // C Standard I/O
 FILE* fdopen (int fd, UNUSED const char* type)
 {
+	if (fd < 0)
+		return NULL;
+	
 	FILE* pFile = calloc(1, sizeof(FILE));
 	if (!pFile)
 	{
