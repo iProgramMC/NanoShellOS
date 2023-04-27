@@ -116,7 +116,7 @@ bool IsCollidable (char c)
 	return c != '.';
 }
 
-Image *GetImage(char tile)
+Image *GetTileImage(char tile)
 {
 	switch (tile)
 	{
@@ -133,7 +133,7 @@ Image *GetImage(char tile)
 
 bool IsRender (char c)
 {
-	return GetImage(c) != NULL;
+	return GetTileImage(c) != NULL;
 }
 
 #endif
@@ -349,7 +349,7 @@ void DrawColumn (int x)
 	
 	int textureHeight = (int)ARRAY_COUNT(g_endPoints) - 1; // the height that's used by this renderer
 		
-	Image *pWallImg = GetImage (cTileFound);
+	Image *pWallImg = GetTileImage (cTileFound);
 	
 	if (pWallImg)
 	{
@@ -382,7 +382,7 @@ void DrawColumn (int x)
 		int tileY = (int)planeY;
 		
 		char floorTile = GetFloor(tileX, tileY);
-		Image *pFloorImg = GetImage (floorTile);
+		Image *pFloorImg = GetTileImage (floorTile);
 		if (!pFloorImg)
 			pFloorImg = &g_sand_icon;
 		
