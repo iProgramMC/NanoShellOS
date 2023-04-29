@@ -288,6 +288,36 @@ void ShowWindow (Window* pWindow)
 	//	KeTaskDone(); //Spinlock: pass execution off to other threads immediately
 }
 
+// This function sounds a bit complicated, but basically, it calls
+// RefreshRectangle on the rectangle A minus the rectangle B, specifying
+// the window to exclude.
+void RefreshRectExcludingRect(Window* pWindow, Rectangle a, Rectangle b)
+{
+	Rectangle *start = NULL, *end = NULL;
+	WmSplitRectWithRectList(a, &b, 1, &start, &end);
+	
+	Rectangle rects[32];
+	int nRects = 0;
+	
+	for (Rectangle* rect = start; rect != end; rect++)
+	{
+		rects[nRects++] = *rect;
+		
+		if (nRects >= (int)ARRAY_COUNT(rects))
+		{
+			SLogMsg("WARNING: RefreshRectExcludingRect overflow !!");
+			break;
+		}
+	}
+	
+	WmSplitDone();
+	
+	for (int i = 0; i < nRects; i++)
+	{
+		RefreshRectangle(rects[i], pWindow);
+	}
+}
+
 void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight)
 {
 	if (newPosX != -1)
@@ -307,7 +337,7 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	if (newHeight< WINDOW_MIN_HEIGHT)
 		newHeight= WINDOW_MIN_HEIGHT;
 	
-	HideWindow(pWindow);
+	//HideWindow(pWindow);
 	
 	uint32_t* pNewFb = (uint32_t*)MmAllocatePhy(newWidth * newHeight * sizeof(uint32_t), ALLOCATE_BUT_DONT_WRITE_PHYS);
 	if (!pNewFb)
@@ -337,16 +367,19 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 		memset_ints(&pNewFb[i * newWidth], 0x80, newWidth);
 	}
 	
-	// Free the old framebuffer.  This action should be done atomically.
-	// TODO: If I ever decide to add locks to mmfree etc, then fix this so that it can't cause deadlocks!!
+	// Free the old framebuffer.
+	LockAcquire(&pWindow->m_screenLock);
 	
 	MmFree(pWindow->m_fullVbeData.m_framebuffer32);
 	pWindow->m_fullVbeData.m_framebuffer32 = pNewFb;
+	
 	pWindow->m_fullVbeData.m_width   = newWidth;
 	pWindow->m_fullVbeData.m_pitch32 = newWidth;
 	pWindow->m_fullVbeData.m_pitch16 = newWidth*2;
 	pWindow->m_fullVbeData.m_pitch   = newWidth*4;
 	pWindow->m_fullVbeData.m_height  = newHeight;
+	
+	LockFree(&pWindow->m_screenLock);
 	
 	Rectangle oldMarg = GetWindowMargins(pWindow);
 	
@@ -364,24 +397,23 @@ void ResizeWindowInternal (Window* pWindow, int newPosX, int newPosY, int newWid
 	pWindow->m_vbeData.m_offsetX  = margins.left;
 	pWindow->m_vbeData.m_offsetY  = margins.top;
 	
+	Rectangle oldRect = pWindow->m_fullRect;
+	
 	pWindow->m_fullRect.left   = newPosX;
 	pWindow->m_fullRect.top    = newPosY;
 	pWindow->m_fullRect.right  = pWindow->m_fullRect.left + newWidth;
 	pWindow->m_fullRect.bottom = pWindow->m_fullRect.top  + newHeight;
 	
+	Rectangle newRect = pWindow->m_fullRect;
+	
 	WmRecalculateClientRect(pWindow);
 	
-	// Mark as dirty.
+	// Mark as dirty.  I mean, of course.
 	pWindow->m_fullVbeData.m_dirty = true;
 	
-	ShowWindow(pWindow);
+	RefreshRectExcludingRect(pWindow, oldRect, newRect);
 	
-	SLogMsg("oldMarg: %d %d %d %d",oldMarg.left,oldMarg.right,oldMarg.top,oldMarg.bottom);
-	SLogMsg("OldWidth: %d OldHeight: %d",oldWidth,oldHeight);
-	SLogMsg("Margins: %d %d %d %d",margins.left,margins.right,margins.top,margins.bottom);
-	SLogMsg("newWidth: %d newHeight: %d",newWidth,newHeight);
-	
-	// Send window events: EVENT_SIZE, EVENT_PAINT.
+	// Send an EVENT_SIZE window event.
 	WindowAddEventToMasterQueue(pWindow, EVENT_SIZE,
 		MAKE_MOUSE_PARM(newWidth - margins.left - margins.right, newHeight - margins.top - margins.bottom),
 		MAKE_MOUSE_PARM(oldWidth - oldMarg.left - oldMarg.right, oldHeight - oldMarg.top - oldMarg.bottom)
@@ -854,7 +886,7 @@ void WindowBlitTakingIntoAccountOcclusions(Rectangle e, Window* pWindow)
 {
 	Rectangle* pRect = NULL, *end = NULL;
 	
-	WmSplitRectWithWindows(e, pWindow, &pRect, &end);
+	WmSplitRectWithWindows(e, pWindow, &pRect, &end, true);
 	
 	for (; pRect != end; pRect++)
 	{
@@ -894,6 +926,8 @@ void RenderWindow (Window* pWindow)
 		return;
 	}
 	
+	LockAcquire(&pWindow->m_screenLock);
+	
 	//to avoid clashes with other threads printing, TODO use a safelock!!
 #ifdef DIRTY_RECT_TRACK
 	cli;
@@ -905,7 +939,6 @@ void RenderWindow (Window* pWindow)
 	sti;
 #endif
 	
-	//ACQUIRE_LOCK(g_screenLock);
 	g_vbeData = &g_mainScreenVBEData;
 	
 #ifdef DIRTY_RECT_TRACK
@@ -943,6 +976,8 @@ void RenderWindow (Window* pWindow)
 		WindowBlitTakingIntoAccountOcclusions(e, pWindow);
 	}
 #endif
+	
+	LockFree(&pWindow->m_screenLock);
 }
 
 void SetWindowIcon (Window* pWindow, int icon)

@@ -197,7 +197,7 @@ static void WmSplitRectStackByWindow(Window* pWindow)
 
 SafeLock g_RectSplitLock;
 
-void WmSplitRectWithWindows(Rectangle ogRect, const Window* pThisWindow, Rectangle** pStartOut, Rectangle** pEndOut)
+void WmSplitRectWithWindows(Rectangle ogRect, const Window* pThisWindow, Rectangle** pStartOut, Rectangle** pEndOut, bool bIgnoreStuffBeforeExcludedWindow)
 {
 	LockAcquire(&g_RectSplitLock);
 	
@@ -223,7 +223,7 @@ void WmSplitRectWithWindows(Rectangle ogRect, const Window* pThisWindow, Rectang
 			continue;
 		}
 		
-		if (bReachedThisWindow && !bFilledIn[order])
+		if ((bReachedThisWindow || !bIgnoreStuffBeforeExcludedWindow) && !bFilledIn[order])
 		{
 			WmSplitRectStackByWindow(&g_windows[order]);
 			bFilledIn[order] = true;

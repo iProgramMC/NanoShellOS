@@ -259,12 +259,8 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 	}
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLock, bool bLockEvents)
-{
-	if (!bLock)
-		LockAcquire (&pWindow->m_screenLock);
-	//if bLock is true, we can assume that we already have the lock
-	
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLockEvents)
+{	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	//setup paint stuff so the window can only paint in their little box
 	
@@ -342,7 +338,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		WmPaintWindowBorder(pWindow);
 		WmPaintWindowTitle(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, bLockEvents);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -555,7 +551,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	if (eventType == EVENT_SIZE || eventType == EVENT_REPAINT_PRIVATE)
 	{
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, true, bLockEvents);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, bLockEvents);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -582,9 +578,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		NukeWindow(pWindow);
 		
-		//if (!bLock)
-		//	LockFree (&pWindow->m_screenLock);
-		
 		return false;
 	}
 	else if (eventType == EVENT_SET_WINDOW_TITLE_PRIVATE)
@@ -592,9 +585,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		// free whatever we have in parm1
 		MmFree((void*)parm1);
 	}
-	
-	if (!bLock)
-		LockFree (&pWindow->m_screenLock);
 	
 	return true;
 }
@@ -625,7 +615,7 @@ bool HandleMessages(Window* pWindow)
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, et, p1, p2, false, false))
+		if (!OnProcessOneEvent(pWindow, et, p1, p2, false))
 			return false;
 	}
 	
@@ -636,7 +626,7 @@ bool HandleMessages(Window* pWindow)
 	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], false, true))
+		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], true))
 			return false;
 	}
 	pWindow->m_eventQueueSize = 0;
@@ -650,7 +640,7 @@ bool HandleMessages(Window* pWindow)
 		
 		unsigned char out = WinReadFromInputQueue(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false, false);
+		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false);
 		
 		// if the key was just pressed:
 		if ((out & 0x80) == 0)
@@ -659,7 +649,7 @@ bool HandleMessages(Window* pWindow)
 			char sensible = KbMapAtCodeToChar (out & 0x7F);
 			
 			if (sensible)
-				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false, false);
+				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false);
 		}
 	}
 	
@@ -708,7 +698,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			int h = GET_Y_PARM(parm2);
 			
 			ResizeWindowInternal(pWindow, x, y, w, h);
-			ShowWindow(pWindow);
+			//ShowWindow(pWindow);
 			
 			break;
 		}

@@ -156,7 +156,7 @@ void SetCursorInternal(Cursor* pCursor, bool bUndrawOldCursor);
 void OnRightClickShowMenu(Window * pWindow, int parm1);
 void WmCreateRectangleStack();
 void WmFreeRectangleStack();
-void WmSplitRectWithWindows(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut);
+void WmSplitRectWithWindows(Rectangle ogRect, const Window* pExcept, Rectangle** pStartOut, Rectangle** pEndOut, bool bIgnoreStuffBeforeExcludedWindow);
 void WmSplitRectWithRectList(Rectangle ogRect, const Rectangle* rectList, int rectCount, Rectangle** pStartOut, Rectangle** pEndOut);
 void WmSplitDone();
 void WmTakeOverWindow(Window* pWindow);

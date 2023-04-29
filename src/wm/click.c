@@ -204,16 +204,13 @@ void StartDragUnsafe(Window* window, int mouseX, int mouseY, int dragMode)
 	}
 }
 
+void RefreshRectExcludingRect(Window* pWindow, Rectangle a, Rectangle b);
+
 void ReleaseDragUnsafe(int mouseX, int mouseY)
 {
 	Window* pWindow = g_currentlyClickedWindow;
 	if (!pWindow) return;
 	if (!pWindow->m_isBeingDragged) return;
-	
-	if (!g_RenderWindowContents)
-	{
-		HideWindow(pWindow);
-	}
 	
 	if (GetCurrentCursor()->m_flags & CUR_RESIZE)
 	{
@@ -223,11 +220,13 @@ void ReleaseDragUnsafe(int mouseX, int mouseY)
 		pWindow->m_resize_flags = 0;
 		
 		ResizeWindow(pWindow, newX, newY, newWidth, newHeight);
-		WindowAddEventToMasterQueue(pWindow, EVENT_SHOW_WINDOW_PRIVATE, 0, 0);
+		
 		pWindow->m_isBeingDragged = false;
 	}
 	else
 	{
+		Rectangle oldWndRect = pWindow->m_fullRect;
+		
 		// simply move the window without a re-position
 		Rectangle newWndRect;
 		newWndRect.left   = mouseX - g_windowDragCursor.leftOffs;
@@ -236,15 +235,19 @@ void ReleaseDragUnsafe(int mouseX, int mouseY)
 			newWndRect.top = 0;
 		newWndRect.right  = newWndRect.left + GetWidth (&pWindow->m_fullRect);
 		newWndRect.bottom = newWndRect.top  + GetHeight(&pWindow->m_fullRect);
+		
 		pWindow->m_fullRect = newWndRect;
+		
+		RefreshRectExcludingRect(pWindow, oldWndRect, newWndRect);
+		
 		WmRecalculateClientRect(pWindow);
 		
 		pWindow->m_fullVbeData.m_dirty = true;
 		pWindow->m_renderFinished = false;
 		pWindow->m_isBeingDragged = false;
-		
-		ShowWindow(pWindow);
 	}
+	
+	WindowAddEventToMasterQueue(pWindow, EVENT_SHOW_WINDOW_PRIVATE, 0, 0);
 	
 	if (GetCurrentCursor() == &g_windowDragCursor)
 	{
