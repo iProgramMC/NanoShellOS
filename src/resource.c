@@ -196,8 +196,12 @@ FileAssociation g_FileAssociations[] =
 	{ "*", "", "Character device", ICON_SERIAL, FILE_TYPE_CHAR_DEVICE }, // not all char devices are serial, but meh.
 	
 	{ "*.txt", "ted",      "Text Document",         ICON_TEXT_FILE,    0 },
+	{ "*.ini", "ted",      "Configuration File",    ICON_TEXT_FILE,    0 },
 	{ "*.nse", "exwindow", "Application",           ICON_APPLICATION,  0 },
-	{ "*.c",   "exscript", "NanoShell Script File", ICON_FILE_CSCRIPT, 0 },
+	{ "*.sc",  "exscript", "NanoShell Script File", ICON_FILE_CSCRIPT, 0 },
+	{ "*.c",   "ted",      "C Source File",         ICON_FILE_CSCRIPT, 0 },
+	{ "*.cpp", "ted",      "C++ Source File",       ICON_FILE_CSCRIPT, 0 }, // questionable. I don't know if we'll be using C++ anytime soon in this project at all
+	{ "*.h",   "ted",      "C/C++ Header File",     ICON_TEXT_FILE,    0 },
 	{ "*.md",  "help",     "Help Document",         ICON_FILE_MKDOWN,  0 },
 	{ "*.bmp", "image",    "BMP File",              ICON_FILE_IMAGE,   0 },
 	{ "*.tga", "image",    "TGA File",              ICON_FILE_IMAGE,   0 },
