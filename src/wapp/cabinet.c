@@ -712,7 +712,21 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						else
 						{
 							RESOURCE_STATUS status = LaunchFileOrResource(pFileName);
-							if (status != RESOURCE_LAUNCH_SUCCESS)
+							if (status == RESOURCE_LAUNCH_INVALID_PROTOCOL)
+							{
+								char ext[PATH_MAX];
+								char* x = strrchr(pFileName, '.');
+								if (x)
+								{
+									strncpy(ext, x, sizeof ext - 1);
+									ext[sizeof ext - 1] = 0;
+								}
+								
+								char buffer [512];
+								snprintf (buffer, sizeof buffer, "There is no file association set up for the file type \"%s\".\n\nNanoShell cannot open this file.", *ext ? ext : "None");
+								MessageBox(pWindow, buffer, "Error", ICON_INFO << 16 | MB_OK);
+							}
+							else if (status != RESOURCE_LAUNCH_SUCCESS)
 							{
 								char buffer [512];
 								snprintf (buffer, sizeof buffer, GetResourceErrorText(status), pFileName);
