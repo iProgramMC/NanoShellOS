@@ -193,6 +193,8 @@ void WmOnTaskCrashed(Task *pTask)
 	}
 }
 
+bool WidgetNone_OnEvent(Control* pCtl, int eventType, int parm1, int parm2, Window* pWindow);
+
 // Takes over a window. Simple enough, this will make the window inert (i.e. the default
 // steps will be taken for every event.) Good if you want to destroy it later.
 void WmTakeOverWindow(Window* pWindow)
@@ -203,6 +205,18 @@ void WmTakeOverWindow(Window* pWindow)
 	pWindow->m_callback              = DefaultWindowProc;
 	pWindow->m_screenLock.m_held     = false;
 	pWindow->m_EventQueueLock.m_held = false;
+	
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		// kinda hacky, but it's to help support custom controls.
+		Control* pCtl = &pWindow->m_pControlArray[i];
+		
+		uint32_t addr = (uint32_t)pCtl->OnEvent;
+		
+		// if this isn't part of the kernel...
+		if (addr < KERNEL_BASE_ADDRESS)
+			pCtl->OnEvent = WidgetNone_OnEvent;
+	}
 	
 	sti;
 }
