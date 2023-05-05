@@ -500,6 +500,8 @@ typedef struct ControlStruct
 	void*     m_dataPtr;
 	Rectangle m_rect;
 	bool      m_bMarkedForDeletion;
+	bool      m_bFocused;
+	bool      m_bVisible;
 	
 	//data for controls:
 	union
@@ -520,9 +522,10 @@ typedef struct ControlStruct
 	
 	// A rect that was tried.  This is what the control's size _should_ be,
 	// but due to some limitation m_triedRect may not match m_rect.
+	// The smallest rectangle a control can occupy is 10x10.
 	Rectangle m_triedRect;
 	
-	// The smallest rectangle a control can occupy is 10x10.
+	bool      m_bDisabled;
 }
 Control;
 
