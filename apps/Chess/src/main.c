@@ -38,9 +38,11 @@ enum
 	CHESS_DRAW_WHITE,
 };
 
-void DrawFrameAroundBoard()
+void DrawRectangleFrame(Rectangle rect)
 {
-	Rectangle rect = { g_BoardX, g_BoardY, g_BoardX + BOARD_SIZE * PIECE_SIZE - 1, g_BoardY + BOARD_SIZE * PIECE_SIZE - 1 };
+	rect.bottom--;
+	rect.right--;
+	
 	for (int i = 0; i < BOARD_THICKNESS; i++)
 	{
 		rect.left--;
@@ -53,6 +55,13 @@ void DrawFrameAroundBoard()
 		VidDrawVLine(BUTTON_SHADOW_COLOR, rect.top, rect.bottom, rect.left);
 		VidDrawVLine(BUTTON_HILITE_COLOR, rect.top, rect.bottom, rect.right);
 	}
+}
+
+
+void DrawFrameAroundBoard()
+{
+	Rectangle rect = { g_BoardX, g_BoardY, g_BoardX + BOARD_SIZE * PIECE_SIZE, g_BoardY + BOARD_SIZE * PIECE_SIZE };
+	DrawRectangleFrame(rect);
 }
 
 void GetBoardCoords(int mouseX, int mouseY, int * boardRow, int * boardCol)
@@ -403,11 +412,18 @@ int g_FlashTimerID = -1;
 
 ePiece PromotionPopup(eColor color, int row, int col);
 
+void ChessUpdateMoveList()
+{
+	CallControlCallback(g_pWindow, CHESS_MOVE_LIST, EVENT_UPDATE_MOVE_LIST, 0, 0);
+}
+
+void AddMoveList(Window* pWindow, Rectangle rect, int comboID);
+
 void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
-		case EVENT_USER:
+		case EVENT_UPDATE_FLASHING:
 		{
 			UpdateFlashingTiles();
 			break;
@@ -436,7 +452,8 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			UpdatePlayerTurn();
 			
 			RECT(rect, g_BoardX + BOARD_SIZE * PIECE_SIZE + 10, g_BoardY, RIGHT_BAR_WIDTH, BOARD_SIZE * PIECE_SIZE);
-			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_MOVE_LIST, 0, 0);
+			//AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_MOVE_LIST, 0, 0);
+			AddMoveList(pWindow, rect, CHESS_MOVE_LIST);
 			
 			RECT(rect, 10, g_BoardY, 40, (BOARD_SIZE * PIECE_SIZE / 2) - 5);
 			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_CAPTURES_BLACK, 0, 0);
@@ -456,7 +473,7 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 			AddControl(pWindow, CONTROL_BUTTON, rect, "Draw",   CHESS_DRAW_WHITE,   ICON_SCALE16, 0);
 			SetControlDisabled(pWindow, CHESS_DRAW_WHITE, true);
 			
-			g_FlashTimerID = AddTimer(pWindow, 250, EVENT_USER);
+			g_FlashTimerID = AddTimer(pWindow, 250, EVENT_UPDATE_FLASHING);
 			
 			break;
 		}
@@ -525,6 +542,8 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 		}
 	}
 }
+
+void ChessUpdateMoveList();
 
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {

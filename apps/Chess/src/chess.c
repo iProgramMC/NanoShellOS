@@ -745,11 +745,11 @@ char GetPieceNotation(ePiece piece, int col)
 }
 
 // This formats a move into PGN and lets the UI know about it.
-void ChessGeneratePGN(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool bCheck, bool bCapture, bool bEnPassant, eMateType mateType)
+void ChessGeneratePGN(char* pgnOut, BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType castleType, bool bCheck, bool bCapture, bool bEnPassant, eMateType mateType)
 {
 	BoardPiece* pcDst = GetPiece(pState, rowDst, colDst);
 	
-	char moveList[20];
+	char moveList[sizeof(pState->m_MoveInfo.pgn)];
 	strcpy(moveList, "???");
 	
 	if (castleType != CASTLE_NONE)
@@ -857,7 +857,7 @@ void ChessGeneratePGN(BoardState* pState, int rowSrc, int colSrc, int rowDst, in
 		*pcDst = pcCopy;
 	}
 	
-	ChessAddMoveToUI(moveList);
+	strcpy(pgnOut, moveList);
 }
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
@@ -881,8 +881,9 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	
 	if (g_CurrentState != &g_History[g_HistorySize - 1])
 	{
-		if (g_History < g_CurrentState || g_CurrentState <= g_History + g_HistorySize)
+		if (g_CurrentState < g_History || g_History + g_HistorySize <= g_CurrentState)
 		{
+			SLogMsg("Okay");
 			return ERROR_CANT_OVERWRITE_HISTORY;
 		}
 		// Show a message box asking whether the user wants to overwrite the history.
@@ -892,7 +893,7 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 		}
 		
 		// this ptr diff should be fine, since we already check the bounds...
-		g_HistorySize = (int)(g_CurrentState - g_History);
+		g_HistorySize = (int)(g_CurrentState - g_History) + 1;
 	}
 	
 	// commit the move!!
@@ -928,7 +929,12 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 			mateType = ChessCheckmateOrStalemate(pState, i);
 	}
 	
-	ChessGeneratePGN(pState, rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
+	// fill in the move struct
+	MoveInfo* pmi = &pState->m_MoveInfo;
+	
+	ChessGeneratePGN(pmi->pgn, pState, rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
+	
+	ChessUpdateMoveList();
 	
 	pState->m_Player = GetNextPlayer(pState->m_Player);
 	

@@ -6,6 +6,9 @@
 #define BOARD_SIZE (8)  // most likely will never change
 #define PIECE_SIZE (32)
 
+#define EVENT_UPDATE_FLASHING  (EVENT_USER)
+#define EVENT_UPDATE_MOVE_LIST (EVENT_USER + 1)
+
 #define RIGHT_BAR_WIDTH (140)
 #define LEFT_BAR_WIDTH  (60)
 #define SIDE_BAR_WIDTH  (LEFT_BAR_WIDTH + RIGHT_BAR_WIDTH)
@@ -103,6 +106,16 @@ PlayerState;
 
 typedef struct
 {
+	char pgn[32];
+}
+MoveInfo;
+
+typedef struct
+{
+	// the move that led here
+	MoveInfo m_MoveInfo;
+	
+	// the board's actual state
 	PlayerState m_PlayerState[NPLAYERS];
 	
 	BoardPiece m_Pieces[BOARD_SIZE][BOARD_SIZE];
@@ -119,6 +132,7 @@ extern BoardPiece g_pieces[BOARD_SIZE][BOARD_SIZE];
 extern Window* g_pWindow;
 
 eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst);
+eErrorCode ChessCheckMove(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* castleType, bool * bWouldDoEP, bool bFlashTiles);
 
 // Check if a color is in checkmate or stalemate.
 eMateType ChessCheckmateOrStalemate(BoardState* pState, eColor color);
