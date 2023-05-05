@@ -386,48 +386,7 @@ void CabinetMountRamDisk(Window *pwnd, const char *pfn)
 
 IconType CabGetIconBasedOnName(const char *pName, int pType)
 {
-	IconType icon = ICON_FILE;
-	if (pType & FILE_TYPE_MOUNTPOINT)
-	{
-		icon = ICON_HARD_DRIVE; //- or ICON_DEVICE_BLOCK
-	}
-	else if (pType & FILE_TYPE_DIRECTORY)
-	{
-		icon = ICON_FOLDER;
-	}
-	else if (pType == FILE_TYPE_CHAR_DEVICE)
-	{
-		if (StartsWith (pName, "Com"))
-			icon = ICON_SERIAL;
-		else
-			icon = ICON_DEVICE_CHAR;
-	}
-	else if (EndsWith (pName, ".nse"))
-	{
-		//icon = ICON_EXECUTE_FILE;
-		icon = ICON_APPLICATION;
-	}
-	else if (EndsWith (pName, ".c"))
-	{
-		icon = ICON_FILE_CSCRIPT;
-	}
-	else if (EndsWith (pName, ".txt"))
-	{
-		icon = ICON_TEXT_FILE;
-	}
-	else if (EndsWith (pName, ".md"))
-	{
-		icon = ICON_FILE_MKDOWN;
-	}
-	else if (EndsWith (pName, ".tga") || EndsWith (pName, ".bmp"))
-	{
-		icon = ICON_FILE_IMAGE;
-	}
-	else if (EndsWith (pName, ".tar") || EndsWith (pName, ".mrd"))
-	{
-		icon = ICON_TAR_ARCHIVE;//ICON_CABINET_COMBINE;
-	}
-	return icon;
+	return ResolveAssociation(pName, pType)->icon;
 }
 
 void RequestTaskbarUpdate();
