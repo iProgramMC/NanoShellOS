@@ -220,14 +220,23 @@ static int CtlGetSelectedIndexTable(Control * this)
 	return this->m_tableViewData.m_selected_row;
 }
 
-static void CtlSetSelectedIndexTable(Control * this, Window * pWindow, int selectedIndex)
+static Rectangle WidgetTableView_GetBottomRect(Control* this);
+static void WidgetTableView_PaintRow(Control* this, int index, Rectangle clipRect);
+
+static void CtlSetSelectedIndexTable(Control * this, int selectedIndex)
 {
 	if (selectedIndex < 0 || selectedIndex >= this->m_tableViewData.m_row_count)
 		selectedIndex = -1;
 	
+	int oldSelection = this->m_tableViewData.m_selected_row;
+	
 	this->m_tableViewData.m_selected_row = selectedIndex;
 	
-	CallControlCallback(pWindow,  this->m_comboID, EVENT_PAINT, 0, 0);
+	Rectangle bottomBar = WidgetTableView_GetBottomRect(this);
+	VidSetClipRect(&bottomBar);
+	WidgetTableView_PaintRow(this, oldSelection, bottomBar);
+	WidgetTableView_PaintRow(this, selectedIndex, bottomBar);
+	VidSetClipRect(NULL);
 }
 
 static int CtlGetScrollTable(Control * this)
@@ -325,7 +334,7 @@ void SetSelectedIndexTable(Window* pWindow, int comboID, int selind)
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
-			CtlSetSelectedIndexTable(&pWindow->m_pControlArray[i], pWindow, selind);
+			CtlSetSelectedIndexTable(&pWindow->m_pControlArray[i], selind);
 	}
 }
 
@@ -346,6 +355,126 @@ void SetScrollTable(Window* pWindow, int comboID, int scroll)
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 			CtlSetScrollTable(&pWindow->m_pControlArray[i], pWindow, scroll);
 	}
+}
+
+static Rectangle WidgetTableView_GetBottomRect(Control* this)
+{
+	Rectangle inRect = this->m_rect;
+	
+	inRect.left += 2;
+	inRect.top  += 2;
+	inRect.right  -= 2;
+	inRect.bottom -= 2;
+	
+	// Draw the top bar.
+	Rectangle bottomBar;
+	bottomBar = inRect;
+	// Render each row.
+	bottomBar.top += TITLE_BAR_HEIGHT - 2;
+	
+	return bottomBar;
+}
+
+static void WidgetTableView_PaintRow(Control* this, int index, Rectangle clipRect)
+{
+	Rectangle bottomBar = WidgetTableView_GetBottomRect(this);
+	
+	int topOffset = (TABLE_ITEM_HEIGHT - GetLineHeight()) / 2;
+	
+	TableViewData* table = &this->m_tableViewData;
+	
+	int iYPos = index - table->m_row_scroll;
+	int rowsPerSize = (bottomBar.bottom - bottomBar.top + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
+	if (iYPos < 0 || iYPos >= rowsPerSize) return;
+	
+	int defaultStartX = 22;
+	if (this->m_parm2 & TABLEVIEW_NOICONCOLUMN)
+		defaultStartX = 0;
+	
+	int startX = bottomBar.left + defaultStartX + 4, offs = bottomBar.top + iYPos * TABLE_ITEM_HEIGHT;
+	
+	Rectangle rect = bottomBar;
+	
+	rect.top += iYPos * TABLE_ITEM_HEIGHT;
+	rect.bottom = rect.top + TABLE_ITEM_HEIGHT - 1;
+	
+	if (rect.bottom < clipRect.top || rect.top > clipRect.bottom) return;
+	
+	uint32_t bgCol;
+	
+	// TODO: Choose better colors.
+	if (table->m_selected_row == index)
+		bgCol = SELECTED_ITEM_COLOR;
+	else if (index < 0 || index >= table->m_row_count)
+		bgCol = LIST_BACKGD_COLOR;
+	else if (index % 2 == 1)
+		bgCol = TABLE_VIEW_ALT_ROW_COLOR;
+	else
+		bgCol = LIST_BACKGD_COLOR;
+	
+	VidFillRectangle(bgCol, rect);
+	
+	if (index < 0 || index >= table->m_row_count) return;
+	
+	TableViewRow* row = &table->m_pRowData[index];
+	
+	// draw the icon
+	RenderIconForceSize(row->m_icon, bottomBar.left + 4, offs + (TABLE_ITEM_HEIGHT - 16) / 2, 16);
+	
+	// TODO: Allow scrolling via the column count as well.
+	for (int j = 0; j < table->m_column_count; j++)
+	{
+		TableViewColumn* col = &table->m_pColumnData[j];
+		
+		VidTextOutLimit(row->m_items[j].m_text, startX, offs + topOffset, (table->m_selected_row == index) ? SELECTED_MENU_ITEM_TEXT_COLOR : DESELECTED_MENU_ITEM_TEXT_COLOR, TRANSPARENT, col->m_width);
+		
+		startX += col->m_width;
+	}
+}
+
+void WidgetTableView_UpdateBottomView(Control* this, Rectangle bottomBar)
+{
+	TableViewData* table = &this->m_tableViewData;
+	Rectangle actualBottomView = WidgetTableView_GetBottomRect(this);
+	
+	VidSetClipRect(&bottomBar);
+	
+	int rowsPerSize = (actualBottomView.bottom - actualBottomView.top + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
+	
+	for (int i = 0, index = table->m_row_scroll; i < rowsPerSize; i++, index++)
+	{
+		WidgetTableView_PaintRow(this, index, bottomBar);
+	}
+	
+	VidSetClipRect(NULL);
+}
+
+void WidgetTableView_SetScrollPos(Control* this, int pos)
+{
+	TableViewData* pData = &this->m_tableViewData;
+	if (pData->m_row_scroll == pos) return;
+
+	int oldScroll = pData->m_row_scroll;
+	pData->m_row_scroll  = pos;
+	
+	int yDiff = TABLE_ITEM_HEIGHT * (oldScroll - pos);
+	if (yDiff == 0) return; // redundant?
+	
+	Rectangle rect = WidgetTableView_GetBottomRect(this);
+	
+	ScrollRect(&rect, 0, yDiff);
+	
+	Rectangle updateRect = rect;
+	if (yDiff > 0)
+	{
+		updateRect.bottom = updateRect.top + yDiff;
+	}
+	else
+	{
+		updateRect.top = updateRect.bottom + yDiff;
+	}
+	
+	WidgetTableView_UpdateBottomView(this, updateRect);
 }
 
 bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
@@ -394,61 +523,62 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			bool bNeedRepaint = false;
 			TableViewData* table = &this->m_tableViewData;
 			
+			int selectedRow = table->m_selected_row;
+			int rowScroll   = table->m_row_scroll;
+			
 			switch (code)
 			{
 				case KEY_ARROW_UP:
 				{
-					if (table->m_selected_row == -1) break;
+					if (selectedRow == -1) break;
 					
-					int old_row = table->m_selected_row;
+					int old_row = selectedRow;
 					
-					table->m_selected_row--;
-					if (table->m_selected_row < 0)
-						table->m_selected_row = 0;
+					selectedRow--;
+					if (selectedRow < 0)
+						selectedRow = 0;
 					
-					if (table->m_row_scroll >= table->m_selected_row)
-						table->m_row_scroll  = table->m_selected_row;
+					if (rowScroll >= selectedRow)
+						rowScroll  = selectedRow;
 					
-					if (table->m_selected_row != old_row)
+					if (selectedRow != old_row)
 						bNeedRepaint = true;
 					
 					break;
 				}
 				case KEY_ARROW_DOWN:
 				{
-					if (table->m_selected_row == -1) break;
+					if (selectedRow == -1) break;
 					
 					int rowsPerSize = (this->m_rect.bottom - this->m_rect.top - (TITLE_BAR_HEIGHT - 2) + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
 					
-					int old_row = table->m_selected_row;
+					int old_row = selectedRow;
 					
-					table->m_selected_row++;
-					if (table->m_selected_row >= table->m_row_count)
-						table->m_selected_row  = table->m_row_count - 1;
+					selectedRow++;
+					if (selectedRow >= table->m_row_count)
+						selectedRow  = table->m_row_count - 1;
 					
-					if (table->m_row_scroll <= table->m_selected_row - rowsPerSize + 2)
-						table->m_row_scroll  = table->m_selected_row - rowsPerSize + 2;
+					if (rowScroll <= selectedRow - rowsPerSize + 2)
+						rowScroll  = selectedRow - rowsPerSize + 2;
 					
-					if (table->m_selected_row != old_row)
+					if (selectedRow != old_row)
 						bNeedRepaint = true;
 					
 					break;
 				}
 				case KEY_ENTER:
 				{
-					if (table->m_selected_row == -1) break;
+					if (selectedRow == -1) break;
 					
 					// well, this behaves like a double click.
-					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, table->m_selected_row);
+					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, selectedRow);
 					
 					break;
 				}
 			}
 			
-			if (bNeedRepaint)
-			{
-				WidgetTableView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
-			}
+			CtlSetSelectedIndexTable(this, selectedRow);
+			WidgetTableView_SetScrollPos(this, rowScroll);
 			
 			break;
 		}
@@ -467,23 +597,7 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			
 			SetFocusedControl(pWindow, this->m_comboID);
 			
-			Rectangle inRect = this->m_rect;
-			
-			inRect.left += 2;
-			inRect.top  += 2;
-			inRect.right  -= 2;
-			inRect.bottom -= 2;
-			
-			// Draw the top bar.
-			Rectangle topBar, bottomBar;
-			topBar = bottomBar = inRect;
-			topBar.bottom = topBar.top + TITLE_BAR_HEIGHT - 2;
-			
-			Rectangle columnBar = topBar;
-			columnBar.right = columnBar.left - 1;
-			
-			// Render each row.
-			bottomBar.top = topBar.bottom;
+			Rectangle bottomBar = WidgetTableView_GetBottomRect(this);
 			
 			int rowsPerSize = (bottomBar.bottom - bottomBar.top + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
 			
@@ -498,9 +612,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				{
 					// select this!
 					bool isDoubleClick = table->m_selected_row == index;
-					table->m_selected_row = index;
 					
-					WidgetTableView_OnEvent(this, EVENT_PAINT, 0, 0, pWindow);
+					CtlSetSelectedIndexTable(this, index);
 					
 					if (isDoubleClick)
 					{
@@ -522,19 +635,16 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 		case EVENT_CLICKCURSOR:
 		case EVENT_SCROLLDONE:
 		{
-			TableViewData* pData = &this->m_tableViewData;
 			int pos = GetScrollBarPos(pWindow, -this->m_comboID);
-			if (pData->m_row_scroll != pos)
-			{
-				pData->m_row_scroll  = pos;
-			}
-			else break;
-			// fallthrough intended
+			
+			WidgetTableView_SetScrollPos(this, pos);
+			
+			break;
 		}
 		case EVENT_PAINT:
 		{
 			VidSetClipRect(&this->m_rect);
-			VidFillRectangle(LIST_BACKGD_COLOR, this->m_rect);
+			//VidFillRectangle(LIST_BACKGD_COLOR, this->m_rect);
 			
 			Rectangle inRect = this->m_rect;
 			DrawEdge(inRect, DRE_SUNKENINNER | DRE_SUNKENOUTER, 0);
@@ -597,46 +707,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			// Render each row.
 			bottomBar.top = topBar.bottom;
 			
-			VidSetClipRect(&bottomBar);
+			WidgetTableView_UpdateBottomView(this, bottomBar);
 			
-			int rowsPerSize = (bottomBar.bottom - bottomBar.top + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
-			
-			for (int i = 0, index = table->m_row_scroll; index < table->m_row_count && i < rowsPerSize; i++, index++)
-			{
-				int startX = bottomBar.left + defaultStartX + 4, offs = bottomBar.top + i * TABLE_ITEM_HEIGHT;
-				
-				TableViewRow* row = &table->m_pRowData[index];
-				
-				Rectangle rect = bottomBar;
-				
-				rect.top += i * TABLE_ITEM_HEIGHT;
-				rect.bottom = rect.top + TABLE_ITEM_HEIGHT - 1;
-				
-				// TODO: Choose better colors.
-				if (table->m_selected_row == index)
-				{
-					VidFillRectangle(SELECTED_ITEM_COLOR, rect);
-				}
-				else if (index % 2 == 1)
-				{
-					VidFillRectangle(TABLE_VIEW_ALT_ROW_COLOR, rect);
-				}
-				
-				// draw the icon
-				RenderIconForceSize(row->m_icon, bottomBar.left + 4, offs + (TABLE_ITEM_HEIGHT - 16) / 2, 16);
-				
-				// TODO: Allow scrolling via the column count as well.
-				for (int j = 0; j < table->m_column_count; j++)
-				{
-					TableViewColumn* col = &table->m_pColumnData[j];
-					
-					VidTextOutLimit(row->m_items[j].m_text, startX, offs + topOffset, (table->m_selected_row == index) ? SELECTED_MENU_ITEM_TEXT_COLOR : DESELECTED_MENU_ITEM_TEXT_COLOR, TRANSPARENT, col->m_width);
-					
-					startX += col->m_width;
-				}
-			}
-			
-			VidSetClipRect(NULL);
 			break;
 		}
 	}
