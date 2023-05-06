@@ -217,3 +217,111 @@ void DrawEdge(Rectangle rect, int style, unsigned bg)
 	if (style & DRE_FILLED)
 		VidFillRectangle(bg, rect);
 }
+
+void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color)
+{
+	Rectangle arrowRect = rect;
+	
+	if (flags & DRA_IGNORESIZE)
+	{
+		arrowRect.right  = arrowRect.left + ARROW_SIZE;
+		arrowRect.bottom = arrowRect.top  + ARROW_SIZE;
+	}
+	else if (flags & DRA_IGNOREXSIZE)
+	{
+		arrowRect.right = arrowRect.left + (arrowRect.bottom - arrowRect.top);
+	}
+	else if (flags & DRA_IGNOREXSIZE)
+	{
+		arrowRect.bottom = arrowRect.top + (arrowRect.right - arrowRect.left);
+	}
+	
+	// adjust the width/height so that we can actually center it
+	switch (arrowType)
+	{
+		case DRA_UP:
+		case DRA_DOWN:
+		{
+			arrowRect.bottom = arrowRect.top + (arrowRect.right - arrowRect.left) / 2;
+			break;
+		}
+		case DRA_LEFT:
+		case DRA_RIGHT:
+		{
+			arrowRect.right = arrowRect.left + (arrowRect.bottom - arrowRect.top) / 2;
+			break;
+		}
+	}
+	
+	if (flags & DRA_CENTERX)
+	{
+		int width = arrowRect.right - arrowRect.left;
+		arrowRect.left = rect.left + (rect.right - rect.left - width) / 2;
+		arrowRect.right = arrowRect.left + width;
+	}
+	
+	if (flags & DRA_CENTERY)
+	{
+		int height = arrowRect.bottom - arrowRect.top;
+		arrowRect.top = rect.top + (rect.bottom - rect.top - height) / 2;
+		arrowRect.bottom = arrowRect.top + height;
+	}
+	
+	switch (arrowType)
+	{
+		case DRA_UP:
+		{
+			int yPos = arrowRect.bottom - 1;
+			arrowRect.right--;
+			
+			while (yPos >= arrowRect.top && arrowRect.left <= arrowRect.right)
+			{
+				VidDrawHLine(color, arrowRect.left, arrowRect.right, yPos);
+				yPos--;
+				arrowRect.left++;
+				arrowRect.right--;
+			}
+			break;
+		}
+		case DRA_DOWN:
+		{
+			int yPos = arrowRect.top;
+			arrowRect.right--;
+			
+			while (yPos < arrowRect.bottom && arrowRect.left <= arrowRect.right)
+			{
+				VidDrawHLine(color, arrowRect.left, arrowRect.right, yPos);
+				yPos++;
+				arrowRect.left++;
+				arrowRect.right--;
+			}
+			break;
+		}
+		case DRA_LEFT:
+		{
+			int xPos = arrowRect.left;
+			arrowRect.bottom--;
+			while (xPos < arrowRect.right && arrowRect.top <= arrowRect.bottom)
+			{
+				VidDrawVLine(color, arrowRect.top, arrowRect.bottom, xPos);
+				arrowRect.top++;
+				arrowRect.bottom--;
+				xPos++;
+			}
+			break;
+		}
+		case DRA_RIGHT:
+		{
+			int xPos = arrowRect.right - 1;
+			arrowRect.bottom--;
+			while (xPos >= arrowRect.left && arrowRect.top <= arrowRect.bottom)
+			{
+				VidDrawVLine(color, arrowRect.top, arrowRect.bottom, xPos);
+				arrowRect.top++;
+				arrowRect.bottom--;
+				xPos--;
+			}
+			break;
+		}
+	}
+}

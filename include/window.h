@@ -80,6 +80,8 @@
 
 #else
 
+#define ARROW_SIZE (TITLE_BAR_HEIGHT / 4) + 3
+
 enum {
 P_BLACK,
 P_BACKGROUND_COLOR,
@@ -1092,5 +1094,27 @@ void DrawEdge(Rectangle rect, int style, unsigned bg);
 #define DRE_RIGHT  (1  << 29)
 #define DRE_BOTTOM (1  << 30)
 #define DRE_RECT   (15 << 27)
+
+/**
+ * Draws an arrow of a specified type.
+ */
+typedef enum eArrowType
+{
+	DRA_UP,
+	DRA_DOWN,
+	DRA_LEFT,
+	DRA_RIGHT,
+}
+eArrowType;
+
+#define DRA_IGNOREXSIZE (1 << 0) // Ignores the width of the rectangle.
+#define DRA_IGNOREYSIZE (1 << 1) // Ignores the height of the rectangle.
+// DRA_IGNOREXSIZE | DRA_IGNOREYSIZE means that both sizes are ignored, so the default size of ARROW_SIZE will be used.
+#define DRA_IGNORESIZE (DRA_IGNOREXSIZE | DRA_IGNOREYSIZE)
+
+#define DRA_CENTERX     (1 << 2) // Center along the X axis.
+#define DRA_CENTERY     (1 << 3) // Center along the Y axis.
+
+void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color);
 
 #endif//_WINDOW_H
