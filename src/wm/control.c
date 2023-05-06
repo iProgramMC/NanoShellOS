@@ -6,6 +6,8 @@
 ******************************************/
 #include "wi.h"
 
+int g_TickSpeed = 20; // 50 hz
+
 Control* GetControlByComboID(Window* pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -46,6 +48,29 @@ void SetControlVisibility(Window* pWindow, int comboID, bool bVisible)
 		WmSetControlVisibility(pWindow, &pWindow->m_pControlArray[i], bVisible);
 		return;
 	}
+}
+
+void AddTickTimer(Window* pWindow)
+{
+	pWindow->m_nTickTimerID = AddTimer(pWindow, g_TickSpeed, EVENT_TICK);
+}
+
+void RemoveTickTimer(Window* pWindow)
+{
+	DisarmTimer(pWindow, pWindow->m_nTickTimerID);
+	pWindow->m_nTickTimerID = -1;
+}
+
+bool IsControlIDTicking(int id)
+{
+	switch (id)
+	{
+		case CONTROL_COMBOBOX:
+		case CONTROL_TEXTINPUT:
+			return true;
+	}
+	
+	return false;
 }
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
@@ -152,6 +177,16 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 		pControl->m_checkBoxData.m_clicked = 0;
 	}
 	
+	if (IsControlIDTicking(type))
+	{
+		if (pWindow->m_nTickingCtls == 0)
+		{
+			AddTickTimer(pWindow);
+		}
+		
+		pWindow->m_nTickingCtls++;
+	}
+	
 	//register an event for the window:
 	//WindowRegisterEvent(pWindow, EVENT_PAINT, 0, 0);
 	
@@ -200,6 +235,17 @@ void RemoveControl(Window* pWindow, int comboID)
 	}
 	
 	Control* pControl = &pWindow->m_pControlArray[controlIndex];
+	
+	if (IsControlIDTicking(pControl->m_type))
+	{
+		pWindow->m_nTickingCtls--;
+		
+		if (pWindow->m_nTickingCtls == 0)
+		{
+			RemoveTickTimer(pWindow);
+		}
+	}
+	
 	pControl->OnEvent(pControl, EVENT_DESTROY, 0, 0, pWindow);
 	
 	RemoveControlInternal(pWindow, controlIndex);

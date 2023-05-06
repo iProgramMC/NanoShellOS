@@ -57,6 +57,9 @@ void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int 
     // Allow infinite re-use of the queue by looping it around.
     g_windowEventQueueHead = (g_windowEventQueueHead + 1) % MASTER_WIN_EVT_QUEUE_MAX;
 	
+	KeUnsuspendTasksWaitingForWM();
+	KeUnsuspendTasksWaitingForObject(pWindow);
+	
 	LockFree(&g_windowEventQueueLock);
 }
 

@@ -82,6 +82,7 @@ enum
 	SUSPENSION_UNTIL_WM_UPDATE,      // Suspension until the window manager updates
 	SUSPENSION_UNTIL_PIPE_WRITE,     // Suspension until a certain pipe is written to
 	SUSPENSION_UNTIL_PIPE_READ,      // Suspension until a certain pipe is read from
+	SUSPENSION_UNTIL_OBJECT_EVENT,   // Suspension until a generic object gets a generic event.
 };
 
 typedef struct
@@ -243,6 +244,11 @@ void WaitTask (Task* pTask);
 void WaitProcess(void* pProcess);
 
 /***********************************************************
+    Waits until an object receives an event.
+***********************************************************/
+void WaitObject(void* pObject);
+
+/***********************************************************
     Waits until a pipe gets written to.
 ***********************************************************/
 void WaitPipeWrite(void* pPipe);
@@ -284,6 +290,15 @@ void KeUnsuspendTask(Task* pTask);
 	for a certain process handle
 ***********************************************************/
 void KeUnsuspendTasksWaitingForProc(void *pProc);
+
+/***********************************************************
+    Internal function to unsuspend all tasks waiting
+	for a certain object handle.
+	
+	This can be used to signify that there might be an
+	event waiting on that object.
+***********************************************************/
+void KeUnsuspendTasksWaitingForObject(void *pProc);
 
 /***********************************************************
     Internal function to unsuspend all tasks waiting

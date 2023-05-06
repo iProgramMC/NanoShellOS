@@ -345,6 +345,26 @@ void KeUnsuspendTasksWaitingForProc(void *pProc)
 	}
 }
 
+// TODO: A lot of the code is the same. Maybe we should not repeat ourselves.
+void KeUnsuspendTasksWaitingForObject(void *pProc)
+{
+	// let everyone know that this process is gone
+	for (int i = 0; i < C_MAX_TASKS; i++)
+	{
+		register Task *pCurTask = &g_runningTasks[i];
+		if (!pCurTask->m_bExists) continue;
+		
+		if (!pCurTask->m_bSuspended) continue;
+		if (pCurTask->m_suspensionType != SUSPENSION_UNTIL_OBJECT_EVENT) continue;
+		
+		if (pCurTask->m_pWaitedTaskOrProcess == pProc)
+		{
+			// Unsuspend this process, they're done waiting!
+			KeReviveTask(pCurTask);
+		}
+	}
+}
+
 void KeUnsuspendTasksWaitingForPipeWrite(void *pProc)
 {
 	// let everyone know that this process is gone
@@ -672,6 +692,17 @@ void WaitProcess (void* pProcessToWait1)
 	
 	sti;
 	
+	while (pTask->m_bSuspended) KeTaskDone();
+}
+
+void WaitObject(void* pObject)
+{
+	cli;
+	Task *pTask = KeGetRunningTask();
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_OBJECT_EVENT;
+	pTask->m_pWaitedTaskOrProcess = pObject;
+	pTask->m_bSuspended           = true;
+	sti;
 	while (pTask->m_bSuspended) KeTaskDone();
 }
 

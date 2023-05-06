@@ -581,6 +581,8 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			HomeMenu$LoadConfig(pWindow);
 			TaskbarCreateControls(pWindow);
 			
+			AddTimer(pWindow, 50, EVENT_UPDATE);
+			
 			break;
 		}
 		case EVENT_UPDATE:
@@ -777,19 +779,8 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	
 	g_pTaskBarWindow = pWindow;
 	g_pTaskBarWindow->m_EventQueueLock.m_held = false;
-	// setup:
-	//ShowWindow(pWindow);
 	
 	// event loop:
-	int timeout = GetTickCount();
-	while (HandleMessages (pWindow))
-	{
-		if (GetTickCount() > timeout)
-		{
-			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-			//WindowRegisterEvent(pWindow, EVENT_PAINT,  0, 0);
-			timeout += 1000;
-		}
-	}
+	while (HandleMessages (pWindow));
 }
 

@@ -37,14 +37,6 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 	Console* pConsole = (Console*)pWindow->m_data;
 	switch (messageType)
 	{
-		case EVENT_CLICKCURSOR:
-			//CLogMsgNoCr(pConsole, "Clicked! ");
-			break;
-		case EVENT_KEYPRESS:
-		{
-			//CoPrintChar(pConsole, (char)parm1);
-			break;
-		}
 		case EVENT_TERMINAL_EXIT:
 		{
 			// remove the subthread since it's already gone.
@@ -90,6 +82,11 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 			
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			AddTimer(pWindow, 15, EVENT_UPDATE);
 			break;
 		}
 		case EVENT_PAINT:
@@ -308,19 +305,6 @@ void TerminalHostTask(int arg)
 		ShellInit();
 	}
 	
-	//LogMsg("Select this window and type something.");
-	
-	int timeout = GetTickCount();
-	while (HandleMessages (pWindow))
-	{
-		if (GetTickCount() > timeout)
-		{
-			timeout += pWindow->m_isSelected ? 10 : 20;
-			
-			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-		}
-	}
-	
-	//KeKillTask(pTask);
+	while (HandleMessages (pWindow));
 }
 

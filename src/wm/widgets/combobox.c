@@ -253,7 +253,7 @@ void ComboBox_OpenSubWindow(Control* this)
 		windowRect.left, windowRect.top,
 		GetWidth(&windowRect), GetHeight(&windowRect),
 		WidgetComboBox_SubMenuEventProc,
-		WF_MENUITEM | WF_SYSPOPUP | WI_NEVERSEL | WF_NOMINIMZ | WF_NOCLOSE | WF_NOTITLE | WF_FLATBORD
+		WF_MENUITEM | WF_SYSPOPUP | WI_NEVERSEL | WF_NOMINIMZ | WF_NOCLOSE | WF_NOTITLE | WF_FLATBORD | WF_NOWAITWM
 	);
 	
 	if (!pSubWindow)

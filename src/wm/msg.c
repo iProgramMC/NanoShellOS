@@ -6,8 +6,6 @@
 ******************************************/
 #include "wi.h"
 
-int g_TickSpeed = 20; // 50 hz
-
 static bool IsEventPrivate(int eventType)
 {
 	return eventType >= EVENT_PRIVATE_START && eventType < EVENT_USER;
@@ -42,10 +40,13 @@ void OnWindowHung(Window *pWindow)
 //This is what you should use in most cases.
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
 {
+	KeUnsuspendTasksWaitingForObject(pWindow);
+	KeUnsuspendTasksWaitingForWM();
+	
 	int queue_timeout = GetTickCount() + 5000;
 	while (pWindow->m_EventQueueLock.m_held)
 	{
-		KeUnsuspendTasksWaitingForWM();
+		//KeUnsuspendTasksWaitingForWM();
 		KeTaskDone();
 		
 		if (queue_timeout < GetTickCount())
@@ -84,6 +85,7 @@ void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int 
 		
 		pWindow->m_eventQueueSize++;
 		
+		// TODO: change all the apps to use timers instead of manually implemented things
 		if (eventType == EVENT_PAINT && !(pWindow->m_flags & WF_NOWAITWM))
 		{
 			if (pWindow->m_lastSentPaintEventExternallyWhen + 40 < GetTickCount()) // 40 ms delay
@@ -107,6 +109,8 @@ void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int 
 	}
 	else
 		DebugLogMsg("Could not register event %d for window %x", eventType, pWindow);
+	
+	KeUnsuspendTasksWaitingForObject(pWindow);
 }
 
 void RequestRepaint (Window* pWindow)
@@ -260,7 +264,9 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 }
 
 static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLockEvents)
-{	
+{
+	//SLogMsg("Window \"%s\": Event %d", pWindow->m_title, eventType);
+	
 	pWindow->m_lastHandledMessagesWhen = GetTickCount();
 	//setup paint stuff so the window can only paint in their little box
 	
@@ -661,9 +667,25 @@ bool HandleMessages(Window* pWindow)
 		if (bIsNotWM)
 		{
 			if (pWindow->m_flags & WF_NOWAITWM)
+			{
 				WaitMS(1);// ayy
-			else 
-				WaitUntilWMUpdate();
+			}
+			else if (ExGetRunningProc())
+			{
+				if (ExGetRunningProc()->nWindows >= 1)
+				{
+					WaitUntilWMUpdate();
+				}
+				else
+				{
+					WaitObject(pWindow);
+				}
+			}
+			else
+			{
+				// note: kernel tasks typically only have one window running..
+				WaitObject(pWindow);
+			}
 		}
 	}
 	
@@ -723,7 +745,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			pWindow->m_privFlags |= WPF_INITGOOD;
 			
-			AddTimer(pWindow, g_TickSpeed, EVENT_TICK);
+			//AddTimer(pWindow, g_TickSpeed, EVENT_TICK);
 			
 			break;
 		}

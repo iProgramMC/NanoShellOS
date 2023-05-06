@@ -503,6 +503,14 @@ void NukeWindowUnsafe (Window* pWindow)
 	
 	LockFree(&g_CreateLock);
 	
+	Process* proc = ExGetRunningProc();
+	if (proc)
+	{
+		proc->nWindows--;
+		if (proc->nWindows < 0)
+			proc->nWindows = 0;
+	}
+	
 	RequestTaskbarUpdate();
 }
 
@@ -877,6 +885,11 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	LockFree (&g_CreateLock);
 	
 	RequestTaskbarUpdate();
+	
+	if (ExGetRunningProc())
+	{
+		ExGetRunningProc()->nWindows++;
+	}
 	
 	return pWnd;
 }

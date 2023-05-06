@@ -13,7 +13,7 @@
 #include <misc.h>
 #include <icon.h>
 #include <print.h>
-#include <task.h>
+#include <process.h>
 #include <widget.h>
 #include <keyboard.h>
 #include <wbuiltin.h>

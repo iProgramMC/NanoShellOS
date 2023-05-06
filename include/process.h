@@ -58,6 +58,8 @@ struct Proc
 	
 	ProgramInfo   pProgInfo;
 	ResourceTable sResourceTable;
+	
+	int   nWindows; // Number of windows spawned by this process.
 };
 typedef struct Proc Process;
 

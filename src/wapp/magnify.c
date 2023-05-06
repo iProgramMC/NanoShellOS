@@ -23,6 +23,8 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 	{
 		case EVENT_CREATE:
 		{
+			AddTimer(pWindow, 15, EVENT_UPDATE);
+			
 			Rectangle r;
 			RECT (r, 0, 0, MAGWID*MAGSCALE, MAGHEI*MAGSCALE);
 			
@@ -112,21 +114,6 @@ void PrgMagnifyTask (__attribute__((unused)) int argument)
 		return;
 	}
 	
-	// setup:
-	//ShowWindow(pWindow);
-	
 	// event loop:
-#if THREADING_ENABLED
-	int nextUpdateIn = 0;
-	while (HandleMessages (pWindow))
-	{
-		if (nextUpdateIn <= GetTickCount())
-		{
-			//RegisterEventInsideWndProc(pWindow, EVENT_UPDATE, 0, 0);
-			//CallWindowCallbackAndControls(pWindow, EVENT_UPDATE, 0, 0);
-			WindowRegisterEvent(pWindow,  EVENT_UPDATE, 0, 0);
-			nextUpdateIn = GetTickCount() +10;
-		}
-	}
-#endif
+	while (HandleMessages (pWindow));
 }

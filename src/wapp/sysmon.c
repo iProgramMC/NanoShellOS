@@ -42,14 +42,15 @@ const char *GetTaskSuspendStateStr (int susp_type)
 {
 	switch (susp_type)
 	{
-		case SUSPENSION_NONE:  return "Active";
-		case SUSPENSION_TOTAL: return "Suspended";
-		case SUSPENSION_UNTIL_WM_UPDATE: return "Wait WM";
+		case SUSPENSION_NONE:                 return "Active";
+		case SUSPENSION_TOTAL:                return "Suspended";
+		case SUSPENSION_UNTIL_WM_UPDATE:      return "Wait WM";
 		case SUSPENSION_UNTIL_TASK_EXPIRY:    return "Wait Task";
 		case SUSPENSION_UNTIL_TIMER_EXPIRY:   return "Sleeping";
 		case SUSPENSION_UNTIL_PROCESS_EXPIRY: return "Wait Process";
 		case SUSPENSION_UNTIL_PIPE_READ:
-		case SUSPENSION_UNTIL_PIPE_WRITE: return "Wait Pipe";
+		case SUSPENSION_UNTIL_PIPE_WRITE:     return "Wait Pipe";
+		case SUSPENSION_UNTIL_OBJECT_EVENT:   return "Wait Object";
 	}
 	return "Unknown";
 }
@@ -130,16 +131,29 @@ static void AddProcessToList(Window* pWindow, int tid, int pid, const char * nam
 	
 	switch (susp_type)
 	{
-		case SUSPENSION_IDLE:  buf[COL_STATUS] = "Idle"; break;
-		case SUSPENSION_NONE:  buf[COL_STATUS] = "Running"; break;
-		case SUSPENSION_TOTAL: buf[COL_STATUS] = "Suspended"; break;
-		case SUSPENSION_UNTIL_WM_UPDATE: buf[COL_STATUS] = "WM Sync"; break;
-		case SUSPENSION_UNTIL_TIMER_EXPIRY: buf[COL_STATUS] = "Sleeping"; break;
+		case SUSPENSION_IDLE:
+			buf[COL_STATUS] = "Idle";
+			break;
+		case SUSPENSION_NONE:
+		case SUSPENSION_UNTIL_OBJECT_EVENT:
+		case SUSPENSION_UNTIL_WM_UPDATE:
+			buf[COL_STATUS] = "Running";
+			break;
+		case SUSPENSION_TOTAL:
+			buf[COL_STATUS] = "Suspended";
+			break;
+		case SUSPENSION_UNTIL_TIMER_EXPIRY:
+			buf[COL_STATUS] = "Sleeping";
+			break;
 		case SUSPENSION_UNTIL_PIPE_WRITE:
 		case SUSPENSION_UNTIL_PIPE_READ:
 		case SUSPENSION_UNTIL_PROCESS_EXPIRY:
-		case SUSPENSION_UNTIL_TASK_EXPIRY: buf[COL_STATUS] = "Blocked"; break;
-		default: buf[COL_STATUS] = "Unknown"; break;
+		case SUSPENSION_UNTIL_TASK_EXPIRY:
+			buf[COL_STATUS] = "Blocked";
+			break;
+		default:
+			buf[COL_STATUS] = "Unknown";
+			break;
 	}
 	
 	char pf_buf[16];
@@ -198,6 +212,8 @@ int UpdateSystemMonitorLists(Window* pWindow)
 		if (pTask->m_bExists)
 		{
 			uint64_t time1 = s_cpu_time[i];
+			
+			//SLogMsg("TID %d  usage: %l out of %l", i, time1, s_cpu_time_total);
 			
 			uint64_t cpu_usage_percent_64 = time1 * 100 / s_cpu_time_total;
 			int cpu_usage_percent = (int)cpu_usage_percent_64;
@@ -367,6 +383,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			Rectangle r;
 			// Add a list view control.
 			
+			AddTimer(pWindow, 1000, EVENT_UPDATE);
 			
 			int listview_y = PADDING_AROUND_LISTVIEW;
 			int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
@@ -445,18 +462,7 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	
 	pWindow->m_data = pInstance;
 	
-	// event loop:
-#if THREADING_ENABLED
-	int next_tick_in = GetTickCount();
-	while (HandleMessages (pWindow))
-	{
-		if (GetTickCount() >= next_tick_in)
-		{
-			next_tick_in += 1000;
-			WindowRegisterEvent(pWindow, EVENT_UPDATE, 0, 0);
-		}
-	}
-#endif
+	while (HandleMessages(pWindow));
 
 	MmFree(pSystemImage);
 }

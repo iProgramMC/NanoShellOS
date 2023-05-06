@@ -48,10 +48,7 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 	if (pSubWindow)
 	{
 		pSubWindow->m_data = data;
-		while (HandleMessages(pSubWindow))
-		{
-			KeTaskDone();
-		}
+		while (HandleMessages(pSubWindow));
 	}
 	
 	if (pWindow)

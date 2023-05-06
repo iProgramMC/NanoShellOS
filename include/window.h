@@ -251,9 +251,9 @@ enum {
 	//A clickable button which triggers an EVENT_COMMAND with its comboID
 	//as its first parm.
 	CONTROL_BUTTON,
-	//A text input field.  Not Finished
+	//A text input field.
 	CONTROL_TEXTINPUT,
-	//A checkbox.  Not Finished.
+	//A checkbox.
 	CONTROL_CHECKBOX,
 	//A clickable label, which renders its text in the center-left.
 	//Does the same as the CONTROL_BUTTON.
@@ -725,6 +725,14 @@ typedef struct WindowStruct
 	
 	// The last window flags, before a border size recalculation
 	int        m_lastWindowFlags;
+	
+	// The number of controls that require a ticking timer that sends
+	// an EVENT_TICK to function properly. There are only two right now:
+	// CONTROL_TEXTINPUT and CONTROL_COMBOBOX.
+	int       m_nTickingCtls;
+	
+	// The ID of said timer.
+	int       m_nTickTimerID;
 }
 Window;
 
