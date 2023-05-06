@@ -4,7 +4,10 @@
 SRC_DIR=src
 INC_DIR=include
 BUILD_DIR=build
+TOOLS_DIR=tools
 ISO_DIR=$(BUILD_DIR)/iso_root
+
+LIBGCC_PATH = $(TOOLS_DIR)/libgcc-i686.a
 
 # probably shouldn't use $(CC) here because there are people who prefer
 # different versions of clang or ld
@@ -54,7 +57,7 @@ clean:
 
 $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"
-	@$(NLD) $(LDFLAGS) -o $@ $^
+	@$(NLD) $(LDFLAGS) -o $@ $^ $(LIBGCC_PATH)
 
 $(INITRD_TARGET):
 	@echo "Building initrd..."

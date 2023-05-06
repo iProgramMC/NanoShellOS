@@ -12,6 +12,8 @@ AS=nasm
 LIS_DIR=../../crt/src
 LII_DIR=../../crt/include
 
+LGCC=../../tools/libgcc-i686.a
+
 CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2 -nostdinc -DNANOSHELL -DONE_SOURCE=0 -DTCC_TARGET_I386 -Wdeclaration-after-statement -fno-strict-aliasing -Wno-pointer-sign -Wno-sign-compare -Wno-unused-result
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
@@ -37,7 +39,7 @@ application: $(APP_TARGET)
 $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES)
 	@echo "linking: $@"
 	@echo $(APP_O_FILES) $(LIB_O_FILES)
-	@$(LD) $(LDFLAGS) -o $@ $^
+	@$(LD) $(LDFLAGS) -o $@ $^ $(LGCC)
 
 # Build Library
 $(BLD_DIR)/%.asm.o: $(LIS_DIR)/%.asm

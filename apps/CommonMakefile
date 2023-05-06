@@ -7,6 +7,8 @@ BLD_DIR=build
 LIS_DIR=../../crt/src
 LII_DIR=../../crt/include
 
+LGCC=../../tools/libgcc-i686.a
+
 CC=clang
 LD=ld
 AS=nasm
@@ -56,7 +58,7 @@ endif
 $(APP_TARGET): $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)
 	@echo "linking: $@"
 	@echo $(APP_O_FILES) $(LIB_O_FILES) $(RESOURCE_COMP_OBJ)
-	@$(LD) $(LDFLAGS) -o $@ $^
+	@$(LD) $(LDFLAGS) -o $@ $^ $(LGCC)
 
 # Build Library
 $(BLD_DIR)/%.asm.o: $(LIS_DIR)/%.asm
