@@ -465,4 +465,5 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	while (HandleMessages(pWindow));
 
 	MmFree(pSystemImage);
+	MmFree(pInstance);
 }

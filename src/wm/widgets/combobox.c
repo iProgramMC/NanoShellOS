@@ -95,8 +95,8 @@ void ComboBox_Paint(Control* this, bool paintContent, bool paintButton, bool pai
 		
 		DrawEdge(buttonRect, flags, color);
 		
-		buttonRect.top++;
-		buttonRect.bottom++;
+		//buttonRect.top++;
+		//buttonRect.bottom++;
 		
 		if (pData->m_bClicked)
 		{
@@ -106,7 +106,8 @@ void ComboBox_Paint(Control* this, bool paintContent, bool paintButton, bool pai
 			buttonRect.bottom++;
 		}
 		
-		VidDrawText ("\x19", buttonRect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+		//VidDrawText ("\x19", buttonRect, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+		DrawArrow(buttonRect, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
 	}
 	
 	if (paintContent)
@@ -300,6 +301,7 @@ void ComboBox_ClearItems(Control* this)
 	ComboBoxData* pData = ComboBox_GetData(this);
 	
 	MmFree(pData->m_Items);
+	pData->m_Items        = NULL;
 	pData->m_ItemCount    = 0;
 	pData->m_ItemCapacity = 0;
 	pData->m_ShownItem    = 0;
@@ -328,6 +330,7 @@ bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUS
 			ComboBoxData* pData = ComboBox_GetData(this);
 			
 			ComboBox_CloseSubWindow(this);
+			ComboBox_ClearItems(this);
 			
 			MmFree(pData);
 			this->m_dataPtr = NULL;
