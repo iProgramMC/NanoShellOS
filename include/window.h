@@ -1109,11 +1109,13 @@ eArrowType;
 
 #define DRA_IGNOREXSIZE (1 << 0) // Ignores the width of the rectangle.
 #define DRA_IGNOREYSIZE (1 << 1) // Ignores the height of the rectangle.
-// DRA_IGNOREXSIZE | DRA_IGNOREYSIZE means that both sizes are ignored, so the default size of ARROW_SIZE will be used.
-#define DRA_IGNORESIZE (DRA_IGNOREXSIZE | DRA_IGNOREYSIZE)
 
 #define DRA_CENTERX     (1 << 2) // Center along the X axis.
 #define DRA_CENTERY     (1 << 3) // Center along the Y axis.
+
+// DRA_IGNOREXSIZE | DRA_IGNOREYSIZE means that both sizes are ignored, so the default size of ARROW_SIZE will be used.
+#define DRA_IGNORESIZE (DRA_IGNOREXSIZE | DRA_IGNOREYSIZE)
+#define DRA_CENTERALL  (DRA_CENTERX | DRA_CENTERY)
 
 void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color);
 

@@ -242,13 +242,17 @@ void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color)
 		case DRA_UP:
 		case DRA_DOWN:
 		{
-			arrowRect.bottom = arrowRect.top + (arrowRect.right - arrowRect.left) / 2;
+			int wid = (arrowRect.right - arrowRect.left);
+			wid += wid % 2;
+			arrowRect.bottom = arrowRect.top + wid / 2;
 			break;
 		}
 		case DRA_LEFT:
 		case DRA_RIGHT:
 		{
-			arrowRect.right = arrowRect.left + (arrowRect.bottom - arrowRect.top) / 2;
+			int hei = (arrowRect.bottom - arrowRect.top);
+			hei += hei % 2;
+			arrowRect.right = arrowRect.left + hei / 2;
 			break;
 		}
 	}
@@ -299,19 +303,6 @@ void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color)
 		}
 		case DRA_LEFT:
 		{
-			int xPos = arrowRect.left;
-			arrowRect.bottom--;
-			while (xPos < arrowRect.right && arrowRect.top <= arrowRect.bottom)
-			{
-				VidDrawVLine(color, arrowRect.top, arrowRect.bottom, xPos);
-				arrowRect.top++;
-				arrowRect.bottom--;
-				xPos++;
-			}
-			break;
-		}
-		case DRA_RIGHT:
-		{
 			int xPos = arrowRect.right - 1;
 			arrowRect.bottom--;
 			while (xPos >= arrowRect.left && arrowRect.top <= arrowRect.bottom)
@@ -320,6 +311,19 @@ void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color)
 				arrowRect.top++;
 				arrowRect.bottom--;
 				xPos--;
+			}
+			break;
+		}
+		case DRA_RIGHT:
+		{
+			int xPos = arrowRect.left;
+			arrowRect.bottom--;
+			while (xPos < arrowRect.right && arrowRect.top <= arrowRect.bottom)
+			{
+				VidDrawVLine(color, arrowRect.top, arrowRect.bottom, xPos);
+				arrowRect.top++;
+				arrowRect.bottom--;
+				xPos++;
 			}
 			break;
 		}

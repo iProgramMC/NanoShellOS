@@ -233,11 +233,11 @@ go_back:;
 			else
 				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			left_button.top++;
-			right_button.top++;
+			//left_button.top++;
+			//right_button.top++;
 			scroller.top++;
-			left_button.bottom++;
-			right_button.bottom++;
+			//left_button.bottom++;
+			//right_button.bottom++;
 			scroller.bottom++;
 			
 			if (this->m_scrollBarData.m_yMinButton)
@@ -246,9 +246,15 @@ go_back:;
 			if (this->m_scrollBarData.m_yMaxButton)
 				right_button.left++, right_button.right++, right_button.bottom++, right_button.top++;
 			
+			/*
 			VidDrawText ("\x1B",   left_button,  TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x1A",   right_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			*/
+			
+			DrawArrow(left_button,  DRA_LEFT,  DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			DrawArrow(right_button, DRA_RIGHT, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			
 			break;
 		}
 	}
@@ -380,22 +386,21 @@ go_back:;
 			else
 				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			top_button.top++;
-			bottom_button.top++;
-			scroller.top++;
-			top_button.bottom++;
-			bottom_button.bottom++;
-			scroller.bottom++;
-			
 			if (this->m_scrollBarData.m_yMinButton)
 				top_button   .left++, top_button   .right++, top_button   .bottom++, top_button   .top++;
 				
 			if (this->m_scrollBarData.m_yMaxButton)
 				bottom_button.left++, bottom_button.right++, bottom_button.bottom++, bottom_button.top++;
 			
+			/*
 			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
+			*/
+			
+			DrawArrow(top_button,    DRA_UP,   DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			DrawArrow(bottom_button, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			
 			break;
 		}
 	}
