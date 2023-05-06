@@ -22,8 +22,7 @@ PROJECTS :=         \
 	VBuilder        \
 	WavePlayer      \
 	WindowTest      \
-	WorldMap        \
-	nsshell
+	WorldMap
 
 
 cleanup:
