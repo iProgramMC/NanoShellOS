@@ -616,7 +616,7 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 				{
 					//send a command event to the window:
 					//CallWindowCallback(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
-					WindowRegisterEventUnsafe(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
+					WindowAddEventToMasterQueue(pWindow, this->m_parm1, this->m_comboID, this->m_parm2);
 				}
 				this->m_buttonData.m_clicked = false;
 				WidgetActionButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);

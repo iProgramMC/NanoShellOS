@@ -570,6 +570,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				{
 					if (selectedRow == -1) break;
 					
+					if (selectedRow < 0 || selectedRow >= this->m_tableViewData.m_row_capacity) break;
+					
 					// well, this behaves like a double click.
 					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, selectedRow);
 					
@@ -623,7 +625,6 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 					break;
 				}
 			}
-			
 			
 			break;
 		}

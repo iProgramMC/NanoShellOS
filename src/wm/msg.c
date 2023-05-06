@@ -40,77 +40,7 @@ void OnWindowHung(Window *pWindow)
 //This is what you should use in most cases.
 void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
 {
-	KeUnsuspendTasksWaitingForObject(pWindow);
-	KeUnsuspendTasksWaitingForWM();
-	
-	int queue_timeout = GetTickCount() + 5000;
-	while (pWindow->m_EventQueueLock.m_held)
-	{
-		//KeUnsuspendTasksWaitingForWM();
-		KeTaskDone();
-		
-		if (queue_timeout < GetTickCount())
-		{
-			//SLogMsg("Window with address %x (title: %s) is frozen/taking a long time to process events!  Marking it as hung...", pWindow, pWindow->m_title);
-			return;
-		}
-	}
-	
-	LockAcquire (&pWindow->m_EventQueueLock);
-	
-	WindowRegisterEventUnsafe (pWindow, eventType, parm1, parm2);
-	
-	LockFree (&pWindow->m_EventQueueLock);
-}
-
-//Registers an event to a window.  Not recommended for use.
-void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2)
-{
-	if (pWindow->m_flags & WF_FROZEN)
-	{
-		// Can't send events to frozen objects, so pretend it's handled already
-		pWindow->m_lastHandledMessagesWhen = GetTickCount();
-		return;
-	}
-	if (!pWindow->m_eventQueue)
-	{
-		// Can't send events to windows being destroyed can you?
-		return;
-	}
-	if (pWindow->m_eventQueueSize < EVENT_QUEUE_MAX - 1)
-	{
-		pWindow->m_eventQueue[pWindow->m_eventQueueSize] = eventType;
-		pWindow->m_eventQueueParm1[pWindow->m_eventQueueSize] = parm1;
-		pWindow->m_eventQueueParm2[pWindow->m_eventQueueSize] = parm2;
-		
-		pWindow->m_eventQueueSize++;
-		
-		// TODO: change all the apps to use timers instead of manually implemented things
-		if (eventType == EVENT_PAINT && !(pWindow->m_flags & WF_NOWAITWM))
-		{
-			if (pWindow->m_lastSentPaintEventExternallyWhen + 40 < GetTickCount()) // 40 ms delay
-			{
-				// Sent a paint request in more than 40 milliseconds since the
-				// last one, I would wager we don't need turbo mode
-				pWindow->m_frequentWindowRenders = 0;
-			}
-			else
-			{
-				pWindow->m_frequentWindowRenders++;
-				if (pWindow->m_frequentWindowRenders > 50)
-				{
-					SLogMsg("[WindowRegisterEventUnsafe] Potential game detected, allowing acceleration");
-					pWindow->m_flags |= WF_NOWAITWM;
-				}
-			}
-			
-			pWindow->m_lastSentPaintEventExternallyWhen = GetTickCount();
-		}
-	}
-	else
-		DebugLogMsg("Could not register event %d for window %x", eventType, pWindow);
-	
-	KeUnsuspendTasksWaitingForObject(pWindow);
+	WindowAddEventToMasterQueue(pWindow, eventType, parm1, parm2);
 }
 
 void RequestRepaint (Window* pWindow)
@@ -594,6 +524,8 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	return true;
 }
+
+void WmWaitForEvent(Window* pWindow);
 
 bool HandleMessages(Window* pWindow)
 {

@@ -697,12 +697,14 @@ void WaitProcess (void* pProcessToWait1)
 
 void WaitObject(void* pObject)
 {
-	cli;
 	Task *pTask = KeGetRunningTask();
 	pTask->m_suspensionType       = SUSPENSION_UNTIL_OBJECT_EVENT;
 	pTask->m_pWaitedTaskOrProcess = pObject;
 	pTask->m_bSuspended           = true;
-	sti;
+	
+	if (KeCheckInterruptsDisabled())
+		sti;
+	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
 

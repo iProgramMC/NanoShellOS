@@ -13,7 +13,7 @@ typedef struct
     int m_eventType, m_parm1, m_parm2;
 }
 WindowEventQueueItem;
-#define MASTER_WIN_EVT_QUEUE_MAX 4096
+#define MASTER_WIN_EVT_QUEUE_MAX 32768
 WindowEventQueueItem g_windowEventQueue[MASTER_WIN_EVT_QUEUE_MAX];
 
 int g_windowEventQueueHead = 0;
@@ -24,21 +24,32 @@ void OnWindowHung(Window *pWindow);
 
 void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
 {
+	int tickCount = GetTickCount();
 	if (pWindow->m_flags & WF_FROZEN)
 	{
 		// Can't send events to frozen objects! Just pretend it's handled already
 		if (eventType != EVENT_BORDER_SIZE_UPDATE_PRIVATE && eventType != EVENT_REQUEST_RESIZE_PRIVATE && eventType != EVENT_REPAINT_PRIVATE)
 		{
-			pWindow->m_lastHandledMessagesWhen = GetTickCount();
+			pWindow->m_lastHandledMessagesWhen = tickCount;
 			return;
 		}
 	}
 	else
 	{
-		//if hasn't responded in 5 seconds:
-		if (pWindow->m_lastHandledMessagesWhen + 5000 <= GetTickCount())
+		//if hasn't responded in 5 seconds
+		if (pWindow->m_lastHandledMessagesWhen + 5000 <= tickCount)
 		{
-			OnWindowHung(pWindow);
+			//if we haven't sent a message in the last 5 seconds:
+			if (pWindow->m_lastSentMessageTime + 5000 <= tickCount)
+			{
+				//we shouldn't actually think it's frozen. It might not be!
+				pWindow->m_lastHandledMessagesWhen = tickCount;
+				pWindow->m_lastSentMessageTime = tickCount;
+			}
+			else
+			{
+				OnWindowHung(pWindow);
+			}
 		}
 	}
 	
@@ -56,6 +67,7 @@ void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int 
 
     // Allow infinite re-use of the queue by looping it around.
     g_windowEventQueueHead = (g_windowEventQueueHead + 1) % MASTER_WIN_EVT_QUEUE_MAX;
+	pWindow->m_lastSentMessageTime = GetTickCount();
 	
 	KeUnsuspendTasksWaitingForWM();
 	KeUnsuspendTasksWaitingForObject(pWindow);
@@ -112,4 +124,21 @@ bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, int *parm1, int *p
 	LockFree(&g_windowEventQueueLock);
     // No, we still have not found it.  Return false, to signify that there are no more elements on the queue for now.
     return false;
+}
+
+void WmWaitForEvent(Window* pWindow)
+{
+	cli;
+	
+	for (int i = 0; i < MASTER_WIN_EVT_QUEUE_MAX; i++)
+	{
+		if (g_windowEventQueue[i].m_destWindow == pWindow)
+		{
+			// there are actually events! Don't wait.
+			sti;
+			return;
+		}
+	}
+	
+	WaitObject(pWindow); // this will restore interrupts later
 }

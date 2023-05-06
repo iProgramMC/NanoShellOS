@@ -16,6 +16,8 @@ void WinAddToInputQueue (Window* this, char input)
 	while
 	   (this->m_inputBufferEnd >= WIN_KB_BUF_SIZE)
 		this->m_inputBufferEnd -= WIN_KB_BUF_SIZE;
+	
+	KeUnsuspendTasksWaitingForObject(this);
 }
 
 bool WinAnythingOnInputQueue (Window* this)

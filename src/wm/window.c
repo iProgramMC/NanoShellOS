@@ -576,7 +576,7 @@ void SelectWindowUnsafe(Window* pWindow)
 				if (g_windows[i].m_isSelected)
 				{
 					g_windows[i].m_isSelected = false;
-					WindowRegisterEventUnsafe(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
+					WindowAddEventToMasterQueue(&g_windows[i], EVENT_KILLFOCUS, 0, 0);
 				}
 			}
 		}
@@ -586,7 +586,7 @@ void SelectWindowUnsafe(Window* pWindow)
 		if (!bNeverSelect)
 		{
 			pWindow->m_isSelected = true;
-			WindowRegisterEventUnsafe(pWindow, EVENT_SETFOCUS, 0, 0);
+			WindowAddEventToMasterQueue(pWindow, EVENT_SETFOCUS, 0, 0);
 			pWindow->m_fullVbeData.m_dirty = true;
 			pWindow->m_renderFinished = true;
 			pWindow->m_fullVbeData.m_drs->m_bIgnoreAndDrawAll = true;

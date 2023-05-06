@@ -733,6 +733,9 @@ typedef struct WindowStruct
 	
 	// The ID of said timer.
 	int       m_nTickTimerID;
+	
+	// The tick count of when we last sent a message.
+	int       m_lastSentMessageTime;
 }
 Window;
 
