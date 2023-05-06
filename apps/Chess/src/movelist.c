@@ -86,6 +86,7 @@ void WidgetMoveList_DrawItem(Rectangle rect, int scrollY, int index)
 }
 
 void PaintBoard();
+void UpdatePlayerTurn();
 
 bool WidgetMoveList_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWnd)
 {
@@ -151,6 +152,7 @@ bool WidgetMoveList_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUS
 				
 				g_CurrentState = &g_History[index];
 				PaintBoard();
+				UpdatePlayerTurn();
 				
 				WidgetMoveList_DrawItem(rect, scrollY, indexCurrState);
 				WidgetMoveList_DrawItem(rect, scrollY, index);
