@@ -161,7 +161,6 @@ RESOURCE_TYPE ResolveProtocolString(const char* protocol)
 
 RESOURCE_STATUS LaunchResource (const char* pResource)
 {
-	SLogMsg("LaunchResource: MainArg:\"%s\"", pResource);
 	char protocolString [21];
 	const char* colonPtr = strchr ((char*)pResource, ':');
 	if (colonPtr == NULL)
@@ -178,8 +177,6 @@ RESOURCE_STATUS LaunchResource (const char* pResource)
 	RESOURCE_TYPE resourceType = ResolveProtocolString(protocolString);
 	if (resourceType == RESOURCE_NONE)
 		return RESOURCE_LAUNCH_INVALID_PROTOCOL;
-	
-	SLogMsg("LaunchResource: protocolType:%d, arg:%s", resourceType, pResource);
 	
 	if (g_ResourceInvokes[resourceType])
 		return g_ResourceInvokes[resourceType](pResource);

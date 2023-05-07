@@ -125,10 +125,6 @@ void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text
 	
 	g_NextEffectUpdateIn = GetTickCount();
 	
-	
-	SLogMsg("Start Effect Dest: %d %d %d %d", g_EffectDest.left, g_EffectDest.top, g_EffectDest.right, g_EffectDest.bottom);
-	SLogMsg("Start Effect Src:  %d %d %d %d", g_EffectSrc .left, g_EffectSrc .top, g_EffectSrc .right, g_EffectSrc .bottom);
-	
 	int sl = strlen (text);
 	if (sl > 999) sl = 999;
 	memcpy(g_EffectText, text, sl + 1);
