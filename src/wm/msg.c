@@ -604,7 +604,7 @@ bool HandleMessages(Window* pWindow)
 			}
 			else if (ExGetRunningProc())
 			{
-				if (ExGetRunningProc()->nWindows >= 1)
+				if (ExGetRunningProc()->nWindows > 1)
 				{
 					WaitUntilWMUpdate();
 				}

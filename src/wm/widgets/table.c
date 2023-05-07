@@ -13,7 +13,7 @@
 
 #define TABLE_ITEM_HEIGHT (TITLE_BAR_HEIGHT)
 
-static void TableAddColumn(TableViewData* this, const char * text, int width)
+static void TableAddColumn(TableViewData* this, const char * text, int width, bool bHandlesNumbers)
 {
 	if (this->m_column_count + 1 > this->m_column_capacity)
 	{
@@ -39,7 +39,11 @@ static void TableAddColumn(TableViewData* this, const char * text, int width)
 	newColumn->m_text[MAX_COLUMN_LENGTH - 1] = 0;
 	
 	newColumn->m_sort_order = 0;
+	newColumn->m_hovered    = newColumn->m_clicked = false;
 	newColumn->m_width      = width;
+	newColumn->m_sortMode   = TABLE_SORT_NEUTRAL;
+	
+	newColumn->m_bNumbers = bHandlesNumbers;
 	
 	// For each row, re-allocate its item count.
 	for (int i = 0; i < this->m_row_count; i++)
@@ -190,9 +194,9 @@ static void CtlAddTableRow(Control * this, const char* pText[], int optionalIcon
 	CtlUpdateScrollBarSize(this, pWindow);
 }
 
-static void CtlAddTableColumn(Control * this, const char* pText, int width, Window* pWindow)
+static void CtlAddTableColumn(Control * this, const char* pText, int width, Window* pWindow, bool bHandlesNumbers)
 {
-	TableAddColumn(&this->m_tableViewData, pText, width);
+	TableAddColumn(&this->m_tableViewData, pText, width, bHandlesNumbers);
 	CtlUpdateScrollBarSize(this, pWindow);
 }
 
@@ -272,16 +276,21 @@ void AddTableRow (Window* pWindow, int comboID, const char* pText[], int optiona
 	}
 }
 
-void AddTableColumn(Window* pWindow, int comboID, const char* pText, int width)
+void AddTableColumnEx(Window* pWindow, int comboID, const char* pText, int width, bool bHandlesNumbers)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
-			CtlAddTableColumn(&pWindow->m_pControlArray[i], pText, width, pWindow);
+			CtlAddTableColumn(&pWindow->m_pControlArray[i], pText, width, pWindow, bHandlesNumbers);
 			return;
 		}
 	}
+}
+
+void AddTableColumn(Window* pWindow, int comboID, const char* pText, int width)
+{
+	AddTableColumnEx(pWindow, comboID, pText, width, false);
 }
 
 bool GetRowStringsFromTable(Window* pWindow, int comboID, int index, const char * output[])
@@ -703,6 +712,9 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				DrawEdge(columnBar, DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_FILLED, BUTTONMIDC);
 				
 				VidTextOutLimit(text, columnBar.left + 4, columnBar.top + topOffset, WINDOW_TEXT_COLOR, TRANSPARENT, colWidth);
+				
+				if (col)
+					col->m_rect = columnBar;
 			}
 			
 			// Render each row.

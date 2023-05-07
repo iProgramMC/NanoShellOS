@@ -219,6 +219,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->nSymTabEntries = 0;
 	pProc->sResourceTable.m_pResources = NULL;
 	pProc->sResourceTable.m_nResources = 0;
+	pProc->nWindows = 0;
 	
 	KeTaskAssignTag(pTask, pProc->sIdentifier);
 	

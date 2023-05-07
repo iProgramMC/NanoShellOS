@@ -358,11 +358,24 @@ ListItem;
 #define MAX_COLUMN_LENGTH      (32)
 #define MAX_ROW_CONTENT_LENGTH (128)
 
+typedef enum
+{
+	TABLE_SORT_NEUTRAL,    // No effect
+	TABLE_SORT_ASCENDING,
+	TABLE_SORT_DESCENDING,
+}
+eTableSortMode;
+
 typedef struct
 {
 	char   m_text[MAX_COLUMN_LENGTH];
 	int    m_sort_order;
 	int    m_width;
+	Rectangle m_rect;
+	bool   m_hovered;
+	bool   m_clicked;
+	bool   m_bNumbers; // if this column handles numbers. Useful when sorting.
+	eTableSortMode m_sortMode;
 }
 TableViewColumn;
 

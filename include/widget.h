@@ -274,6 +274,11 @@ void AddTableRow (Window* pWindow, int comboID, const char* pText[], int optiona
 /**
  * Add a column into the table.
  */
+void AddTableColumnEx(Window* pWindow, int comboID, const char* pText, int width, bool bHandlesNumbers);
+
+/**
+ * Add a column into the table.
+ */
 void AddTableColumn(Window* pWindow, int comboID, const char* pText, int width);
 
 /**
