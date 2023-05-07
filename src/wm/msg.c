@@ -193,6 +193,242 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 	}
 }
 
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2);
+
+static void PreProcessEvent(Window* pWindow, int eventType, UNUSED int parm1, UNUSED int parm2)
+{
+	switch (eventType)
+	{
+		case EVENT_MINIMIZE:
+		{
+			Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+			
+			HideWindow (pWindow);
+			if (~pWindow->m_flags & WF_MINIMIZE)
+			{
+				pWindow->m_flags      |= WF_MINIMIZE;
+				pWindow->m_rectBackup  = pWindow->m_rect;
+				
+				pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
+				pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
+				pWindow->m_rect.right  = pWindow->m_rect.left + 32;
+				pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
+			}
+			
+			Rectangle new_title_rect = pWindow->m_rect;
+			
+			//if a taskbar is running:
+			new_title_rect = pWindow->m_taskbarRect;
+			
+			CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			break;
+		}
+		case EVENT_UNMINIMIZE:
+		{
+			Rectangle old_title_rect = pWindow->m_rect;
+			//if a taskbar is running:
+			old_title_rect = pWindow->m_taskbarRect;
+			
+			HideWindow (pWindow);
+			
+			pWindow->m_flags &= ~WF_MINIMIZE;
+			pWindow->m_rect = pWindow->m_rectBackup;
+			
+			ShowWindow (pWindow);
+			
+			WmPaintWindowBackgd(pWindow);
+			WmPaintWindowBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
+			
+			OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
+			
+			pWindow->m_renderFinished = true;
+			
+			Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+			
+			CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			break;
+		}
+		case EVENT_SIZE:
+		{
+			DirtyRectInvalidateAll();
+			
+			WmPaintWindowBackgd(pWindow);
+			WmPaintWindowBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
+			
+			// Update controls based on their anchoring modes.
+			UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
+			
+			break;
+		}
+		case EVENT_REPAINT_PRIVATE:
+		{
+			WmPaintWindowBackgd(pWindow);
+			WmPaintWindowBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
+			DirtyRectInvalidateAll();
+			
+			break;
+		}
+		case EVENT_MAXIMIZE:
+		{
+			Rectangle old_title_rect;
+			
+			if (!GetWindowTitleRect(pWindow, &old_title_rect))
+			{
+				Rectangle newRect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+				old_title_rect = newRect;
+			}
+			else
+			{
+				old_title_rect.left   += pWindow->m_fullRect.left;
+				old_title_rect.top    += pWindow->m_fullRect.top;
+				old_title_rect.right  += pWindow->m_fullRect.left;
+				old_title_rect.bottom += pWindow->m_fullRect.top;
+			}
+			
+			if (~pWindow->m_flags & WF_MAXIMIZE)
+				pWindow->m_rectBackup = pWindow->m_fullRect;
+			
+			pWindow->m_flags |= WF_MAXIMIZE;
+			
+			if (!(pWindow->m_flags & WF_FLATBORD))
+			{
+				pWindow->m_flags |= WF_FLATBORD;
+				pWindow->m_privFlags |= WPF_FLBRDFRC;
+			}
+			
+			ResizeWindow(
+				pWindow,
+				g_TaskbarMargins.left,
+				g_TaskbarMargins.top,
+				GetScreenWidth() - g_TaskbarMargins.left - g_TaskbarMargins.right,
+				GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom
+			);
+			
+			pWindow->m_renderFinished = true;
+			
+			Rectangle new_title_rect = {
+				g_TaskbarMargins.left,
+				g_TaskbarMargins.top,
+				GetScreenWidth() - g_TaskbarMargins.right - 1,
+				g_TaskbarMargins.top + TITLE_BAR_HEIGHT - 1
+			};
+			
+			CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			break;
+		}
+		case EVENT_UNMAXIMIZE:
+		{
+			Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
+			
+			Rectangle new_title_rect = { pWindow->m_rectBackup.left + 3, pWindow->m_rectBackup.top + 3, pWindow->m_rectBackup.right - 3, pWindow->m_rectBackup.top + 3 + TITLE_BAR_HEIGHT };
+			
+			if (pWindow->m_flags & WF_MAXIMIZE)
+			{
+				ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
+			}
+			
+			pWindow->m_flags &= ~WF_MAXIMIZE;
+			
+			if (pWindow->m_privFlags & WPF_FLBRDFRC)
+			{
+				pWindow->m_flags &= ~WF_FLATBORD;
+				pWindow->m_privFlags &= ~WPF_FLBRDFRC;
+			}
+			
+			pWindow->m_renderFinished = true;
+			
+			CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			break;
+		}
+		case EVENT_SMARTSNAP:
+		{
+			// if the window is maximized, unmaximize it and deflect
+			if (pWindow->m_flags & WF_MAXIMIZE)
+			{
+				WindowAddEventToMasterQueue(pWindow, EVENT_UNMAXIMIZE, 0, 0);
+				WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
+			}
+			else if (pWindow->m_flags & WF_MINIMIZE)
+			{
+				WindowAddEventToMasterQueue(pWindow, EVENT_UNMINIMIZE, 0, 0);
+				WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
+			}
+			else
+			{
+				int x = -1, y, w, h;
+				
+				int screenW = GetScreenWidth()  - g_TaskbarMargins.left - g_TaskbarMargins.right;
+				int screenH = GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom;
+				
+				switch (parm1)
+				{
+					case 0: // UP
+						x = g_TaskbarMargins.left;
+						y = g_TaskbarMargins.top;
+						w = screenW;
+						h = screenH / 2;
+						break;
+					case 1: // DOWN
+						x = g_TaskbarMargins.left;
+						w = screenW;
+						y = h = screenH / 2;
+						break;
+					case 2: // LEFT
+						x = g_TaskbarMargins.left;
+						y = g_TaskbarMargins.top;
+						w = screenW / 2;
+						h = screenH;
+						break;
+					case 3: // RIGHT
+						y = g_TaskbarMargins.top;
+						x = w = screenW / 2;
+						h = screenH;
+						break;
+					case 4: // UP LEFT
+						x = g_TaskbarMargins.left;
+						y = g_TaskbarMargins.top;
+						w = screenW / 2;
+						h = screenH / 2;
+						break;
+					case 5: // UP RIGHT
+						y = g_TaskbarMargins.top;
+						x = w = screenW / 2;
+						h = screenH / 2;
+					case 6: // DOWN LEFT
+						x = g_TaskbarMargins.left;
+						w = screenW / 2;
+						y = h = screenH / 2;
+						break;
+					case 7: // DOWN RIGHT
+						x = w = screenW / 2;
+						y = h = screenH / 2;
+						break;
+				}
+				
+				if (x != -1)
+				{
+					ResizeWindow(pWindow, x, y, w, h);
+				}
+			}
+			break;
+		}
+		case EVENT_CREATE:
+		{
+			VidSetVBEData (&pWindow->m_vbeData);
+			
+			WmPaintWindowBackgd(pWindow);
+			WmPaintWindowBorder(pWindow);
+			WmPaintWindowTitle(pWindow);
+			
+			DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
+			break;
+		}
+	}
+}
+
 static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	//SLogMsg("Window \"%s\": Event %d", pWindow->m_title, eventType);
@@ -222,235 +458,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	
 	// Perform operations before calling the window's event handler function
-	
-	if (eventType == EVENT_MINIMIZE)
-	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-		
-		VidSetVBEData (pBackup);
-		HideWindow (pWindow);
-		if (~pWindow->m_flags & WF_MINIMIZE)
-		{
-			pWindow->m_flags      |= WF_MINIMIZE;
-			pWindow->m_rectBackup  = pWindow->m_rect;
-			
-			pWindow->m_rect.left += (pWindow->m_rect.right  - pWindow->m_rect.left - 32) / 2;
-			pWindow->m_rect.top  += (pWindow->m_rect.bottom - pWindow->m_rect.top  - 32) / 2;
-			pWindow->m_rect.right  = pWindow->m_rect.left + 32;
-			pWindow->m_rect.bottom = pWindow->m_rect.top  + 32;
-		}
-		//pWindow->m_hidden = false;
-		//UpdateDepthBuffer();
-		
-		//if taskbar is not running -> ???
-		
-		//ShowWindow (pWindow);
-		
-		pBackup = VidSetVBEData (&pWindow->m_vbeData);
-		
-		Rectangle new_title_rect = pWindow->m_rect;
-		
-		//if a taskbar is running:
-		new_title_rect = pWindow->m_taskbarRect;
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
-	}
-	else if (eventType == EVENT_UNMINIMIZE)
-	{
-		Rectangle old_title_rect = pWindow->m_rect;
-		//if a taskbar is running:
-		old_title_rect = pWindow->m_taskbarRect;
-		
-		VidSetVBEData (pBackup);
-		HideWindow (pWindow);
-		
-		pWindow->m_flags &= ~WF_MINIMIZE;
-		pWindow->m_rect = pWindow->m_rectBackup;
-		
-		ShowWindow (pWindow);
-		
-		pBackup = VidSetVBEData (&pWindow->m_vbeData);
-		WmPaintWindowBackgd(pWindow);
-		WmPaintWindowBorder(pWindow);
-		WmPaintWindowTitle(pWindow);
-		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
-		
-		pWindow->m_renderFinished = true;
-		
-		Rectangle new_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
-	}
-	else if (eventType == EVENT_SIZE)
-	{
-		DirtyRectInvalidateAll();
-		
-		WmPaintWindowBackgd(pWindow);
-		WmPaintWindowBorder(pWindow);
-		WmPaintWindowTitle(pWindow);
-		
-		// Update controls based on their anchoring modes.
-		UpdateControlsBasedOnAnchoringModes (pWindow, parm1, parm2);
-	}
-	else if (eventType == EVENT_REPAINT_PRIVATE)
-	{
-		WmPaintWindowBackgd(pWindow);
-		WmPaintWindowBorder(pWindow);
-		WmPaintWindowTitle(pWindow);
-		DirtyRectInvalidateAll();
-	}
-	else if (eventType == EVENT_MAXIMIZE)
-	{
-		Rectangle old_title_rect;
-		
-		if (!GetWindowTitleRect(pWindow, &old_title_rect))
-		{
-			Rectangle newRect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-			old_title_rect = newRect;
-		}
-		else
-		{
-			old_title_rect.left   += pWindow->m_fullRect.left;
-			old_title_rect.top    += pWindow->m_fullRect.top;
-			old_title_rect.right  += pWindow->m_fullRect.left;
-			old_title_rect.bottom += pWindow->m_fullRect.top;
-		}
-		
-		if (~pWindow->m_flags & WF_MAXIMIZE)
-			pWindow->m_rectBackup = pWindow->m_fullRect;
-		
-		pWindow->m_flags |= WF_MAXIMIZE;
-		
-		if (!(pWindow->m_flags & WF_FLATBORD))
-		{
-			pWindow->m_flags |= WF_FLATBORD;
-			pWindow->m_privFlags |= WPF_FLBRDFRC;
-		}
-		
-		ResizeWindow(
-			pWindow,
-			g_TaskbarMargins.left,
-			g_TaskbarMargins.top,
-			GetScreenWidth() - g_TaskbarMargins.left - g_TaskbarMargins.right,
-			GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom
-		);
-		
-		pWindow->m_renderFinished = true;
-		
-		Rectangle new_title_rect = {
-			g_TaskbarMargins.left,
-			g_TaskbarMargins.top,
-			GetScreenWidth() - g_TaskbarMargins.right - 1,
-			g_TaskbarMargins.top + TITLE_BAR_HEIGHT - 1
-		};
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
-	}
-	else if (eventType == EVENT_SMARTSNAP)
-	{
-		// if the window is maximized, unmaximize it and deflect
-		if (pWindow->m_flags & WF_MAXIMIZE)
-		{
-			WindowAddEventToMasterQueue(pWindow, EVENT_UNMAXIMIZE, 0, 0);
-			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
-		}
-		else if (pWindow->m_flags & WF_MINIMIZE)
-		{
-			WindowAddEventToMasterQueue(pWindow, EVENT_UNMINIMIZE, 0, 0);
-			WindowAddEventToMasterQueue(pWindow, EVENT_SMARTSNAP,  parm1, 0);
-		}
-		else
-		{
-			int x = -1, y, w, h;
-			
-			int screenW = GetScreenWidth()  - g_TaskbarMargins.left - g_TaskbarMargins.right;
-			int screenH = GetScreenHeight() - g_TaskbarMargins.top - g_TaskbarMargins.bottom;
-			
-			switch (parm1)
-			{
-				case 0: // UP
-					x = g_TaskbarMargins.left;
-					y = g_TaskbarMargins.top;
-					w = screenW;
-					h = screenH / 2;
-					break;
-				case 1: // DOWN
-					x = g_TaskbarMargins.left;
-					w = screenW;
-					y = h = screenH / 2;
-					break;
-				case 2: // LEFT
-					x = g_TaskbarMargins.left;
-					y = g_TaskbarMargins.top;
-					w = screenW / 2;
-					h = screenH;
-					break;
-				case 3: // RIGHT
-					y = g_TaskbarMargins.top;
-					x = w = screenW / 2;
-					h = screenH;
-					break;
-				case 4: // UP LEFT
-					x = g_TaskbarMargins.left;
-					y = g_TaskbarMargins.top;
-					w = screenW / 2;
-					h = screenH / 2;
-					break;
-				case 5: // UP RIGHT
-					y = g_TaskbarMargins.top;
-					x = w = screenW / 2;
-					h = screenH / 2;
-				case 6: // DOWN LEFT
-					x = g_TaskbarMargins.left;
-					w = screenW / 2;
-					y = h = screenH / 2;
-					break;
-				case 7: // DOWN RIGHT
-					x = w = screenW / 2;
-					y = h = screenH / 2;
-					break;
-			}
-			
-			if (x != -1)
-			{
-				ResizeWindow(pWindow, x, y, w, h);
-			}
-		}
-	}
-	else if (eventType == EVENT_UNMAXIMIZE)
-	{
-		Rectangle old_title_rect = { pWindow->m_rect.left + 3, pWindow->m_rect.top + 3, pWindow->m_rect.right - 3, pWindow->m_rect.top + 3 + TITLE_BAR_HEIGHT };
-		
-		Rectangle new_title_rect = { pWindow->m_rectBackup.left + 3, pWindow->m_rectBackup.top + 3, pWindow->m_rectBackup.right - 3, pWindow->m_rectBackup.top + 3 + TITLE_BAR_HEIGHT };
-		
-		if (pWindow->m_flags & WF_MAXIMIZE)
-		{
-			ResizeWindow(pWindow, pWindow->m_rectBackup.left, pWindow->m_rectBackup.top, pWindow->m_rectBackup.right - pWindow->m_rectBackup.left, pWindow->m_rectBackup.bottom - pWindow->m_rectBackup.top);
-		}
-		
-		pWindow->m_flags &= ~WF_MAXIMIZE;
-		
-		if (pWindow->m_privFlags & WPF_FLBRDFRC)
-		{
-			pWindow->m_flags &= ~WF_FLATBORD;
-			pWindow->m_privFlags &= ~WPF_FLBRDFRC;
-		}
-		
-		pWindow->m_renderFinished = true;
-		
-		CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
-	}
-	else if (eventType == EVENT_CREATE)
-	{
-		VidSetVBEData (&pWindow->m_vbeData);
-		
-		WmPaintWindowBackgd(pWindow);
-		WmPaintWindowBorder(pWindow);
-		WmPaintWindowTitle(pWindow);
-		
-		DefaultWindowProc (pWindow, EVENT_CREATE, 0, 0);
-	}
+	PreProcessEvent(pWindow, eventType, parm1, parm2);
 	
 	// Perform the actual call to the user application here.
 	VidSetVBEData (&pWindow->m_vbeData);
@@ -463,9 +471,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	{
 		someValue = CallWindowCallbackAndControls(pWindow, eventType, parm1, parm2);
 	}
-	
-	// Reset to main screen data.
-	VidSetVBEData (pBackup);
 	
 	// Perform operations after calling into the user application.
 	
@@ -511,6 +516,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		
 		NukeWindow(pWindow);
 		
+		// Reset to main screen data.
+		VidSetVBEData (pBackup);
+		
 		return false;
 	}
 	else if (eventType == EVENT_SET_WINDOW_TITLE_PRIVATE)
@@ -519,6 +527,9 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		MmFree((void*)parm1);
 	}
 	
+	// Reset to main screen data.
+	VidSetVBEData (pBackup);
+	
 	return true;
 }
 
@@ -526,6 +537,8 @@ void WmWaitForEvent(Window* pWindow);
 
 bool HandleMessages(Window* pWindow)
 {
+	int tickCountStart = GetTickCount();
+	
 	if (!IsWindowManagerRunning())
 		return false;
 	
@@ -573,6 +586,8 @@ bool HandleMessages(Window* pWindow)
 				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
 		}
 	}
+	
+	int tickCountEnd = GetTickCount();
 	
 	bool bIsNotWM = !IsWindowManagerTask();
 	if (!have_handled_events)
