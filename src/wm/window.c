@@ -16,9 +16,6 @@ int g_NewWindowX = 10, g_NewWindowY = 10;
 Window g_windows [WINDOWS_MAX];
 
 SafeLock
-g_WindowLock,
-g_ScreenLock,
-g_BufferLock,
 g_CreateLock,
 g_BackgdLock;
 
@@ -438,9 +435,6 @@ void FreeWindow(Window* pWindow)
 	pWindow->m_controlArrayLen = 0;
 	
 	SAFE_DELETE(pWindow->m_title);
-	SAFE_DELETE(pWindow->m_eventQueue);
-	SAFE_DELETE(pWindow->m_eventQueueParm1);
-	SAFE_DELETE(pWindow->m_eventQueueParm2);
 	SAFE_DELETE(pWindow->m_fullVbeData.m_drs);
 	SAFE_DELETE(pWindow->m_inputBuffer);
 	
@@ -713,18 +707,12 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	cli;
 	pWnd->m_used  = true;
 	pWnd->m_title = WmCAllocateIntsDis(WINDOW_TITLE_MAX);
-	pWnd->m_eventQueue = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(short));
-	pWnd->m_eventQueueParm1 = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(int));
-	pWnd->m_eventQueueParm2 = WmCAllocateIntsDis(EVENT_QUEUE_MAX * sizeof(int));
 	pWnd->m_inputBuffer     = WmCAllocateIntsDis(WIN_KB_BUF_SIZE);
 	sti;
 	
-	if (!pWnd->m_title || !pWnd->m_eventQueue || !pWnd->m_eventQueueParm1 || !pWnd->m_eventQueueParm2 || !pWnd->m_inputBuffer)
+	if (!pWnd->m_title || !pWnd->m_inputBuffer)
 	{
 		SAFE_DELETE(pWnd->m_title);
-		SAFE_DELETE(pWnd->m_eventQueue);
-		SAFE_DELETE(pWnd->m_eventQueueParm1);
-		SAFE_DELETE(pWnd->m_eventQueueParm2);
 		SAFE_DELETE(pWnd->m_inputBuffer);
 		
 		SLogMsg("Couldn't allocate some parameters for the window!");
@@ -745,9 +733,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	pWnd->m_isSelected     = false;
 	pWnd->m_clickedInside  = false;
 	pWnd->m_flags          = pWnd->m_lastWindowFlags = flags;// | WF_FLATBORD;
-	
-	pWnd->m_EventQueueLock.m_held = false;
-	pWnd->m_EventQueueLock.m_task_owning_it = NULL;
 	
 	pWnd->m_fullRect.left = xPos;
 	pWnd->m_fullRect.top  = yPos;
@@ -785,7 +770,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		pWnd->m_hidden = true;
 	}
 	
-	pWnd->m_eventQueueSize = 0;
 	pWnd->m_markedForDeletion = false;
 	pWnd->m_callback = proc; 
 	
@@ -808,9 +792,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		SAFE_DELETE(pWnd->m_fullVbeData.m_framebuffer32);
 		SAFE_DELETE(pWnd->m_fullVbeData.m_drs);
 		SAFE_DELETE(pWnd->m_title);
-		SAFE_DELETE(pWnd->m_eventQueue);
-		SAFE_DELETE(pWnd->m_eventQueueParm1);
-		SAFE_DELETE(pWnd->m_eventQueueParm2);
 		SAFE_DELETE(pWnd->m_inputBuffer);
 		SLogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
 		ILogMsg("Cannot allocate window buffer for '%s', out of memory!!!", pWnd->m_title);
@@ -847,8 +828,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	
 	pWnd->m_cursorID = CURSOR_DEFAULT;
 	
-	pWnd->m_eventQueueSize = 0;
-	
 	pWnd->m_screenLock.m_held = false;
 	
 	WmRecalculateClientRect(pWnd);
@@ -865,9 +844,6 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 		SAFE_DELETE(pWnd->m_fullVbeData.m_framebuffer32);
 		SAFE_DELETE(pWnd->m_fullVbeData.m_drs);
 		SAFE_DELETE(pWnd->m_title);
-		SAFE_DELETE(pWnd->m_eventQueue);
-		SAFE_DELETE(pWnd->m_eventQueueParm1);
-		SAFE_DELETE(pWnd->m_eventQueueParm2);
 		SAFE_DELETE(pWnd->m_inputBuffer);
 		pWnd->m_used = false;
 		LockFree (&g_CreateLock);

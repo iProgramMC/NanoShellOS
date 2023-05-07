@@ -778,7 +778,6 @@ void TaskbarEntry(__attribute__((unused)) int arg)
 	pWindow->m_iconID = ICON_DESKTOP2;
 	
 	g_pTaskBarWindow = pWindow;
-	g_pTaskBarWindow->m_EventQueueLock.m_held = false;
 	
 	// event loop:
 	while (HandleMessages (pWindow));

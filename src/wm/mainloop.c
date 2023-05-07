@@ -204,7 +204,6 @@ void WmTakeOverWindow(Window* pWindow)
 	pWindow->m_bWindowManagerUpdated = true;
 	pWindow->m_callback              = DefaultWindowProc;
 	pWindow->m_screenLock.m_held     = false;
-	pWindow->m_EventQueueLock.m_held = false;
 	
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{

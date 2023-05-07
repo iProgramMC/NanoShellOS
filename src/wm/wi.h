@@ -73,7 +73,7 @@ extern Window*  g_pShutdownMessage;
 extern Window*  g_currentlyClickedWindow;
 extern Tooltip  g_tooltip;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern SafeLock g_WindowLock, g_ScreenLock, g_BufferLock, g_CreateLock, g_BackgdLock; 
+extern SafeLock g_CreateLock, g_BackgdLock; 
 extern int      g_mouseX, g_mouseY;
 extern bool     g_RenderWindowContents;
 extern bool     g_GlowOnHover, g_heldAlt;

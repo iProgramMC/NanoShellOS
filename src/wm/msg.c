@@ -193,7 +193,7 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 	}
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2, bool bLockEvents)
+static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
 {
 	//SLogMsg("Window \"%s\": Event %d", pWindow->m_title, eventType);
 	
@@ -274,7 +274,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		WmPaintWindowBorder(pWindow);
 		WmPaintWindowTitle(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, bLockEvents);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -487,7 +487,7 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	
 	if (eventType == EVENT_SIZE || eventType == EVENT_REPAINT_PRIVATE)
 	{
-		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0, bLockEvents);
+		OnProcessOneEvent(pWindow, EVENT_PAINT, 0, 0);
 		
 		pWindow->m_renderFinished = true;
 		
@@ -507,9 +507,6 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 	}
 	else if (eventType == EVENT_DESTROY)
 	{
-		pWindow->m_eventQueueSize = 0;
-		
-		if (bLockEvents) LockFree (&pWindow->m_EventQueueLock);
 		KeTaskDone();
 		
 		NukeWindow(pWindow);
@@ -532,7 +529,7 @@ bool HandleMessages(Window* pWindow)
 	if (!IsWindowManagerRunning())
 		return false;
 	
-	if (!pWindow->m_used || !pWindow->m_eventQueue)
+	if (!pWindow->m_used)
 	{
 		SLogMsg("Sir, this window is gone");
 		return false;
@@ -553,23 +550,9 @@ bool HandleMessages(Window* pWindow)
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
 		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, et, p1, p2, false))
+		if (!OnProcessOneEvent(pWindow, et, p1, p2))
 			return false;
 	}
-	
-	// grab the lock
-	LockAcquire (&pWindow->m_EventQueueLock);
-	
-	// While we have events in our own queue...
-	for (int i = 0; i < pWindow->m_eventQueueSize; i++)
-	{
-		have_handled_events = true;
-		if (!OnProcessOneEvent(pWindow, pWindow->m_eventQueue[i], pWindow->m_eventQueueParm1[i], pWindow->m_eventQueueParm2[i], true))
-			return false;
-	}
-	pWindow->m_eventQueueSize = 0;
-	
-	LockFree (&pWindow->m_EventQueueLock);
 	
 	// Keyboard events are handled separately, in games you may miss input otherwise...
 	while (WinAnythingOnInputQueue(pWindow))
@@ -578,7 +561,7 @@ bool HandleMessages(Window* pWindow)
 		
 		unsigned char out = WinReadFromInputQueue(pWindow);
 		
-		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0, false);
+		OnProcessOneEvent(pWindow, EVENT_KEYRAW, out, 0);
 		
 		// if the key was just pressed:
 		if ((out & 0x80) == 0)
@@ -587,7 +570,7 @@ bool HandleMessages(Window* pWindow)
 			char sensible = KbMapAtCodeToChar (out & 0x7F);
 			
 			if (sensible)
-				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0, false);
+				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
 		}
 	}
 	

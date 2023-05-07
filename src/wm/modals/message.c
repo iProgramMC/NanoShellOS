@@ -9,9 +9,6 @@
 #include <icon.h>
 
 extern SafeLock
-g_WindowLock, 
-g_ScreenLock, 
-g_BufferLock, 
 g_CreateLock, 
 g_BackgdLock;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
@@ -51,17 +48,9 @@ void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, i
 
 int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32_t style)
 {
-	// Free the locks that have been acquired.
-	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
-	if  (wnLock) LockFree (&g_WindowLock);
-	if  (scLock) LockFree (&g_ScreenLock);
-	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_EventQueueLock.m_held;
-		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
-	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
 		{
@@ -317,12 +306,5 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 		WmPaintWindowTitle (pWindow);
 	}
 	
-	// Re-acquire the locks that have been freed before.
-	if (pWindow)
-	{
-		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
-	}
-	if (wnLock) LockAcquire (&g_WindowLock);
-	if (scLock) LockAcquire (&g_ScreenLock);
 	return dataReturned;
 }

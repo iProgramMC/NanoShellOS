@@ -11,17 +11,9 @@ void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, i
 
 void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* data)
 {
-	// Free the locks that have been acquired.
-	bool wnLock = g_WindowLock.m_held, scLock = g_ScreenLock.m_held, eqLock = false;
-	if  (wnLock) LockFree (&g_WindowLock);
-	if  (scLock) LockFree (&g_ScreenLock);
-	
 	bool wasSelectedBefore = false;
 	if (pWindow)
 	{
-		eqLock = pWindow->m_EventQueueLock.m_held;
-		if (eqLock) LockFree (&pWindow->m_EventQueueLock);
-	
 		wasSelectedBefore = pWindow->m_isSelected;
 		if (wasSelectedBefore)
 		{
@@ -65,14 +57,6 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
 		SelectWindow (pWindow);
 		WmPaintWindowTitle (pWindow);
 	}
-	
-	// Re-acquire the locks that have been freed before.
-	if (pWindow)
-	{
-		if (eqLock) LockAcquire (&pWindow->m_EventQueueLock);
-	}
-	if (wnLock) LockAcquire (&g_WindowLock);
-	if (scLock) LockAcquire (&g_ScreenLock);
 }
 
 void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags)

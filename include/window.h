@@ -661,13 +661,13 @@ typedef struct WindowStruct
 	int        m_iconID;
 	
 	bool       m_eventQueueLockUnused; // left to keep compatibity with old ELFs that modify the window structure directly
-	short*     m_eventQueue;
-	int*       m_eventQueueParm1;
-	int*       m_eventQueueParm2;
+	short*     m_unused0;
+	int*       m_unused1;
+	int*       m_unused2;
 	//short      m_eventQueue[EVENT_QUEUE_MAX];
 	//int        m_eventQueueParm1[EVENT_QUEUE_MAX];
 	//int        m_eventQueueParm2[EVENT_QUEUE_MAX];
-	int        m_eventQueueSize;
+	int        m_unused3;
 	
 	int        m_minWidth, m_minHeight;
 	
@@ -695,7 +695,7 @@ typedef struct WindowStruct
 	
 	bool       m_clickedInside;
 	
-	SafeLock   m_EventQueueLock;
+	SafeLock   m_unusedLock;
 	
 	Rectangle  m_taskbarRect;
 	
