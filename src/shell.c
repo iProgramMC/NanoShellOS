@@ -858,7 +858,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		}
 		else
 		{
-			int fd = FiOpen (fileName, O_WRONLY | O_APPEND);
+			int fd = FiOpen (fileName, O_WRONLY | O_CREAT | O_APPEND);
 			if (fd < 0)
 			{
 				LogMsg("ft: %s: %s", fileName, GetErrNoString(fd));
