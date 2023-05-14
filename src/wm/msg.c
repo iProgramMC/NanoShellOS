@@ -699,6 +699,7 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 		{
 			WmPaintWindowTitle(pWindow);
 			pWindow->m_vbeData.m_dirty = true;
+			RequestTaskbarUpdate();
 			break;
 		}
 			
@@ -762,6 +763,16 @@ void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUS
 			
 			//paint the window border:
 			WmPaintWindowTitle(pWindow);
+			RequestTaskbarUpdate();
+			break;
+		}
+		case EVENT_SET_WINDOW_ICON_PRIVATE:
+		{
+			pWindow->m_iconID = parm1;
+			
+			//paint the window border:
+			WmPaintWindowTitle(pWindow);
+			RequestTaskbarUpdate();
 			break;
 		}
 		default:

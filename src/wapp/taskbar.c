@@ -9,6 +9,7 @@
 #include <resource.h>
 
 #define EVENT_UPDATE_TASKBAR_CTLS (EVENT_USER + 1)
+#define EVENT_UPDATE_TASK_LIST    (EVENT_USER + 2)
 
 bool g_bShowDate = true;
 bool g_bShowTimeSeconds = true;
@@ -100,29 +101,35 @@ const char* TaskbarGetNumeralEnding(int num)
 	return "th";
 }
 
-void UpdateTaskbar (Window* pWindow)
+void UpdateTaskbar (Window* pWindow, bool bUpdateTaskList)
 {
-	char buffer[1024];
-	
-	bool bVert = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
-	
-	// Time
-	TimeStruct* time = TmReadTime();
-	sprintf(buffer, g_bShowTimeSeconds ? "%s%02d:%02d:%02d" : "%s%02d:%02d", bVert ? "" : "  ", time->hours, time->minutes, time->seconds);
-	SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
-	
-	if (g_bShowDate)
+	if (!bUpdateTaskList)
 	{
-		if (bVert)
-			sprintf(buffer, "%02d/%02d/%04d", time->day, time->month, time->year);
-		else
-			sprintf(buffer, "    %s %d%s, %04d", TaskbarGetMonthName(time->month), time->day, TaskbarGetNumeralEnding(time->day), time->year);
-		SetLabelText(pWindow, TASKBAR_DATE_TEXT, buffer);
-		CallControlCallback(pWindow, TASKBAR_DATE_TEXT,  EVENT_PAINT, 0, 0);
+		char buffer[1024];
+		
+		bool bVert = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
+		
+		// Time
+		TimeStruct* time = TmReadTime();
+		sprintf(buffer, g_bShowTimeSeconds ? "%s%02d:%02d:%02d" : "%s%02d:%02d", bVert ? "" : "  ", time->hours, time->minutes, time->seconds);
+		SetLabelText(pWindow, TASKBAR_TIME_TEXT, buffer);
+		
+		if (g_bShowDate)
+		{
+			if (bVert)
+				sprintf(buffer, "%02d/%02d/%04d", time->day, time->month, time->year);
+			else
+				sprintf(buffer, "    %s %d%s, %04d", TaskbarGetMonthName(time->month), time->day, TaskbarGetNumeralEnding(time->day), time->year);
+			SetLabelText(pWindow, TASKBAR_DATE_TEXT, buffer);
+			CallControlCallback(pWindow, TASKBAR_DATE_TEXT,  EVENT_PAINT, 0, 0);
+		}
+		
+		CallControlCallback(pWindow, TASKBAR_TIME_TEXT,  EVENT_PAINT, 0, 0);
 	}
-	
-	CallControlCallback(pWindow, TASKBAR_TIME_TEXT,  EVENT_PAINT, 0, 0);
-	CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
+	else
+	{
+		CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
+	}
 }
 
 static void TaskbarCreateMenuEntry (Window* pWindow, WindowMenu* pMenu, const char* pString, int occi, int nComboID, int nIconID)
@@ -581,13 +588,18 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			HomeMenu$LoadConfig(pWindow);
 			TaskbarCreateControls(pWindow);
 			
-			AddTimer(pWindow, 50, EVENT_UPDATE);
+			AddTimer(pWindow, 1000, EVENT_UPDATE);
 			
 			break;
 		}
 		case EVENT_UPDATE:
 		{
-			UpdateTaskbar(pWindow);
+			UpdateTaskbar(pWindow, false);
+			break;
+		}
+		case EVENT_UPDATE_TASK_LIST:
+		{
+			UpdateTaskbar(pWindow, true);
 			break;
 		}
 		case EVENT_UPDATE_TASKBAR_CTLS:
@@ -596,7 +608,8 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			TaskbarCreateControls(pWindow);
 			VidFillRect(WINDOW_BACKGD_COLOR, 0, 0, pWindow->m_vbeData.m_width, pWindow->m_vbeData.m_height);
 			RequestRepaintNew(pWindow);
-			UpdateTaskbar(pWindow);
+			UpdateTaskbar(pWindow, false);
+			UpdateTaskbar(pWindow, true);
 			break;
 		}
 		case EVENT_RIGHTCLICKRELEASE:
@@ -746,7 +759,7 @@ void RequestTaskbarUpdate()
 {
 	if (!g_pTaskBarWindow) return;
 	
-	WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE, 0, 0);
+	WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE_TASK_LIST, 0, 0);
 }
 void TaskbarEntry(__attribute__((unused)) int arg)
 {

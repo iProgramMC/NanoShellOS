@@ -470,31 +470,33 @@ void NukeWindowUnsafe (Window* pWindow)
 	
 	int et, p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
-
-	// Select the (currently) frontmost window
-	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+	
+	if (pWindow->m_isSelected)
 	{
-		if (g_windowDrawOrder[i] < 0)//doesn't exist
-			continue;
-		if (GetWindowFromIndex(g_windowDrawOrder[i])->m_flags & WF_SYSPOPUP) //prioritize non-system windows
-			continue;
+		// Select the (currently) frontmost window
+		for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+		{
+			if (g_windowDrawOrder[i] < 0)//doesn't exist
+				continue;
+			if (GetWindowFromIndex(g_windowDrawOrder[i])->m_flags & WF_SYSPOPUP) //prioritize non-system windows
+				continue;
 
-		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
-		LockFree(&g_CreateLock);
-		return;
-	}
+			SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+			goto _return_label;
+		}
 
-	// Select the (currently) frontmost window, even if it's a system popup
-	for (int i = WINDOWS_MAX - 1; i >= 0; i--)
-	{
-		if (g_windowDrawOrder[i] < 0)//doesn't exist
-			continue;
+		// Select the (currently) frontmost window, even if it's a system popup
+		for (int i = WINDOWS_MAX - 1; i >= 0; i--)
+		{
+			if (g_windowDrawOrder[i] < 0)//doesn't exist
+				continue;
 
-		SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
-		LockFree(&g_CreateLock);
-		return;
+			SelectWindowUnsafe(GetWindowFromIndex(g_windowDrawOrder[i]));
+			goto _return_label;
+		}
 	}
 	
+_return_label:
 	LockFree(&g_CreateLock);
 	
 	Process* proc = ExGetRunningProc();
@@ -707,7 +709,7 @@ Window* CreateWindow (const char* title, int xPos, int yPos, int xSize, int ySiz
 	cli;
 	pWnd->m_used  = true;
 	pWnd->m_title = WmCAllocateIntsDis(WINDOW_TITLE_MAX);
-	pWnd->m_inputBuffer     = WmCAllocateIntsDis(WIN_KB_BUF_SIZE);
+	pWnd->m_inputBuffer = WmCAllocateIntsDis(WIN_KB_BUF_SIZE);
 	sti;
 	
 	if (!pWnd->m_title || !pWnd->m_inputBuffer)
@@ -971,7 +973,7 @@ void RenderWindow (Window* pWindow)
 
 void SetWindowIcon (Window* pWindow, int icon)
 {
-	pWindow->m_iconID = icon;
+	WindowAddEventToMasterQueue(pWindow, EVENT_SET_WINDOW_ICON_PRIVATE, icon, 0);
 }
 
 void SetWindowTitle(Window* pWindow, const char* pTitle)

@@ -309,7 +309,7 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 			
 			if (pParentWindow)
 			{
-				//SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
+				SLogMsg("Selecting parent window %p. We're %p", pParentWindow, pWindow);
 				SelectWindow(pParentWindow);
 			}
 			if (pWindow->m_data)

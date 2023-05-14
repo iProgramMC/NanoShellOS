@@ -232,7 +232,7 @@ void TerminalHostTask(int arg)
 	
 	Console basic_console;
 	
-	pWindow->m_iconID = ICON_COMMAND;
+	SetWindowIcon(pWindow, ICON_COMMAND);
 	memset (&basic_console, 0, sizeof(basic_console));
 	
 	int size = sizeof(uint16_t) * array[2] * array[3];
