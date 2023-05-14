@@ -19,6 +19,7 @@ extern void SelectWindow(Window* pWindow);
 extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
 IconType CabGetIconBasedOnName(const char *pName, int pType);//btw
+
 void FilePickerUpdate (Window *pWindow)
 {
 	// Get the directory path
@@ -34,44 +35,27 @@ void FilePickerUpdate (Window *pWindow)
 	if (strcmp (pCwd, "/")) //if can go to parent, add a button
 		AddElementToList (pWindow, 100002, "..", ICON_FOLDER_PARENT);
 	
-	FileNode *pFolderNode = FsResolvePath (pCwd);
-	
-	DirEnt* pEnt = NULL;
-	uint32_t i = 0;
-	
-	if (!FsOpenDir(pFolderNode))
+	int dd = FiOpenDir(pCwd);
+	if (dd < 0)
 	{
-		SLogMsg("Failed to load cwd: '%s'", pCwd);
-		MessageBox(pWindow, "Could not load directory.", "File picker", ICON_ERROR | ICON_WARNING << 16);
+		MessageBox(pWindow, "Could not load directory.", "File picker", MB_OK | ICON_WARNING << 16);
 		return;
 	}
 	
-	DirEnt ent;
-	while ((pEnt = FsReadDir (pFolderNode, &i, &ent)) != 0)
+	DirEnt* pEnt = NULL;
+	while ((pEnt = FiReadDir(dd)) != 0)
 	{
-		FileNode* pNode = FsFindDir (pFolderNode, pEnt->m_name);
-		
-		if (!pNode)
-		{
-			AddElementToList (pWindow, 100002, "<a NULL directory entry>", ICON_ERROR);
-		}
-		else
-		{
-			AddElementToList (pWindow, 100002, pNode->m_name, CabGetIconBasedOnName(pNode->m_name, pNode->m_type));
-			
-			FsReleaseReference(pNode);
-		}
+		AddElementToList(pWindow, 100002, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type));
 	}
 	
-	FsReleaseReference(pFolderNode);
+	FiCloseDir(dd);
 }
 
 void FilePickerCdBack (Window *pWindow)
 {
 	const char* pCwd = TextInputGetRawText(pWindow, 100001);
 	
-	int size = strlen (pCwd) + 1;
-	char cwd_copy[size];
+	char cwd_copy[PATH_MAX + 1];
 	strcpy(cwd_copy, pCwd);
 	
 	if (cwd_copy[1] == 0) return;//can't cd back from root
@@ -94,6 +78,52 @@ void FilePickerCdBack (Window *pWindow)
 #define FNULL ((void*)0xffffffff)
 #define POPUP_WIDTH  (400)
 #define POPUP_HEIGHT (400)
+
+void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRootOnFailure)
+{
+	if (strlen(cwd) >= PATH_MAX - 2) goto _pathtoolong;
+	
+	char cwdNew[PATH_MAX];
+	strcpy(cwdNew, TextInputGetRawText(pWindow, 100001));
+	
+	if (*cwd == '/')
+	{
+		strcpy(cwdNew, cwd);
+	}
+	else
+	{
+		if (strcmp(cwdNew, "/"))
+			strcat(cwdNew, "/");
+	
+		if (strlen(cwdNew) + 2 + strlen(cwd) >= PATH_MAX)
+		{
+		_pathtoolong:
+			MessageBox(pWindow, "Cannot navigate to directory.\n\nPath name would be too long.", "Error", ICON_ERROR << 16 | MB_OK);
+			return;
+		}
+		
+		strcat(cwdNew, cwd);
+	}
+	
+	int dd = FiOpenDir(cwdNew);
+	if (dd < 0)
+	{
+		char buffer [256];
+		sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\n%s", cwdNew,
+			bTakeToRootOnFailure ? "Changing back to the root directory." : "Try another file or directory.");
+		MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+		
+		if (bTakeToRootOnFailure)
+			FilePickerChangeDirectory(pWindow, "/", false);
+		
+		return;
+	}
+	
+	SetTextInputText (pWindow, 100001, cwdNew);
+	FilePickerUpdate (pWindow);
+	RequestRepaint   (pWindow);
+}
+
 void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	if (messageType == EVENT_COMMAND)
@@ -109,49 +139,36 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 				return;
 			}
 			
-			FileNode *pFolderNode = FsResolvePath (pCwd);
-			const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
+			int dd = FiOpenDir(pCwd);
+			if (dd < 0)
+			{
+				FilePickerChangeDirectory(pWindow, "/", false);
+				return;
+			}
 			
+			const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
+			if (!pFileName)
+			{
+				SLogMsg("pFileName is NULL!");
+				FiCloseDir(dd);
+				return;
+			}
+			
+			OnBusy(pWindow);
 			if (strcmp (pFileName, PATH_PARENTDIR) == 0)
 			{
 				FilePickerCdBack(pWindow);
 			}
 			else
 			{
-				FileNode* pFileNode = FsFindDir	(pFolderNode, pFileName);
-				if (pFileNode)
+				StatResult sr;
+				int res = FiStatAt(dd, pFileName, &sr);
+				
+				if (res >= 0)
 				{
-					if (pFileNode->m_type & FILE_TYPE_DIRECTORY)
+					if (sr.m_type & FILE_TYPE_DIRECTORY)
 					{
-						OnBusy(pWindow);
-						
-						// Is a directory.  Navigate to it.
-						int size = strlen (pCwd) * 2;
-						char cwd_copy[size];
-						strcpy(cwd_copy, pCwd);
-						
-						if (cwd_copy[1] != 0)
-							strcat (cwd_copy, "/");
-						
-						strcat (cwd_copy, pFileName);
-						
-						FileNode *pCurrent = FsResolvePath (cwd_copy);
-						if (!pCurrent)
-						{
-							char buffer [256];
-							sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.", cwd_copy);
-							MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
-						}
-						else
-						{
-							SetTextInputText (pWindow, 100001, cwd_copy);
-							FilePickerUpdate (pWindow);
-							RequestRepaint   (pWindow);
-							
-							FsReleaseReference(pCurrent);
-						}
-						
-						OnNotBusy(pWindow);
+						FilePickerChangeDirectory(pWindow, pFileName, true);
 					}
 					else
 					{
@@ -163,16 +180,19 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 							strcat (pWindow->m_data, "/");
 						strcat (pWindow->m_data, pFileName);
 					}
-					
-					FsReleaseReference(pFileNode);
 				}
 				else
 				{
-					char buffer [256];
-					sprintf (buffer, "Cannot find file '%s'.  It may have been moved or deleted.\n\nTry clicking the 'Refresh' button in the top bar.", pFileName);
+					OnNotBusy(pWindow);
+					char buffer [512];
+					snprintf(buffer, sizeof buffer, "Cannot access file '%s'.  It may have been moved or deleted.\n\n%s\n\nTry clicking the 'Refresh' button in the top bar.", GetErrNoString(res), pFileName);
 					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 				}
 			}
+			
+			OnNotBusy(pWindow);
+			
+			FiCloseDir(dd);
 		}
 		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
 		{
