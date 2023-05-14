@@ -371,23 +371,33 @@ void TextInputSetFont(Window *pWindow, int comboID, unsigned font);
 void TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm);
 
 /**
- * TODO
+ * Adds an item to a combo box.
  */
 void ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID, int iconID);
 
 /**
- * TODO
+ * Gets the selected item ID of a combo box widget.
  */
 int ComboBoxGetSelectedItemID(Window* pWindow, int comboID);
 
 /**
- * TODO
+ * Sets the selected item ID of a combo box widget.
  */
-void ComboBoxSetSelectedItem(Window* pWindow, int comboID, int itemID);
+void ComboBoxSetSelectedItemID(Window* pWindow, int comboID, int itemID);
 
 /**
- * TODO
+ * Clears the items of a combo box widget.
  */
 void ComboBoxClearItems(Window* pWindow, int comboID);
+
+/**
+ * Check if a control is focused.
+ */
+bool IsControlFocused(Window* pWindow, int comboID);
+
+/**
+ * Check if a control is disabled.
+ */
+bool IsControlDisabled(Window* pWindow, int comboID);
 
 #endif//_WIDGET_H

@@ -369,6 +369,16 @@ enum
 		WIN_SET_CONTROL_VISIBLE,
 		WIN_PROG_BAR_SET_PROGRESS,
 		WIN_PROG_BAR_SET_MAX_PROG,
+		
+	// System Calls V2.4
+		WIN_COMBO_BOX_ADD_ITEM,
+		WIN_COMBO_BOX_GET_SELECTED_ITEM,
+		WIN_COMBO_BOX_SET_SELECTED_ITEM,
+		WIN_COMBO_BOX_CLEAR_ITEMS,
+		WIN_IS_CONTROL_FOCUSED,
+		WIN_IS_CONTROL_DISABLED,
+		WIN_TEXT_INPUT_SET_FONT,
+		WIN_TEXT_INPUT_REQUEST_COMMAND,
 };
 
 const void *WindowCall[] = {
@@ -580,6 +590,16 @@ const void *WindowCall[] = {
 		SetControlVisibility,
 		ProgBarSetProgress,
 		ProgBarSetMaxProg,
+		
+	// System Calls V2.4 - 14/05/2023
+		ComboBoxAddItem,
+		ComboBoxGetSelectedItemID,
+		ComboBoxSetSelectedItemID,
+		ComboBoxClearItems,
+		IsControlFocused,
+		IsControlDisabled,
+		TextInputSetFont,
+		TextInputRequestCommand,
 };
 
 

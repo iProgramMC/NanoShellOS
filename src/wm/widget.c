@@ -9,6 +9,24 @@
 bool g_GlowOnHover = true;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 
+bool IsControlFocused(Window* pWindow, int comboID)
+{
+	Control* pCtl = GetControlByComboID(pWindow, comboID);
+	
+	if (!pCtl) return false;
+	
+	return pCtl->m_bFocused;
+}
+
+bool IsControlDisabled(Window* pWindow, int comboID)
+{
+	Control* pCtl = GetControlByComboID(pWindow, comboID);
+	
+	if (!pCtl) return false;
+	
+	return pCtl->m_bDisabled;
+}
+
 void SetFocusedControl(Window *pWindow, int comboID)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
