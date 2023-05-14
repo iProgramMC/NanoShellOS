@@ -9,7 +9,7 @@ enum
 	EINVAL,        // Invalid argument
 	EIO,           // I/O error
 	EISDIR,        // Is a directory
-	ELOOP,         // Too many symbolic links
+	ELOOP,         // Symbolic link chain too deep
 	EMFILE,        // Too many open files
 	ENAMETOOLONG,  // File or path name too long
 	ENFILE,        // Too many open files in system

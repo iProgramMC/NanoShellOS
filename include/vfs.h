@@ -32,8 +32,9 @@ enum
 	FILE_TYPE_CHAR_DEVICE,
 	FILE_TYPE_BLOCK_DEVICE,
 	FILE_TYPE_PIPE,
+	FILE_TYPE_SYMBOLIC_LINK,
 	FILE_TYPE_DIRECTORY  = 8,
-	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
+	FILE_TYPE_MOUNTPOINT = 16, //to be OR'd into the other flags
 };
 
 #define PERM_READ  (1)
@@ -175,8 +176,12 @@ DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
 int      FsUnlinkFile(FileNode* pNode, const char* pName);
 
-
-FileNode*FsResolvePath (const char* pPath);
+// If the path points to a symbolic link, depending on bResolveSymbolicLink, it does the following:
+// - True:  Goes down the symbolic link chain (at a depth of 16), until the file is reached.
+//          If the symbolic chain is too deep, this returns one of the symbolic links' file nodes.
+// - False: Returns the symbolic link's node instead.
+//FileNode* FsResolvePath(const char* pPath, bool bResolveSymbolicLink);
+FileNode* FsResolvePath(const char* pPath);
 
 void FsAddReference(FileNode* pNode);
 void FsReleaseReference(FileNode* pNode);

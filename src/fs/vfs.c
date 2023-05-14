@@ -877,7 +877,7 @@ static const char* ErrorStrings[] = {
 	"Invalid argument",
 	"Input/output error",
 	"Is a directory",
-	"Too many symbolic links",
+	"Symbolic link chain too deep",
 	"Too many open files",
 	"File or path name too long",
 	"Too many open files in system",

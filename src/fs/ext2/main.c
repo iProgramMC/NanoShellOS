@@ -404,57 +404,6 @@ void Ext2LoadBlockGroupDescriptorTable(Ext2FileSystem* pFS)
 	SLogMsg("Block count: %d", pFS->m_superBlock.m_nBlocks);
 }
 
-void Ext2TestFunction()
-{
-	
-	//#define TEST_FILE_SHRINK
-#ifdef TEST_FILE_SHRINK
-	// Resolve the path:
-	FileNode* pFileNode = FsResolvePath("/Ext0/z2_3085.txt");
-	
-	// Grab the info.
-	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
-	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
-	Ext2Inode* pInode = &pUnit->m_inode;
-	
-	// Expand the inode by 16000 bytes. So its size would be 16024 bytes afterwards.
-	Ext2InodeExpand(pFS, pUnit, 16000);
-	
-	// Shrink the inode by 3000 bytes. So its size would be 85 bytes afterwards.
-	//Ext2InodeShrink(pFS, pUnit, 3000);
-	Ext2DumpInode(pInode, "/Ext0/z2_3085.txt");
-	
-	FsReleaseReference(pFileNode);
-#endif
-	
-#ifdef TEST_CREATE_HARD_LINK_TO
-	// Get the root inode.
-	FileNode* pFileNode = FsResolvePath("/Ext0/test");
-	
-	// Grab the info.
-	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pFileNode->m_implData;
-	Ext2FileSystem* pFS = (Ext2FileSystem*)pFileNode->m_implData1;
-	Ext2Inode* pInode = &pUnit->m_inode;
-	
-	char buf[1000];
-	
-	uint32_t tickCountThen = GetTickCount();
-	
-	for (int i = 0; i < 100; i++)
-	{
-		sprintf(buf, "bogus%d.txt", i);
-		// Try adding a directory entry.
-		Ext2AddDirectoryEntry(pFS, pUnit, buf, 20, E2_DETI_REG_FILE);
-	}
-	
-	uint32_t tickCountNow = GetTickCount();
-	
-	SLogMsg("Added 100 entries in %d ms", tickCountNow - tickCountThen);
-	
-	FsReleaseReference(pFileNode);
-#endif
-}
-
 // note: No one actually bothers to do this. (I think, from my own testing it seems like not)
 // This function was mostly written to test the Ext2FlushSuperBlock function.
 void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
@@ -586,11 +535,6 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
-	
-	//Ext2UpdateLastMountedPath(pFS, FreeArea);
-	
-	// Try to retrieve the backups of the inodes. This is a test function.
-	Ext2TestFunction();
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
