@@ -10,6 +10,14 @@
 #include <wbuiltin.h>
 #include <icon.h>
 
+enum
+{
+	FP_FILE_TEXT   = 100000,
+	FP_CWD_TEXT,
+	FP_DIR_LISTING,
+	FP_PROMPT_TEXT,
+};
+
 extern SafeLock
 g_CreateLock, 
 g_BackgdLock;
@@ -20,32 +28,47 @@ extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int message
 
 IconType CabGetIconBasedOnName(const char *pName, int pType);//btw
 
+void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRootOnFailure);
+
 void FilePickerUpdate (Window *pWindow)
 {
 	// Get the directory path
-	const char* pCwd = TextInputGetRawText(pWindow, 100001);
+	const char* pCwd = TextInputGetRawText(pWindow, FP_CWD_TEXT);
 	if (!pCwd)
 	{
 		MessageBox(pWindow, "The OS really messed up", "Assert", ICON_ERROR << 16 | MB_OK);
 		return;
 	}
 	
-	ResetList (pWindow, 100002);
+	bool bIsRootDir = (strcmp(pCwd, "/") == 0);
 	
-	if (strcmp (pCwd, "/")) //if can go to parent, add a button
-		AddElementToList (pWindow, 100002, "..", ICON_FOLDER_PARENT);
+	ResetList (pWindow, FP_DIR_LISTING);
+	
+	if (!bIsRootDir) //if can go to parent, add a button
+		AddElementToList (pWindow, FP_DIR_LISTING, "..", ICON_FOLDER_PARENT);
 	
 	int dd = FiOpenDir(pCwd);
 	if (dd < 0)
 	{
-		MessageBox(pWindow, "Could not load directory.", "File picker", MB_OK | ICON_WARNING << 16);
+		const char* errorMsg = "Could not load directory. Taking you back to root.";
+		
+		if (bIsRootDir)
+			errorMsg = "Could not load root directory, uh oh!";
+		
+		MessageBox(pWindow, errorMsg, "File picker", MB_OK | ICON_WARNING << 16);
+		
+		if (!bIsRootDir)
+		{
+			FilePickerChangeDirectory(pWindow, "/", false);
+		}
+		
 		return;
 	}
 	
 	DirEnt* pEnt = NULL;
 	while ((pEnt = FiReadDir(dd)) != 0)
 	{
-		AddElementToList(pWindow, 100002, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type));
+		AddElementToList(pWindow, FP_DIR_LISTING, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type));
 	}
 	
 	FiCloseDir(dd);
@@ -53,7 +76,7 @@ void FilePickerUpdate (Window *pWindow)
 
 void FilePickerCdBack (Window *pWindow)
 {
-	const char* pCwd = TextInputGetRawText(pWindow, 100001);
+	const char* pCwd = TextInputGetRawText(pWindow, FP_CWD_TEXT);
 	
 	char cwd_copy[PATH_MAX + 1];
 	strcpy(cwd_copy, pCwd);
@@ -69,9 +92,7 @@ void FilePickerCdBack (Window *pWindow)
 	if (cwd_copy[0] == 0)
 		strcpy(cwd_copy, "/");
 	
-	SetTextInputText (pWindow, 100001, cwd_copy);
-	FilePickerUpdate (pWindow);
-	RequestRepaint   (pWindow);
+	FilePickerChangeDirectory(pWindow, cwd_copy, true);
 }
 
 //Null but all 0xffffffff's. Useful
@@ -84,7 +105,7 @@ void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRoo
 	if (strlen(cwd) >= PATH_MAX - 2) goto _pathtoolong;
 	
 	char cwdNew[PATH_MAX];
-	strcpy(cwdNew, TextInputGetRawText(pWindow, 100001));
+	strcpy(cwdNew, TextInputGetRawText(pWindow, FP_CWD_TEXT));
 	
 	if (*cwd == '/')
 	{
@@ -119,131 +140,145 @@ void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRoo
 		return;
 	}
 	
-	SetTextInputText (pWindow, 100001, cwdNew);
+	SetTextInputText (pWindow, FP_CWD_TEXT, cwdNew);
 	FilePickerUpdate (pWindow);
 	RequestRepaint   (pWindow);
 }
 
 void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
-	if (messageType == EVENT_COMMAND)
+	switch (messageType)
 	{
-		//Which button did we click?
-		if (parm1 == 100002)
+		case EVENT_KEYPRESS:
 		{
-			// List View
-			const char* pCwd = TextInputGetRawText(pWindow, 100001);
-			if (!pCwd)
+			if ((char)parm1 == '\r' || (char)parm1 == '\n')
 			{
-				MessageBox(pWindow, "The OS really messed up", "Assert", ICON_ERROR << 16 | MB_OK);
-				return;
-			}
-			
-			int dd = FiOpenDir(pCwd);
-			if (dd < 0)
-			{
-				FilePickerChangeDirectory(pWindow, "/", false);
-				return;
-			}
-			
-			const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
-			if (!pFileName)
-			{
-				SLogMsg("pFileName is NULL!");
-				FiCloseDir(dd);
-				return;
-			}
-			
-			OnBusy(pWindow);
-			if (strcmp (pFileName, PATH_PARENTDIR) == 0)
-			{
-				FilePickerCdBack(pWindow);
-			}
-			else
-			{
-				StatResult sr;
-				int res = FiStatAt(dd, pFileName, &sr);
-				
-				if (res >= 0)
+				// if the CWD item is focused:
+				if (IsControlFocused(pWindow, FP_CWD_TEXT))
 				{
-					if (sr.m_type & FILE_TYPE_DIRECTORY)
-					{
-						FilePickerChangeDirectory(pWindow, pFileName, true);
-					}
-					else
-					{
-						size_t len1 = strlen (pFileName);
-						size_t len2 = strlen (pCwd);
-						pWindow->m_data = MmAllocateK(len1 + len2 + 3);
-						strcpy (pWindow->m_data, pCwd);
-						if (strcmp (pCwd, "/"))
-							strcat (pWindow->m_data, "/");
-						strcat (pWindow->m_data, pFileName);
-					}
+					// update
+					FilePickerUpdate(pWindow);
+					RequestRepaint  (pWindow);
+				}
+			}
+			
+			break;
+		}
+		case EVENT_COMMAND:
+		{
+			// Which button did we click?
+			if (parm1 == FP_DIR_LISTING)
+			{
+				// List View
+				const char* pCwd = TextInputGetRawText(pWindow, FP_CWD_TEXT);
+				if (!pCwd)
+				{
+					MessageBox(pWindow, "The OS really messed up", "Assert", ICON_ERROR << 16 | MB_OK);
+					return;
+				}
+				
+				int dd = FiOpenDir(pCwd);
+				if (dd < 0)
+				{
+					FilePickerChangeDirectory(pWindow, "/", false);
+					return;
+				}
+				
+				const char* pFileName = GetElementStringFromList (pWindow, parm1, parm2);
+				if (!pFileName)
+				{
+					SLogMsg("pFileName is NULL!");
+					FiCloseDir(dd);
+					return;
+				}
+				
+				OnBusy(pWindow);
+				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
+				{
+					FilePickerCdBack(pWindow);
 				}
 				else
 				{
-					OnNotBusy(pWindow);
-					char buffer [512];
-					snprintf(buffer, sizeof buffer, "Cannot access file '%s'.  It may have been moved or deleted.\n\n%s\n\nTry clicking the 'Refresh' button in the top bar.", GetErrNoString(res), pFileName);
-					MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+					StatResult sr;
+					int res = FiStatAt(dd, pFileName, &sr);
+					
+					if (res >= 0)
+					{
+						if (sr.m_type & FILE_TYPE_DIRECTORY)
+						{
+							FilePickerChangeDirectory(pWindow, pFileName, true);
+						}
+						else
+						{
+							size_t len1 = strlen (pFileName);
+							size_t len2 = strlen (pCwd);
+							pWindow->m_data = MmAllocateK(len1 + len2 + 3);
+							strcpy (pWindow->m_data, pCwd);
+							if (strcmp (pCwd, "/"))
+								strcat (pWindow->m_data, "/");
+							strcat (pWindow->m_data, pFileName);
+						}
+					}
+					else
+					{
+						OnNotBusy(pWindow);
+						char buffer [512];
+						snprintf(buffer, sizeof buffer, "Cannot access file '%s'.  It may have been moved or deleted.\n\n%s\n\nTry clicking the 'Refresh' button in the top bar.", GetErrNoString(res), pFileName);
+						MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
+					}
 				}
+				
+				OnNotBusy(pWindow);
+				
+				FiCloseDir(dd);
 			}
-			
-			OnNotBusy(pWindow);
-			
-			FiCloseDir(dd);
-		}
-		if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
-		{
-			//We clicked a valid button.  Return.
-			
-			if (parm1 == MBID_CANCEL)
+			if (parm1 >= MBID_OK && parm1 < MBID_COUNT)
 			{
-				pWindow->m_data = FNULL;
-				return;
-			}
-			const char* pText = TextInputGetRawText(pWindow, 100000);
-			const char* pCwd  = TextInputGetRawText(pWindow, 100001);
-			if (!pText || !pCwd)
-				pWindow->m_data = FNULL;
-			else
-			{
-				size_t len1 = strlen (pText);
-				size_t len2 = strlen (pCwd);
+				//We clicked a valid button.  Return.
 				
-				bool isAbsolutePath = pText[0] == '/';
-				if (isAbsolutePath)
-					len2 = 0;
-				
-				pWindow->m_data = MmAllocateK(len1 + len2 + 3);
-				*((char*)pWindow->m_data) = 0;//so strcat works all the time
-				
-				if (!isAbsolutePath)
+				if (parm1 == MBID_CANCEL)
 				{
-					strcpy (pWindow->m_data, pCwd);
-					if (strcmp (pCwd, "/"))
-						strcat (pWindow->m_data, "/");
+					pWindow->m_data = FNULL;
+					return;
 				}
-				
-				strcat (pWindow->m_data, pText);
+				const char* pText = TextInputGetRawText(pWindow, FP_FILE_TEXT);
+				const char* pCwd  = TextInputGetRawText(pWindow, FP_CWD_TEXT);
+				if (!pText || !pCwd)
+					pWindow->m_data = FNULL;
+				else
+				{
+					size_t len1 = strlen (pText);
+					size_t len2 = strlen (pCwd);
+					
+					bool isAbsolutePath = pText[0] == '/';
+					if (isAbsolutePath)
+						len2 = 0;
+					
+					pWindow->m_data = MmAllocateK(len1 + len2 + 3);
+					*((char*)pWindow->m_data) = 0;//so strcat works all the time
+					
+					if (!isAbsolutePath)
+					{
+						strcpy (pWindow->m_data, pCwd);
+						if (strcmp (pCwd, "/"))
+							strcat (pWindow->m_data, "/");
+					}
+					
+					strcat (pWindow->m_data, pText);
+				}
 			}
+			break;
 		}
+		case EVENT_CREATE:
+		{
+			pWindow->m_fullVbeData.m_dirty = 1;
+			DefaultWindowProc (pWindow, messageType, parm1, parm2);
+			break;
+		}
+		default:
+			DefaultWindowProc (pWindow, messageType, parm1, parm2);
+			break;
 	}
-	else if (messageType == EVENT_CREATE)
-	{
-		pWindow->m_fullVbeData.m_dirty = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else if (messageType == EVENT_PAINT || messageType == EVENT_SETFOCUS || messageType == EVENT_KILLFOCUS ||
-			 messageType == EVENT_CLICKCURSOR || messageType == EVENT_RELEASECURSOR)
-	{
-		pWindow->m_fullVbeData.m_dirty = 1;
-		pWindow->m_renderFinished  = 1;
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
-	}
-	else
-		DefaultWindowProc (pWindow, messageType, parm1, parm2);
 }
 
 // Pops up a text box requesting an input string, and returns a MmAllocate'd
@@ -325,14 +360,14 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	rect.top    = 12;
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 50;
-	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, 0x10000, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
+	AddControl (pBox, CONTROL_TEXT, rect, pPrompt, FP_PROMPT_TEXT, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 	
 	rect.left   = 10;
 	rect.top    = 12 + 20;
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 20;
-	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100001, 0, 0);
-	SetTextInputText(pBox, 100001, "/");
+	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, FP_CWD_TEXT, 0, 0);
+	SetTextInputText(pBox, FP_CWD_TEXT, "/");
 	
 	rect.left   = 10;
 	rect.top    = 12 + 60;
@@ -341,15 +376,15 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	
 	//400-18+18 -  120 + 12 + 18
 	
-	AddControl (pBox, CONTROL_ICONVIEW, rect, NULL, 100002, 0, 0);
+	AddControl (pBox, CONTROL_ICONVIEW, rect, NULL, FP_DIR_LISTING, 0, 0);
 	
 	rect.left   = 10;
 	rect.top    = POPUP_HEIGHT - 90 + 20;
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 20;
-	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, 100000, 0, 0);
+	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, FP_FILE_TEXT, 0, 0);
 	if (pDefaultText)
-		SetTextInputText(pBox, 100000, pDefaultText);
+		SetTextInputText(pBox, FP_FILE_TEXT, pDefaultText);
 	
 	RECT(rect, (POPUP_WIDTH - 250)/2, POPUP_HEIGHT - 30, 100, 20);
 	AddControl (pBox, CONTROL_BUTTON, rect, "Cancel", MBID_CANCEL, 0, 0);
