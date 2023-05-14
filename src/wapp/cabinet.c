@@ -648,13 +648,13 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 				if (!pFileName)
 				{
 					SLogMsg("pFileName is NULL!");
+					FiCloseDir(dd);
 					break;
 				}
 				
 				if (strcmp (pFileName, PATH_PARENTDIR) == 0)
 				{
 					CdBack(pWindow);
-					break;
 				}
 				else
 				{
