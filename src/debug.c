@@ -239,6 +239,12 @@ void KeBugCheck (BugCheckReason reason, Registers* pRegs)
 	
 	KeLogExceptionDetails (reason, pRegs, ExGetRunningProc());
 	
+	if (reason == BC_EX_ASSERTION_FAILED)
+	{
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, false);
+		PrintBackTrace((StackFrame*)KeGetEBP(), (uintptr_t)KeGetEIP(), NULL, NULL, true);
+	}
+	
 	//enough text, draw the icon:
 	
 	int x_mid = (GetScreenSizeX() - 96) / 2;
