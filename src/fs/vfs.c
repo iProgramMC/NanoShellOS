@@ -773,7 +773,7 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 		return -ENOENT;
 	}
 	
-	if (pDirNodeOld->m_pFileSystemHandle != pDirNodeNew->m_pFileSystemHandle)
+	if (pDirNodeOld->m_pFileSystemHandle != pDirNodeNew->m_pFileSystemHandle || pDirNodeOld->RenameOp != pDirNodeNew->RenameOp)
 	{
 		// No cross file system action allowed. Must use manual copy / delete combo.
 		FsReleaseReference(pDirNodeOld);
@@ -841,6 +841,9 @@ int FrMakeDir(const char* pDirName, const char* pFileName)
 int FrRemoveDir(const char* pPath)
 {
 	FileNode* pNode = FsResolvePath(pPath);
+	if (!pNode)
+		return -ENOENT;
+	
 	if (!pNode->RemoveDir)
 		return -ENOTSUP;
 	
