@@ -10,7 +10,7 @@
 #include <console.h>
 #include <string.h>
 #include <print.h>
-#include <misc.h>
+#include <time.h>
 
 extern Console* g_currentConsole;
 

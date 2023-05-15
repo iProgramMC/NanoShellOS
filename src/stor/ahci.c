@@ -7,7 +7,7 @@
 
 #include <memory.h>
 #include <storabs.h>
-#include <misc.h>
+#include <time.h>
 #include <config.h>
 
 #define AHCI_DEBUG

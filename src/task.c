@@ -9,7 +9,7 @@
 #include <process.h>
 #include <string.h>
 #include <print.h>
-#include <misc.h>
+#include <time.h>
 
 // The kernel task is task 0.  Other tasks are 1-indexed.
 // This means g_runningTasks[0] is unused.

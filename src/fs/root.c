@@ -9,6 +9,7 @@
 #include <console.h>
 #include <string.h>
 #include <misc.h>
+#include <time.h>
 #include <print.h>
 #include <memory.h>
 #include <tar.h>

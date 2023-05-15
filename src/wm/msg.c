@@ -537,8 +537,6 @@ void WmWaitForEvent(Window* pWindow);
 
 bool HandleMessages(Window* pWindow)
 {
-	int tickCountStart = GetTickCount();
-	
 	if (!IsWindowManagerRunning())
 		return false;
 	
@@ -586,8 +584,6 @@ bool HandleMessages(Window* pWindow)
 				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
 		}
 	}
-	
-	int tickCountEnd = GetTickCount();
 	
 	bool bIsNotWM = !IsWindowManagerTask();
 	if (!have_handled_events)

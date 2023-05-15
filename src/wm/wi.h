@@ -11,6 +11,7 @@
 #include <widget.h>
 #include <wmenu.h>
 #include <misc.h>
+#include <time.h>
 #include <icon.h>
 #include <print.h>
 #include <process.h>

@@ -9,7 +9,7 @@
 #include <tmpfs.h>
 #include <string.h>
 #include <memory.h>
-#include <misc.h>
+#include <time.h>
 
 TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDirectory)
 {

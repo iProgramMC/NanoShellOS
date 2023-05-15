@@ -5,7 +5,7 @@
          Process Executive module
 ******************************************/
 #include <process.h>
-#include <misc.h>
+#include <time.h>
 #include "mm/memoryi.h"
 
 // note: Process ID 0 is no longer used.

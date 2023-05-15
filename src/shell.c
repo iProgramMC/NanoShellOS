@@ -14,6 +14,7 @@
 #include <print.h>
 #include <memory.h>
 #include <misc.h>
+#include <time.h>
 #include <task.h>
 #include <storabs.h>
 #include <window.h>

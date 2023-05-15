@@ -10,6 +10,7 @@
 #include <syscall.h>
 #include <debug.h>
 #include <misc.h>
+#include <time.h>
 #include <video.h>
 #include <task.h>
 #include <process.h>

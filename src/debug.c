@@ -16,7 +16,7 @@ bool g_bAreInterruptsEnabled       = false;
 bool g_bAreInterruptsEnabledBackup = false;
 int  g_nInterruptRecursionCount    = 0;
 
-uintptr_t g_InterruptDisabler = 0;
+void* g_InterruptDisabler = NULL;
 
 extern Console *g_focusedOnConsole, *g_currentConsole, g_debugConsole;
 
@@ -383,7 +383,7 @@ void KeEnableInterrupts()
 	}
 	
 	g_bAreInterruptsEnabled = true;
-	g_InterruptDisabler = 0;
+	g_InterruptDisabler = NULL;
 	asm("sti");
 }
 

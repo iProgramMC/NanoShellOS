@@ -13,6 +13,7 @@
 #include <main.h>
 #include <memory.h>
 #include <misc.h>
+#include <time.h>
 #include <mouse.h>
 #include <multiboot.h>
 #include <pci.h>
@@ -27,6 +28,7 @@
 #include <video.h>
 #include <wcall.h>
 #include <window.h>
+#include <main.h>
 
 // definitions we don't really want out there:
 void MbSetup(uint32_t check, uint32_t mbaddr);

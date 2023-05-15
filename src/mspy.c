@@ -6,7 +6,7 @@
 ******************************************/
 #include <main.h>
 #include <console.h>
-#include <misc.h>
+#include <time.h>
 #include <print.h>
 #include <string.h>
 #include <ansi.h>
@@ -235,7 +235,6 @@ void MemorySpy()
 			
 			UpdateScreen(address, groupAsInts, numRows);
 		}
-		
 		
 		WaitMS(16);
 	}

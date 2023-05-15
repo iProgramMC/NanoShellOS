@@ -6,7 +6,7 @@
 ******************************************/
 #include <storabs.h>
 #include <memory.h>
-#include <misc.h>
+#include <time.h>
 
 #define CACHE_DEBUG
 

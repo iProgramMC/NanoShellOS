@@ -8,7 +8,7 @@
 //  ***************************************************************
 #include <vfs.h>
 #include <ext2.h>
-#include <misc.h>
+#include <time.h>
 
 static int FileTypeToExt2TypeHint(int fileType)
 {

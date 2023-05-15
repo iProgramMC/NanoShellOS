@@ -12,7 +12,7 @@
 #include <print.h>
 #include <task.h>
 #include <widget.h>
-#include <misc.h>
+#include <time.h>
 
 #define DebugLogMsg  SLogMsg
 

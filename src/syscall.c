@@ -16,6 +16,7 @@
 #include <vfs.h>
 #include <clip.h>
 #include <misc.h>
+#include <time.h>
 #include <config.h>
 #include <idt.h>
 #include <process.h>

@@ -9,27 +9,6 @@
 
 #include <multiboot.h>
 
-#define RTC_TICKS_PER_SECOND 8
-
-#define C_UPDATE_IN_PROGRESS_FLAG  0X80
-
-// (0x20 would represent 20, not 32)
-#define BCD_TO_BIN(x) (x&0x0F)+((x>>4)*10)
-
-typedef struct
-{
-	int seconds,
-		minutes,
-		hours,
-		weekday,
-		day,
-		month,
-		year,
-		statusA,
-		statusB;
-}
-TimeStruct;
-
 typedef struct
 {
 	unsigned char m_steppingID : 4;
@@ -44,52 +23,11 @@ typedef struct
 __attribute__((packed))
 CPUIDFeatureBits;
 
-/**
- * Gets the TSC from the CPU.  It returns the number of cycles the CPU went
- * through after the last reset, in "high" and "low".
- * The "high" or "low" pointers can be NULL, but if you pass in both as NULL, this does not use rdtsc.
- */
-void GetTimeStampCounter(uint32_t* high, uint32_t* low);
-
-/**
- * Gets the number of milliseconds since boot, assuming interrupts are disabled.
- */
-int GetTickCountUnsafe();
-
-/**
- * Gets the number of milliseconds since boot, assuming interrupts are enabled.
- */
-int GetTickCount();
-
-/**
- * Gets the number of times the RTC interrupt handler was called.
- */
-int GetRawTickCount();
-
-/**
- * Gets the number of microseconds since boot, assuming interrupts are disabled.
- */
-uint64_t GetUsecCountUnsafe();
-
-/**
- * Gets the number of microseconds since boot, assuming interrupts are enabled.
- */
-uint64_t GetUsecCount();
-
-/**
- * Gets the number of CPU ticks since boot.
- */
-uint64_t ReadTSC();
 
 /**
  * Returns a random number between 0 and 2147483647.
  */
 int GetRandom();
-
-/**
- * Waits a specified number of milliseconds.
- */
-void WaitMS(int ms);
 
 /**
  * Gets the CPU type string. (e.g. "GenuineIntel", "AuthenticAMD" etc)
@@ -132,37 +70,6 @@ void KePrintSystemInfoAdvanced();
  */
 __attribute__((noreturn))
 void KeRestartSystem(void);
-
-enum
-{
-	FORMAT_TYPE_FIXED, //hh:mm:ss
-	FORMAT_TYPE_VAR,   //H hours, M minutes, S seconds
-};
-
-/**
- * Formats time as seconds into a string.  Recommend a size of at least 128.
- */
-void FormatTime(char* output, int formatType, int seconds);
-
-/**
- * Reads the time into a TimeStruct.  Use this in the RTC timer tick.
- */
-void TmGetTime (TimeStruct* pStruct);
-
-/**
- * Gets the current time.
- */
-TimeStruct* TmReadTime();
-
-/**
- * Gets the current time in seconds since 1 January 1970.
- */
-int GetEpochTime();
-
-/**
- * Converts epoch time into human readable time (TimeStruct)
- */
-void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut);
 
 /**
  * Stops all kernel activity forcefully. Only use this if something

@@ -259,11 +259,6 @@ void WaitPipeWrite(void* pPipe);
 void WaitPipeRead(void* pPipe);
 
 /***********************************************************
-    Waits a certain number of milliseconds.
-***********************************************************/
-void WaitMS (int ms);
-
-/***********************************************************
     Waits until the window manager refreshes again.
 ***********************************************************/
 void WaitUntilWMUpdate ();
