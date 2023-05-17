@@ -188,9 +188,10 @@ RESOURCE_STATUS LaunchResource (const char* pResource)
 FileAssociation g_FileAssociations[] =
 {
 	// things that match everything with a certain flag.
-	{ "*", "", "Local Disk",  ICON_HARD_DRIVE,  FILE_TYPE_MOUNTPOINT },
-	{ "*", "", "File folder", ICON_FOLDER,      FILE_TYPE_DIRECTORY },
-	{ "*", "", "Character device", ICON_SERIAL, FILE_TYPE_CHAR_DEVICE }, // not all char devices are serial, but meh.
+	{ "*", "", "Local Disk",       ICON_HARD_DRIVE,  FILE_TYPE_MOUNTPOINT    },
+	{ "*", "", "File folder",      ICON_FOLDER,      FILE_TYPE_DIRECTORY     },
+	{ "*", "", "Symbolic link",    ICON_CHAIN,       FILE_TYPE_SYMBOLIC_LINK },
+	{ "*", "", "Character device", ICON_SERIAL,      FILE_TYPE_CHAR_DEVICE   }, // not all char devices are serial, but meh.
 	
 	{ "*.txt", "ted",      "Text Document",         ICON_TEXT_FILE,    0 },
 	{ "*.ini", "ted",      "Configuration File",    ICON_TEXT_FILE,    0 },

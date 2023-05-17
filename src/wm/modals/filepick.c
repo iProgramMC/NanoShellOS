@@ -68,7 +68,21 @@ void FilePickerUpdate (Window *pWindow)
 	DirEnt* pEnt = NULL;
 	while ((pEnt = FiReadDir(dd)) != 0)
 	{
-		AddElementToList(pWindow, FP_DIR_LISTING, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type));
+		int iconFlags = 0;
+		int icon = CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type);
+		if (pEnt->m_type == FILE_TYPE_SYMBOLIC_LINK)
+		{
+			iconFlags = ICON_SHORTCUT_FLAG;
+			
+			StatResult sr;
+			int stat = FiStat(pEnt->m_name, &sr);
+			if (stat < 0)
+				icon = ICON_CHAIN_BROKEN;
+			else
+				icon = CabGetIconBasedOnName(pEnt->m_name, sr.m_type);
+		}
+		
+		AddElementToList(pWindow, FP_DIR_LISTING, pEnt->m_name, iconFlags | icon);
 	}
 	
 	FiCloseDir(dd);
@@ -76,23 +90,7 @@ void FilePickerUpdate (Window *pWindow)
 
 void FilePickerCdBack (Window *pWindow)
 {
-	const char* pCwd = TextInputGetRawText(pWindow, FP_CWD_TEXT);
-	
-	char cwd_copy[PATH_MAX + 1];
-	strcpy(cwd_copy, pCwd);
-	
-	if (cwd_copy[1] == 0) return;//can't cd back from root
-	
-	char *p = strrchr (cwd_copy, '/');//get last occurrence
-	
-	if (pCwd == p) p++;//so that we don't cut the root / as well
-	
-	*p = 0;//cut it off
-	
-	if (cwd_copy[0] == 0)
-		strcpy(cwd_copy, "/");
-	
-	FilePickerChangeDirectory(pWindow, cwd_copy, true);
+	FilePickerChangeDirectory(pWindow, "..", true);
 }
 
 //Null but all 0xffffffff's. Useful
@@ -102,35 +100,16 @@ void FilePickerCdBack (Window *pWindow)
 
 void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRootOnFailure)
 {
-	if (strlen(cwd) >= PATH_MAX - 2) goto _pathtoolong;
-	
-	char cwdNew[PATH_MAX];
-	strcpy(cwdNew, TextInputGetRawText(pWindow, FP_CWD_TEXT));
-	
-	if (*cwd == '/')
+	if (strlen(cwd) >= PATH_MAX - 2)
 	{
-		strcpy(cwdNew, cwd);
-	}
-	else
-	{
-		if (strcmp(cwdNew, "/"))
-			strcat(cwdNew, "/");
-	
-		if (strlen(cwdNew) + 2 + strlen(cwd) >= PATH_MAX)
-		{
-		_pathtoolong:
-			MessageBox(pWindow, "Cannot navigate to directory.\n\nPath name would be too long.", "Error", ICON_ERROR << 16 | MB_OK);
-			return;
-		}
-		
-		strcat(cwdNew, cwd);
+		MessageBox(pWindow, "Cannot navigate to directory.\n\nPath name would be too long.", "Error", ICON_ERROR << 16 | MB_OK);
+		return;
 	}
 	
-	int dd = FiOpenDir(cwdNew);
-	if (dd < 0)
+	if (FiChangeDir(cwd) < 0)
 	{
 		char buffer [256];
-		sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\n%s", cwdNew,
+		sprintf (buffer, "Cannot find directory '%s'.  It may have been moved or deleted.\n\n%s", cwd,
 			bTakeToRootOnFailure ? "Changing back to the root directory." : "Try another file or directory.");
 		MessageBox(pWindow, buffer, "Error", ICON_ERROR << 16 | MB_OK);
 		
@@ -140,7 +119,7 @@ void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRoo
 		return;
 	}
 	
-	SetTextInputText (pWindow, FP_CWD_TEXT, cwdNew);
+	SetTextInputText (pWindow, FP_CWD_TEXT, FiGetCwd());
 	FilePickerUpdate (pWindow);
 	RequestRepaint   (pWindow);
 }
@@ -208,8 +187,21 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 						{
 							FilePickerChangeDirectory(pWindow, pFileName, true);
 						}
+						else if (sr.m_type & FILE_TYPE_SYMBOLIC_LINK)
+						{
+						//	FilePickerChangeDirectory(pWindow, pFileName, true);
+							if (FiChangeDir(pFileName) < 0)
+							{
+								goto _regular_file;
+							}
+							else
+							{
+								FilePickerChangeDirectory(pWindow, ".", true);
+							}
+						}
 						else
 						{
+						_regular_file:;
 							size_t len1 = strlen (pFileName);
 							size_t len2 = strlen (pCwd);
 							pWindow->m_data = MmAllocateK(len1 + len2 + 3);
@@ -242,7 +234,7 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 					return;
 				}
 				const char* pText = TextInputGetRawText(pWindow, FP_FILE_TEXT);
-				const char* pCwd  = TextInputGetRawText(pWindow, FP_CWD_TEXT);
+				const char* pCwd  = FiGetCwd();
 				if (!pText || !pCwd)
 					pWindow->m_data = FNULL;
 				else
@@ -281,12 +273,14 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 	}
 }
 
+extern char g_cwd[];
+
 // Pops up a text box requesting an input string, and returns a MmAllocate'd
 // region of memory with the text inside.  Make sure to free the result,
 // if it's non-null.
 //
 // Returns NULL if the user cancels.
-char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText)
+char* FilePickerBoxEx(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText, const char* pFilePath)
 {
 	/*
 	
@@ -323,6 +317,14 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	  +---------------------------------------------------------------------+
 	
 	*/
+	
+	char cwd[PATH_MAX + 2];
+	strcpy(cwd, FiGetCwd());
+	
+	if (FiChangeDir(pFilePath) < 0)
+	{
+		FiChangeDir("/");
+	}
 	
 	bool wasSelectedBefore = false;
 	if (pWindow)
@@ -367,7 +369,7 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 	rect.right  = POPUP_WIDTH - 10;
 	rect.bottom = 20;
 	AddControl (pBox, CONTROL_TEXTINPUT, rect, NULL, FP_CWD_TEXT, 0, 0);
-	SetTextInputText(pBox, FP_CWD_TEXT, "/");
+	SetTextInputText(pBox, FP_CWD_TEXT, FiGetCwd());
 	
 	rect.left   = 10;
 	rect.top    = 12 + 60;
@@ -434,5 +436,13 @@ char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, 
 		WmPaintWindowTitle (pWindow);
 	}
 	
+	// just change it back anyway.. If anything fails, this acts as if the directory was deleted while we were still there
+	strcpy(g_cwd, cwd);
+	
 	return dataReturned;
+}
+
+char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText)
+{
+	return FilePickerBoxEx(pWindow, pPrompt, pCaption, pDefaultText, "/");
 }

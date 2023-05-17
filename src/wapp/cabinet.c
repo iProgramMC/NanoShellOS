@@ -198,57 +198,59 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 				}
 			}
 			
+			int lineHeight = GetLineHeight();
+			
 			RECTA(r, 10, 10, 32, 32);
 			AddControl(pWindow, CONTROL_ICON, r, NULL, PROPS_ICON, icon, 0);
 			
 			// add the hint text
-			RECTA(r, 52, 10 + (32 - GetLineHeight()) / 2, CABINET_PROPS_WIDTH - 62, 32);
+			RECTA(r, 52, 10 + (32 - lineHeight) / 2, CABINET_PROPS_WIDTH - 62, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			SetHugeLabelText(pWindow, PROPS_LABEL, justName);
 			
-			RECTA(r, 10, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Location:", PROPS_LABEL_LOCATION, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECTA(r, 10, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Size:", PROPS_LABEL_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECTA(r, 10, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Size on disk:", PROPS_LABEL_DISK_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECTA(r, 10, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Created:", PROPS_LABEL_CREATE_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECTA(r, 10, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Modified:", PROPS_LABEL_MODIFY_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
-			RECTA(r, 10, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 20, 32);
+			RECTA(r, 10, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 20, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, "Attributes:", PROPS_LABEL_ATTRIBUTES, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			// Add the actual information itself
 			char buf[512];
-			RECTA(r, 80, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 0 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXTHUGE, r, NULL, PROPS_LOCATION, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			SetHugeLabelText(pWindow, PROPS_LOCATION, path);
 			
 			FormatSizeDetailed(res.m_size, buf);
-			RECTA(r, 80, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 1 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_FILE_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			FormatSizeDetailed(res.m_blocks * 512, buf);
-			RECTA(r, 80, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 2 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_DISK_SIZE, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			TimeStruct str;
 			GetHumanTimeFromEpoch(res.m_createTime, &str);
 			sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d", str.day, str.month, str.year, str.hours, str.minutes, str.seconds);
 			
-			RECTA(r, 80, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 4 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_CREATE_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			GetHumanTimeFromEpoch(res.m_modifyTime, &str);
 			sprintf(buf, "%02d/%02d/%04d %02d:%02d:%02d", str.day, str.month, str.year, str.hours, str.minutes, str.seconds);
 			
-			RECTA(r, 80, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 5 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_MODIFY_TIME, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			sprintf(buf, "%s, %s, %s",
@@ -256,7 +258,7 @@ static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int 
 				(res.m_perms & PERM_WRITE)   ? "Write"   : "No Write",
 				(res.m_perms & PERM_EXEC)    ? "Execute" : "No Execute");
 			
-			RECTA(r, 80, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 90, 32);
+			RECTA(r, 80, 20 + 32 + 7 * 20, CABINET_PROPS_WIDTH - 90, lineHeight + 4);
 			AddControl(pWindow, CONTROL_TEXT, r, buf, PROPS_ATTRIBUTES, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
 			
 			break;
@@ -427,8 +429,11 @@ static void ChangeListViewMode(Window* pWindow)
 }
 
 // size = -1, means don't show anything to the file
-static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size, int last_modified_date)
+static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size, int last_modified_date, bool is_symlink)
 {
+	if (is_symlink)
+		icon |= ICON_SHORTCUT_FLAG;
+	
 	// note: this is real crap
 	if (g_bUsingTableView)
 	{
@@ -464,7 +469,7 @@ static void UpdateDirectoryListing (Window* pWindow)
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 	{
-		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1);
+		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1, false);
 	}
 	
 	DirEnt* pEnt = NULL;
@@ -483,6 +488,8 @@ static void UpdateDirectoryListing (Window* pWindow)
 		StatResult statResult;
 		int res = 0;
 		
+		const char* pName = pEnt->m_name;
+		
 		if (filesDone < C_MAX_STATS_BEFORE_QUIT && g_bUsingTableView)
 		{
 			FiStatAt (dd, pEnt->m_name, &statResult);
@@ -496,15 +503,34 @@ static void UpdateDirectoryListing (Window* pWindow)
 		}
 		filesDone++;
 		
+		bool bIsSymLink = false;
+		
 		if (res < 0)
 		{
 			char buf[512];
 			sprintf(buf, "%s (can't stat -- %s)", pEnt->m_name, GetErrNoString(res));
-			AddFileElementToList(pWindow, buf, ICON_ERROR, -1, -1);
+			AddFileElementToList(pWindow, buf, ICON_ERROR, -1, -1, false);
+		}
+		else if (pEnt->m_type == FILE_TYPE_SYMBOLIC_LINK && filesDone < C_MAX_STATS_BEFORE_QUIT)
+		{
+			// stat the actual file using FiStat. This works since the cabinet uses the system CWD as its own CWD.
+			int res = FiStat(pEnt->m_name, &statResult);
+			if (res < 0)
+			{
+				// TODO: ICON_CHAIN_BROKEN
+				AddFileElementToList(pWindow, pEnt->m_name, ICON_CHAIN_BROKEN, (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, true);
+			}
+			else
+			{
+				pEnt->m_type = statResult.m_type;
+				bIsSymLink = true;
+				goto stat_done;
+			}
 		}
 		else
 		{
-			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type), (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime);
+		stat_done:
+			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pName, pEnt->m_type), (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, bIsSymLink);
 		}
 	}
 	
@@ -667,12 +693,27 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 						{
 							CabinetChangeDirectory(pWindow, pFileName, false);
 						}
+						else if (sr.m_type & FILE_TYPE_SYMBOLIC_LINK)
+						{
+							// first, try to chdir there.
+							int res = FiChangeDir(pFileName);
+							if (res < 0)
+							{
+								goto _regular_file;
+							}
+							else
+							{
+								CabinetChangeDirectory(pWindow, ".", false);
+							}
+						}
 						else
 						{
+						_regular_file:;
 							RESOURCE_STATUS status = LaunchFileOrResource(pFileName);
 							if (status == RESOURCE_LAUNCH_INVALID_PROTOCOL)
 							{
 								char ext[PATH_MAX];
+								ext[0] = 0;
 								char* x = strrchr(pFileName, '.');
 								if (x)
 								{

@@ -265,6 +265,11 @@ typedef uint32_t IconColor;
 #include <icons/setting_tb_show_secs.h>
 #include <icons/setting_window_drag.h>
 #include <icons/setting_solid_bg.h>
+// Icons V2.1
+#include <icons/chain_broken.h>
+#include <icons/chain_broken16.h>
+#include <icons/shortcut_overlay.h>
+#include <icons/shortcut_overlay16.h>
 
 Image * g_iconTable[] = {
 	NULL,
@@ -502,6 +507,10 @@ Image * g_iconTable[] = {
 	&g_tb_show_secs_icon,
 	&g_window_drag_icon,
 	&g_solid_bg_icon,
+	&g_chain_broken_icon,
+	&g_chain_broken16_icon,
+	&g_shortcut_overlay_icon,
+	&g_shortcut_overlay16_icon,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(g_iconTable) == ICON_COUNT, "Change this array if adding icons.");
@@ -585,24 +594,35 @@ Image* GetIconImage(IconType type, int sz)
 			CASE(PIPE)
 			CASE(CHESS)
 			CASE(CRAYONS)
+			CASE(CHAIN_BROKEN)
+			CASE(SHORTCUT_OVERLAY)
 			#undef CASE
 		}
 	}
 	
 	return g_iconTable[type];
 }
+
 void RenderIcon(IconType type, int x, int y)
 {
+	bool bShortcut = type & ICON_SHORTCUT_FLAG;
+	type &= ~ICON_SHORTCUT_FLAG;
+	
 	Image* p = GetIconImage(type, -1);
 	if (!p) return;
 	VidBlitImage(p, x, y);
+	
+	if (bShortcut)
+		RenderIcon(ICON_SHORTCUT_OVERLAY, x, y);
 }
+
 void RenderIconOutline(IconType type, int x, int y, uint32_t color)
 {
 	Image* p = GetIconImage(type, -1);
 	if (!p) return;
 	VidBlitImageOutline(p, x, y, color);
 }
+
 void RenderThumbClock(int x, int y, int size);
 
 bool IsMonochromeIcon(IconType type)
@@ -620,6 +640,9 @@ bool IsMonochromeIcon(IconType type)
 
 void RenderIconForceSize(IconType type, int x, int y, int size)
 {
+	bool bShortcut = type & ICON_SHORTCUT_FLAG;
+	type &= ~ICON_SHORTCUT_FLAG;
+	
 	Image *p = GetIconImage(type, size);
 	if (!p) return;
 	
@@ -632,6 +655,9 @@ void RenderIconForceSize(IconType type, int x, int y, int size)
 	{
 		RenderThumbClock(x, y, size);
 	}
+	
+	if (bShortcut)
+		RenderIconForceSize(ICON_SHORTCUT_OVERLAY, x, y, size);
 }
 
 

@@ -329,6 +329,9 @@ FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
 		if (cwdLen + 2 + pathLen >= PATH_MAX)
 			return NULL;
 		
+		if (*path != 0)
+			strcat(path, "/");
+		
 		strcat(path, pPath);
 	}
 	
@@ -719,9 +722,6 @@ int FrStat (const char *pFileName, StatResult* pOut)
 	FileNode *pNode = FsResolvePath(pFileName, true);
 	if (!pNode)
 		return -ENOENT;
-	
-	if (pNode->m_type == FILE_TYPE_SYMBOLIC_LINK)
-		return -ELOOP;
 	
 	pOut->m_type       = pNode->m_type;
 	pOut->m_size       = pNode->m_length;
