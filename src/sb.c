@@ -366,7 +366,7 @@ void SbSetUpFile()
 {
 	const char * name = "/Device/Sb16";
 	FsRootCreateFileAt(name, NULL, 0);
-	FileNode *pNode = FsResolvePath(name);
+	FileNode *pNode = FsResolvePath(name, false);
 	
 	ASSERT(pNode && "Couldn't add that file to the root?");
 	

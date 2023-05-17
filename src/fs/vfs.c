@@ -184,6 +184,7 @@ int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 
 int FsCreateDir(FileNode* pDirNode, const char *pFileName)
 {
+	SLogMsg("FsCreateDir(%p, '%s')", pDirNode, pFileName);
 	if (!pDirNode) return -EIO;
 	if (!pDirNode->CreateDir) return -ENOTSUP;
 	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
@@ -198,63 +199,141 @@ int FsCreateDir(FileNode* pDirNode, const char *pFileName)
 	return pDirNode->CreateDir(pDirNode, pFileName);
 }
 
-FileNode* FsResolvePath (const char* pPath)
+// pBuf needs to be PATH_MAX or bigger in size.
+int FsReadSymbolicLink(FileNode* pNode, char* pBuf)
 {
-	char path_copy[PATH_MAX]; //max path
-	if (strlen (pPath) >= PATH_MAX-1) return NULL;
-	strcpy (path_copy, pPath);
+	if (pNode->m_length >= PATH_MAX)
+		return -ENAMETOOLONG;
 	
-	TokenState state;
-	state.m_bInitted = 0;
-	char* initial_filename = Tokenize (&state, path_copy, "/");
-	if (!initial_filename) return NULL;
+	for (int i = 0; i < (int)pNode->m_length; i++)
+		pBuf[i] = 65;
 	
-	//is it just an empty string? if yes, we're using
-	//an absolute path.  Otherwise we gotta append the CWD 
-	//and run this function again.
-	if (*initial_filename == 0)
+	uint32_t read = pNode->Read(pNode, 0, pNode->m_length, pBuf, true);
+	if (read < pNode->m_length)
+		return -EIO;
+	
+	pBuf[pNode->m_length] = 0;
+	return 0;
+}
+
+// note: this does NO checks on pPath being longer than PATH_MAX, we assume it's already been done!
+FileNode* FsResolvePathInternal(FileNode* pStartNode, const char* pPath, bool bResolveSymLinks, int nSymLinkDepth, int * errNo)
+{
+	*errNo = 0;
+	
+	if (!*pPath)
+		return pStartNode;
+	
+	if (nSymLinkDepth >= C_MAX_SYMLINK_DEPTH)
 	{
-		FileNode *pNode = FsGetRootNode();
-		while (true)
+		*errNo = -ELOOP;
+		return NULL;
+	}
+	
+	char sCurrentFileName[PATH_MAX];
+	const char *pPath2 = pPath;
+	int index = 0;
+	
+	// since we will go through AT LEAST one iteration of the while loop (since the path isn't "nothing")
+	// we need to add another reference to cancel out the one we would remove in the loop.
+	FsAddReference(pStartNode);
+	
+	FileNode* pFileNode = pStartNode;
+	
+	while (true)
+	{
+		index = 0;
+		while (*pPath2 != '/' && *pPath2 != '\0')
 		{
-			char* path = Tokenize (&state, NULL, "/");
+			sCurrentFileName[index++] = *pPath2;
+			pPath2++;
+		}
+		sCurrentFileName[index] = 0;
+		
+		bool bAtEnd = (*pPath2 == '\0'); //that, or it's at a '/'
+		
+		if (!bAtEnd)
+		{
+			pPath2++;
+		}
+		
+		FileNode* pChild = FsFindDir(pFileNode, sCurrentFileName);
+		if (!pChild)
+		{
+			FsReleaseReference(pFileNode);
+			return NULL;
+		}
+		
+		// note. Currently, we keep the parent referenced, since we need to maybe resolve a symlink.
+		// if we're a symbolic link, read it
+		if (pChild->m_type == FILE_TYPE_SYMBOLIC_LINK && (!bAtEnd || bResolveSymLinks))
+		{
+			char slink[PATH_MAX];
 			
-			//are we done?
-			if (path && *path)
+			*errNo = FsReadSymbolicLink(pChild, slink);
+			if (*errNo < 0)
 			{
-				//nope, resolve pNode again.
-				FileNode* pOldNode = pNode;
-				pNode = FsFindDir (pNode, path);
-				
-				//release the old one
-				FsReleaseReference(pOldNode);
-				
-				//if we don't actually have it, return NULL
-				if (!pNode) return NULL;
+				// couldn't read. Unreference everything we know, and return.
+				FsReleaseReference(pFileNode);
+				FsReleaseReference(pChild);
+				return NULL;
 			}
-			else
+			
+			if (slink[0] == '/') // absolute symbolic link:
 			{
-				return pNode;
+				// start over from scratch.
+				FsReleaseReference(pFileNode);
+				FsReleaseReference(pChild);
+				pFileNode = FsResolvePathInternal(FsGetRootNode(), slink, bResolveSymLinks, nSymLinkDepth + 1, errNo);
+			}
+			else // relative sym link
+			{
+				// release the child (the symlink), and start the lookup from our parent.
+				// This is why kept it referenced.
+				FsReleaseReference(pChild);
+				FileNode* pNewNode = FsResolvePathInternal(pFileNode, slink, bResolveSymLinks, nSymLinkDepth + 1, errNo);
+				FsReleaseReference(pFileNode);
+				pFileNode = pNewNode;
 			}
 		}
+		else
+		{
+			// dereference the parent, and update the pointer to the child.
+			FsReleaseReference(pFileNode);
+			pFileNode = pChild;
+		}
+		
+		if (bAtEnd)
+			return pFileNode;
+	}
+}
+
+FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
+{
+	// ensure the path is long enough
+	size_t pathLen = strlen(pPath);
+	if (pathLen >= PATH_MAX)
+		return NULL;
+	
+	char path[PATH_MAX];
+	if (*pPath == '/')
+	{
+		strcpy(path, pPath + 1);
 	}
 	else
 	{
-		// Not an absolute path. Append the CD
-		char path_copy[PATH_MAX * 2 + 5]; //max path
-		path_copy[0] = 0;
-		strcpy (path_copy, g_cwd);
-		if (g_cwd[1] != 0) // there's not just /
-			strcat (path_copy, "/");
-		strcat (path_copy, pPath);
+		strcpy(path, FiGetCwd() + 1);
 		
-		if (strlen (path_copy) >= PATH_MAX - 5)
-			// Errno: ENAMETOOLONG
+		size_t cwdLen = strlen(path);
+		
+		if (cwdLen + 2 + pathLen >= PATH_MAX)
 			return NULL;
 		
-		// try to resolve this as a standard path
-		return FsResolvePath (path_copy);
+		strcat(path, pPath);
 	}
+	
+	UNUSED int errNo = 0;
+	return FsResolvePathInternal(FsGetRootNode(), path, bResolveSymLinks, 0, &errNo);
 }
 
 // Default
@@ -364,7 +443,7 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 	}
 	else
 	{
-		pFile = FsResolvePath(pFileName);
+		pFile = FsResolvePath(pFileName, true);
 		if (!pFile)
 		{
 			// Allow creation, if O_CREAT was specified and we need to write data
@@ -386,13 +465,16 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 					}
 				}
 				
-				FileNode* pDir = FsResolvePath(fileName);
+				FileNode* pDir = FsResolvePath(fileName, false);
 				if (!pDir)
 				{
 					SLogMsg("Warning: Couldn't even find parent dir '%s' ('%s')", fileName, pFileName);
 					//couldn't even find parent dir
 					return -ENOENT;
 				}
+				
+				// this SHOULD be true...
+				ASSERT(pDir->m_type & FILE_TYPE_DIRECTORY);
 				
 				// Try creating a file
 				if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
@@ -412,6 +494,15 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 				//Can't append to/read from a missing file!
 				return -ENOENT;
 			}
+		}
+		
+		// if the file itself is a symlink (we asked it to resolve through sym links), simply return -ELOOP
+		// to let the user know the symlink chain is too deep or some other issue happened
+		if (pFile->m_type == FILE_TYPE_SYMBOLIC_LINK)
+		{
+			FsReleaseReference(pFile);
+			
+			return -ELOOP;
 		}
 	}
 	
@@ -506,10 +597,16 @@ int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	if (dd < 0)
 		return dd;
 	
-	FileNode* pDir = FsResolvePath(pFileName);
+	FileNode* pDir = FsResolvePath(pFileName, true);
 	if (!pDir)
 		// No File
 		return -ENOENT;
+	
+	if (pDir->m_type == FILE_TYPE_SYMBOLIC_LINK)
+	{
+		FsReleaseReference(pDir);
+		return -ELOOP;
+	}
 	
 	if (!(pDir->m_type & FILE_TYPE_DIRECTORY))
 	{
@@ -619,7 +716,28 @@ int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 
 int FrStat (const char *pFileName, StatResult* pOut)
 {
-	FileNode *pNode = FsResolvePath(pFileName);
+	FileNode *pNode = FsResolvePath(pFileName, true);
+	if (!pNode)
+		return -ENOENT;
+	
+	if (pNode->m_type == FILE_TYPE_SYMBOLIC_LINK)
+		return -ELOOP;
+	
+	pOut->m_type       = pNode->m_type;
+	pOut->m_size       = pNode->m_length;
+	pOut->m_inode      = pNode->m_inode;
+	pOut->m_perms      = pNode->m_perms;
+	pOut->m_modifyTime = pNode->m_modifyTime;
+	pOut->m_createTime = pNode->m_createTime;
+	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	
+	FsReleaseReference(pNode);
+	return -ENOTHING;
+}
+
+int FrLinkStat (const char *pFileName, StatResult* pOut)
+{
+	FileNode *pNode = FsResolvePath(pFileName, false);
 	if (!pNode)
 		return -ENOENT;
 	
@@ -725,7 +843,7 @@ extern char g_cwd[PATH_MAX+2];
 
 int FrUnlinkInDir(const char* pDirName, const char* pFileName)
 {
-	FileNode *pDir = FsResolvePath (pDirName);
+	FileNode *pDir = FsResolvePath (pDirName, false);
 	if (!pDir)
 		return -ENOENT;
 	
@@ -739,8 +857,14 @@ int FrUnlinkInDir(const char* pDirName, const char* pFileName)
 
 int FrChangeDir(const char *pfn)
 {
-	FileNode *pNode = FsResolvePath (pfn);
+	FileNode *pNode = FsResolvePath(pfn, true);
 	if (!pNode) return -ENOENT;
+	
+	if (pNode->m_type == FILE_TYPE_SYMBOLIC_LINK)
+	{
+		FsReleaseReference(pNode);
+		return -ELOOP;
+	}
 	
 	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
 	{
@@ -760,12 +884,12 @@ int FrChangeDir(const char *pfn)
 int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, const char* pNameNew)
 {
 	// resolve the directories
-	FileNode* pDirNodeOld = FsResolvePath(pDirOld);
+	FileNode* pDirNodeOld = FsResolvePath(pDirOld, true);
 	
 	if (!pDirNodeOld)
 		return -ENOENT;
 	
-	FileNode* pDirNodeNew = FsResolvePath(pDirNew);
+	FileNode* pDirNodeNew = FsResolvePath(pDirNew, true);
 	
 	if (!pDirNodeNew)
 	{
@@ -829,7 +953,7 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 
 int FrMakeDir(const char* pDirName, const char* pFileName)
 {
-	FileNode *pNode = FsResolvePath(pDirName);
+	FileNode *pNode = FsResolvePath(pDirName, false);
 	if (!pNode) return -ENOENT;
 	
 	int status = FsCreateDir(pNode, pFileName);
@@ -840,7 +964,7 @@ int FrMakeDir(const char* pDirName, const char* pFileName)
 
 int FrRemoveDir(const char* pPath)
 {
-	FileNode* pNode = FsResolvePath(pPath);
+	FileNode* pNode = FsResolvePath(pPath, false);
 	if (!pNode)
 		return -ENOENT;
 	

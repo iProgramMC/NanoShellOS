@@ -910,6 +910,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			SW_INO  = (1 << 3),
 			SW_HELP = (1 << 4),
 			SW_CR   = (1 << 5),
+			SW_TYPE = (1 << 6),
 		};
 		
 		int switches = 0;
@@ -933,6 +934,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 						case 'd': switches |= SW_DATE; break;
 						case 'b': switches |= SW_BARE; break;
 						case 'c': switches |= SW_CR;   break;
+						case 't': switches |= SW_TYPE; break;
 						default:  switches |= SW_UNK;  break;
 					}
 					parm++;
@@ -956,6 +958,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			LogMsg("-b: List the directory in a bare format.");
 			LogMsg("-d: Show human readable dates next to files.");
 			LogMsg("-c: Show creation date instead of modification date. Use with -d.");
+			LogMsg("-t: Show file type numbers. These are specific to NanoShell.");
 			return;
 		}
 		
@@ -993,7 +996,15 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			}
 			
 			StatResult statResult;
-			int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
+			//int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
+			
+			char path[2048];
+			strcpy(path, FiGetCwd());
+			if (strcmp(path, "/"))
+				strcat(path, "/");
+			strcat(path, pDirEnt->m_name);
+			
+			int res = FiStat(path, &statResult);
 			
 			if (res < 0)
 			{
@@ -1026,6 +1037,8 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			{
 				char buf[20];
 				
+				buf[10] = ' ';
+				
 				sprintf( buf, " %9u ", statResult.m_inode );
 				
 				// hack
@@ -1035,6 +1048,26 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 					buf[10] = ' ';
 				}
 				
+				
+				strcat( buffer, buf );
+				
+				auxStr = buffer;
+			}
+			
+			if (switches & SW_TYPE)
+			{
+				char buf[20];
+				
+				buf[10] = ' ';
+				
+				sprintf( buf, " %3u ", statResult.m_type );
+				
+				// hack
+				if (buf[10] != ' ')
+				{
+					memmove(buf, buf + 1, sizeof buf);
+					buf[10] = ' ';
+				}
 				
 				strcat( buffer, buf );
 				

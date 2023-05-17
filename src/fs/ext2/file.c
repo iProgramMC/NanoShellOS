@@ -42,6 +42,12 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 	
 	if (size == 0) return 0;
 	
+	if (pNode->m_type == FILE_TYPE_SYMBOLIC_LINK && pNode->m_length <= 60)
+	{
+		memcpy(pBuffer, pInode->m_shortSymlinkContents + offset, size);
+		return size;
+	}
+	
 	// read!
 	Ext2ReadFileSegment(pFS, pUnit, offset, size, pBuffer);
 	return size;
@@ -454,11 +460,12 @@ try_again:;
 	// convert the type indicator
 	switch (d.dirEnt->m_typeIndicator)
 	{
-		case E2_DETI_REG_FILE:  pOutputDent->m_type = FILE_TYPE_FILE;                        break;
-		case E2_DETI_CHAR_DEV:  pOutputDent->m_type = FILE_TYPE_CHAR_DEVICE;                 break;
-		case E2_DETI_BLOCK_DEV: pOutputDent->m_type = FILE_TYPE_BLOCK_DEVICE;                break;
-		case E2_DETI_DIRECTORY: pOutputDent->m_type = FILE_TYPE_DIRECTORY | FILE_TYPE_FILE;  break;
-		default:                pOutputDent->m_type = FILE_TYPE_NONE;                        break;
+		case E2_DETI_REG_FILE:  pOutputDent->m_type = FILE_TYPE_FILE;          break;
+		case E2_DETI_CHAR_DEV:  pOutputDent->m_type = FILE_TYPE_CHAR_DEVICE;   break;
+		case E2_DETI_BLOCK_DEV: pOutputDent->m_type = FILE_TYPE_BLOCK_DEVICE;  break;
+		case E2_DETI_SYMLINK:   pOutputDent->m_type = FILE_TYPE_SYMBOLIC_LINK; break;
+		case E2_DETI_DIRECTORY: pOutputDent->m_type = FILE_TYPE_DIRECTORY;     break;
+		default:                pOutputDent->m_type = FILE_TYPE_NONE;          break;
 	}
 	
 	return pOutputDent;

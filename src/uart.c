@@ -208,7 +208,7 @@ void UartInit(uint8_t com_num)
 	name[11] = '1' + com_num;
 	
 	FsRootCreateFileAt(name, NULL, 0);
-	FileNode *pNode = FsResolvePath(name);
+	FileNode *pNode = FsResolvePath(name, false);
 	
 	ASSERT(pNode && "Couldn't add that file to the root?");
 	

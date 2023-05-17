@@ -634,7 +634,6 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		{
 			if (parm1 == MAIN_LISTVIEW)
 			{
-				//FileNode *pFolderNode = FsResolvePath (g_cabinetCWD);
 				int dd = FiOpenDir(g_cabinetCWD);
 				if (dd < 0)
 				{

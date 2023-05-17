@@ -272,7 +272,7 @@ RootFileNode* FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 	*name = 0;
 	name++;
 	
-	FileNode* pFNode = FsResolvePath(buffer);
+	FileNode* pFNode = FsResolvePath(buffer, false);
 	
 	if (!pFNode)
 	{
@@ -286,7 +286,7 @@ RootFileNode* FsRootCreateFileAt(const char* path, void* pContents, size_t sz)
 
 RootFileNode* FsRootCreateDirAt(const char* path)
 {
-	if (FsResolvePath(path))
+	if (FsResolvePath(path, false))
 		return NULL;
 	
 	char buffer[PATH_MAX+1];
@@ -303,7 +303,7 @@ RootFileNode* FsRootCreateDirAt(const char* path)
 	*name = 0;
 	name++;
 	
-	FileNode* pFNode = FsResolvePath(buffer);
+	FileNode* pFNode = FsResolvePath(buffer, false);
 	
 	if (!pFNode)
 	{

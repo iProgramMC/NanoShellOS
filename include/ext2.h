@@ -106,10 +106,17 @@ typedef struct Ext2Inode
 	uint32_t m_nBlocks;
 	uint32_t m_flags;
 	uint32_t m_osSpecific1;
-	uint32_t m_directBlockPointer[12];
-	uint32_t m_singlyIndirBlockPtr;
-	uint32_t m_doublyIndirBlockPtr;
-	uint32_t m_triplyIndirBlockPtr;
+	union
+	{
+		struct
+		{
+			uint32_t m_directBlockPointer[12];
+			uint32_t m_singlyIndirBlockPtr;
+			uint32_t m_doublyIndirBlockPtr;
+			uint32_t m_triplyIndirBlockPtr;
+		};
+		char m_shortSymlinkContents[60];
+	};
 	uint32_t m_nGeneration;
 	uint32_t m_extendedAttributeBlock;
 	uint32_t m_upperSize; // upper 32 bits of m_size.

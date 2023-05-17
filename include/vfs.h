@@ -19,6 +19,8 @@ struct DirEntS;
 #define FS_DEVICE_NAME "Device"
 #define FS_FSROOT_NAME "FSRoot"
 
+#define C_MAX_SYMLINK_DEPTH (8)
+
 // if the node has this many references, it's clear we never want it gone
 // The root node has this property.
 #define NODE_IS_PERMANENT (2000000000)
@@ -176,12 +178,11 @@ DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
 int      FsUnlinkFile(FileNode* pNode, const char* pName);
 
-// If the path points to a symbolic link, depending on bResolveSymbolicLink, it does the following:
+// If the path points to a symbolic link, depending on bResolveThroughSymLinks, it does the following:
 // - True:  Goes down the symbolic link chain (at a depth of 16), until the file is reached.
 //          If the symbolic chain is too deep, this returns one of the symbolic links' file nodes.
 // - False: Returns the symbolic link's node instead.
-//FileNode* FsResolvePath(const char* pPath, bool bResolveSymbolicLink);
-FileNode* FsResolvePath(const char* pPath);
+FileNode* FsResolvePath(const char* pPath, bool bResolveThroughSymLinks);
 
 void FsAddReference(FileNode* pNode);
 void FsReleaseReference(FileNode* pNode);
@@ -346,6 +347,9 @@ void FsInit ();
 
 	// Retrieves information about a file.
 	int FiStat (const char *pFileName, StatResult* pOut);
+	
+	// Retrieves information about a file. If the file name points to a symbolic link, it stats the symbolic link.
+	int FiLinkStat (const char *pFileName, StatResult* pOut);
 	
 	// Changes the current directory.
 	int FiChangeDir (const char *pfn);

@@ -60,6 +60,9 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 		case E2_INO_DIRECTORY:
 			pFileNode->m_type = FILE_TYPE_DIRECTORY;
 			break;
+		case E2_INO_SYM_LINK:
+			pFileNode->m_type = FILE_TYPE_SYMBOLIC_LINK;
+			break;
 	}
 	
 	// NanoShell has no concept of a 'user'.. If anyone can write/read/exec, we can do that. :)

@@ -31,6 +31,7 @@ int TmCmosReadRegister(int reg)
 	WritePort(0x70,reg);
 	return ReadPort(0x71);
 }
+
 void TmCmosWriteRegister(int reg, int data)
 {
 	WritePort(0x70,reg);
