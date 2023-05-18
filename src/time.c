@@ -381,6 +381,9 @@ void FormatTime(char* output, int formatType, int seconds)
 
 void KiTimingWait()
 {
+	TmGetTime(TmReadTime());
+	g_nEpochTime = CalculateEpochTime();
+	
 	// wait 1 second for system to initialize, so that we can wait and stuff
 	while (GetTickCount() < 1000)
 	{
@@ -425,7 +428,7 @@ void IrqClock()
 		{
 			TmGetTime(TmReadTime());
 			
-			g_nEpochTime = GetEpochTime();
+			g_nEpochTime = CalculateEpochTime();
 		}
 	}
 }

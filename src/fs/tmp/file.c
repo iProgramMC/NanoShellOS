@@ -9,8 +9,7 @@
 #include <tmpfs.h>
 #include <string.h>
 #include <memory.h>
-#include <misc.h>
-
+#include <time.h>
 
 uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
 {
@@ -24,6 +23,8 @@ uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, voi
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
 	
 	memcpy(pBuffer, pTFNode->m_pFileData + offset, size);
+	
+	pFileNode->m_accessTime = GetEpochTime();
 	
 	return size;
 }
@@ -99,6 +100,8 @@ uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, vo
 	
 	if (pFileNode->m_length < endOffs)
 		pFileNode->m_length = endOffs;
+	
+	pFileNode->m_accessTime = pFileNode->m_modifyTime = GetEpochTime();
 	
 	return size;
 }
