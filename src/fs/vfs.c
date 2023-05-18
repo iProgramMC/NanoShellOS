@@ -184,7 +184,6 @@ int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 
 int FsCreateDir(FileNode* pDirNode, const char *pFileName)
 {
-	SLogMsg("FsCreateDir(%p, '%s')", pDirNode, pFileName);
 	if (!pDirNode) return -EIO;
 	if (!pDirNode->CreateDir) return -ENOTSUP;
 	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
@@ -343,7 +342,7 @@ FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
 #if 1
 // Basic functions
 
-void FsRootInit();
+void FsTempInit();
 
 void FsInitializeDevicesDir();
 
@@ -351,7 +350,7 @@ void FsInitializeDevicesDir();
 void FsInit ()
 {
 	strcpy(g_cwd, "/");
-	FsRootInit();
+	FsTempInit();
 	FsInitializeDevicesDir();
 }
 
@@ -1038,4 +1037,46 @@ const char *GetErrNoString(int errno)
 		return "Unknown Error";
 	
 	return ErrorStrings[errno];
+}
+
+void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pSrcNode)
+{
+	FileNode* pFN = FsResolvePath(pDirPath, false);
+	int failure = 0;
+	if (!pFN)
+	{
+	_fail:
+		SLogMsg("Couldn't FsUtilAddArbitraryFileNode('%s', '%s')! (failure ID: %d)", pDirPath, pFileName, failure);
+		
+		if (pFN)
+			FsReleaseReference(pFN);
+		
+		return;
+	}
+	
+	failure = pFN->CreateFile(pFN, pFileName);
+	if (failure < 0)
+		goto _fail;
+	
+	// it worked, look it up:
+	FileNode* pNewNode = FsFindDir(pFN, pFileName);
+	if (!pNewNode)
+	{
+		failure = 1;
+		goto _fail;
+	}
+	
+	void* oldParentSpecific = pNewNode->m_pParentSpecific;
+	
+	// copy the new node's contents over the old one:
+	*pNewNode = *pSrcNode;
+	
+	// make sure to pin it
+	pNewNode->m_refCount = NODE_IS_PERMANENT;
+	
+	// restore the old "parent specific" stuff...
+	pNewNode->m_pParentSpecific = oldParentSpecific;
+	
+	// unreference the parent.
+	FsReleaseReference(pFN);
 }

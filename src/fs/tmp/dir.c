@@ -92,10 +92,15 @@ go_again:;
 		goto go_again;
 	}
 	
+	if (bSkipDotAndDotDot && (strcmp(dirEntry.m_filename, ".") == 0 || strcmp(dirEntry.m_filename, "..") == 0))
+	{
+		goto go_again;
+	}
+	
 	// fill out the direntry structure
 	strncpy(pDirEnt->m_name, dirEntry.m_filename, sizeof pDirEnt->m_name);
 	pDirEnt->m_name[sizeof pDirEnt->m_name - 1] = 0;
-	pDirEnt->m_inode = dirEntry.m_pNode->m_node.m_inode;
+	pDirEnt->m_inode = (int)dirEntry.m_pNode->m_node.m_pParentSpecific;
 	pDirEnt->m_type  = dirEntry.m_fileType;
 	
 	return pDirEnt;
@@ -103,7 +108,7 @@ go_again:;
 
 DirEnt* FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt)
 {
-	return FsTempDirReadInternal(pFileNode, pOffset, pDirEnt, false);
+	return FsTempDirReadInternal(pFileNode, pOffset, pDirEnt, true);
 }
 
 FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName)
@@ -114,7 +119,7 @@ FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName)
 	DirEnt* pDirEnt = NULL;
 	uint32_t offset = 0;
 	
-	while ((pDirEnt = FsTempDirRead(pFileNode, &offset, &ent)))
+	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, false)))
 	{
 		if (strcmp(pDirEnt->m_name, pName) == 0)
 		{

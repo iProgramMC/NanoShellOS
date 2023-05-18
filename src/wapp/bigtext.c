@@ -26,6 +26,7 @@ enum
 	NOTEP_BTNSYNHL,
 	NOTEP_BTNLNNUM,
 	NOTEP_BTNFONTP,
+	NOTEP_BTNSPACER1,
 	
 	//coolbar actions
 	CB$NEW,
@@ -107,7 +108,7 @@ void NotepadOpenFile (Window* pWindow, const char*pFileName)
 		
 		strcpy(NOTEPDATA(pWindow)->m_filename, pFileName);
 		NOTEPDATA(pWindow)->m_untitled   = false;
-		NOTEPDATA(pWindow)->m_ackChanges = false;
+		NOTEPDATA(pWindow)->m_ackChanges = true;
 			
 		NotepadUpdateTitle(pWindow);
 	}
@@ -356,6 +357,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNOPEN,      "Open...");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSAVE,      "Save");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSAVEAS,    "Save as...");
+			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNSPACER1,   "");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_FILE, NOTEP_BTNEXIT,      "Exit");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_HELP, NOTEP_BTNABOUT,     "About Notepad");
 			AddMenuBarItem(pWindow, NOTEP_MENUBAR, NOTEP_MENUBAR_VIEW, NOTEP_BTNSYNHL,     "Syntax Highlighting");
@@ -435,7 +437,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 					NotepadOnActionOpen(pWindow);
 					break;
 				case CB$SAVE:
-					NotepadOnActionSaveAs(pWindow);
+					NotepadOnActionSave(pWindow);
 					break;
 				case CB$FIND:
 					NotepadOnActionFind(pWindow);
@@ -518,6 +520,9 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 				if (result == MBID_YES)
 					NotepadOnSave(pWindow);
 			}
+			
+			TextInputClearDirtyFlag(pWindow, NOTEP_TEXTVIEW);
+			
 			DefaultWindowProc (pWindow, msg, parm1, parm2);
 			break;
 		}
@@ -555,9 +560,6 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 			}
 			break;
 		}
-		case EVENT_PAINT:
-			
-			break;
 		default:
 			DefaultWindowProc (pWindow, msg, parm1, parm2);
 			break;

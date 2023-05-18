@@ -883,7 +883,8 @@ char* InputBox(Window* pWindow, const char* pPrompt, const char* pCaption, const
  *
  * pDefaultText can be NULL. If it isn't, the text box will be initialized with the default value passed in.
  */
-char* FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
+char* FilePickerBoxEx(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText, const char* pInitPath /* = "/" */);
+char* FilePickerBox  (Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 
 /**
  * Allows the user to select a color.  Returns 0xffffffff if they did not pick.

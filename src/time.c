@@ -17,9 +17,14 @@
 TimeStruct g_time;
 int gEarliestTickCount;
 int g_nRtcTicks = 0;
+int g_nEpochTime = 0;
 bool g_bRtcInitialized = false;
-extern uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
-extern int g_nSeconds;
+int  g_nSeconds;
+bool g_gotTime = false;
+uint64_t g_tscOneSecondAgo, g_tscTwoSecondsAgo;
+bool g_trustRtcUpdateFinishFlag;
+
+void MonitorSystem();
 
 TimeStruct* TmReadTime()
 {
@@ -200,7 +205,7 @@ int GetRawTickCount()
 // functions on my system (used gmtime, matches exactly with a call to time(NULL))
 static int s_daysPerMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
-int GetEpochTime()
+int CalculateEpochTime()
 {
 	TimeStruct ts = *TmReadTime();
 	int year = ts.year - 1970;
@@ -221,6 +226,11 @@ int GetEpochTime()
 	}
 	
 	return days * 86400 + ts.hours * 3600 + ts.minutes * 60 + ts.seconds;
+}
+
+int GetEpochTime()
+{
+	return g_nEpochTime;
 }
 
 void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut)
@@ -375,5 +385,47 @@ void KiTimingWait()
 	while (GetTickCount() < 1000)
 	{
 		asm("hlt":::"memory");
+	}
+}
+
+void IrqClock()
+{
+	//acknowledge interrupt
+	WritePort(0x20, 0x20);
+	WritePort(0xA0, 0x20);
+	//also read register C, may be useful later:
+	WritePort(0x70, 0x0C);
+	
+	UNUSED char flags = ReadPort(0x71);
+	
+	g_nRtcTicks++;
+	if (g_nRtcTicks % RTC_TICKS_PER_SECOND == 0)
+	{
+		g_nSeconds++;
+		g_tscTwoSecondsAgo = g_tscOneSecondAgo;
+		g_tscOneSecondAgo  = ReadTSC();
+		//SLogMsg("TSC difference: %Q", g_tscOneSecondAgo - g_tscTwoSecondsAgo);
+		
+		MonitorSystem();
+	}
+	
+	// 1 real second passed. Don't count on it, as some emulators don't send this flag
+	// VirtualBox comes to mind...
+	if (flags & (1 << 4))
+	{
+		g_trustRtcUpdateFinishFlag = true; // yeah, trust me from now on
+		
+		TmGetTime(TmReadTime());
+	}
+	//(temporarily) load time like so, until (and if) a flag UPDATE_FINISHED interrupt comes
+	if (!g_trustRtcUpdateFinishFlag)
+	{
+		//1 second passed!
+		if (g_nRtcTicks % RTC_TICKS_PER_SECOND == 0)
+		{
+			TmGetTime(TmReadTime());
+			
+			g_nEpochTime = GetEpochTime();
+		}
 	}
 }

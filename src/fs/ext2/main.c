@@ -421,8 +421,8 @@ void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
 	Ext2FlushSuperBlock(pFS);
 }
 
-//NOTE: This makes a copy!!
-FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
+// note. This makes a copy, but does not preserve the inode number
+void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pFN);
 
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
@@ -534,7 +534,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	pCacheUnit->m_node.m_type     |= FILE_TYPE_MOUNTPOINT;
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
-	FsRootAddArbitraryFileNodeToRoot(name, &pCacheUnit->m_node);
+	FsUtilAddArbitraryFileNode("/", name, &pCacheUnit->m_node);
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
