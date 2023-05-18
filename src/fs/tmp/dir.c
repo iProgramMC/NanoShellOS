@@ -28,7 +28,6 @@ void FsTempDirSetup(FileNode* pFileNode, FileNode* pParentNode)
 	
 	strcpy(dotEntry   .m_filename, ".");
 	strcpy(dotDotEntry.m_filename, "..");
-	dotEntry.m_fileType  = dotDotEntry.m_fileType = FILE_TYPE_DIRECTORY;
 	
 	// set the node of the dot entry to ourselves
 	dotEntry.m_pNode = pTFNode;
@@ -101,7 +100,7 @@ go_again:;
 	strncpy(pDirEnt->m_name, dirEntry.m_filename, sizeof pDirEnt->m_name);
 	pDirEnt->m_name[sizeof pDirEnt->m_name - 1] = 0;
 	pDirEnt->m_inode = (int)dirEntry.m_pNode->m_node.m_pParentSpecific;
-	pDirEnt->m_type  = dirEntry.m_fileType;
+	pDirEnt->m_type  = dirEntry.m_pNode->m_node.m_type;
 	
 	return pDirEnt;
 }
@@ -175,8 +174,6 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 	strcpy(dent.m_filename, pName);
 	
 	dent.m_pNode = (TempFSNode*)pChildNode->m_implData;
-	
-	dent.m_fileType = pChildNode->m_type;
 	
 	// write it.
 	uint32_t written = FsTempFileWrite(pFileNode, offset, sizeof dent, &dent, false);

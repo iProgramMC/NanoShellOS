@@ -11,7 +11,7 @@
 
 #include <vfs.h>
 
-#define C_MAX_TMPFS_FILENAME (128 - 8) // 120, to fit the entire dent structure into 128 bytes.
+#define C_MAX_TMPFS_FILENAME (128 - 4) // 124, to fit the entire dent structure into 128 bytes.
 
 struct TempFSNode; // forward declare for the DirectoryEntry
 
@@ -19,9 +19,6 @@ typedef struct
 {
 	// the pointer to the inode
 	struct TempFSNode* m_pNode;
-	
-	// the type of file.
-	int m_fileType;
 	
 	// the file name
 	char m_filename[C_MAX_TMPFS_FILENAME];
