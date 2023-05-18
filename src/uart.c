@@ -153,8 +153,7 @@ static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t 
 	
 	return size;
 }
-
-void FsRootCreateFileAt(const char* path, void* pContents, size_t sz);
+void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pSrcNode);;
 
 void UartInit(uint8_t com_num)
 {
@@ -204,13 +203,12 @@ void UartInit(uint8_t com_num)
 	
 	// Ok, port init has completed, now add it to the file system
 	
-	char name[] = "/Device/ComX";
-	name[11] = '1' + com_num;
+	char name[] = "ComX";
+	name[3] = '1' + com_num;
 	
-	FsRootCreateFileAt(name, NULL, 0);
-	FileNode *pNode = FsResolvePath(name, false);
-	
-	ASSERT(pNode && "Couldn't add that file to the root?");
+	FileNode node, *pNode = &node;
+	memset(pNode, 0, sizeof node);
+	strcpy(pNode->m_name, name);
 	
 	pNode->m_refCount = NODE_IS_PERMANENT;
 	
@@ -220,6 +218,8 @@ void UartInit(uint8_t com_num)
 	pNode->m_length = 0;
 	pNode->Read     = FsSerialRead;
 	pNode->Write    = FsSerialWrite;
+	
+	FsUtilAddArbitraryFileNode("/Device", name, pNode);
 	
 	// Send a testing string out
 	char pText[] = "NanoShell has initialized COMX successfully.\r\n";

@@ -24,6 +24,7 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	// we don't store it in one centralized file system instance. All TMPFS instances are part of one giant hivemind.
 	// However, we will store a handle to our own TempFSNode
 	pFNode->m_pFileSystemHandle = NULL;
+	pFNode->m_pParentSpecific   = pTFNode;
 	
 	strncpy(pFNode->m_name, pName, sizeof pFNode->m_name);
 	pFNode->m_name[sizeof pFNode->m_name - 1] = 0;
@@ -89,6 +90,9 @@ void FsTempFreeNode(TempFSNode* pNode)
 	MmFree(pNode);
 }
 
+void FsMountRamDisk(UNUSED void* unused)
+{
+}
 
 //NOTE: This makes a copy!!
 FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
@@ -102,13 +106,27 @@ void FsTempFileOnUnreferenced(FileNode* pFileNode)
 	FsTempFreeNode(pTFNode);
 }
 
+FileNode* g_pRootNode;
+
+FileNode* FsGetRootNode()
+{
+	return g_pRootNode;
+}
+
 void FsTempInit()
 {
-	TempFSNode* pTFNode = FsTempCreateNode("Temp", NULL, true);
+	TempFSNode* pTFNode = FsTempCreateNode("root", NULL, true);
 	FileNode* pFNode = &pTFNode->m_node;
 	
 	// this will be referenced in the root.
 	pFNode->m_refCount = NODE_IS_PERMANENT;
 	
-	FsRootAddArbitraryFileNodeToRoot("/Temp", pFNode);
+	// set it to the root node:
+	g_pRootNode = pFNode;
 }
+
+void FsInitializeDevicesDir()
+{
+	g_pRootNode->CreateDir(g_pRootNode, "Device");
+}
+

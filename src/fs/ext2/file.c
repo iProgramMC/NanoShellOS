@@ -48,6 +48,8 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 		return size;
 	}
 	
+	pNode->m_accessTime = pUnit->m_inode.m_lastAccessTime = GetEpochTime();
+	
 	// read!
 	Ext2ReadFileSegment(pFS, pUnit, offset, size, pBuffer);
 	return size;
@@ -71,6 +73,10 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 	}
 	
 	if (size == 0) return 0;
+	
+	// set the modify date to our current time:
+	pNode->m_accessTime = pUnit->m_inode.m_lastAccessTime = GetEpochTime();
+	pNode->m_modifyTime = pUnit->m_inode.m_lastModTime = pNode->m_accessTime;
 	
 	// write!
 	Ext2WriteFileSegment(pFS, pUnit, offset, size, pBuffer);

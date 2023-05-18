@@ -139,7 +139,6 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	//FsFatInit();
 	FsExt2Init();
 	FsInitRdInit();
-	FsTempInit();
 	UartInit(0);
 	SbInit();
 	CfgLoadFromMainFile();

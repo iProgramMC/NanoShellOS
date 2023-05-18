@@ -360,17 +360,18 @@ int FsSoundBlasterIoControl(UNUSED FileNode* pNode, unsigned long request, void 
 	return -ENOTHING;
 }
 
-void FsRootCreateFileAt(const char* path, void* pContents, size_t sz);
+void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pSrcNode);
 
 void SbSetUpFile()
 {
-	const char * name = "/Device/Sb16";
-	FsRootCreateFileAt(name, NULL, 0);
-	FileNode *pNode = FsResolvePath(name, false);
+	FileNode node, *pNode = &node;
+	memset(pNode, 0, sizeof node);
+	strcpy(pNode->m_name, "Sb16");
 	
 	ASSERT(pNode && "Couldn't add that file to the root?");
 	
 	pNode->m_refCount = NODE_IS_PERMANENT;
+	pNode->m_inode    = 0;
 	
 	pNode->m_perms   = PERM_READ | PERM_WRITE;
 	pNode->m_type    = FILE_TYPE_CHAR_DEVICE;
@@ -379,4 +380,6 @@ void SbSetUpFile()
 	pNode->Read      = FsSoundBlasterRead;
 	pNode->Write     = FsSoundBlasterWrite;
 	pNode->IoControl = FsSoundBlasterIoControl;
+	
+	FsUtilAddArbitraryFileNode("/Device", "Sb16", pNode);
 }

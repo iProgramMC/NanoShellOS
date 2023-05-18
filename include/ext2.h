@@ -283,8 +283,6 @@ enum
 	E2_DYNAMIC_REV,
 };
 
-
-
 // OS specifics
 
 // Binary search tree node.
