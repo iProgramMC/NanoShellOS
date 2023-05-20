@@ -355,7 +355,7 @@ void WidgetColorPicker_DrawHueValRect(Control* this)
 	// to avoid it drawing the highlight out of bounds and us having to redraw the edge
 	VidSetClipRect(&hsPickerRect);
 	WidgetColorPicker_DrawHVHighlight(hsPickerRect.left + x, hsPickerRect.top + y, hsPickerRect.top, hsPickerRect.bottom);
-	VidSetClipRect(&this->m_rect);
+	VidSetClipRect(NULL);
 }
 
 void WidgetColorPicker_DrawSatRect(Control* this)

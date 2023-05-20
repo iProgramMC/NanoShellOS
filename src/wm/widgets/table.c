@@ -715,6 +715,8 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				
 				if (col)
 					col->m_rect = columnBar;
+				
+				VidSetClipRect(NULL);
 			}
 			
 			// Render each row.
