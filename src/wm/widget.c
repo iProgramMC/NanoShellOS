@@ -249,7 +249,7 @@ void DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color)
 	{
 		arrowRect.right = arrowRect.left + (arrowRect.bottom - arrowRect.top);
 	}
-	else if (flags & DRA_IGNOREXSIZE)
+	else if (flags & DRA_IGNOREYSIZE)
 	{
 		arrowRect.bottom = arrowRect.top + (arrowRect.right - arrowRect.left);
 	}
