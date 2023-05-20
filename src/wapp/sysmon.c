@@ -11,6 +11,7 @@
 #include <elf.h>
 #include <image.h>
 #include <task.h>
+#include <config.h>
 
 #define SYSMON_WIDTH  486
 #define SYSMON_HEIGHT 500
@@ -20,6 +21,8 @@ typedef struct
 	int dataPointCPUUsage;
 	int dataPointMemUsage;
 	int dataPointWmFps;
+	
+	int xPos;
 	
 	Image* pImg;
 }
@@ -90,6 +93,16 @@ enum Column
 	COL_STATUS,
 	COL_PAGE_FAULTS,
 };
+
+bool SystemMonitorShowGraph()
+{
+	const char* p = CfgGetEntryValue("SystemMonitor::ShowGraph");
+	
+	if (!p) return true;
+	
+	// if it's different from 'no', show the graph.
+	return strcmp(p, "no") != 0;
+}
 
 static void AddColumns(Window * pWindow)
 {
@@ -258,6 +271,7 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	
 	return cpu_usage_idle_percent;
 }
+
 void ShiftImageLeftBy(Image *pImg, int by)
 {
 	uint32_t* pFB = (uint32_t*)pImg->framebuffer;
@@ -267,12 +281,20 @@ void ShiftImageLeftBy(Image *pImg, int by)
 		memcpy_ints(&pFB[pImg->width * i], &pFB[pImg->width * i + by], pImg->width - by);
 	}
 }
+
 SAI int ConvertToGraphPos(Image *pImg, int y, int ymax)
 {
 	return (int)((uint64_t)(ymax - y) * (uint64_t)pImg->height / (uint64_t)ymax);
 }
+
 void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 {
+	SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
+	Image *pImg = pInst->pImg;
+	
+	if (!pImg)
+		return;
+	
 	int cpu_usage_total = 100 - cpu_idle_time;
 	int npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
 	int memUsedKB = (npp - nfpp) * 4;
@@ -280,10 +302,9 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	if (fps < 0)  fps = 0;
 	if (fps > 60) fps = 60;
 	
-	SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
-	Image *pImg = pInst->pImg;
+#define GRAPH_QUANTUM_WIDTH (4)
 	
-	ShiftImageLeftBy(pImg, 4); // 4 pixels <--
+	ShiftImageLeftBy(pImg, GRAPH_QUANTUM_WIDTH); // 4 pixels <--
 	
 	VBEData image_data, *backup;
 	extern VBEData* g_vbeData;
@@ -292,7 +313,7 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	BuildGraphCtxBasedOnImage (&image_data, pImg);
 	
 	VidSetVBEData(&image_data);
-	VidFillRect(0x000000, pImg->width - 4, 0, pImg->width, pImg->height);
+	VidFillRect(0x000000, pImg->width - GRAPH_QUANTUM_WIDTH, 0, pImg->width, pImg->height);
 	
 	// draw lines:
 	
@@ -301,27 +322,27 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 		// color
 		0xFF0000, 
 		// pos 1
-		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointWmFps, 60),
+		pImg->width - GRAPH_QUANTUM_WIDTH, ConvertToGraphPos(pImg, pInst->dataPointWmFps, 60),
 		// pos 2
-		pImg->width - 1, ConvertToGraphPos(pImg, fps,                   61));
+		pImg->width - 1, ConvertToGraphPos(pImg, fps, 61));
 	
 	// memory usage
 	VidDrawLine(
 		// color
 		0x0000FF, 
 		// pos 1
-		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointMemUsage, npp * 4),
+		pImg->width - GRAPH_QUANTUM_WIDTH, ConvertToGraphPos(pImg, pInst->dataPointMemUsage, npp * 4),
 		// pos 2
-		pImg->width - 1, ConvertToGraphPos(pImg, memUsedKB,                npp * 4));
+		pImg->width - 1, ConvertToGraphPos(pImg, memUsedKB, npp * 4));
 	
 	// CPU usage
 	VidDrawLine(
 		// color
 		0x00FF00, 
 		// pos 1
-		pImg->width - 4, ConvertToGraphPos(pImg, pInst->dataPointCPUUsage, 100),
+		pImg->width - GRAPH_QUANTUM_WIDTH, ConvertToGraphPos(pImg, pInst->dataPointCPUUsage, 100),
 		// pos 2
-		pImg->width - 1, ConvertToGraphPos(pImg, cpu_usage_total,          100));
+		pImg->width - 1, ConvertToGraphPos(pImg, cpu_usage_total, 100));
 	
 	//update the data points
 	pInst->dataPointCPUUsage = cpu_usage_total;
@@ -347,17 +368,20 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 		{
 			//paint the image
 			
+			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
+			Image *pImg = pInst->pImg;
+			
+			if (!pImg) break;
+			
 			int listview_y = PADDING_AROUND_LISTVIEW;
 			//int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2;
+			int listview_height = wnheight - 100 - pImg->height - PADDING_AROUND_LISTVIEW * 2;
 			
 			int x = (pWindow->m_vbeData.m_width - (wnwidth - 20)) / 2;
 			int y = (pWindow->m_vbeData.m_height - wnheight) + listview_y + listview_height + 10;
 			
-			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
-			Image *pImg = pInst->pImg;
-			
-			VidBlitImage(pImg, x, y);
+			if (pImg)
+				VidBlitImage(pImg, x, y);
 			
 			break;
 		}
@@ -387,12 +411,16 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			
 			int listview_y = PADDING_AROUND_LISTVIEW;
 			int listview_width  = wnwidth   - PADDING_AROUND_LISTVIEW * 2;
-			int listview_height = wnheight * 7 / 12  - PADDING_AROUND_LISTVIEW * 2;
 			
 			SystemMonitorInstance *pInst = (SystemMonitorInstance*)pWindow->m_data;
 			Image *pImg = pInst->pImg;
 			
-			int image_height = pImg->height;
+			int image_height = 0;
+			
+			if (pImg)
+				image_height = pImg->height;
+			
+			int listview_height = wnheight - 100 - image_height - PADDING_AROUND_LISTVIEW * 2;
 			
 			RECT(r, 
 				/*X Coord*/ PADDING_AROUND_LISTVIEW, 
@@ -433,8 +461,16 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 		wnwidth = 312;
 	}
 	
+	int flags = WF_ALWRESIZ;
+	
+	const char* pVal = CfgGetEntryValue("SystemMonitor::AlwaysOnTop");
+	if (!pVal  ||  strcmp(pVal, "yes") == 0)
+	{
+		flags |= WF_FOREGRND;
+	}
+	
 	// create ourself a window:
-	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, wnwidth, wnheight, SystemMonitorProc, WF_ALWRESIZ | WF_FOREGRND);
+	Window* pWindow = CreateWindow ("System Monitor", CW_AUTOPOSITION, CW_AUTOPOSITION, wnwidth, wnheight, SystemMonitorProc, flags);
 	
 	if (!pWindow)
 	{
@@ -453,20 +489,26 @@ void SystemMonitorEntry (__attribute__((unused)) int argument)
 	}
 	memset (pInstance, 0, sizeof *pInstance);
 	
-	Image* pSystemImage = BitmapAllocate (wnwidth - 20, imheight, 0x0000FF);
-	if (!pInstance)
+	Image* pSystemImage = NULL;
+	if (SystemMonitorShowGraph())
 	{
-		MmFree (pInstance);
-		DestroyWindow (pWindow);
-		while (HandleMessages (pWindow));
-		return;
+		pSystemImage = BitmapAllocate (wnwidth - 16, imheight, 0x000020);
+		if (!pInstance)
+		{
+			MmFree (pInstance);
+			DestroyWindow (pWindow);
+			while (HandleMessages (pWindow));
+			return;
+		}
+		pInstance->pImg = pSystemImage;
 	}
-	pInstance->pImg = pSystemImage;
 	
 	pWindow->m_data = pInstance;
 	
 	while (HandleMessages(pWindow));
 
-	MmFree(pSystemImage);
+	if (pSystemImage)
+		MmFree(pSystemImage);
+	
 	MmFree(pInstance);
 }
