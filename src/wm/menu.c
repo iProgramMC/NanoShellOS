@@ -164,14 +164,11 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
 
 						RECT(r, xPos, y, width, height - 1);
 						
-						char buffer[110];
-						sprintf(buffer, "%s%s", pData->pMenuEntries[i].sText, pData->pMenuEntries[i].nMenuEntries ? "  >>" : "");
-						
 						AddControl (
 							pWindow,
 							CONTROL_BUTTON_LIST,
 							r,
-							buffer,
+							pData->pMenuEntries[i].sText,
 							MENU_ITEM_COMBOID+i,
 							pData->pMenuEntries[i].nIconID,
 							(pData->bHasIcons ? BTNLIST_HASICON : 0) | (pData->pMenuEntries[i].nMenuEntries ? BTNLIST_HASSUBS : 0)

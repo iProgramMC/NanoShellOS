@@ -462,6 +462,10 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				offs  += 10;
 			}
 			
+			Rectangle rectArrow = this->m_rect;
+			rectArrow.left   = rectArrow.right - 8;
+			rectArrow.right -= 4;
+			
 			Rectangle r1 = this->m_rect;
 			r1.right = offs1;
 			
@@ -493,6 +497,11 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				
 				r.top += 1;
 				r.bottom += 1;
+				
+				rectArrow.left++;
+				rectArrow.top++;
+				rectArrow.right++;
+				rectArrow.bottom++;
 				
 				r.left++; r.right++; r.bottom++; r.top++;
 				
@@ -539,6 +548,11 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 				r.left -= offs;
 				if (this->m_parm1)
 					RenderIconForceSize (this->m_parm1, r.left + 4, r.top + (r.bottom - r.top - iconSize) / 2, iconSize);
+			}
+			
+			if (this->m_parm2 & BTNLIST_HASSUBS)
+			{
+				DrawArrow(rectArrow, DRA_RIGHT, DRA_CENTERY | DRA_IGNOREYSIZE, CAPTION_BUTTON_ICON_COLOR);
 			}
 			
 			break;
