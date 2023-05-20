@@ -129,7 +129,7 @@ void* MmAllocatePhy (size_t size, uint32_t* physAddresses)
 	void *pMem = MhAllocate(size, physAddresses);
 	
 	// I use this to find and track down leaks in the kernel heap
-	//SLogMsg("%x <== MmAllocatePhyD %s %d", pMem);
+	//SLogMsg("%x <== MmAllocatePhyD   %p", pMem, __builtin_return_address(0));
 	
 	// restore interrupts, all good
 	sti;

@@ -232,6 +232,7 @@ void MhFreePage(void* pPage)
 void MhFree(void* pPage)
 {
 	KeVerifyInterruptsDisabled;
+	//SLogMsg("%x => MhFree", pPage);
 	
 	if (!pPage) return;
 	
