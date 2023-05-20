@@ -4,7 +4,7 @@
 #include <nanoshell/nanoshell.h>
 
 #define BOARD_SIZE (8)  // most likely will never change
-#define PIECE_SIZE (32)
+#define PIECE_SIZE (48)
 
 #define EVENT_UPDATE_FLASHING  (EVENT_USER)
 #define EVENT_UPDATE_MOVE_LIST (EVENT_USER + 1)
@@ -31,12 +31,12 @@ eCastleType;
 typedef enum
 {
 	PIECE_NONE,
-	PIECE_PAWN,
 	PIECE_KING,
 	PIECE_QUEEN,
-	PIECE_ROOK,
-	PIECE_KNIGHT,
 	PIECE_BISHOP,
+	PIECE_KNIGHT,
+	PIECE_ROOK,
+	PIECE_PAWN,
 	PIECE_MAX,
 }
 ePiece;
@@ -153,5 +153,7 @@ void ChessClearGUI();
 void SetupBoard(BoardState* pState);
 
 int ChessMessageBox(const char* text, const char* caption, int flags);
+
+void SetGameOver(bool);
 
 #endif//CHESS_H

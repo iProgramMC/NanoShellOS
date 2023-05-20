@@ -216,7 +216,8 @@ bool ChessCheckLegalBasedOnRank(BoardState* pState, int rowSrc, int colSrc, int 
 				if (pcDst->color == pcSrc->color)
 					return false;
 				
-				return true;
+				// one final check to make sure the range isn't broken. You know, pawns can't step one step and capture on the same turn.
+				return abs(rowSrc - rowDst) == 1;
 			}
 			else return false;
 			break;
@@ -883,7 +884,6 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	{
 		if (g_CurrentState < g_History || g_History + g_HistorySize <= g_CurrentState)
 		{
-			SLogMsg("Okay");
 			return ERROR_CANT_OVERWRITE_HISTORY;
 		}
 		// Show a message box asking whether the user wants to overwrite the history.
@@ -1012,6 +1012,7 @@ void SetupBoard(BoardState* pState)
 void ResetGame()
 {
 	//LogMsg("TODO: ResetGame!");
+	SetGameOver(false);
 	InitializeHistory();
 	AddHistoryFrame();
 }

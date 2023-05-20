@@ -10,21 +10,24 @@
 #define CHESS_WIDTH  (PIECE_SIZE * BOARD_SIZE + SIDE_BAR_WIDTH + 20)
 #define CHESS_HEIGHT (PIECE_SIZE * BOARD_SIZE + TOP_BAR_HEIGHT + 20)
 
-#define ICON_RESIGN  (914)
-#define ICON_SCALE16 (915)
-#define ICON_QUES    (916)
+#define ICON_RESIGN  (902)
+#define ICON_SCALE16 (903)
+#define ICON_QUES    (904)
 #define ICON_TROPHY  (900)
 #define ICON_SCALE   (901)
-#define ICON_PIECES_START (900)
+#define BMP_PIECES   (1000)
 
 Window* g_pWindow;
 int g_BoardX = 0, g_BoardY = TOP_BAR_HEIGHT;
+
+bool g_bGameOver = false;
 
 extern BoardState* g_CurrentState;
 
 // note: The row number is flipped, so 1 is the bottom-most row.
 
 Image* g_pPieceImages[14];
+Image* g_pPieceSheet;
 
 enum
 {
@@ -81,6 +84,38 @@ void FlashTile(int row, int col)
 {
 	g_FlashingTiles[row][col] = TILE_FLASH_COUNT;
 	PaintTile(row, col);
+}
+
+void BuildPieceImages()
+{
+	int pieceSize = g_pPieceSheet->width;
+	
+	for (int pieceID = PIECE_NONE + 1; pieceID < PIECE_MAX; pieceID++)
+	{
+		for (int color = FIRST_PLAYER; color < NPLAYERS; color++)
+		{
+			int yPos = pieceSize * (pieceID - 1 + 6 * (1 - color));
+			int placeInMem = pieceID * 2 + color;
+			
+			Image* img = calloc(1, sizeof(Image));
+			img->width = img->height = pieceSize;
+			img->framebuffer = &g_pPieceSheet->framebuffer[yPos * img->width];
+			
+			g_pPieceImages[placeInMem] = img;
+		}
+	}
+}
+
+void RemovePieceImages()
+{
+	for (int i = 0; i < (int)ARRAY_COUNT(g_pPieceImages); i++)
+	{
+		if (g_pPieceImages[i])
+		{
+			free(g_pPieceImages[i]);
+			g_pPieceImages[i] = NULL;
+		}
+	}
 }
 
 Image* GetPieceImage(ePiece piece, eColor color)
@@ -172,7 +207,7 @@ void PaintTile(int row, int column)
 	{
 		int offsetX = (PIECE_SIZE - pImg->width) / 2;
 		int offsetY = (PIECE_SIZE - pImg->height) / 2;
-		VidBlitImage(pImg, x + offsetX, y + offsetY);
+		VidBlitImageResize(pImg, x + offsetX, y + offsetY, PIECE_SIZE, PIECE_SIZE);
 	}
 }
 
@@ -220,6 +255,8 @@ void ChessStartDrag(int x, int y)
 
 void ChessClickCursor(int x, int y)
 {
+	if (g_bGameOver) return;
+	
 	if (g_bDragging) return;
 	
 	//if (g_MouseX != -1)
@@ -243,9 +280,16 @@ const char* GetPlayerName(eColor player)
 	return g_playerNames[player];
 }
 
+void SetGameOver(bool bGameOver)
+{
+	g_bGameOver = bGameOver;
+}
+
 void ChessOnGameEnd(eErrorCode errCode, eColor col)
 {
 	char buffer[2048], buffer2[100];
+	SetGameOver(true);
+	UpdatePlayerTurn();
 	
 	switch (errCode)
 	{
@@ -318,6 +362,9 @@ void ChessClearGUI()
 
 void ChessReleaseCursor(int x, int y)
 {
+	if (g_bGameOver)
+		return;
+	
 	eErrorCode err = ERROR_SUCCESS;
 	
 	bool bPromotePawn = false;
@@ -340,8 +387,6 @@ void ChessReleaseCursor(int x, int y)
 		}
 	}
 	
-	UpdatePlayerTurn();
-	
 	g_MouseX = g_MouseY = -1;
 	g_bDragging = false;
 	int odpr = g_DraggedPieceRow, odpc = g_DraggedPieceCol;
@@ -362,12 +407,20 @@ void ChessReleaseCursor(int x, int y)
 		default:
 			LogMsg("Cannot commit move: %d", err);
 	}
+	
+	UpdatePlayerTurn();
 }
 
 void UpdatePlayerTurn()
 {
 	char buffer[100];
-	sprintf(buffer, "It's %s's turn", GetPlayerName(g_CurrentState->m_Player));
+	
+	if (g_bGameOver)
+		strcpy(buffer, "Game Over");
+	else
+		sprintf(buffer, "It's %s's turn", GetPlayerName(g_CurrentState->m_Player));
+	
+	VidSetClipRect(NULL);
 	SetLabelText(g_pWindow, CHESS_TURN_LABEL, buffer);
 	CallControlCallback(g_pWindow, CHESS_TURN_LABEL, EVENT_PAINT, 0, 0);
 }
@@ -386,26 +439,6 @@ void UpdateFlashingTiles()
 				PaintTile(row, col);
 		}
 	}
-}
-
-void ChessAddMoveToUI(const char* moveList)
-{
-	static char buffer[128];
-	if (g_CurrentState->m_Player == WHITE)
-	{
-		snprintf(buffer, sizeof buffer, "%d. %s", ++g_nMoveNumber, moveList);
-		AddElementToList(g_pWindow, CHESS_MOVE_LIST, buffer, ICON_NULL);
-	}
-	else
-	{
-		// take whatever we had before. This isn't great, and can be a source of bugs.
-		// It should be fine though
-		char* buffer2 = buffer + strlen(buffer);
-		sprintf(buffer2, " %s", moveList);
-		SetListItemText(g_pWindow, CHESS_MOVE_LIST, g_nMoveNumber - 1, ICON_NULL, buffer);
-	}
-	
-	CallControlCallback(g_pWindow, CHESS_MOVE_LIST, EVENT_PAINT, 0, 0);
 }
 
 int g_FlashTimerID = -1;
@@ -430,10 +463,11 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 		}
 		case EVENT_CREATE:
 		{
+			BuildPieceImages();
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 			
 			// Load the cursors.
-			for (int i = PIECE_PAWN; i < PIECE_MAX; i++)
+			for (int i = PIECE_NONE + 1; i < PIECE_MAX; i++)
 			{
 				SetPieceCursorID((ePiece)i, BLACK, UploadCursor(GetPieceImage((ePiece)i, BLACK), PIECE_SIZE / 2, PIECE_SIZE / 2));
 				SetPieceCursorID((ePiece)i, WHITE, UploadCursor(GetPieceImage((ePiece)i, WHITE), PIECE_SIZE / 2, PIECE_SIZE / 2));
@@ -549,7 +583,8 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 {
 	for (int i = 2; i < 14; i++)
 	{
-		g_pPieceImages[i] = GetImage(GetResource(ICON_PIECES_START + i));
+		//g_pPieceImages[i] = GetImage(GetResource(ICON_PIECES_START + i));
+		g_pPieceSheet = GetImage(GetResource(BMP_PIECES));
 	}
 	
 	g_pWindow = CreateWindow ("Chess", CW_AUTOPOSITION, CW_AUTOPOSITION, CHESS_WIDTH, CHESS_HEIGHT, ChessWndProc, 0);
@@ -558,6 +593,8 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 		return 1;
 	
 	while (HandleMessages (g_pWindow));
+	
+	RemovePieceImages();
 	
 	return 0;
 }
