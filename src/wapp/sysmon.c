@@ -406,10 +406,10 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 24, listview_width, 20);
 			AddControlEx (pWindow, CONTROL_TEXTCENTER, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", MEMORY_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			
-			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 44, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 44, 150, 20);
 			AddControlEx (pWindow, CONTROL_TEXTCENTER, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", FPS_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			
-			RECT (r, PADDING_AROUND_LISTVIEW + 150, listview_y + listview_height + image_height + 44, listview_width, 20);
+			RECT (r, PADDING_AROUND_LISTVIEW + 150, listview_y + listview_height + image_height + 44, listview_width - 150, 20);
 			AddControlEx (pWindow, CONTROL_TEXTCENTER, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_TOP_TO_BOTTOM, r, "Please wait...", UPTIME_LABEL, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
 			
 			RECT (r, PADDING_AROUND_LISTVIEW, listview_y + listview_height + image_height + 64, listview_width, 20);
