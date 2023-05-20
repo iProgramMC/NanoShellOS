@@ -6,6 +6,7 @@
 ******************************************/
 #include <process.h>
 #include "wi.h"
+#include "../mm/memoryi.h"
 
 #define C_MAX_CURSOR_SLOTS (1024)
 #define C_BUILTIN_CURSOR_COUNT (CURSOR_CUSTOM + 1)
@@ -119,7 +120,6 @@ void ReleaseCursorsBy(Process* pProc)
 {
 	uint32_t* s_cursor_buffers[C_MAX_CURSOR_SLOTS];
 	int sp = 0;
-	cli;
 	for (int i = 0; i < C_MAX_CURSOR_SLOTS; i++)
 	{
 		if (g_CursorSlots[i].m_ownedBy == pProc)
@@ -129,12 +129,11 @@ void ReleaseCursorsBy(Process* pProc)
 			g_CursorSlots[i].m_bUsed   = false;
 		}
 	}
-	sti;
 	
 	for (int i = 0; i < sp; i++)
 	{
 		if (s_cursor_buffers[i])
-			MmFree(s_cursor_buffers[i]);
+			MhFree(s_cursor_buffers[i]);
 	}
 }
 

@@ -546,6 +546,7 @@ static void UpdateDirectoryListing (Window* pWindow)
 	strcpy (title, "Cabinet - ");
 	strcat (title, g_cabinetCWD); //note: WINDOW_TITLE_MAX is 250, but file names are 127 max. 
 	SetWindowTitle(pWindow, title);
+	MmFree(title);
 	RequestTaskbarUpdate();
 	
 	SetLabelText(pWindow, MAIN_PATH_TEXT, g_cabinetCWD);

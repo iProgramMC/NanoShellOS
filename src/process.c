@@ -31,6 +31,8 @@ Process* ExMakeUpAProcess()
 	return NULL;
 }
 
+void ReleaseCursorsBy(Process* pProc);
+
 void ExDisposeProcess(Process *pProc)
 {
 	// Assert that all threads are dead
@@ -40,6 +42,14 @@ void ExDisposeProcess(Process *pProc)
 		pProc->bWillDie = false;
 		return;
 	}
+	
+	if (pProc->sResourceTable.m_pResources)
+	{
+		MhFree(pProc->sResourceTable.m_pResources);
+	}
+	
+	// Release the cursors we've uploaded...
+	ReleaseCursorsBy(pProc);
 	
 	// If the current heap is this process' heap (which we hope it isn't),
 	// disposing of this heap will automatically switch to the kernel heap :^)
