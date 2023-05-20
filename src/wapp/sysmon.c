@@ -315,6 +315,21 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	VidSetVBEData(&image_data);
 	VidFillRect(0x000000, pImg->width - GRAPH_QUANTUM_WIDTH, 0, pImg->width, pImg->height);
 	
+	// draw the backdrop:
+	for (int i = pImg->width - GRAPH_QUANTUM_WIDTH; i < pImg->width; i++)
+	{
+		if (pInst->xPos % 10 == 0)
+		{
+			VidDrawVLine(0x303030, 0, pImg->height, i);
+		}
+		else for (int j = 0; j < 100; j += 10)
+		{
+			VidPlotPixel(i, j, 0x303030);
+		}
+		
+		pInst->xPos++;
+	}
+	
 	// draw lines:
 	
 	// memory usage
