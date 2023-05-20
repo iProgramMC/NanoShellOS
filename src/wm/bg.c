@@ -197,6 +197,8 @@ void SetBackgroundSolidColor()
 	
 	LockFree(&g_BackgdLock);
 	RefreshScreen();
+	
+	g_DefaultCursorID = CURSOR_DEFAULT;
 }
 
 // A safe function to set the background image.
@@ -256,15 +258,17 @@ void VidPrintTestingPattern2(uint32_t or_mask, uint32_t y_shift)
 void GenerateBackground()
 {
 	ConfigEntry *pEntryGradient = CfgGetEntry ("Theming::BackgroundGradient");
-	if (!pEntryGradient) return;
-	
-	if (strcmp (pEntryGradient->value, "yes")) return;
+	if (!pEntryGradient || strcmp (pEntryGradient->value, "yes"))
+	{
+		g_DefaultCursorID = CURSOR_DEFAULT;
+		return;
+	}
 	
 	Image *pImage = BitmapAllocate (GetScreenWidth(), GetScreenHeight(), 0xFFFFFFFF);
 	
 	if (!pImage)
 	{
-		SetBackgroundSolidColor();
+		g_DefaultCursorID = CURSOR_DEFAULT;
 	}
 	else
 	{
