@@ -124,6 +124,7 @@ void        ImageCtlZoomToFill(Window* pWindow, int comboID);
 void        SetControlDisabled(Window* pWindow, int comboID, bool flag);
 void        SetControlFocused (Window* pWindow, int comboID, bool flag);
 void        SetControlVisible (Window* pWindow, int comboID, bool flag);
+void        VidSetClipRect(Rectangle* rect);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

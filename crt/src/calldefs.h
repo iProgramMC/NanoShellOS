@@ -340,7 +340,7 @@ CALL_END
 CALL (GetMousePos, VID_GET_MOUSE_POS, Point, void)
 	RARGS()
 CALL_END
-CALL (VidSetClipRect, VID_SET_CLIP_RECT, void, Rectangle r)
+CALL (VidSetClipRectP, VID_SET_CLIP_RECT, void, Rectangle r)
 	SARGS(r)
 CALL_END
 CALL (CbClear, CB_CLEAR, void, void)

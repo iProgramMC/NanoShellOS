@@ -40,3 +40,20 @@ bool RectangleOverlap(Rectangle *r1, Rectangle *r2)
 {
 	return (r1->left <= r2->right && r1->right >= r2->left && r1->top <= r2->bottom && r1->bottom >= r2->top);
 }
+
+void VidSetClipRect(Rectangle* x)
+{
+	if (x)
+	{
+		VidSetClipRectP(*x);
+	}
+	else
+	{
+		Rectangle r;
+		r.left   = -1;
+		r.top    = -1;
+		r.right  = -1;
+		r.bottom = -1;
+		VidSetClipRectP(r);
+	}
+}
