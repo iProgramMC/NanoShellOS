@@ -33,6 +33,8 @@
 
 struct Proc;
 
+#define C_MAX_PROCESS (64)
+
 typedef void (*DeathProc) (struct Proc*);
 
 struct Proc
@@ -43,7 +45,8 @@ struct Proc
 	char  sIdentifier[250];
 	
 	int   nTasks;
-	Task* sTasks [4];
+	int   nTaskCapacity;
+	Task**sTasks;
 	void* pDetail;
 	
 	DeathProc OnDeath;
@@ -71,6 +74,8 @@ enum
 };
 
 void ExKillProcess(Process *pProc);
+void ExProcessDebugDump();
+bool ExAddThreadToProcess(Process *pProc, Task* pTask);
 Process* ExGetRunningProc();
 Process* ExGetProcessByRID(uint64_t rid);
 Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParameter, const char *pIdent, int nHeapSize, int *pErrCode, void* pDetail);

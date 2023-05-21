@@ -12,7 +12,7 @@
 
 SafeLock gProcessLock;
 
-Process gProcesses[64];
+Process gProcesses[C_MAX_PROCESS];
 
 UserHeap* MuiGetCurrentHeap();
 void MuiUseHeap(UserHeap* pHeap);
@@ -57,6 +57,9 @@ void ExDisposeProcess(Process *pProc)
 	
 	// Deactivate this process
 	pProc->bActive = false;
+	
+	// Free the tasks array.
+	MhFree(pProc->sTasks);
 	
 	// If there are any tasks waiting for us to terminate, unsuspend those now
 	KeUnsuspendTasksWaitingForProc(pProc);
@@ -151,6 +154,24 @@ void ExOnThreadExit (Process* pProc, Task* pTask)
 	}
 }
 
+bool ExAddThreadToProcess(Process* pProc, Task* pTask)
+{
+	if (pProc->nTasks + 1 > pProc->nTaskCapacity)
+	{
+		int newCap = pProc->nTaskCapacity * 2;
+		
+		Task** pTasksNew = MhReAllocate(pProc->sTasks, newCap * sizeof(Task*));
+		if (!pTasksNew)
+			return false;
+		
+		pProc->sTasks = pTasksNew;
+		pProc->nTaskCapacity = newCap;
+	}
+	
+	pProc->sTasks[pProc->nTasks++] = pTask;
+	return true;
+}
+
 Process* ExGetRunningProc()
 {
 	if (KeGetRunningTask())
@@ -207,22 +228,30 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	
 	strcpy (pProc->sIdentifier, pIdent);
 	
+	// Setup the process structure.
+	pProc->bActive  = true;
+	pProc->bWillDie = false;
+	pProc->nTasks = 1;
+	pProc->nTaskCapacity = 4096 / sizeof(Task*);
+	pProc->sTasks = MhAllocate(4096, NULL);
+	
 	// Create the task itself
 	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pProc->sIdentifier, "[Process]", 0);
 	if (!pTask)
 	{
 		SLogMsg("Uh oh!");
+		
+		pProc->bActive = false;
+		MhFree(pProc->sTasks);
+		pProc->sTasks = NULL;
+		pProc->nTaskCapacity = 0;
+		
 		sti;
 		//error code was already set
 		LockFree (&gProcessLock);
 		return NULL;
 	}
 	
-	// Setup the process structure.
-	pProc->bActive  = true;
-	pProc->bWillDie = false;
-	pProc->nTasks = 1;
-	pProc->sTasks[0] = pTask;
 	pProc->nIdentifier = ReadTSC();
 	pProc->pDetail   = pDetail;
 	pProc->pSymTab   = pProc->pStrTab = NULL;
@@ -298,4 +327,47 @@ Resource* ExLookUpResource(int id)
 	if (!ExGetRunningProc()) return NULL;
 	
 	return RstLookUpResource(&ExGetRunningProc()->sResourceTable, id);
+}
+
+typedef struct
+{
+	int  nProcessID;
+	char sIdentifier[250];
+	int  nTasks;
+	int  nWindows;
+}
+ProcessInfo;
+
+void ExProcessDebugDump()
+{
+	ProcessInfo* pInfo = MmAllocate(sizeof(ProcessInfo) * C_MAX_PROCESS);
+	int nProcesses = 0;
+	
+	cli;
+	
+	for (int i = 0; i < C_MAX_PROCESS; i++)
+	{
+		ProcessInfo procInfo;
+		
+		if (!gProcesses[i].bActive) continue;
+		
+		strcpy(procInfo.sIdentifier, gProcesses[i].sIdentifier);
+		procInfo.nTasks     = gProcesses[i].nTasks;
+		procInfo.nWindows   = gProcesses[i].nWindows;
+		procInfo.nProcessID = i;
+		
+		pInfo[nProcesses++] = procInfo;
+	}
+	
+	sti;
+	
+	LogMsg(" PID | NT | NW | ImageName");
+	
+	for (int i = 0; i < nProcesses; i++)
+	{
+		ProcessInfo* pi = pInfo + i;
+		LogMsg("%4d | %2d | %2d | %s", pi->nProcessID, pi->nTasks, pi->nWindows, pi->sIdentifier);
+	}
+	
+	MmFree(pInfo);
 }

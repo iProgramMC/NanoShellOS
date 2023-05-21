@@ -1322,6 +1322,10 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		KeTaskDebugDump();
 	}
+	else if (strcmp (token, "lp") == 0)
+	{
+		ExProcessDebugDump();
+	}
 	else if (strcmp (token, "crash") == 0)
 	{
 		LogMsg("OK");

@@ -266,6 +266,20 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		Task* pTask = &g_runningTasks[i];
 		memset (pTask, 0, sizeof *pTask);
 		
+		// This replacement is purely symbolic: while it won't use the
+		// page directory of this heap, it will apply it to the new task.
+		if (pProc)
+		{
+			if (!ExAddThreadToProcess(pProc, pTask))
+			{
+				*pErrorCodeOut = TASK_ERROR_CANT_ADD_TO_PROC;
+				
+				MhFree(pStack);
+				
+				return NULL;
+			}
+		}
+		
 		pTask->m_pFunction = function;
 		pTask->m_pStack = pStack;
 		pTask->m_bFirstTime = true;
@@ -281,12 +295,14 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		pTask->m_suspensionType = SUSPENSION_TOTAL;
 		pTask->m_bSuspended     = true;
 		
-		UserHeap* pBkp = MuGetCurrentHeap();
-		
 		// This replacement is purely symbolic: while it won't use the
 		// page directory of this heap, it will apply it to the new task.
 		if (pProc)
+		{
 			MuiUseHeap(pProc->pHeap);
+		}
+		
+		UserHeap* pBkp = MuGetCurrentHeap();
 		
 		char buffer[32];
 		sprintf(buffer, "<task no. %d>", i);
@@ -322,7 +338,7 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 }
 Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
 {
-	return KeStartTaskExD(function, argument, pErrorCodeOut, NULL, authorFile, authorFunc, authorLine);
+	return KeStartTaskExD(function, argument, pErrorCodeOut, ExGetRunningProc(), authorFile, authorFunc, authorLine);
 }
 
 // TODO: A lot of the code is the same. Maybe we should not repeat ourselves.
