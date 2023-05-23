@@ -17,6 +17,7 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	if (!pTFNode) return NULL;
 	
 	memset(pTFNode, 0, sizeof *pTFNode);
+	pTFNode->m_bMutable = true;
 	
 	FileNode* pFNode = &pTFNode->m_node;
 	pFNode->m_refCount = 0;
@@ -71,6 +72,27 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	}
 	
 	return pTFNode;
+}
+
+int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pName);
+
+void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* buffer, uint32_t fileSize)
+{
+	TempFSNode* pTFNode = FsTempCreateNode(fileName, pNode, false);
+	pTFNode->m_bMutable = false;
+	pTFNode->m_node.m_refCount = NODE_IS_PERMANENT;
+	pTFNode->m_node.m_length = fileSize;
+	pTFNode->m_pFileData = buffer;
+	pTFNode->m_nFileSizePages = (fileSize + 4095) / 4096;
+	
+	int res = FsTempDirAddEntry(pNode, &pTFNode->m_node, fileName);
+	if (res < 0)
+	{
+		SLogMsg("Couldn't create file '%s'", fileName);
+		pTFNode->m_node.m_refCount = 1;
+		FsReleaseReference(&pTFNode->m_node);
+		return;
+	}
 }
 
 void FsTempFreeNode(TempFSNode* pNode)

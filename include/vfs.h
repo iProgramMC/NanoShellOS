@@ -228,11 +228,6 @@ void FsInit ();
 	* Gets the root entry of the initrd.
 	*/
 	FileNode* FsGetInitrdNode ();
-	
-	/**
-	 * Initializes the initial ramdisk.
-	 */
-	void FsInitializeInitRd(void* pRamDisk);
 #endif
 
 // Basic POSIX-like API

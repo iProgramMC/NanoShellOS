@@ -70,7 +70,7 @@ void FsTempDirClose(UNUSED FileNode* pFileNode)
 	// okay
 }
 
-DirEnt* FsTempDirReadInternal(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt, UNUSED bool bSkipDotAndDotDot)
+DirEnt* FsTempDirReadInternal(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt, bool bSkipDotAndDotDot, TempFSNode** pOutNode)
 {
 	TempFSDirEntry dirEntry;
 	memset(&dirEntry, 0, sizeof dirEntry);
@@ -102,12 +102,15 @@ go_again:;
 	pDirEnt->m_inode = (int)dirEntry.m_pNode->m_node.m_pParentSpecific;
 	pDirEnt->m_type  = dirEntry.m_pNode->m_node.m_type;
 	
+	if (pOutNode)
+		*pOutNode = dirEntry.m_pNode;
+	
 	return pDirEnt;
 }
 
 DirEnt* FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt)
 {
-	return FsTempDirReadInternal(pFileNode, pOffset, pDirEnt, true);
+	return FsTempDirReadInternal(pFileNode, pOffset, pDirEnt, true, NULL);
 }
 
 FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName)
@@ -118,7 +121,7 @@ FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName)
 	DirEnt* pDirEnt = NULL;
 	uint32_t offset = 0;
 	
-	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, false)))
+	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, false, NULL)))
 	{
 		if (strcmp(pDirEnt->m_name, pName) == 0)
 		{
@@ -274,8 +277,9 @@ int FsTempDirUnlinkInternal(FileNode* pFileNode, const char* pName, uint32_t ino
 	
 	DirEnt* pDirEnt = NULL;
 	uint32_t offset = 0;
+	TempFSNode* pTFSNode = NULL;
 	
-	while ((pDirEnt = FsTempDirRead(pFileNode, &offset, &ent)))
+	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, true, &pTFSNode)))
 	{
 		if ((!bByInode && strcmp(pDirEnt->m_name, pName) == 0) || (bByInode && pDirEnt->m_inode == inodeNo))
 		{
@@ -283,6 +287,10 @@ int FsTempDirUnlinkInternal(FileNode* pFileNode, const char* pName, uint32_t ino
 			
 			if (pFN->m_type != FILE_TYPE_FILE && bCheckDirs)
 				return -EISDIR;
+			
+			// check if the node is actually immutable first
+			if (!pTFSNode->m_bMutable)
+				return -EACCES;
 			
 			// remove a reference to the file node, that reference being of our directory
 			FsReleaseReference(pFN);

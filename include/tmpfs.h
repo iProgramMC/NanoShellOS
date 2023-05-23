@@ -42,6 +42,9 @@ typedef struct TempFSNode
 	
 	// The file's size, in pages.
 	size_t   m_nFileSizePages;
+	
+	// If this file is mutable.
+	bool     m_bMutable;
 }
 TempFSNode;
 

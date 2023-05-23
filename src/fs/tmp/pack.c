@@ -26,7 +26,10 @@ static uint32_t OctToBin(char *data, uint32_t size)
 	return value;
 }
 
-void FsInitializeInitRd(void* pRamDisk)
+void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* buffer, uint32_t fileSize);
+
+// bPermanent - States that this memory never goes away and we don't need to duplicate it.
+void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 {
 	uint32_t epochTime = GetEpochTime();
 	// Add files to the root FS.
@@ -89,18 +92,41 @@ void FsInitializeInitRd(void* pRamDisk)
 					
 					node->node.m_modifyTime = mtime;
 					node->node.m_createTime = epochTime;*/
-					int fd = FiOpen(buffer, O_CREAT | O_WRONLY);
-					if (fd < 0)
+					
+					if (bPermanent)
 					{
-						LogMsg("Could not create file '%s': %s", buffer, GetErrNoString(fd));
+						char buf1[PATH_MAX];
+						
+						strcpy(buf1, buffer);
+						
+						// get rid of the last slash
+						char* ptr = strrchr(buf1, '/');
+						if (!ptr) ptr = buf1;
+						*ptr = 0;
+						ptr++;
+						
+						FileNode *pNode = FsResolvePath(buf1, false);
+						
+						FsTempCreatePermanentFile(pNode, ptr, (uint8_t*)&ramDiskTar->buffer, fileSize);
+						
+						FsReleaseReference(pNode);
 					}
 					else
 					{
-						uint32_t wr = FiWrite(fd, &ramDiskTar->buffer, fileSize);
-						if (wr != fileSize)
-							LogMsg("File %s couldn't be fully written. (%d/%d bytes)", buffer, wr, fileSize);
-						
-						FiClose(fd);
+						// do it the regular way
+						int fd = FiOpen(buffer, O_CREAT | O_WRONLY);
+						if (fd < 0)
+						{
+							LogMsg("Could not create file '%s': %s", buffer, GetErrNoString(fd));
+						}
+						else
+						{
+							uint32_t wr = FiWrite(fd, &ramDiskTar->buffer, fileSize);
+							if (wr != fileSize)
+								LogMsg("File %s couldn't be fully written. (%d/%d bytes)", buffer, wr, fileSize);
+							
+							FiClose(fd);
+						}
 					}
 				}
 			}
@@ -146,5 +172,5 @@ void FsInitRdInit()
 	SLogMsg("Physical address that we should load from: %x", pInitrdAddress);
 	
 	// Load the initrd last so its entries show up last when we type 'ls'.
-	FsInitializeInitRd(pInitrdAddress);
+	FsInitializeInitRd(pInitrdAddress, true);
 }

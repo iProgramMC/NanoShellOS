@@ -61,6 +61,10 @@ void FsTempFileShrink(FileNode* pFileNode, uint32_t newSize)
 uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
 {
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
+	
+	if (!pTFNode->m_bMutable)
+		return 0;
+	
 	uint32_t sCapacity = PAGE_SIZE * pTFNode->m_nFileSizePages;
 	
 	uint32_t startOffs = offset, endOffs = offset + size;
