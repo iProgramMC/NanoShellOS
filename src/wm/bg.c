@@ -348,4 +348,5 @@ void SetDefaultBackground()
 	UNUSED int errorCode = 0;
 	Task* task = KeStartTask(WmBackgroundLoaderThread, 0, &errorCode);
 	KeUnsuspendTask(task);
+	KeDetachTask(task);
 }

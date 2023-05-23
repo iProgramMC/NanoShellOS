@@ -255,6 +255,7 @@ void LaunchRun()
 	pTask = KeStartTask(RunPopupEntry, 0, &errorCode);
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	DebugLogMsg("Created run popup task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }

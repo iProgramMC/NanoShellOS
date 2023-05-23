@@ -132,6 +132,7 @@ void SetupWindowManager()
 	errorCode = 0;
 	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 #endif
@@ -520,6 +521,7 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 			int errorCode = 0;
 			Task *pTask = KeStartTask(ShutdownProcessing, 0, &errorCode);
 			KeUnsuspendTask(pTask);
+			KeDetachTask(pTask);
 			g_shutdownProcessing = true;
 			if (pTask == NULL)
 			{

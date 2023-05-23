@@ -280,8 +280,9 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 			}
 		}
 		
-		pTask->m_pFunction = function;
-		pTask->m_pStack = pStack;
+		pTask->m_pFunction  = function;
+		pTask->m_bAttached  = true;
+		pTask->m_pStack     = pStack;
 		pTask->m_bFirstTime = true;
 		pTask->m_authorFile = authorFile;
 		pTask->m_authorFunc = authorFunc;
@@ -437,6 +438,11 @@ void KeUnsuspendTasksWaitingForWM()
 
 void WmOnTaskDied(Task *pTask);
 
+void KeDetachTask(Task* pTask)
+{
+	pTask->m_bAttached = false;
+}
+
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt)
@@ -490,7 +496,6 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_pStack = NULL;
 		
 		pTask->m_bFirstTime = false;
-		pTask->m_bExists    = false;
 		pTask->m_pFunction  = NULL;
 		pTask->m_authorFile = NULL;
 		pTask->m_authorFunc = NULL;
@@ -499,10 +504,24 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_argument   = 0;
 		pTask->m_featuresArgs = false;
 		pTask->m_bMarkedForDeletion = false;
+		
+		if (pTask->m_bAttached)
+		{
+			// suspend it as SUSPENSION_ZOMBIE:
+			SLogMsg("Thread %d is now a zombie.", pTask - g_runningTasks);
+			pTask->m_bSuspended     = true;
+			pTask->m_suspensionType = SUSPENSION_ZOMBIE;
+		}
+		else
+		{
+			// simply get rid of it.
+			pTask->m_bExists = false;
+		}
+		
 		if (!interrupt)
 		{
 			KeVerifyInterruptsDisabled;
-			sti;//if we didn't restore interrupts here would be our death point
+			sti;
 		}
 	}
 }
@@ -513,6 +532,8 @@ void FiReleaseResourcesFromTask(Task *pTask);
 
 bool KeKillTask(Task* pTask)
 {
+	if (!pTask) return false;
+	
 	if (pTask == KeGetRunningTask())
 		KeExit();
 	
@@ -530,24 +551,25 @@ bool KeKillTask(Task* pTask)
 	
 	KeVerifyInterruptsEnabled;
 	cli;
-	if (pTask == NULL)
-	{
-		sti; return false;
-	}
 	if (!pTask->m_bExists)
 	{
 		sti; return false;
 	}
+	
 	KeResetTask(pTask, true, true);
+	
 	KeVerifyInterruptsDisabled;
+	
 	sti;
 	return true;
 }
+
 Task* KeGetRunningTask()
 {
 	if (s_currentRunningTask == -1) return NULL;
 	return &g_runningTasks[s_currentRunningTask];
 }
+
 void KiTaskSystemInit()
 {
 	for (int i = 0; i < C_MAX_TASKS; i++)
@@ -643,6 +665,23 @@ void WaitTask (Task* pTaskToWait)
 	if (!pTaskToWait) return;
 	Task *pTask = KeGetRunningTask();
 	
+	if (!pTask->m_bAttached)
+	{
+		SLogMsg("ERROR: WaitTask can't wait for a detached thread.");
+		return;
+	}
+	
+	// check if it's a zombie right now:
+	cli;
+	
+	if (pTask->m_bSuspended && pTask->m_suspensionType == SUSPENSION_ZOMBIE)
+	{
+		pTask->m_bAttached = false;
+		KeResetTask(pTask, true, true);
+	}
+	
+	sti;
+	
 	if (pTask == pTaskToWait)
 	{
 		// No point in waiting like this.
@@ -652,8 +691,8 @@ void WaitTask (Task* pTaskToWait)
 		return;
 	}
 	
-	pTask->m_suspensionType       = SUSPENSION_UNTIL_TASK_EXPIRY;
 	pTask->m_pWaitedTaskOrProcess = pTaskToWait;
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_TASK_EXPIRY;
 	pTask->m_bSuspended           = true;
 	
 	while (pTask->m_bSuspended) KeTaskDone();
@@ -663,8 +702,8 @@ void WaitPipeWrite (void* pPipe)
 {
 	Task *pTask = KeGetRunningTask();
 	
-	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_WRITE;
 	pTask->m_pPipeWaitingToWrite  = pPipe;
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_WRITE;
 	pTask->m_bSuspended           = true;
 	
 	while (pTask->m_bSuspended) KeTaskDone();
@@ -674,41 +713,29 @@ void WaitPipeRead (void* pPipe)
 {
 	Task *pTask = KeGetRunningTask();
 	
-	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_READ;
 	pTask->m_pPipeWaitingToRead   = pPipe;
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PIPE_READ;
 	pTask->m_bSuspended           = true;
 	
 	while (pTask->m_bSuspended) KeTaskDone();
 }
 
-void WaitProcess (void* pProcessToWait1)
+void WaitProcessInternal(void* pProcessToWait)
 {
-	cli;
-	Process* pProcessToWait = (Process*)pProcessToWait1;
-	if (!pProcessToWait || !pProcessToWait->bActive)
-	{
-		sti;
-		return;
-	}
-	
 	Task *pTask = KeGetRunningTask();
 	
-	if (ExGetRunningProc() == pProcessToWait)
-	{
-		// No point in waiting like this.
-		
-		// TODO: Kill the process instead
-		sti;
-		return;
-	}
-	
-	pTask->m_suspensionType       = SUSPENSION_UNTIL_PROCESS_EXPIRY;
 	pTask->m_pWaitedTaskOrProcess = pProcessToWait;
+	pTask->m_suspensionType       = SUSPENSION_UNTIL_PROCESS_EXPIRY;
 	pTask->m_bSuspended           = true;
 	
 	sti;
 	
 	while (pTask->m_bSuspended) KeTaskDone();
+}
+
+void WaitProcess (void* pProc)
+{
+	ExJoinProcess((Process*)pProc);
 }
 
 void WaitObject(void* pObject)

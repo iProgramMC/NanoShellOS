@@ -37,6 +37,7 @@ RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -49,6 +50,7 @@ RESOURCE_STATUS LaunchSystem()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -61,6 +63,7 @@ RESOURCE_STATUS LaunchIconTest()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -73,6 +76,7 @@ RESOURCE_STATUS LaunchListTest()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -85,6 +89,7 @@ RESOURCE_STATUS LaunchTextShell()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -97,6 +102,7 @@ RESOURCE_STATUS LaunchPaint()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -110,6 +116,7 @@ RESOURCE_STATUS LaunchControlPanel()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -122,6 +129,7 @@ RESOURCE_STATUS LaunchNotepad()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -134,6 +142,7 @@ RESOURCE_STATUS LaunchCabinet()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -146,6 +155,7 @@ RESOURCE_STATUS LaunchMagnifier()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }
@@ -500,6 +510,7 @@ RESOURCE_STATUS LaunchLauncher()
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }

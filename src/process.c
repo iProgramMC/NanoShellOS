@@ -43,6 +43,13 @@ void ExDisposeProcess(Process *pProc)
 		return;
 	}
 	
+	if (pProc->bAttached)
+	{
+		// wait until it's detached. Also, signal every thread waiting for us.
+		KeUnsuspendTasksWaitingForProc(pProc);
+		return;
+	}
+	
 	if (pProc->sResourceTable.m_pResources)
 	{
 		MhFree(pProc->sResourceTable.m_pResources);
@@ -145,7 +152,6 @@ void ExOnThreadExit (Process* pProc, Task* pTask)
 					MuiResetHeap ();
 				}
 				
-				
 				pProc->bWillDie = true;//it is useless now
 			}
 			
@@ -231,7 +237,8 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	// Setup the process structure.
 	pProc->bActive  = true;
 	pProc->bWillDie = false;
-	pProc->nTasks = 1;
+	pProc->bAttached = true;
+	pProc->nTasks = 0;
 	pProc->nTaskCapacity = 4096 / sizeof(Task*);
 	pProc->sTasks = MhAllocate(4096, NULL);
 	
@@ -263,6 +270,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	KeTaskAssignTag(pTask, pProc->sIdentifier);
 	
 	KeUnsuspendTaskUnsafe(pTask);
+	KeDetachTask(pTask);
 	
 	MuiUseHeap (pBkp);
 	
@@ -272,6 +280,34 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	LockFree (&gProcessLock);
 	
 	return pProc;
+}
+
+void ExDetachProcess(Process* pProc)
+{
+	pProc->bAttached = false;
+}
+
+void WaitProcessInternal(void* pProcessToWait);
+void ExJoinProcess(Process* pProc)
+{
+	cli;
+	if (!pProc->bAttached)
+	{
+		sti;
+		return;
+	}
+	
+	// check if the process is a zombie yet:
+	if (pProc->bWillDie)
+	{
+		// yeah. detach and return
+		pProc->bAttached = false;
+		sti;
+		return;
+	}
+	
+	// the process won't die, should wait until it does.
+	WaitProcessInternal(pProc);
 }
 
 void ExSetProgramInfo(const ProgramInfo* pProgInfo)

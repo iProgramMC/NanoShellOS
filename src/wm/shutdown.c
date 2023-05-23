@@ -166,6 +166,7 @@ void WindowManagerOnShutdown(void)
 	//create a task
 	UNUSED int useless = 0;
 	Task* task = KeStartTask(WindowManagerOnShutdownTask, 0, &useless);
+	KeDetachTask(task);
 	KeUnsuspendTask(task);
 }
 

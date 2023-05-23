@@ -669,10 +669,14 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	pProc->OnDeath = ElfOnDeath;
 	
 	// If this is an async execution, our job is done, and the KeExecThread will continue.
-	if (bAsync) return ELF_ERROR_NONE;
+	if (bAsync)
+	{
+		ExDetachProcess(pProc);
+		return ELF_ERROR_NONE;
+	}
 	
 	// Otherwise, wait until you're done.
-	WaitProcess (pProc);
+	ExJoinProcess(pProc);
 	
 	// Ok, execution is complete. Free all related data
 	int error_code_obtained = pBlock->nElfErrorCode;

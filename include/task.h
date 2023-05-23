@@ -83,6 +83,7 @@ enum
 	SUSPENSION_UNTIL_PIPE_WRITE,     // Suspension until a certain pipe is written to
 	SUSPENSION_UNTIL_PIPE_READ,      // Suspension until a certain pipe is read from
 	SUSPENSION_UNTIL_OBJECT_EVENT,   // Suspension until a generic object gets a generic event.
+	SUSPENSION_ZOMBIE,               // The task is waiting to be joined/detached.
 };
 
 typedef struct
@@ -104,7 +105,8 @@ typedef struct
 	//! TODO: Maybe we could use a linked list instead? Hmm. 
 	//  For now I'll just use a hardcoded array.
 	
-	bool           m_bExists;  //true if this task has been initialized
+	bool           m_bExists;   // true if this task has been initialized
+	bool           m_bAttached; // if the task has been detached, simply kill it.
 	TaskedFunction m_pFunction;
 	
 	CPUSaveState   m_state;
@@ -211,6 +213,13 @@ void KeTaskAssignTag(Task* pTask, const char* pTag);
 const char* KeTaskGetTag(Task* pTask);
 
 /***********************************************************
+    Detaches the task. When it dies, it'll no longer
+	stick around as a zombie, instead, it'll just be
+	cleaned up by the system.
+***********************************************************/
+void KeDetachTask(Task* pTask);
+
+/***********************************************************
     Queues the current task for deletion, and yields.
 	Execution will not continue beyond the call to this
 	function.  If the current task is the kernel task,
@@ -235,7 +244,8 @@ Task* KeGetThreadByRID (uint64_t proc);
 void WaitMS (int ms);
 
 /***********************************************************
-    Waits until a task gets terminated.
+    Waits for a task to exit. Also cleans it up.
+	This may not be called for detached threads.
 ***********************************************************/
 void WaitTask (Task* pTask);
 

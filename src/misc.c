@@ -458,5 +458,6 @@ void KiLaunch (TaskedFunction func)
 	
 	// And take off!
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 }
 #endif

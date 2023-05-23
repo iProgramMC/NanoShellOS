@@ -71,6 +71,7 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, pFileName);
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;

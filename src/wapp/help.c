@@ -360,6 +360,7 @@ RESOURCE_STATUS HelpOpenResource(const char* pResourceID)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	return RESOURCE_LAUNCH_SUCCESS;
 }

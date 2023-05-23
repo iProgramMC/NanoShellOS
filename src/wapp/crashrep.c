@@ -155,6 +155,7 @@ void CrashReporterCheck()
 		else
 		{
 			KeUnsuspendTask(pTask);
+			KeDetachTask(pTask);
 		}
 		
 		// Kill the process
