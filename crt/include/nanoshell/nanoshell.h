@@ -20,6 +20,7 @@
 
 // NanoShell specifics
 #include <nanoshell/graphics.h>
+#include <nanoshell/lock.h>
 
 // Threading
 void sleep(int ms);      //not actually standard I don't think
@@ -125,6 +126,20 @@ void        SetControlDisabled(Window* pWindow, int comboID, bool flag);
 void        SetControlFocused (Window* pWindow, int comboID, bool flag);
 void        SetControlVisible (Window* pWindow, int comboID, bool flag);
 void        VidSetClipRect(Rectangle* rect);
+void        DrawEdge(Rectangle rect, int style, unsigned bg);
+void        DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color);
+void        ProgBarSetProgress(Window* pWindow, int comboID, int prog);
+void        ProgBarSetMaxProg(Window* pWindow, int comboID, int max_prog);
+void        TextInputSetFont(Window *pWindow, int comboID, unsigned font);
+void        TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm);
+void        ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID, int iconID);
+int         ComboBoxGetSelectedItemID(Window* pWindow, int comboID);
+void        ComboBoxSetSelectedItemID(Window* pWindow, int comboID, int itemID);
+void        ComboBoxClearItems(Window* pWindow, int comboID);
+bool        IsControlFocused(Window* pWindow, int comboID);
+bool        IsControlDisabled(Window* pWindow, int comboID);
+KeyState    KbGetKeyState(unsigned char keycode);
+Window*     SpawnMenu(Window* pParentWindow, WindowMenu *root, int x, int y);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

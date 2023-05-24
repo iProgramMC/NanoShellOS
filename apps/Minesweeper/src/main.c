@@ -207,7 +207,8 @@ void MineDrawTile(int tileX, int tileY, int drawX, int drawY)
 		else
 		{
 			RECT(rect, drawX, drawY, TILE_SIZE, TILE_SIZE);
-			RenderButtonShapeNoRounding(rect, 0x808080, 0xFFFFFF, 0xC0C0C0);
+			//RenderButtonShapeNoRounding(rect, 0x808080, 0xFFFFFF, 0xC0C0C0);
+			DrawEdge(rect, DRE_RAISED | DRE_FILLED, BUTTON_MIDDLE_COLOR);
 			
 			if (m_flag[tileX][tileY])
 			{
@@ -241,8 +242,8 @@ void MineDrawTile(int tileX, int tileY, int drawX, int drawY)
 				IsMine(tileX + 0, tileY + 1) + 
 				IsMine(tileX + 1, tileY + 1);
 			
-			VidFillRectangle (0xC0C0C0, rect);
-			VidDrawRectangle (0x808080, rect);
+			VidFillRectangle (WINDOW_BACKGD_COLOR, rect);
+			VidDrawRectangle (BUTTON_SHADOW_COLOR, rect);
 			
 			if (mines_around)
 			{
@@ -434,7 +435,8 @@ bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED int parm1, UN
 	
 	int num = this->m_parm1;
 	
-	RenderButtonShapeNoRounding(this->m_rect, 0xFFFFFF, 0x808080, TRANSPARENT);
+	//RenderButtonShapeNoRounding(this->m_rect, 0xFFFFFF, 0x808080, TRANSPARENT);
+	DrawEdge(this->m_rect, DRE_SUNKEN, TRANSPARENT);
 	
 	int digits[3];
 	

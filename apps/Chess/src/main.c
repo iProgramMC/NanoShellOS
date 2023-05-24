@@ -43,23 +43,13 @@ enum
 
 void DrawRectangleFrame(Rectangle rect)
 {
-	rect.bottom--;
-	rect.right--;
+	rect.left   -= 2;
+	rect.top    -= 2;
+	rect.right  += 2;
+	rect.bottom += 2;
 	
-	for (int i = 0; i < BOARD_THICKNESS; i++)
-	{
-		rect.left--;
-		rect.top--;
-		rect.right++;
-		rect.bottom++;
-		
-		VidDrawHLine(BUTTON_SHADOW_COLOR, rect.left, rect.right, rect.top);
-		VidDrawHLine(BUTTON_HILITE_COLOR, rect.left, rect.right, rect.bottom);
-		VidDrawVLine(BUTTON_SHADOW_COLOR, rect.top, rect.bottom, rect.left);
-		VidDrawVLine(BUTTON_HILITE_COLOR, rect.top, rect.bottom, rect.right);
-	}
+	DrawEdge(rect, DRE_SUNKEN, TRANSPARENT);
 }
-
 
 void DrawFrameAroundBoard()
 {

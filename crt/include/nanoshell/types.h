@@ -20,6 +20,7 @@
 #include <nanoshell/unistd_types.h>
 #include <nanoshell/mman_types.h>
 #include <nanoshell/graphics_types.h>
+#include <nanoshell/lock_types.h>
 #include <nanoshell/keyboard.h>
 
 #define false 0
@@ -252,6 +253,23 @@ enum // eResourceType
 	RES_BLOB,
 };
 typedef int eResourceType;
+
+// Text Edit commands. TextInputRequestCommand
+enum
+{
+	// clipboard commands. `parm` is ignored.
+	TEDC_PASTE,
+	TEDC_CUT,
+	TEDC_COPY,
+	
+	TEDC_INSERT,     // inserts an arbitrary piece of text. Requires a parameter in `parm`.
+	
+	TEDC_GOTOLINE,   // `parm` is here treated as a pointer to an integer
+	TEDC_GOTOOFFSET, // same here
+	TEDC_UNDO,
+	TEDC_SELECT_ALL,
+	TEDC_DELETE,
+};
 
 //NOTE WHEN WORKING WITH CONTROLS:
 //While yes, the window manager technically supports negative comboIDs, you're not supposed
@@ -569,14 +587,6 @@ typedef struct ControlStruct
 	bool      m_bDisabled;
 }
 Control;
-
-typedef struct
-{
-	volatile bool  m_held;
-	volatile void* m_task_owning_it;
-	volatile void* m_return_addr;
-}
-SafeLock;
 
 // DON'T rely on this!!! This is an internal kernel struct and can be changed.
 
