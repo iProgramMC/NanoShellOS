@@ -1015,5 +1015,6 @@ void ResetGame()
 	SetGameOver(false);
 	InitializeHistory();
 	AddHistoryFrame();
+	ClearFlashingTiles();
 }
 

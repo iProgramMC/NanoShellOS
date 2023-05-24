@@ -156,4 +156,6 @@ int ChessMessageBox(const char* text, const char* caption, int flags);
 
 void SetGameOver(bool);
 
+void ClearFlashingTiles();
+
 #endif//CHESS_H

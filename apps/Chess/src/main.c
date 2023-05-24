@@ -275,6 +275,18 @@ void SetGameOver(bool bGameOver)
 	g_bGameOver = bGameOver;
 }
 
+void ClearFlashingTiles()
+{
+	for (int row = 0; row < BOARD_SIZE; row++)
+	{
+		for (int col = 0; col < BOARD_SIZE; col++)
+		{
+			g_FlashingTiles[row][col] = 0;
+			PaintTile(row, col);
+		}
+	}
+}
+
 void ChessOnGameEnd(eErrorCode errCode, eColor col)
 {
 	char buffer[2048], buffer2[100];
