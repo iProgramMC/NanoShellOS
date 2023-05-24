@@ -7,12 +7,14 @@
 
 #include <window.h>
 #include <wbuiltin.h>
+#include <wmenu.h>
 #include <widget.h>
 #include <video.h>
 #include <print.h>
 #include <console.h>
 #include <memory.h>
 #include <cinterp.h>
+#include <keyboard.h>
 #include <vfs.h>
 #include <clip.h>
 #include <misc.h>
@@ -380,6 +382,17 @@ enum
 		WIN_IS_CONTROL_DISABLED,
 		WIN_TEXT_INPUT_SET_FONT,
 		WIN_TEXT_INPUT_REQUEST_COMMAND,
+		
+	// System Calls V2.5
+		WIN_DRAW_EDGE,
+		WIN_DRAW_ARROW,
+		WIN_TAB_VIEW_ADD_TAB,
+		WIN_TAB_VIEW_REMOVE_TAB,
+		WIN_TAB_VIEW_CLEAR_TABS,
+		WIN_SPAWN_MENU,
+		KB_GET_KEY_STATE,
+		LCK_ACQUIRE,
+		LCK_FREE,
 };
 
 const void *WindowCall[] = {
@@ -601,6 +614,17 @@ const void *WindowCall[] = {
 		IsControlDisabled,
 		TextInputSetFont,
 		TextInputRequestCommand,
+		
+	// System Calls V2.5 - 24/05/2023
+		DrawEdge,
+		DrawArrow,
+		TabViewAddTab,
+		TabViewRemoveTab,
+		TabViewClearTabs,
+		SpawnMenu,
+		KbGetKeyState,
+		LockAcquire,
+		LockFree,
 };
 
 

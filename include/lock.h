@@ -17,6 +17,7 @@ typedef struct
 	volatile void* m_return_addr;
 }
 SafeLock;
+
 void LockAcquire (SafeLock *pLock);
 void LockFree (SafeLock *pLock);
 

@@ -538,5 +538,66 @@ CALL_END
 CALL(SetControlVisible, WIN_SET_CONTROL_VISIBLE, void, Window* pWindow, int comboID, bool flag)
 	SARGS(pWindow, comboID, flag)
 CALL_END
+CALL(ProgBarSetProgress, WIN_PROG_BAR_SET_PROGRESS, void, Window* pWindow, int comboID, int x)
+	SARGS(pWindow, comboID, x)
+CALL_END
+CALL(ProgBarSetMaxProg, WIN_PROG_BAR_SET_MAX_PROG, void, Window* pWindow, int comboID, int x)
+	SARGS(pWindow, comboID, x)
+CALL_END
+
+// Calls V2.4
+CALL(ComboBoxAddItem, WIN_COMBO_BOX_ADD_ITEM, void, Window* pWindow, int comboID, const char* item, int itemID, int iconID)
+	SARGS(pWindow, comboID, item, itemID, iconID)
+CALL_END
+CALL(ComboBoxGetSelectedItemID, WIN_COMBO_BOX_GET_SELECTED_ITEM, int, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(ComboBoxSetSelectedItemID, WIN_COMBO_BOX_SET_SELECTED_ITEM, void, Window* pWindow, int comboID, int itemID)
+	SARGS(pWindow, comboID, itemID)
+CALL_END
+CALL(ComboBoxClearItems, WIN_COMBO_BOX_CLEAR_ITEMS, void, Window* pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+CALL(IsControlFocused, WIN_IS_CONTROL_FOCUSED, bool, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(IsControlDisabled, WIN_IS_CONTROL_DISABLED, bool, Window* pWindow, int comboID)
+	RARGS(pWindow, comboID)
+CALL_END
+CALL(TextInputSetFont, WIN_TEXT_INPUT_SET_FONT, void, Window* pWindow, int comboID, unsigned font)
+	SARGS(pWindow, comboID, font)
+CALL_END
+CALL(TextInputRequestCommand, WIN_TEXT_INPUT_REQUEST_COMMAND, void, Window *pWindow, int comboID, int command, void* parm)
+	SARGS(pWindow, comboID, command, parm)
+CALL_END
+
+// Calls V2.5
+CALL(DrawEdge, WIN_DRAW_EDGE, void, Rectangle rect, int style, unsigned bg)
+	SARGS(rect, style, bg)
+CALL_END
+CALL(DrawArrow, WIN_DRAW_ARROW, void, Rectangle rect, eArrowType arrowType, int flags, unsigned color)
+	SARGS(rect, arrowType, flags, color)
+CALL_END
+CALL(TabViewAddTab, WIN_TAB_VIEW_ADD_TAB, void, Window* pWindow, int comboID, int tabID, const char* pTabText, int tabWidth)
+	SARGS(pWindow, comboID, tabID, pTabText, tabWidth)
+CALL_END
+CALL(TabViewRemoveTab, WIN_TAB_VIEW_REMOVE_TAB, void, Window* pWindow, int comboID, int tabID)
+	SARGS(pWindow, comboID, tabID)
+CALL_END
+CALL(TabViewClearTabs, WIN_TAB_VIEW_REMOVE_TAB, void, Window* pWindow, int comboID)
+	SARGS(pWindow, comboID)
+CALL_END
+CALL(SpawnMenu, WIN_SPAWN_MENU, Window*, Window* pParentWindow, WindowMenu* pRoot, int x, int y)
+	RARGS(pParentWindow, pRoot, x, y)
+CALL_END
+CALL(KbGetKeyState, KB_GET_KEY_STATE, KeyState, unsigned char keycode)
+	RARGS(keycode)
+CALL_END
+CALL(LockAcquire, LCK_ACQUIRE, void, SafeLock* ptr)
+	SARGS(ptr)
+CALL_END
+CALL(LockFree, LCK_FREE, void, SafeLock* ptr)
+	SARGS(ptr)
+CALL_END
 
 

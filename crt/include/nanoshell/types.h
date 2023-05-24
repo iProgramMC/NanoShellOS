@@ -161,6 +161,38 @@
 #define GetImage(res)  ((Image*)((res)->m_data))
 #define GetString(res) ((const char*)((res)->m_data))
 
+#define DRE_RAISEDINNER (1 << 0)
+#define DRE_SUNKENINNER (1 << 1)
+#define DRE_RAISEDOUTER (1 << 2)
+#define DRE_SUNKENOUTER (1 << 3)
+#define DRE_BLACKOUTER  (1 << 4) // takes priority over all these
+
+#define DRE_OUTER (DRE_RAISEDOUTER | DRE_SUNKENOUTER)
+#define DRE_INNER (DRE_RAISEDINNER | DRE_SUNKENINNER)
+
+#define DRE_RAISED (DRE_RAISEDINNER | DRE_RAISEDOUTER)
+#define DRE_SUNKEN (DRE_SUNKENINNER | DRE_SUNKENOUTER)
+
+#define DRE_FILLED (1 << 24) // 'bg' is ignored if this is not set
+#define DRE_FLAT   (1 << 25) // flat border.
+#define DRE_HOT    (1 << 26) // the button is hovered
+
+#define DRE_LEFT   (1  << 27)
+#define DRE_TOP    (1  << 28)
+#define DRE_RIGHT  (1  << 29)
+#define DRE_BOTTOM (1  << 30)
+#define DRE_RECT   (15 << 27)
+
+#define DRA_IGNOREXSIZE (1 << 0) // Ignores the width of the rectangle.
+#define DRA_IGNOREYSIZE (1 << 1) // Ignores the height of the rectangle.
+
+#define DRA_CENTERX     (1 << 2) // Center along the X axis.
+#define DRA_CENTERY     (1 << 3) // Center along the Y axis.
+
+// DRA_IGNOREXSIZE | DRA_IGNOREYSIZE means that both sizes are ignored, so the default size of ARROW_SIZE will be used.
+#define DRA_IGNORESIZE (DRA_IGNOREXSIZE | DRA_IGNOREYSIZE)
+#define DRA_CENTERALL  (DRA_CENTERX | DRA_CENTERY)
+
 // Structs and enums
 
 #define DefaultConsoleColor 0x0F
@@ -378,6 +410,15 @@ enum
 	// Add more clipboard data types here.  Unknown clipboard data types will be treated as generic binaries
 };
 
+typedef enum eArrowType
+{
+	DRA_UP,
+	DRA_DOWN,
+	DRA_LEFT,
+	DRA_RIGHT,
+}
+eArrowType;
+
 //Console
 typedef struct ConsoleStruct
 {
@@ -531,8 +572,9 @@ Control;
 
 typedef struct
 {
-	bool  m_held;
-	void* m_task_owning_it;
+	volatile bool  m_held;
+	volatile void* m_task_owning_it;
+	volatile void* m_return_addr;
 }
 SafeLock;
 
@@ -660,5 +702,28 @@ typedef struct
 	char m_data[];
 }
 Resource;
+
+typedef struct MenuEntry
+{
+	Window*           pWindow;
+	struct MenuEntry* pMenuEntries;
+	int               nMenuEntries;
+	int               nMenuComboID;
+	int               nOrigCtlComboID;
+	char              sText[100];
+	bool              bOpen;
+	bool              bHasIcons;
+	int               nLineSeparators;
+	Window*           pOpenWindow;
+	int               nIconID;
+	int               nWidth;           // The width of the menu window (if this has children)
+	int               nHeight;          // The height of the menu window
+	int               nItemWidth;       // The width of this item when the parent menu is opened. If 0, this fills to the width.
+	int               nItemX;           // The X position of the item.
+	int               nItemY;           // The Y position of the item. If 0, this is automatically laid out.
+	bool              bDisabled;
+	bool              bPrivate;         // uses a private event rather than a public one.
+}
+WindowMenu;
 
 #endif//_NANOSHELL_TYPES__H

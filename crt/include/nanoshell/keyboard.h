@@ -105,4 +105,9 @@
 
 #define SCANCODE_RELEASE 0x80
 
+typedef uint8_t KeyState;
+#define KEY_PRESSED ((KeyState) 1)
+#define KEY_HELD ((KeyState) 2)
+#define KEY_RELEASED ((KeyState) 0)
+
 #endif//_NANOSHELL_KEYBOARD__H
