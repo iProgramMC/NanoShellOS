@@ -6,3 +6,6 @@ AppName      "NanoShell SDK World Map Demo"
 AppAuthor    "iProgramInCpp"
 AppCopyright "Copyright (C) 2019-2023 iProgramInCpp. Licensed under the GNU GPLv3."
 ProjectName  "The NanoShell(TM) Operating System"
+
+Resource 1000 Bitmap "world_map.png"
+

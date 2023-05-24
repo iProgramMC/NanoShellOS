@@ -7,14 +7,16 @@
 ******************************************/
 #include <nsstandard.h>
 
-#include "world_map.h"
-
 #define CHART_WINDOW_WIDTH  (356 + 2 * 10)
 #define CHART_WINDOW_HEIGHT (184 + 2 * 10 + 40)
+
+#define RES_WORLD_MAP (1000)
 
 Image gWorldMap = {
 	356, 184, NULL
 };
+
+Image g_world_map_icon;
 
 //TODO: Country 0x47 is missing - relocate 0x99 to there
 
@@ -30,17 +32,19 @@ void SetSelectedCountry(int country)
 	int total_pixels = gWorldMap.width * gWorldMap.height;
 	for (int i = 0; i < total_pixels; i++)
 	{
-		if (pSrc[i] == 0x00FFFFFF) // White - ocean.
+		uint32_t pixelSrc = pSrc[i] & 0xFFFFFF;
+		
+		if (pixelSrc == 0x00FFFFFF) // White - ocean.
 		{
-			pDst[i] =  0x0000007F;
+			pDst[i] = 0x0000007F;
 			continue;
 		}
-		if (pSrc[i] == ((uint32_t) country << 4)) // The selected country
+		if (pixelSrc == ((uint32_t) country << 4)) // The selected country
 		{
-			pDst[i] =  0x0000B020;
+			pDst[i] = 0x0000B020;
 			continue;
 		}
-		// Random land :)
+		// not selected - just draw it normally
 		pDst[i] = 0x00007F00;
 	}
 }
@@ -119,6 +123,8 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {
+	g_world_map_icon = *GetImage(GetResource(RES_WORLD_MAP));
+	
 	Window* pWindow = CreateWindow ("World map test", CW_AUTOPOSITION, CW_AUTOPOSITION, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT, WndProc, WF_NOMINIMZ);
 	
 	if (!pWindow)
