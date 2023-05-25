@@ -149,9 +149,15 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	pControl->m_bVisible = true;
 	
 	if (text)
-		strcpy (pControl->m_text, text);
+	{
+		//strcpy (pControl->m_text, text);
+		strncpy(pControl->m_text, text, sizeof pControl->m_text);
+		pControl->m_text[sizeof pControl->m_text - 1] = 0;
+	}
 	else
+	{
 		pControl->m_text[0] = '\0';
+	}
 	
 	pControl->OnEvent = GetWidgetOnEventFunction(type);
 	

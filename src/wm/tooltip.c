@@ -6,32 +6,52 @@
 ******************************************/
 #include "wi.h"
 
-Tooltip g_tooltip;
+Window* g_pTooltipWindow;
+SafeLock g_tooltipLock;
 
 void TooltipDismiss()
 {
-	//if we're not showing anything, get outta here
-	if (!g_tooltip.m_shown) return;
+	LockAcquire(&g_tooltipLock);
+	if (!g_pTooltipWindow)
+	{
+		LockFree(&g_tooltipLock);
+		return;
+	}
 	
-	g_tooltip.m_shown = false;
-	RefreshRectangle(g_tooltip.m_rect, NULL);
+	DestroyWindow(g_pTooltipWindow);
+	g_pTooltipWindow = NULL;
+	
+	LockFree(&g_tooltipLock);
+	return;
 }
 
-void TooltipDraw()
+void TooltipWindowProc(Window* pWindow, int eventType, int parm1, int parm2)
 {
-	//if we're not showing anything, get outta here
-	if (!g_tooltip.m_shown) return;
-	
-	VBEData* pBackup = g_vbeData;
-	
-	VidSetVBEData (&g_mainScreenVBEData);
-	
-	VidFillRect(TOOLTIP_BACKGD_COLOR, g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
-	VidDrawRect(TOOLTIP_TEXT_COLOR,   g_tooltip.m_rect.left, g_tooltip.m_rect.top, g_tooltip.m_rect.right - 2, g_tooltip.m_rect.bottom - 2);
-	
-	VidTextOut(g_tooltip.m_text, g_tooltip.m_rect.left + 3, g_tooltip.m_rect.top + 3, TOOLTIP_TEXT_COLOR, TRANSPARENT);
-	
-	VidSetVBEData (pBackup);
+	switch (eventType)
+	{
+		case EVENT_USER:
+		{
+			char* ptr = (char*)parm1;
+			
+			Rectangle rect = GetWindowClientRect(pWindow, false);
+			rect.left   += 2;
+			rect.top    += 2;
+			rect.right  -= 2;
+			rect.bottom -= 2;
+			
+			AddControl(pWindow, CONTROL_TEXTHUGE, rect, NULL, 1, WINDOW_TEXT_COLOR, TEXTSTYLE_FORCEBGCOL);
+			SetHugeLabelText(pWindow, 1, ptr);
+			
+			MmFree(ptr);
+			
+			CallControlCallback(pWindow, 1, EVENT_PAINT, 0, 0);
+			
+			break;
+		}
+		default:
+			DefaultWindowProc(pWindow, eventType, parm1, parm2);
+			break;
+	}
 }
 
 void TooltipShow(const char * text, int x, int y)
@@ -39,24 +59,33 @@ void TooltipShow(const char * text, int x, int y)
 	//dismiss the old one
 	TooltipDismiss();
 	
-	strncpy (g_tooltip.m_text, text, 511);
+	LockAcquire(&g_tooltipLock);
 	
 	//calculate the rectangle
-	int width = 0, height = 0;
-	VidTextOutInternal(text, 0, 0, 0, 0, true, &width, &height);
+	size_t sz = strlen(text);
+	char* ptr = MmAllocate(sz * 2 + 1);
 	
-	g_tooltip.m_shown = true;
+	int height = WrapText(ptr, text, GetScreenWidth() / 3);
+	int width  = 0, height2 = 0;
+	VidTextOutInternal(ptr, 0, 0, 0, 0, true, &width, &height2);
 	
-	g_tooltip.m_rect.left   = x;
-	g_tooltip.m_rect.top    = y;
-	g_tooltip.m_rect.right  = g_tooltip.m_rect.left + width  + 6;
-	g_tooltip.m_rect.bottom = g_tooltip.m_rect.top  + height + 6;
+	g_pTooltipWindow = CreateWindow("Tooltip Window", x, y, width + 4, height + 4, TooltipWindowProc, WF_NOTITLE | WF_SYSPOPUP | WF_FOREGRND);
 	
-	//render it initially
-	TooltipDraw();
+	if (!g_pTooltipWindow)
+	{
+		LockFree(&g_tooltipLock);
+		MmFree(ptr);
+		return;
+	}
+	
+	WindowRegisterEvent(g_pTooltipWindow, EVENT_USER, (int)ptr, 0);
+	
+	g_pTooltipWindow->m_bWindowManagerUpdated = true;
+	
+	LockFree(&g_tooltipLock);
 }
 
 Rectangle* TooltipGetRect()
 {
-	return &g_tooltip.m_rect;
+	return &g_pTooltipWindow->m_fullRect;
 }

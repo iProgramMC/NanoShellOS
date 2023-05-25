@@ -447,9 +447,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 					Point p = { g_mouseX, g_mouseY };
 					if (RectangleContains(&pWindow->m_fullRect, &p))
 						RenderCursor();
-					
-					if (RectangleOverlap(&pWindow->m_fullRect, &g_tooltip.m_rect))
-						TooltipDraw();
 				}
 			}
 			

@@ -23,7 +23,6 @@
 #include <image.h>
 #include <config.h>
 #include <wterm.h>
-#include <slab.h>
 
 //#define BORDER_SIZE (15)
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)
@@ -48,14 +47,6 @@ enum
 	CID_SMARTSNAP_7,
 };
 
-typedef struct Tooltip
-{
-	bool m_shown;
-	char m_text[512];
-	Rectangle m_rect;
-}
-Tooltip;
-
 typedef struct
 {
 	char m_text[61];
@@ -73,7 +64,6 @@ extern Window   g_windows [WINDOWS_MAX];
 extern Window*  g_focusedOnWindow;
 extern Window*  g_pShutdownMessage;
 extern Window*  g_currentlyClickedWindow;
-extern Tooltip  g_tooltip;
 extern VBEData* g_vbeData, g_mainScreenVBEData;
 extern SafeLock g_CreateLock, g_BackgdLock; 
 extern int      g_mouseX, g_mouseY;

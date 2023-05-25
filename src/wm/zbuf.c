@@ -217,8 +217,5 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 		}
 	}
 	
-	if (RectangleOverlap(&rect, TooltipGetRect()))
-		TooltipDraw();
-	
 	g_vbeData = backup;
 }
