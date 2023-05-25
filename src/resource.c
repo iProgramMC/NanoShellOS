@@ -97,6 +97,7 @@ RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, "Notepad");
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;
@@ -122,6 +123,7 @@ RESOURCE_STATUS ScribbleLaunchResource(const char* pResource)
 	// After the task was created, give it a tag and start it.
 	KeTaskAssignTag(pTask, "Scribble");
 	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
 	
 	// Consider it done.  LaunchExecutable task shall now MmFree the string allocated.
 	return RESOURCE_LAUNCH_SUCCESS;
