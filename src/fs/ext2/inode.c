@@ -8,6 +8,7 @@
 //  ***************************************************************
 #include <vfs.h>
 #include <ext2.h>
+#include <slab.h>
 
 // File operations.
 uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
@@ -114,7 +115,7 @@ void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
 		pUnit->m_pBlockBuffer = NULL;
 	}
 	
-	MmFree(pUnit);
+	SlabFree(pUnit);
 }
 
 //quick and dirty hash function. Not cryptographically secure or anything, but good enough for a hash table
@@ -220,8 +221,9 @@ void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 // Adds an inode to the binary search tree.
 Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
 {
+	//SLogMsg("sizeof = %d", sizeof(Ext2InodeCacheUnit));
 	// Create a new inode cache unit:
-	Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
+	Ext2InodeCacheUnit* pUnit = SlabAllocate(sizeof(Ext2InodeCacheUnit));
 	memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));
 	
 	// Set its inode number.

@@ -29,6 +29,7 @@
 #include <wcall.h>
 #include <window.h>
 #include <main.h>
+#include <slab.h>
 
 // definitions we don't really want out there:
 void MbSetup(uint32_t check, uint32_t mbaddr);
@@ -53,6 +54,7 @@ void ShellInit();
 void CrashReporterCheckNoWindow();
 void KiLaunch(TaskedFunction func);
 bool KiEmergencyMode();
+void KiInitializeSlabs();
 
 static int s_stopwatchStart;
 
@@ -108,6 +110,7 @@ void TestFontInit()
 NO_RETURN
 void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 {
+	KiInitializeSlabs();
 	CoKickOff();
 	SLogMsg("NanoShell is starting up...");
 	MbSetup(check, mbaddr);
