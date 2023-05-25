@@ -15,6 +15,7 @@
 #include <lock.h>
 #include <memory.h>
 #include <idt.h>
+#include <string.h>
 
 // Namespace guide:
 // * Mu = User Heaps
@@ -95,5 +96,11 @@ void MuCreatePageTable(UserHeap *pHeap, int pageTable);
 void MuRemovePageTable(UserHeap *pHeap, int pageTable);
 bool MuRemoveMapping(UserHeap *pHeap, uintptr_t address);
 bool MuUnMap (UserHeap *pHeap, uintptr_t address, size_t nPages);
+
+// Slab allocator (based on kernel heap)
+void * SlabAllocate(int size);
+void   SlabFree(void* ptr);
+int    SlabGetSize(void* ptr);
+int    SlabSizeToType(int size);
 
 #endif

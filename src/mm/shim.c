@@ -11,25 +11,6 @@
 #include <memory.h>
 #include "memoryi.h"
 
-/*
-Define the following functions:
-- MmMapPhysMemFastUnsafeRW
-- MmUnmapPhysMemFastUnsafe
-- MmMapPhysicalMemoryRWUnsafe
-- MmAllocateSinglePagePhyD
-- MmAllocateSinglePageD
-- MmAllocatePhyD
-- MmAllocateD
-- MmAllocateKD
-- MmReAllocateD
-- MmReAllocateKD
-- MmFreePage
-- MmFree
-- MmFreeK
-- 
-- 
-*/
-
 // Physical Memory Mapping
 #if 1
 
@@ -118,18 +99,33 @@ void* MmAllocateSinglePage()
 	return MmAllocateSinglePagePhy(NULL);
 }
 
+// Since slab items page aligned addresses are reserved for something else,
+// the check for whether a memory chunk is part of a slab is as easy as checking
+// if the pointer is page aligned or not.
+static bool MmIsPartOfSlab(void* ptr)
+{
+	return ((uintptr_t)ptr & 0xFFF) != 0;
+}
+
 void* MmAllocatePhy (size_t size, uint32_t* physAddresses)
 {
 	KeVerifyInterruptsEnabled;
+	
+	// I use this to find and track down leaks in the kernel heap
+	//SLogMsg("%x <== MmAllocatePhyD   %p", pMem, __builtin_return_address(0));
+	
+	// if we don't want a physical address, and the size is less than 1024:
+	if (!physAddresses && size <= 1024)
+	{
+		// rely on the slab allocator:
+		return SlabAllocate(size);
+	}
 	
 	// clear interrupts - kernel heap isn't something to race on
 	cli;
 	
 	// allocate from the kernel heap
 	void *pMem = MhAllocate(size, physAddresses);
-	
-	// I use this to find and track down leaks in the kernel heap
-	//SLogMsg("%x <== MmAllocatePhyD   %p", pMem, __builtin_return_address(0));
 	
 	// restore interrupts, all good
 	sti;
@@ -151,6 +147,22 @@ void* MmReAllocate(void *oldPtr, size_t newSize)
 {
 	// TODO: Make this go through the user heap too.
 	KeVerifyInterruptsEnabled;
+	
+	if (MmIsPartOfSlab(oldPtr))
+	{
+		int slabSize = SlabGetSize(oldPtr);
+		
+		// if we don't actually need to resize:
+		if (SlabSizeToType((int)newSize) == SlabSizeToType(slabSize))
+			return oldPtr;
+		
+		// I think it's fine if we just copy:
+		void* pNewMem = MmAllocate(newSize);
+		memcpy(pNewMem, oldPtr, slabSize);
+		SlabFree(oldPtr);
+		return pNewMem;
+	}
+	
 	cli;
 	void *pMem = MhReAllocate(oldPtr, newSize);
 	sti;
@@ -168,6 +180,9 @@ void* MmReAllocateK (void *oldPtr, size_t newSize)
 void MmFreePage(void *pAddr)
 {
 	KeVerifyInterruptsEnabled;
+	
+	ASSERT(!MmIsPartOfSlab(pAddr));
+	
 	cli;
 	MhFreePage(pAddr);
 	sti;
@@ -177,13 +192,16 @@ void MmFree(void *pAddr)
 {
 	KeVerifyInterruptsEnabled;
 	
-	cli;
-	
-	MhFree(pAddr);
-	
 	// I use this to track down memory leaks easily
 	//SLogMsg("%x => MhFree", pAddr);
 	//PrintBackTrace(KeGetEBP(), KeGetEIP(), "bruh", NULL, false);
+	
+	if (MmIsPartOfSlab(pAddr))
+		return SlabFree(pAddr);
+	
+	cli;
+	
+	MhFree(pAddr);
 	
 	sti;
 }

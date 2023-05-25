@@ -1,8 +1,14 @@
-// Fast efficient memory allocator for small objects created often.
-#include <main.h>
-#include <lock.h>
-#include <memory.h>
-#include <string.h>
+//  ***************************************************************
+//  mm/slab.c - Creation date: 25/05/2023
+//  -------------------------------------------------------------
+//  NanoShell Copyright (C) 2023 - Licensed under GPL V3
+//
+//  ***************************************************************
+//  Programmer(s):  iProgramInCpp (iprogramincpp@gmail.com)
+//  ***************************************************************
+
+// This is an efficient memory allocator for small objects created often.
+#include "memoryi.h"
 
 struct SlabContainer;
 
@@ -28,7 +34,9 @@ SlabContainer;
 typedef enum eSlabSize
 {
 	SLAB_SIZE_16,
+	SLAB_SIZE_32,
 	SLAB_SIZE_64,
+	SLAB_SIZE_128,
 	SLAB_SIZE_256,
 	SLAB_SIZE_512,
 	SLAB_SIZE_1024,
@@ -41,7 +49,9 @@ SlabContainer g_Slabs[SLAB_COUNT];
 void KiInitializeSlabs()
 {
 	g_Slabs[SLAB_SIZE_16]  .m_itemSize = 16;
+	g_Slabs[SLAB_SIZE_32]  .m_itemSize = 32;
 	g_Slabs[SLAB_SIZE_64]  .m_itemSize = 64;
+	g_Slabs[SLAB_SIZE_128] .m_itemSize = 128;
 	g_Slabs[SLAB_SIZE_256] .m_itemSize = 256;
 	g_Slabs[SLAB_SIZE_512] .m_itemSize = 512;
 	g_Slabs[SLAB_SIZE_1024].m_itemSize = 1024;
@@ -50,11 +60,21 @@ void KiInitializeSlabs()
 int SlabSizeToType(int size)
 {
 	if (size <= 16)   return SLAB_SIZE_16;
+	if (size <= 32)   return SLAB_SIZE_32;
 	if (size <= 64)   return SLAB_SIZE_64;
+	if (size <= 128)  return SLAB_SIZE_128;
 	if (size <= 256)  return SLAB_SIZE_256;
 	if (size <= 512)  return SLAB_SIZE_512;
 	if (size <= 1024) return SLAB_SIZE_1024;
 	return -1;
+}
+
+int SlabGetSize(void* ptr)
+{
+	// get the parent slab item
+	SlabItem* pItem = (void*)((uintptr_t)ptr & ~(uintptr_t)0xFFF);
+	
+	return pItem->m_pContainer->m_itemSize;
 }
 
 void* SlabTryAllocate(SlabContainer* pCont, SlabItem* pItem)
