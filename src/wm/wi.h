@@ -23,6 +23,7 @@
 #include <image.h>
 #include <config.h>
 #include <wterm.h>
+#include <slab.h>
 
 //#define BORDER_SIZE (15)
 #define SAFE_DELETE(x) do { if (x) { MmFree(x); x = NULL; } } while (0)

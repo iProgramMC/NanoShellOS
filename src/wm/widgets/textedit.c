@@ -18,7 +18,7 @@
 
 #define INT_MAX          (0x7FFFFFFF)
 
-#define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2))
+#define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2 - 1))
 
 int g_TextCursorFlashSpeed = 500; // 2 hz.
 
@@ -1609,7 +1609,7 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int pa
 	{
 		case EVENT_CREATE:
 		{
-			TextInputDataEx* pData = MmAllocate(sizeof(TextInputDataEx));
+			TextInputDataEx* pData = SlabAllocate(sizeof(TextInputDataEx));
 			memset(pData, 0, sizeof *pData);
 			this->m_dataPtr = pData;
 			
@@ -1728,7 +1728,7 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int pa
 			
 			TextInput_Clear(this);
 			
-			MmFree(this->m_dataPtr);
+			SlabFree(this->m_dataPtr);
 			break;
 		}
 		case EVENT_PAINT:

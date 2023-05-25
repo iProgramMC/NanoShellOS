@@ -9,11 +9,12 @@
 #include <tmpfs.h>
 #include <string.h>
 #include <memory.h>
+#include <slab.h>
 #include <time.h>
 
 TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)
 {
-	TempFSNode* pTFNode = MmAllocate(sizeof(TempFSNode));
+	TempFSNode* pTFNode = SlabAllocate(sizeof(TempFSNode));
 	if (!pTFNode) return NULL;
 	
 	memset(pTFNode, 0, sizeof *pTFNode);
@@ -107,7 +108,7 @@ void FsTempFreeNode(TempFSNode* pNode)
 		pNode->m_nFileSizePages = 0;
 	}
 	
-	MmFree(pNode);
+	SlabFree(pNode);
 }
 
 void FsMountRamDisk(UNUSED void* unused)

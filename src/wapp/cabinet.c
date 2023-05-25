@@ -11,6 +11,7 @@
 #include <elf.h>
 #include <wterm.h>
 #include <resource.h>
+#include <slab.h>
 
 #define CABINET_WIDTH  600
 #define CABINET_HEIGHT 400
@@ -952,7 +953,7 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, in
 		{
 			if (pWindow->m_data)
 			{
-				MmFree(pWindow->m_data);
+				SlabFree(pWindow->m_data);
 				pWindow->m_data = NULL;
 			}
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
@@ -1035,7 +1036,7 @@ void CabinetEntry (__attribute__((unused)) int argument)
 	
 	pWindow->m_iconID = ICON_CABINET;
 	
-	pWindow->m_data = MmAllocate(sizeof(CabData));
+	pWindow->m_data = SlabAllocate(sizeof(CabData));
 	
 	g_bUsingTableView = true;
 	
