@@ -199,7 +199,7 @@ int FsTempDirCreate(FileNode* pFileNode, const char* pName)
 		return -ENAMETOOLONG;
 	
 	// try to create a new file.
-	TempFSNode* pNewChildTFNode = FsTempCreateNode(pName, NULL, false);
+	TempFSNode* pNewChildTFNode = FsTempCreateNode(NULL, false);
 	if (!pNewChildTFNode)
 		return -ENOSPC;
 	
@@ -226,7 +226,7 @@ int FsTempDirCreateDir(FileNode* pFileNode, const char* pName)
 	int refCountOld = pFileNode->m_refCount;
 	
 	// try to create a new file.
-	TempFSNode* pNewChildTFNode = FsTempCreateNode(pName, pFileNode, true);
+	TempFSNode* pNewChildTFNode = FsTempCreateNode(pFileNode, true);
 	if (!pNewChildTFNode)
 		return -ENOSPC;
 	

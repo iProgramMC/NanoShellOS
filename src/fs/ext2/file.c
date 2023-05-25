@@ -192,7 +192,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 				pUnit->m_nLastBlockRead = ~0u;
 				
 				// Now, get the entry itself. This will be a hard link
-				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, inodeNo, pName, false);
+				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, inodeNo, false);
 				
 				// Increase the destination Inode's reference count
 				pDestUnit->m_inode.m_nLinks++;
@@ -264,7 +264,7 @@ static int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUn
 				if (pTypeIndicatorOut) *pTypeIndicatorOut = pDirEnt->m_typeIndicator;
 				
 				// get the inode itself. This inode's reference count will be decreased.
-				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, pName, false);
+				Ext2InodeCacheUnit* pDestUnit = Ext2ReadInode(pFS, oldEntryInode, false);
 				
 				// Add a reference to this while we delete it.
 				FsAddReference(&pDestUnit->m_node);
@@ -492,7 +492,7 @@ FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
 		if (strcmp(space.m_name, pName) == 0)
 		{
 			// Load the inode
-			Ext2InodeCacheUnit* pCU = Ext2ReadInode(pFS, space.m_inode, space.m_name, false);
+			Ext2InodeCacheUnit* pCU = Ext2ReadInode(pFS, space.m_inode, false);
 			
 			if (!pCU) return NULL;
 			

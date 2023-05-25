@@ -290,7 +290,6 @@ typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
 	struct Ext2InodeCacheUnit *pNext, *pPrev;
-	bool m_bPermanent; // if false, this can get deleted if its reference count (will add soon) is zero
 	
 	FileNode  m_node;
 	Ext2Inode m_inode;
@@ -345,7 +344,7 @@ Ext2FileSystem;
 void FsRootCreateFileAtRoot(const char *pFileName, void *pContents, size_t sz);
 
 // Adds an inode to the inode cache.
-Ext2InodeCacheUnit *Ext2AddInodeToCache(Ext2FileSystem *pFS, uint32_t inodeNo, Ext2Inode *pInode, const char *pName);
+Ext2InodeCacheUnit *Ext2AddInodeToCache(Ext2FileSystem *pFS, uint32_t inodeNo, Ext2Inode *pInode);
 
 // Dumps the inode cache tree of a file system.
 void Ext2DumpInodeCacheTree(Ext2FileSystem *pFS);
@@ -357,7 +356,7 @@ Ext2InodeCacheUnit *Ext2LookUpInodeCacheUnit(Ext2FileSystem *pFS, uint32_t inode
 void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo);
 
 // Read an inode and add it to the inode cache. (or if it's in the inode cache, retrieve it from there or refresh it.)
-Ext2InodeCacheUnit *Ext2ReadInode(Ext2FileSystem *pFS, uint32_t inodeNo, const char *pName, bool bForceReRead);
+Ext2InodeCacheUnit *Ext2ReadInode(Ext2FileSystem *pFS, uint32_t inodeNo, bool bForceReRead);
 
 // Get the inode block number at an offset in block_size units.
 uint32_t Ext2GetInodeBlock(Ext2Inode *pInode, Ext2FileSystem *pFS, uint32_t offset);

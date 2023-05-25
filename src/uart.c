@@ -208,7 +208,6 @@ void UartInit(uint8_t com_num)
 	
 	FileNode node, *pNode = &node;
 	memset(pNode, 0, sizeof node);
-	strcpy(pNode->m_name, name);
 	
 	pNode->m_refCount = NODE_IS_PERMANENT;
 	
@@ -216,6 +215,7 @@ void UartInit(uint8_t com_num)
 	pNode->m_type   = FILE_TYPE_CHAR_DEVICE;
 	pNode->m_inode  = com_num;
 	pNode->m_length = 0;
+	pNode->m_bHasDirCallbacks = false;
 	pNode->Read     = FsSerialRead;
 	pNode->Write    = FsSerialWrite;
 	

@@ -56,7 +56,7 @@ TempFSInstance;
 
 void FsTempInit();
 
-TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDirectory);
+TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory);
 void FsTempFreeNode(TempFSNode* pNode);
 void FsTempFileOnUnreferenced(FileNode* pFileNode);
 

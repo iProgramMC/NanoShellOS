@@ -28,14 +28,14 @@ const char* FiGetCwd ()
 
 void FsAddReference(FileNode* pNode)
 {
-	//SLogMsg("FsAddReference(%s) -> %d", pNode->m_name, pNode->m_refCount + 1);
+	//SLogMsg("FsAddReference(%p) -> %d", pNode, pNode->m_refCount + 1);
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
 	
 	pNode->m_refCount++;
 }
 void FsReleaseReference(FileNode* pNode)
 {
-	//SLogMsg("FsReleaseReference(%s) -> %d", pNode->m_name, pNode->m_refCount - 1);
+	//SLogMsg("FsReleaseReference(%p) -> %d", pNode, pNode->m_refCount - 1);
 	
 	// if it's permanent, return
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
@@ -54,7 +54,7 @@ uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, 
 {
 	if (pNode)
 	{
-		if (pNode->Read)
+		if (!pNode->m_bHasDirCallbacks && pNode->Read)
 			return pNode->Read(pNode, offset, size, pBuffer, block);
 		else return 0;
 	}
@@ -65,7 +65,7 @@ uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer,
 {
 	if (pNode)
 	{
-		if (pNode->Write)
+		if (!pNode->m_bHasDirCallbacks && pNode->Write)
 		{
 			return pNode->Write(pNode, offset, size, pBuffer, block);
 		}
@@ -78,7 +78,7 @@ int FsIoControl(FileNode* pNode, unsigned long request, void * argp)
 {
 	if (pNode)
 	{
-		if (pNode->IoControl)
+		if (!pNode->m_bHasDirCallbacks && pNode->IoControl)
 		{
 			return pNode->IoControl(pNode, request, argp);
 		}
@@ -91,7 +91,7 @@ bool FsOpen(FileNode* pNode, bool read, bool write)
 {
 	if (pNode)
 	{
-		if (pNode->Open)
+		if (!pNode->m_bHasDirCallbacks && pNode->Open)
 			return pNode->Open(pNode, read, write);
 		else return true;
 	}
@@ -103,7 +103,7 @@ void FsClose(FileNode* pNode)
 {
 	if (pNode)
 	{
-		if (pNode->Close)
+		if (!pNode->m_bHasDirCallbacks && pNode->Close)
 			pNode->Close(pNode);
 	}
 }
@@ -112,7 +112,7 @@ DirEnt* FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
 {
 	if (pNode)
 	{
-		if (pNode->ReadDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
+		if (pNode->ReadDir && pNode->m_bHasDirCallbacks)
 			return pNode->ReadDir(pNode, index, pOutputDent);
 		else return NULL;
 	}
@@ -123,7 +123,7 @@ FileNode* FsFindDir(FileNode* pNode, const char* pName)
 {
 	if (pNode)
 	{
-		if (pNode->FindDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
+		if (pNode->FindDir && pNode->m_bHasDirCallbacks)
 			return pNode->FindDir(pNode, pName);
 		else return NULL;
 	}
@@ -134,7 +134,7 @@ bool FsOpenDir(FileNode* pNode)
 {
 	if (pNode)
 	{
-		if (pNode->OpenDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
+		if (pNode->OpenDir && pNode->m_bHasDirCallbacks)
 			return pNode->OpenDir(pNode);
 		else return true;//Assume it is opened.
 	}
@@ -145,7 +145,7 @@ void FsCloseDir(FileNode* pNode)
 {
 	if (pNode)
 	{
-		if (pNode->CloseDir && (pNode->m_type & FILE_TYPE_DIRECTORY))
+		if (pNode->CloseDir && pNode->m_bHasDirCallbacks)
 			pNode->CloseDir(pNode);
 	}
 }
@@ -154,7 +154,7 @@ void FsClearFile(FileNode* pNode)
 {
 	if (pNode)
 	{
-		if (pNode->EmptyFile && !(pNode->m_type & FILE_TYPE_DIRECTORY))
+		if (pNode->EmptyFile && !pNode->m_bHasDirCallbacks)
 			pNode->EmptyFile(pNode);
 	}
 }
@@ -164,7 +164,7 @@ int FsUnlinkFile(FileNode* pNode, const char* pName)
 	if (!pNode) return -ENOENT;
 	
 	// if the directory we're trying to remove from isn't actually a directory
-	if (!(pNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+	if (!pNode->m_bHasDirCallbacks) return -ENOTDIR;
 	
 	// if there's no way to unlink a file
 	if (!pNode->UnlinkFile) return -ENOTSUP;
@@ -176,8 +176,9 @@ int FsCreateEmptyFile(FileNode* pDirNode, const char* pFileName)
 {
 	if (!pDirNode) return -EIO;
 	
+	if (!pDirNode->m_bHasDirCallbacks) return -ENOTDIR;
+	
 	if (!pDirNode->CreateFile) return -ENOTSUP;
-	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
 	
 	return pDirNode->CreateFile(pDirNode, pFileName);
 }
@@ -186,7 +187,7 @@ int FsCreateDir(FileNode* pDirNode, const char *pFileName)
 {
 	if (!pDirNode) return -EIO;
 	if (!pDirNode->CreateDir) return -ENOTSUP;
-	if (!(pDirNode->m_type & FILE_TYPE_DIRECTORY)) return -ENOTDIR;
+	if (!pDirNode->m_bHasDirCallbacks) return -ENOTDIR;
 	
 	FileNode* pChildIfExists = FsFindDir(pDirNode, pFileName);
 	if (pChildIfExists)
@@ -904,7 +905,7 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 		return -EXDEV;
 	}
 	
-	if (!(pDirNodeOld->m_type & FILE_TYPE_DIRECTORY) || !(pDirNodeNew->m_type & FILE_TYPE_DIRECTORY))
+	if (!pDirNodeOld->m_bHasDirCallbacks || !pDirNodeNew->m_bHasDirCallbacks)
 	{
 		FsReleaseReference(pDirNodeOld);
 		FsReleaseReference(pDirNodeNew);

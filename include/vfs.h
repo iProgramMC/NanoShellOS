@@ -76,10 +76,9 @@ typedef struct FSNodeS
 	void*              m_pParentSpecific;
 	
 	//note: try not to use the m_name field. On ext2, it's going to always be the first thing that was found with that inode.
-	char 	           m_name[128]; //+nullterm, so actually 127 chars
+	//char 	           m_name[128]; //+nullterm, so actually 127 chars
 	uint32_t           m_type;
 	uint32_t           m_perms;
-	uint32_t           m_flags;
 	uint32_t           m_inode;      //device specific
 	uint32_t           m_length;     //file size
 	
@@ -108,36 +107,49 @@ typedef struct FSNodeS
 	uint32_t           m_createTime;
 	uint32_t           m_accessTime;
 	
-	// File callbacks
-	FileReadFunc       Read;
-	FileWriteFunc      Write;
-	FileOpenFunc       Open;
-	FileCloseFunc      Close;
-	// Opens a directory, and loads it into the file system structure.
-	FileOpenDirFunc    OpenDir;
-	// Returns the N-th child of a directory.
-	FileReadDirFunc    ReadDir;
-	// Tries to find a child with a name in a directory.
-	FileFindDirFunc    FindDir;
-	// Closes a directory.
-	FileCloseDirFunc   CloseDir;
-	// Creates an empty file and sets it up inside the file system.
-	FileCreateFileFunc CreateFile;
-	// Removes all the contents of a file.
-	FileEmptyFileFunc  EmptyFile;
-	// Creates an empty directory and sets up all the necessary stuff.
-	FileCreateDirFunc  CreateDir;
-	// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
-	// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
-	FileUnlinkFileFunc UnlinkFile;
-	// Removes an empty directory.
-	FileRemoveDirFunc  RemoveDir;
-	// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
-	FileRenameOpFunc   RenameOp;
-	// Sends a request to the underlying device.
-	FileIoControlFunc  IoControl;
 	// This function is called everytime the reference count of a file reaches zero.
 	FileOnUnreferencedFunc OnUnreferenced;
+	
+	bool m_bHasDirCallbacks;
+	
+	union
+	{
+		struct
+		{
+			// File callbacks
+			FileReadFunc       Read;
+			FileWriteFunc      Write;
+			FileOpenFunc       Open;
+			FileCloseFunc      Close;
+			// Removes all the contents of a file.
+			FileEmptyFileFunc  EmptyFile;
+			// Sends a request to the underlying device.
+			FileIoControlFunc  IoControl;
+		};
+		
+		struct
+		{
+			// Opens a directory, and loads it into the file system structure.
+			FileOpenDirFunc    OpenDir;
+			// Returns the N-th child of a directory.
+			FileReadDirFunc    ReadDir;
+			// Tries to find a child with a name in a directory.
+			FileFindDirFunc    FindDir;
+			// Closes a directory.
+			FileCloseDirFunc   CloseDir;
+			// Creates an empty file and sets it up inside the file system.
+			FileCreateFileFunc CreateFile;
+			// Creates an empty directory and sets up all the necessary stuff.
+			FileCreateDirFunc  CreateDir;
+			// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
+			// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
+			FileUnlinkFileFunc UnlinkFile;
+			// Removes an empty directory.
+			FileRemoveDirFunc  RemoveDir;
+			// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
+			FileRenameOpFunc   RenameOp;
+		};
+	};
 }
 FileNode;
 

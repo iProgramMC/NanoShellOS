@@ -110,19 +110,20 @@ void FsPipeOnUnreferenced(FileNode* pPipeNode)
 
 void FsPipeInitialize(FileNode* pPipeNode)
 {
-	pPipeNode->m_type            = FILE_TYPE_PIPE;
-	pPipeNode->m_pipe.buffer     = MmAllocate(C_DEFAULT_PIPE_SIZE);
-	pPipeNode->m_pipe.bufferSize = C_DEFAULT_PIPE_SIZE;
-	pPipeNode->m_pipe.bufferTail = pPipeNode->m_pipe.bufferHead = 0;
-	pPipeNode->OnUnreferenced    = FsPipeOnUnreferenced;
-	pPipeNode->Read              = FsPipeRead;
-	pPipeNode->Write             = FsPipeWrite;
+	pPipeNode->m_type             = FILE_TYPE_PIPE;
+	pPipeNode->m_pipe.buffer      = MmAllocate(C_DEFAULT_PIPE_SIZE);
+	pPipeNode->m_pipe.bufferSize  = C_DEFAULT_PIPE_SIZE;
+	pPipeNode->m_pipe.bufferTail  = pPipeNode->m_pipe.bufferHead = 0;
+	pPipeNode->OnUnreferenced     = FsPipeOnUnreferenced;
+	pPipeNode->m_bHasDirCallbacks = true;
+	pPipeNode->Read               = FsPipeRead;
+	pPipeNode->Write              = FsPipeWrite;
 }
 
 FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);
 
 // note: this gives the file node 1 reference. Use FsReleaseReference to release this final reference.
-FileNode* FsPipeCreate(const char* pName)
+FileNode* FsPipeCreate(UNUSED const char* pName)
 {
 	// TODO: add to any path
 	FileNode* pfn = MmAllocate(sizeof(FileNode));
@@ -131,7 +132,6 @@ FileNode* FsPipeCreate(const char* pName)
 	FsPipeInitialize(pfn);
 	pfn->m_refCount = 1;
 	pfn->m_perms = PERM_READ | PERM_WRITE;
-	strcpy(pfn->m_name, pName);
 	
 	return pfn;
 }

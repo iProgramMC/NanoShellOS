@@ -366,7 +366,6 @@ void SbSetUpFile()
 {
 	FileNode node, *pNode = &node;
 	memset(pNode, 0, sizeof node);
-	strcpy(pNode->m_name, "Sb16");
 	
 	ASSERT(pNode && "Couldn't add that file to the root?");
 	
@@ -377,6 +376,7 @@ void SbSetUpFile()
 	pNode->m_type    = FILE_TYPE_CHAR_DEVICE;
 	pNode->m_inode   = 0;
 	pNode->m_length  = 0;
+	pNode->m_bHasDirCallbacks = false;
 	pNode->Read      = FsSoundBlasterRead;
 	pNode->Write     = FsSoundBlasterWrite;
 	pNode->IoControl = FsSoundBlasterIoControl;

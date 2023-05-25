@@ -527,8 +527,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	name[3] = s_extLetters[FreeArea];
 	
 	// Read the root directory's inode, and cache it.
-	Ext2InodeCacheUnit* pCacheUnit = Ext2ReadInode(pFS, 2, name, true);
-	pCacheUnit->m_bPermanent = true; // Currently useless right now.
+	Ext2InodeCacheUnit* pCacheUnit = Ext2ReadInode(pFS, 2, true);
 	
 	pCacheUnit->m_node.m_refCount  = NODE_IS_PERMANENT;
 	pCacheUnit->m_node.m_type     |= FILE_TYPE_MOUNTPOINT;

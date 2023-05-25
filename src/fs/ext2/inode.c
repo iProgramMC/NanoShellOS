@@ -32,10 +32,8 @@ int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, c
 //   Section : Inode Cache
 // *************************
 
-void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeNo, const char* pName)
+void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeNo)
 {
-	strcpy(pFileNode->m_name, pName);
-	
 	// Set the inode number
 	pFileNode->m_inode = inodeNo;
 	
@@ -90,6 +88,7 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	// TODO: ReadDir() and other calls if this is a directory.
 	if (pFileNode->m_type == FILE_TYPE_DIRECTORY)
 	{
+		pFileNode->m_bHasDirCallbacks = true;
 		pFileNode->ReadDir    = Ext2ReadDir;
 		pFileNode->FindDir    = Ext2FindDir;
 		pFileNode->CreateDir  = Ext2CreateDir;
@@ -100,6 +99,7 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	}
 	else
 	{
+		pFileNode->m_bHasDirCallbacks = false;
 		pFileNode->Read  = Ext2FileRead;
 		pFileNode->Write = Ext2FileWrite;
 		
@@ -219,7 +219,7 @@ void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 }
 
 // Adds an inode to the binary search tree.
-Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode, const char* pName)
+Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, Ext2Inode* pInode)
 {
 	//SLogMsg("sizeof = %d", sizeof(Ext2InodeCacheUnit));
 	// Create a new inode cache unit:
@@ -234,7 +234,7 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 	pUnit->m_node.m_implData1 = (uint32_t)pFS;
 	pUnit->m_node.m_pFileSystemHandle = pFS;
 	
-	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo, pName);
+	Ext2InodeToFileNode(&pUnit->m_node, pInode, inodeNo);
 	
 	if (pFS->m_bIsReadOnly)
 	{
@@ -325,7 +325,7 @@ void Ext2FlushInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
 // Read an inode and add it to the inode cache. Give it a name from the system side, since
 // the inodes themselves do not contain names -- that's the job of the directory entry.
 // When done, return the specific cache unit.
-Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const char* pName, bool bForceReRead)
+Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, bool bForceReRead)
 {
 	// If the inode was already cached, and we aren't forced to re-read it, just return.
 	if (!bForceReRead)
@@ -338,7 +338,7 @@ Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, const c
 	Ext2Inode inode;
 	Ext2ReadInodeMetaData(pFS, inodeNo, &inode);
 	
-	return Ext2AddInodeToCache(pFS, inodeNo, &inode, pName);
+	return Ext2AddInodeToCache(pFS, inodeNo, &inode);
 }
 
 // **************************************

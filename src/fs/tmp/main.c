@@ -11,7 +11,7 @@
 #include <memory.h>
 #include <time.h>
 
-TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDirectory)
+TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)
 {
 	TempFSNode* pTFNode = MmAllocate(sizeof(TempFSNode));
 	if (!pTFNode) return NULL;
@@ -27,11 +27,7 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	pFNode->m_pFileSystemHandle = NULL;
 	pFNode->m_pParentSpecific   = pTFNode;
 	
-	strncpy(pFNode->m_name, pName, sizeof pFNode->m_name);
-	pFNode->m_name[sizeof pFNode->m_name - 1] = 0;
-	
 	pFNode->m_perms  = PERM_READ | PERM_WRITE | PERM_EXEC;
-	pFNode->m_flags  = 0;
 	pFNode->m_inode  = (int)pFNode;
 	pFNode->m_length = 0;
 	pFNode->m_implData   = (int)pTFNode;
@@ -47,6 +43,7 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	if (bDirectory)
 	{
 		pFNode->m_type = FILE_TYPE_DIRECTORY;
+		pFNode->m_bHasDirCallbacks = true;
 		
 		pFNode->OpenDir        = FsTempDirOpen;
 		pFNode->CloseDir       = FsTempDirClose;
@@ -63,6 +60,7 @@ TempFSNode* FsTempCreateNode(const char* pName, FileNode* pParentDir, bool bDire
 	else
 	{
 		pFNode->m_type = FILE_TYPE_FILE;
+		pFNode->m_bHasDirCallbacks = false;
 		
 		pFNode->Open      = FsTempFileOpen;
 		pFNode->Close     = FsTempFileClose;
@@ -78,7 +76,7 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 
 void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* buffer, uint32_t fileSize)
 {
-	TempFSNode* pTFNode = FsTempCreateNode(fileName, pNode, false);
+	TempFSNode* pTFNode = FsTempCreateNode(pNode, false);
 	pTFNode->m_bMutable = false;
 	pTFNode->m_node.m_refCount = NODE_IS_PERMANENT;
 	pTFNode->m_node.m_length = fileSize;
@@ -97,7 +95,7 @@ void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* b
 
 void FsTempFreeNode(TempFSNode* pNode)
 {
-	SLogMsg("FsTempFreeNode(%p aka '%s')", pNode, pNode->m_node.m_name);
+	SLogMsg("FsTempFreeNode(%p)", pNode);
 	
 	// if it has any data, free that too.
 	// note that we do not allow deleting directories with files in them,
@@ -137,7 +135,7 @@ FileNode* FsGetRootNode()
 
 void FsTempInit()
 {
-	TempFSNode* pTFNode = FsTempCreateNode("root", NULL, true);
+	TempFSNode* pTFNode = FsTempCreateNode(NULL, true);
 	FileNode* pFNode = &pTFNode->m_node;
 	
 	// this will be referenced in the root.
