@@ -26,6 +26,11 @@ SAI void* OffsetBy(void* array, size_t elemSize, size_t index)
 	return (void*)((uintptr_t)array + index * elemSize);
 }
 
+SAI void* OffsetByCst(const void* array, size_t elemSize, size_t index)
+{
+	return (void*)((uintptr_t)array + index * elemSize);
+}
+
 // I broke out my textbook for this one. The algorithm in the text book uses 1-indexing, rather than 0 indexing.
 void HeapCombine(void* array, size_t elemSize, ComparisonFunc comp, void *ctx, size_t index, size_t elemMax)
 {
@@ -36,14 +41,14 @@ void HeapCombine(void* array, size_t elemSize, ComparisonFunc comp, void *ctx, s
 		if (chi < elemMax)
 		{
 			// compare to see which child gets to swap
-			if (comp(ctx, OffsetBy(array, elemSize, chi), OffsetBy(array, elemSize, chi + 1)) < 0)
+			if (comp(OffsetBy(array, elemSize, chi), OffsetBy(array, elemSize, chi + 1), ctx) < 0)
 				chi++;
 		}
 		
 		void *ppar = OffsetBy(array, elemSize, par);
 		void *pchi = OffsetBy(array, elemSize, chi);
 		
-		if (comp(ctx, ppar, pchi) < 0)
+		if (comp(ppar, pchi, ctx) < 0)
 		{
 			SwapBytes(ppar, pchi, elemSize);
 			par = chi;
@@ -70,3 +75,27 @@ void HeapSort(void* array, size_t elemSize, size_t elemCount, ComparisonFunc com
 		HeapCombine(array, elemSize, comp, ctx, 1, i - 1);
 	}
 }
+
+void* BinarySearch(const void* key, const void* base, size_t elemCount, size_t elemSize, ComparisonFunc comp, void* ctx)
+{
+	size_t left = 0, right = elemCount - 1, mid;
+	
+	while (left <= right)
+	{
+		mid = left + (right - left) / 2;
+		
+		void* ptr = OffsetByCst(base, elemSize, mid);
+		
+		int cres = comp(ptr, key, ctx);
+		if (cres == 0)
+			return ptr;
+		
+		if (cres < 0) // ptr < key
+			left = mid + 1;
+		else
+			right = mid - 1;
+	}
+	
+	return NULL;
+}
+

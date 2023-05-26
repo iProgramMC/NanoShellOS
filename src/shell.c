@@ -249,6 +249,11 @@ void ShellExecuteFile(const char* fileName, const char* arguments)
 	}
 }
 
+int ComparisonInts(const void* a, const void* b, UNUSED void* ctx)
+{
+	return *(const int*)a - *(const int*)b;
+}
+
 void ShellExecuteCommand(char* p, bool* pbExit)
 {
 	TokenState state;

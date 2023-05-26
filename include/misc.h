@@ -9,12 +9,17 @@
 
 #include <multiboot.h>
 
-typedef int (*ComparisonFunc)(void* context, const void* item1, const void* item2);
+typedef int (*ComparisonFunc)(const void* item1, const void* item2, void* ctx);
 
 /**
  * Performs a sorting operation using a binary heap.
  */
 void HeapSort(void* array, size_t elemSize, size_t elemCount, ComparisonFunc comp, void *ctx);
+
+/**
+ * Performs a binary search on a sorted array.
+ */
+void* BinarySearch(const void* key, const void* base, size_t elemCount, size_t elemSize, ComparisonFunc comp, void* ctx);
 
 
 typedef struct
