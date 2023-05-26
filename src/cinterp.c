@@ -16,6 +16,7 @@
 #include <cinterp.h>
 #include <print.h>
 #include <idt.h>
+#include <time.h>
 
 // c4.c - C in four functions
 // char, int, and pointer types
