@@ -30,6 +30,9 @@ void SLogMsgNoCr(const char* fmt, ...);
 // since MAGIC_NUMBER_1_FREE is zero
 #define IS_FREE(header) (!((header)->m_magicNo1))
 
+// The pointer returned by malloc(0), or realloc(X, 0), lives here.
+int gZeroByteAllocPtr;
+
 typedef struct MemAreaHeader
 {
 	uint32_t m_magicNo1;
@@ -234,6 +237,9 @@ void MemMgrInitializeMemory()
 // First-fit allocation method. We could also use best-fit, however right now I'd rather not.
 void* MemMgrAllocateMemory(size_t sz)
 {
+	if (sz == 0)
+		return &gZeroByteAllocPtr;
+	
 	// Pad the size to four bytes, or one double word.
 	sz = (sz + SIZE_AND_LOCATION_PADDING - 1) & ~(SIZE_AND_LOCATION_PADDING - 1);
 	
@@ -361,6 +367,9 @@ void* MemMgrAllocateMemory(size_t sz)
 
 void MemMgrFreeMemory(void *pMem)
 {
+	if (pMem == &gZeroByteAllocPtr)
+		return;
+	
 	// check the padding first
 	if (((uintptr_t)pMem & (SIZE_AND_LOCATION_PADDING - 1)) != 0)
 	{
@@ -437,6 +446,37 @@ void MemMgrFreeMemory(void *pMem)
 	}
 }
 
+/*
+void* MemMgrReAllocateMemory(void* pMem, size_t size)
+{
+	if (pMem == &gZeroByteAllocPtr)
+		pMem = NULL;
+	
+	if (!pMem)
+		return MemMgrAllocateMemory(size);
+	
+	// get the header right before the memory with some cool syntax tricks
+	MemAreaHeader* pHeader = & (-1)[(MemAreaHeader*)pMem];
+
+	// Ensure the sanity of this header
+	MemMgrPerformSanityChecks(pHeader);
+	
+	void* pNewMem = MemMgrAllocateMemory(size);
+	if (!pNewMem)
+		return NULL;
+	
+	size_t minSize = pHeader->m_size;
+	if (minSize > size)
+		minSize = size;
+	
+	memcpy(pNewMem, pMem, minSize);
+	
+	MemMgrFreeMemory(pMem);
+	
+	return pNewMem;
+}
+*/
+
 void* MemMgrReAllocateMemory(void* pMem, size_t size)
 {
 	// get the header right before the memory with some cool syntax tricks
@@ -444,7 +484,7 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 
 	// Ensure the sanity of this header
 	MemMgrPerformSanityChecks(pHeader);
-		
+	
 	if (gLastHeader == pHeader)
 	{
 		gLastHeader = NULL;
@@ -474,6 +514,9 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 		return pMem;
 	}
 	
+	// TODO: fix this code
+	/*
+	
 	// How much space do we have between this and the next header?
 	MemAreaHeader* pNext = pHeader->m_pNext;
 	
@@ -490,6 +533,8 @@ void* MemMgrReAllocateMemory(void* pMem, size_t size)
 		
 		return pMem;
 	}
+	
+	*/
 	
 	// We can't! Means we need to relocate.
 	void * pNewMem = MemMgrAllocateMemory(size);
