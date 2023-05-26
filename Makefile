@@ -60,12 +60,14 @@ $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"
 	@$(NLD) $(LDFLAGS) -o $@ $^ $(LIBGCC_PATH)
 
+# note. I use -cp, instead of cp, so that potential errors are ignored.
+# The errors here are non-fatal, it's just that you won't be able to use Tcc if you don't build the Crt first on the host.
 $(INITRD_TARGET):
 	@echo "Building initrd..."
 	@mkdir -p fs/User/Include
 	@mkdir -p fs/User/Library
-	@cp -r crt/include/* fs/User/Include
-	@cp -r crt/lib/* fs/User/Library
+	@-cp -rf crt/include/* fs/User/Include
+	@-cp -rf crt/lib/* fs/User/Library
 	@tar -cf $@ -C fs .
 
 $(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)
