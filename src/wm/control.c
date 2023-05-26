@@ -65,7 +65,6 @@ bool IsControlIDTicking(int id)
 {
 	switch (id)
 	{
-		case CONTROL_COMBOBOX:
 		case CONTROL_TEXTINPUT:
 			return true;
 	}

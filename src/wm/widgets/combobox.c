@@ -206,6 +206,19 @@ void WidgetComboBox_SubMenuEventProc(Window* pWindow, int eventType, int parm1, 
 			DestroyWindow(pWindow);
 			break;
 		}
+		case EVENT_DESTROY:
+		{
+			ComboBoxData* pData = (ComboBoxData*)pWindow->m_data;
+			
+			// send our parent a message that we're gone.
+			// ComboBox_CloseSubWindow will send a parm1 of 4242 to let us know that
+			// we already know it'll be gone
+			if (parm1 != 4242)
+				WindowAddEventToMasterQueue(pData->m_pWindow, EVENT_COMBOSUBGONE, pData->m_CtlComboID, 0);
+			
+			DefaultWindowProc(pWindow, eventType, parm1, parm2);
+			break;
+		}
 		default:
 			DefaultWindowProc(pWindow, eventType, parm1, parm2);
 	}
@@ -217,11 +230,10 @@ void ComboBox_CloseSubWindow(Control* this)
 	
 	if (!pData->m_pSubWindow) return;
 	
-	WindowAddEventToMasterQueue(pData->m_pSubWindow, EVENT_DESTROY, 0, 0);
+	WindowAddEventToMasterQueue(pData->m_pSubWindow, EVENT_DESTROY, 4242, 0);
 	
-	// wait for it to go away... hopefully
-	while (HandleMessages(pData->m_pSubWindow));
-	
+	// The window manager will take care of events, so just assume it's gone already to avoid a race condition.
+	// The sub window will send us an EVENT_COMBOSUBGONE, so just treat it as if it's gone.
 	pData->m_pSubWindow = NULL;
 }
 
@@ -269,6 +281,9 @@ void ComboBox_OpenSubWindow(Control* this)
 	// handle the initial 'create' event
 	if (!HandleMessages(pSubWindow))
 		pData->m_pSubWindow = NULL;
+	
+	// now let the window manager handle events:
+	pData->m_pSubWindow->m_bWindowManagerUpdated = true;
 }
 
 int ComboBox_GetSelectedItemID(Control* this)
@@ -325,6 +340,16 @@ bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUS
 			
 			break;
 		}
+		// the sub window told us that it's gone. We must obey
+		case EVENT_COMBOSUBGONE:
+		{
+			if (parm1 != this->m_comboID)
+				break; // ignore
+			
+			ComboBoxData* pData = ComboBox_GetData(this);
+			pData->m_pSubWindow = NULL;
+			break;
+		}
 		case EVENT_DESTROY:
 		{
 			ComboBoxData* pData = ComboBox_GetData(this);
@@ -334,18 +359,6 @@ bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUS
 			
 			MmFree(pData);
 			this->m_dataPtr = NULL;
-			
-			break;
-		}
-		case EVENT_TICK:
-		{
-			ComboBoxData* pData = ComboBox_GetData(this);
-			
-			if (pData->m_pSubWindow)
-			{
-				if (!HandleMessages(pData->m_pSubWindow))
-					pData->m_pSubWindow = NULL;
-			}
 			
 			break;
 		}
