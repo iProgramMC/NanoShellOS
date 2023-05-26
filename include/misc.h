@@ -9,6 +9,14 @@
 
 #include <multiboot.h>
 
+typedef int (*ComparisonFunc)(void* context, const void* item1, const void* item2);
+
+/**
+ * Performs a sorting operation using a binary heap.
+ */
+void HeapSort(void* array, size_t elemSize, size_t elemCount, ComparisonFunc comp, void *ctx);
+
+
 typedef struct
 {
 	unsigned char m_steppingID : 4;

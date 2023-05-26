@@ -5,7 +5,7 @@
             Icon listing module
 ******************************************/
 #include <icon.h>
-#include <misc.h>
+#include <time.h>
 #include <window.h>
 #include <process.h>
 
@@ -668,3 +668,30 @@ void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t 
 	
 	VidBlitImageResizeOutline(p, x, y, size, size, color);
 }
+
+// mini clock for one specific icon
+const int g_mini_clock_cosa[]={    0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,   0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995,-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105 };
+const int g_mini_clock_sina[]={-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105,   0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,    0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995 };
+
+SAI void RenderThumbClockHand(int deg, int len, int cenX, int cenY, unsigned color)
+{
+	int begPointX = cenX,                                         begPointY = cenY;
+	int endPointX = cenX + (g_mini_clock_cosa[deg] * len / 1000), endPointY = cenY + (g_mini_clock_sina[deg] * len / 1000);
+	VidDrawLine (color, begPointX, begPointY, endPointX, endPointY);
+}
+
+void RenderThumbClock(int x, int y, int size)//=32
+{
+	if (size == 16) return;
+	//render simple clock:
+	TimeStruct* time = TmReadTime();
+	
+	int centerX = x + size/2, centerY = y + size/2;
+	int diameter = size;
+	int handMaxLength = (2 * diameter / 5);
+	
+	RenderThumbClockHand(time->hours % 12 * 5 + time->minutes / 12, 4 * handMaxLength / 9, centerX, centerY, 0xFF0000);
+	RenderThumbClockHand(time->minutes,                             6 * handMaxLength / 9, centerX, centerY, 0x000000);
+	RenderThumbClockHand(time->seconds,                             8 * handMaxLength / 9, centerX, centerY, 0x000000);
+}
+
