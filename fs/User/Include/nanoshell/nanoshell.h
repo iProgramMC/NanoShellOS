@@ -20,6 +20,7 @@
 
 // NanoShell specifics
 #include <nanoshell/graphics.h>
+#include <nanoshell/lock.h>
 
 // Threading
 void sleep(int ms);      //not actually standard I don't think
@@ -33,7 +34,7 @@ void exit (int errcode);
 //NOTE: size must be 4 byte aligned!!
 void  ZeroMemory (void* bufptr1, size_t size);
 void  fmemcpy32 (void* restrict dest, const void* restrict src, size_t size);
-void* fast_memset(void* bufptr, BYTE val, size_t size);
+void* fast_memset(void* bufptr, uint8_t val, size_t size);
 
 // File management
 
@@ -53,6 +54,7 @@ int         GetScrollBarPos (Window *pWindow, int comboID);
 void        AddElementToList (Window* pWindow, int comboID, const char* pText, int optionalIcon);
 const char* GetElementStringFromList (Window* pWindow, int comboID, int index);
 void        RemoveElementFromList (Window* pWindow, int comboID, int elemIndex);
+void        SetListItemText(Window* pWindow, int comboID, int index, int icon, const char * pText);
 void        ResetList (Window* pWindow, int comboID);
 void        SetLabelText (Window *pWindow, int comboID, const char* pText);
 void        AddMenuBarItem (Window* pWindow, int menuBarControlId, int comboIdTo, int comboIdAs, const char* pText);
@@ -73,12 +75,14 @@ void        SetTextInputText(Window* pWindow, int comboID, const char* pText);
 void        ShellAbout (const char* pText, int icon);
 void        RequestRepaint (Window *pWindow);
 void        RequestRepaintNew (Window *pWindow);
-void        PopupWindow (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+void        PopupWindow  (Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
+void        PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* pData);
 uint32_t    ColorInputBox (Window *pWindow, const char *pPrompt, const char *pCaption);
 uint32_t    GetThemingParameter (int type);
 void        SetThemingParameter (int type, uint32_t parm);
 void        SetWidgetEventHandler(Window *pWindow, int comboID, WidgetEventHandler handler);
-// The input boxes that return stings return a kernel memory region. Use MmKernelFree() instead of free() to free it.
+WidgetEventHandler GetWidgetEventHandler(Window* pWindow, int comboID);
+// The input boxes that return strings return a kernel memory region. Use MmKernelFree() instead of free() to free it.
 char*       InputBox (Window *pWindow, const char *pPrompt, const char *pCaption, const char *pDefaultText);
 char*       FilePickerBox(Window* pWindow, const char* pPrompt, const char* pCaption, const char* pDefaultText);
 void        CallControlCallback(Window * pWindow, int comboID, int event, int parm1, int parm2);
@@ -96,6 +100,46 @@ void        AddTableColumn(Window* pWindow, int comboID, const char* pText, int 
 bool        GetRowStringsFromTable(Window* pWindow, int comboID, int index, const char * output[]);
 void        RemoveRowFromTable(Window* pWindow, int comboID, int elementIndex);
 void        ResetTable(Window* pWindow, int comboID);
+const char* GetWindowTitle(Window* pWindow);
+void*       GetWindowData(Window* pWindow);
+void        SetWindowData(Window* pWindow, void* pData);
+void        GetWindowRect(Window* pWindow, Rectangle* pRectOut);
+void        ChangeCursor(Window* pWindow, int cursorID);
+void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
+void        CallWindowCallbackAndControls(Window* pWindow, int eventType, int parm1, int parm2);
+int         GetWindowFlags(Window * pWindow);
+void        SetWindowFlags(Window * pWindow, int flags);
+int         AddTimer(Window* pWindow, int frequencyMs, int eventFired);
+void        DisarmTimer(Window* pWindow, int timerID);
+void        ChangeTimer(Window* pWindow, int newFrequencyMs /* = -1 */, int newEventFired /* = -1 */);
+int         UploadCursor(Image* pImage, int xOff, int yOff);
+void        ReleaseCursor(int cursorID);
+Image*      GetIconImage(int iconType, int size /* = -1 */);
+Resource*   GetResource(int resID);
+Point       GetMousePos();
+void        SetImageCtlMode(Window* pWindow, int comboID, int mode);
+void        SetImageCtlColor(Window* pWindow, int comboID, uint32_t color);
+void        SetImageCtlCurrentImage(Window* pWindow, int comboID, Image* pImage);
+Image*      GetImageCtlCurrentImage(Window* pWindow, int comboID);
+void        ImageCtlZoomToFill(Window* pWindow, int comboID);
+void        SetControlDisabled(Window* pWindow, int comboID, bool flag);
+void        SetControlFocused (Window* pWindow, int comboID, bool flag);
+void        SetControlVisible (Window* pWindow, int comboID, bool flag);
+void        VidSetClipRect(Rectangle* rect);
+void        DrawEdge(Rectangle rect, int style, unsigned bg);
+void        DrawArrow(Rectangle rect, eArrowType arrowType, int flags, unsigned color);
+void        ProgBarSetProgress(Window* pWindow, int comboID, int prog);
+void        ProgBarSetMaxProg(Window* pWindow, int comboID, int max_prog);
+void        TextInputSetFont(Window *pWindow, int comboID, unsigned font);
+void        TextInputRequestCommand(Window *pWindow, int comboID, int command, void* parm);
+void        ComboBoxAddItem(Window* pWindow, int comboID, const char* item, int itemID, int iconID);
+int         ComboBoxGetSelectedItemID(Window* pWindow, int comboID);
+void        ComboBoxSetSelectedItemID(Window* pWindow, int comboID, int itemID);
+void        ComboBoxClearItems(Window* pWindow, int comboID);
+bool        IsControlFocused(Window* pWindow, int comboID);
+bool        IsControlDisabled(Window* pWindow, int comboID);
+KeyState    KbGetKeyState(unsigned char keycode);
+Window*     SpawnMenu(Window* pParentWindow, WindowMenu *root, int x, int y);
 
 // Internal C Compiler
 int CcRunCCode(const char* pCode, int length);

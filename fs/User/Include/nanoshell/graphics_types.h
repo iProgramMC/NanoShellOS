@@ -11,12 +11,6 @@
 #define TEXT_RENDER_TRANSPARENT 0xFFFFFFFF
 #define TEXT_RENDER_BOLD        0x01000000
 
-#define TEXTSTYLE_HCENTERED   (1)
-#define TEXTSTYLE_VCENTERED   (2)
-#define TEXTSTYLE_WORDWRAPPED (4)
-#define TEXTSTYLE_RJUSTIFY    (8)
-#define TEXTSTYLE_FORCEBGCOL  (16)//VidDrawText does nothing to prevent that, but it's useful for CONTROL_TEXTCENTER.
-
 #define RECT(rect,x,y,w,h) do {\
 	rect.left = x, rect.top = y, rect.right = x+w, rect.bottom = y+h;\
 } while (0)
@@ -243,6 +237,36 @@ enum
 	ICON_BOX_CHECK,
 	ICON_BOX_UNCHECK,
 	ICON_FOLDER_SETTINGS16,
+	//icons V1.8
+	ICON_MINIMIZE,
+	ICON_MAXIMIZE,
+	ICON_RESTORE,
+	ICON_CLOSE,
+	ICON_ARROW_UP,
+	ICON_ARROW_DOWN,
+	ICON_ARROW_LEFT,
+	ICON_ARROW_RIGHT,
+	ICON_PIPE,
+	ICON_PIPE16,
+	ICON_VB_CURSOR,
+	ICON_VB_SELECT,
+	ICON_VB_TEXT,
+	ICON_VB_TEXT_CEN,
+	ICON_VB_INPUT_1LINE,
+	ICON_VB_INPUT_MLINE,
+	ICON_VB_CHECKBOX,
+	ICON_VB_SURR_RECT,
+	ICON_VB_BUTTON,
+	ICON_CLIPBOARD,
+	ICON_PAINT2,
+	ICON_FILE_BROKEN,
+	ICON_STOP_BLACK,
+	ICON_STOP_SMALL,
+	ICON_PAUSE_BLACK,
+	ICON_PAUSE_SMALL,
+	ICON_PLAY_BLACK,
+	ICON_PLAY_SMALL,
+	ICON_BROWSE_SMALL,
 	ICON_COUNT
 };
 
@@ -288,5 +312,18 @@ typedef struct
 	Rectangle m_clipRect;
 }
 VBEData;
+
+typedef struct
+{
+	uint16_t width, height;
+	int16_t leftOffs, topOffs;
+	const uint32_t* bitmap;
+	bool m_transparency;//optimization
+	
+	bool m_resizeMode;
+	uint16_t boundsWidth, boundsHeight;
+	uint16_t mouseLockX, mouseLockY;
+}
+Cursor;
 
 #endif//_NANOSHELL_GRAPHICS_TYPES_H

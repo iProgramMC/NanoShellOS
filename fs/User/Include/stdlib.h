@@ -9,8 +9,10 @@
 #include <nanoshell/stdlib_types.h>
 
 // Numeric conversion functions
+long long atoll      (const char* str);
 int    atoi       (const char* str);
 int    atox       (const char* str);
+long   atol       (const char* str);
 double atof       (const char *arr);
 char*  itoa       (int value, char* buffer, int radix);
 char*  ltoa       (long value, char* buffer, int radix);

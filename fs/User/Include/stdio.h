@@ -24,6 +24,7 @@ int    getc  (FILE* file);
 void   rewind(FILE* file);
 int    vfprintf (FILE* file, const char* fmt, va_list list);
 int    fprintf  (FILE* file, const char* fmt, ...);
+int    vprintf  (const char* fmt, va_list list);
 
 // Operations on files
 int remove(const char* filename);
@@ -50,5 +51,9 @@ int fputc(int c, FILE * stream);
 int putc(int c, FILE* stream);
 int puts(const char * s);
 int putchar(int c);
+int fgetc(FILE* stream);
+int getc(FILE* stream);
+int ungetc(int c, FILE * stream);
+int ferror(FILE* stream);
 
 #endif//_STDIO__H
