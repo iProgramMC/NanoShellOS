@@ -54,6 +54,7 @@ run: image
 
 clean:
 	rm -rf $(BUILD_DIR)/*
+	rm -rf fs/User/*
 
 $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"
@@ -61,6 +62,10 @@ $(KERNEL_TARGET): $(KERNEL_O_FILES)
 
 $(INITRD_TARGET):
 	@echo "Building initrd..."
+	@mkdir -p fs/User/Include
+	@mkdir -p fs/User/Library
+	@cp -r crt/include/* fs/User/Include
+	@cp -r crt/lib/* fs/User/Library
 	@tar -cf $@ -C fs .
 
 $(IMAGE_TARGET): $(KERNEL_TARGET) $(INITRD_TARGET)

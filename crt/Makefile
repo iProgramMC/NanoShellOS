@@ -42,10 +42,10 @@ ASFLAGS=-f elf32
 ARFLAGS=rcs
 CRT1_LDFLAGS=-relocatable
 
-LIBN_TARGET = libnanoshell.a
-CRT1_TARGET = crt1.o
-CRTI_TARGET = crti.o
-CRTN_TARGET = crtn.o
+LIBN_TARGET = lib/libnanoshell.a
+CRT1_TARGET = lib/crt1.o
+CRTI_TARGET = lib/crti.o
+CRTN_TARGET = lib/crtn.o
 
 ROOT_PATH = ../fs
 
@@ -62,15 +62,13 @@ updinc:
 	cp -r include/* $(ROOT_PATH)/User/Include
 
 clean:
-	rm -rf build_libnanoshell/*
-	rm -rf build_crt1/*
-	rm -f crt1.o
-	rm -f crti.o
-	rm -f crtn.o
-	rm -f libnanoshell.a
+	rm -rf build_libnanoshell
+	rm -rf build_crt1
+	rm -rf lib
 
 libnanoshell: $(LIBN_O_FILES)
 	@echo "Archiving libnanoshell"
+	@mkdir -p $(dir $(LIBN_TARGET))
 	@$(AR) $(ARFLAGS) $(LIBN_TARGET) $^
 	
 build_libnanoshell/%.asm.o: src/%.asm
@@ -85,6 +83,7 @@ build_libnanoshell/%.c.o: src/%.c
 
 crt1: $(CRT1_O_FILES)
 	@echo "Linking crt1"
+	@mkdir -p $(dir $(CRT1_TARGET))
 	@$(LD) $(CRT1_LDFLAGS) -o $(CRT1_TARGET) -T crt1.ld $^
 
 build_crt1/%.asm.o: src/%.asm
@@ -94,6 +93,7 @@ build_crt1/%.asm.o: src/%.asm
 
 crti: src/zstub.c
 	@echo "Compiling stub object"
+	@mkdir -p $(dir $(CRTI_TARGET))
 	@$(CC) $(CFLAGS) -c $(CRT_STUB) -o $(CRTI_TARGET)
 	@cp $(CRTI_TARGET) $(CRTN_TARGET)
 	
