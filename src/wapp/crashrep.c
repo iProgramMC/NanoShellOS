@@ -169,8 +169,6 @@ void CrashReportWindow(CrashInfo* pCrashInfo)
 	
 	CrashReporterFinalize(pCrashInfo);
 	
-	MmFree (pCrashInfo);
-	
 	if (!pWindow)
 	{
 	_failure:

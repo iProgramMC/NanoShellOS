@@ -664,6 +664,7 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	if (!pProc)
 	{
 		MmFreeK (pBlock);
+		MmFreeK (pData);
 		return ELF_PROCESS_ERROR;
 	}
 	pProc->OnDeath = ElfOnDeath;

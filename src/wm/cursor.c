@@ -62,13 +62,17 @@ static void ImageToCursor(Cursor* pCur, Image* pImg, int xOff, int yOff, uint32_
 int UploadCursor(Image * pImage, int xOff, int yOff)
 {
 	KeVerifyInterruptsEnabled;
+	cli;
 	
 	int nPixels = pImage->width * pImage->height;
-	uint32_t *pBuf = MmAllocate(nPixels * sizeof(uint32_t));
-	if (!pBuf)
-		return -1;
 	
-	cli;
+	uint32_t *pBuf = MhAllocate(nPixels * sizeof(uint32_t));
+	
+	if (!pBuf)
+	{
+		sti;
+		return -1;
+	}
 	
 	// locate a free slot.
 	int freeSlot = -1;
