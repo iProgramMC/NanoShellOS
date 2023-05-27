@@ -58,10 +58,46 @@ CrashInfo* CrashInfoPop()
 	return pPopped;
 }
 
+typedef struct CrashWinParms
+{
+	char string1[7168];
+	char string2[1024];
+}
+CrashWinParms;
+
+#define CRASH_REP_WIN_WIDTH  (500)
+#define CRASH_REP_WIN_HEIGHT (260)
+
 void CALLBACK CrashReportWndProc( Window* pWindow, int messageType, int parm1, int parm2 )
 {
 	switch (messageType)
 	{
+		case EVENT_CREATE:
+		{
+			CrashWinParms* pParms = (CrashWinParms*)pWindow->m_data;
+			pWindow->m_data = NULL;
+			
+			//add some controls to the window before handing control
+			Rectangle r;
+			RECT(r, 10, 10, 32, 32);
+			AddControl (pWindow, CONTROL_ICON, r, NULL, 1, ICON_AMBULANCE, 0);
+			
+			RECT(r, 50, 10, CRASH_REP_WIN_WIDTH - 50, 100);
+			AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
+			SetHugeLabelText(pWindow, 2, pParms->string2);
+			
+			int ylol = (CRASH_REP_WIN_HEIGHT) / 4;
+			RECT(r, 50, ylol, CRASH_REP_WIN_WIDTH - 60, (CRASH_REP_WIN_HEIGHT-ylol-40));
+			AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 5, 0);
+			SetTextInputText(pWindow, 4, pParms->string1);
+			
+			RECT(r, (CRASH_REP_WIN_WIDTH - 50) / 2, (CRASH_REP_WIN_HEIGHT - 30), 50, 20);
+			AddControl (pWindow, CONTROL_BUTTON, r, "Damn", 3, 0, 0);
+			
+			MmFree(pParms);
+			
+			break;
+		}
 		case EVENT_COMMAND:
 			if (parm1 == 3)
 			{
@@ -81,15 +117,22 @@ void CrashReporterFinalize(CrashInfo* pCrashInfo);
 //The argument is assumed to be a pointer to a Registers* structure.  It gets freed automatically by the task.
 void CrashReportWindow(CrashInfo* pCrashInfo)
 {
-	char string [8192];
+	CrashWinParms *pParms = MmAllocate(sizeof(CrashWinParms));
+	if (!pParms)
+	{
+		CrashReporterFinalize(pCrashInfo);
+		goto _failure;
+	}
+	
+	char* string = pParms->string1;
+	char* otherString = pParms->string2;
+	
 	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
 	
 	Process *p = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
 	
-	char otherString[512], 
-	     //anotherString[4096], 
-	     smallerString[512];
+	char smallerString[512];
 	sprintf(
 		otherString,
 		"This task has performed an illegal operation and will be shut down.\n\n"
@@ -110,13 +153,12 @@ void CrashReportWindow(CrashInfo* pCrashInfo)
 		index++;
 	}
 	
-	int winwidth = 500, winheight = 260;
+	int winwidth = CRASH_REP_WIN_WIDTH, winheight = CRASH_REP_WIN_HEIGHT;
 	
-	char winTitle[500];
-	sprintf(winTitle, "Application Execution Error - %s", pCrashInfo->m_tag);
+	sprintf(smallerString, "Application Execution Error - %s", pCrashInfo->m_tag);
 	
 	Window* pWindow = CreateWindow (
-		winTitle, 
+		smallerString, 
 		(GetScreenWidth()  - winwidth)  / 2,
 		(GetScreenHeight() - winheight) / 2,
 		winwidth,
@@ -131,30 +173,15 @@ void CrashReportWindow(CrashInfo* pCrashInfo)
 	
 	if (!pWindow)
 	{
+	_failure:
 		ILogMsg("Could not create crash report window!");
 		ILogMsg("Some task crashed, here is its register dump:");
-		ILogMsg("%s", string);
+		DumpRegisters(&pCrashInfo->m_regs);
 		return;
 	}
 	
 	pWindow->m_iconID = ICON_NANOSHELL_LETTERS;
-	
-	//add some controls to the window before handing control
-	Rectangle r;
-	RECT(r, 10, 10, 32, 32);
-	AddControl (pWindow, CONTROL_ICON, r, NULL, 1, ICON_AMBULANCE, 0);
-	
-	RECT(r, 50, 10, winwidth - 50, 100);
-	AddControl (pWindow, CONTROL_TEXTHUGE, r, NULL, 2, WINDOW_TEXT_COLOR, TEXTSTYLE_WORDWRAPPED);
-	SetHugeLabelText(pWindow, 2, otherString);
-	
-	int ylol = (winheight) / 4;
-	RECT(r, 50, ylol, winwidth - 60, (winheight-ylol-40));
-	AddControl (pWindow, CONTROL_TEXTINPUT, r, NULL, 4, 5, 0);
-	SetTextInputText(pWindow, 4, string);
-	
-	RECT(r, (winwidth - 50) / 2, (winheight - 30), 50, 20);
-	AddControl (pWindow, CONTROL_BUTTON, r, "Damn", 3, 0, 0);
+	pWindow->m_data   = pParms;
 	
 	while (HandleMessages (pWindow));
 }
