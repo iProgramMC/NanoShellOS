@@ -1609,7 +1609,7 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int pa
 	{
 		case EVENT_CREATE:
 		{
-			TextInputDataEx* pData = SlabAllocate(sizeof(TextInputDataEx));
+			TextInputDataEx* pData = MmAllocate(sizeof(TextInputDataEx));
 			memset(pData, 0, sizeof *pData);
 			this->m_dataPtr = pData;
 			
@@ -1728,7 +1728,7 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int pa
 			
 			TextInput_Clear(this);
 			
-			SlabFree(this->m_dataPtr);
+			MmFree(this->m_dataPtr);
 			break;
 		}
 		case EVENT_PAINT:

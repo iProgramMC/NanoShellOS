@@ -15,6 +15,7 @@
 #include <print.h>
 #include <memory.h>
 #include <storabs.h>
+#include <ht.h>
 
 // Counts how many buckets a hash table contains.
 #define C_EXT2_HASH_TABLE_BUCKET_COUNT (256)
@@ -289,7 +290,6 @@ enum
 typedef struct Ext2InodeCacheUnit
 {
 	uint32_t m_inodeNumber;
-	struct Ext2InodeCacheUnit *pNext, *pPrev;
 	
 	FileNode  m_node;
 	Ext2Inode m_inode;
@@ -329,11 +329,7 @@ typedef struct Ext2FileSystem
 	
 	Ext2BlockGroupDescriptor *m_pBlockGroups;
 	
-	struct 
-	{
-		Ext2InodeCacheUnit *pFirst, *pLast;
-	}
-	m_inodeHashTable [C_EXT2_HASH_TABLE_BUCKET_COUNT];
+	HashTable* m_pInodeHashTable;
 	
 	uint8_t *m_pBlockBuffer;
 	uint8_t *m_pBlockBuffer2; // Ext2GetInodeBlock uses this

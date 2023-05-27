@@ -29,7 +29,6 @@
 #include <wcall.h>
 #include <window.h>
 #include <main.h>
-#include <slab.h>
 
 // definitions we don't really want out there:
 void MbSetup(uint32_t check, uint32_t mbaddr);

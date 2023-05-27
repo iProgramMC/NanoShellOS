@@ -424,6 +424,18 @@ void Ext2UpdateLastMountedPath(Ext2FileSystem* pFS, int FreeArea)
 // note. This makes a copy, but does not preserve the inode number
 void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pFN);
 
+uint32_t FsExt2GetInodeHash(const void* key)
+{
+	return (uint32_t)key;
+}
+
+bool FsExt2KeyEquals(const void* key1, const void* key2)
+{
+	return key1 == key2;
+}
+
+void FsExt2OnErase(const void* key, void* data);
+
 void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
 	// Find a Fat32 structure in the list of Fat32 structures.
@@ -496,7 +508,8 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	SLogMsg("Mounting Ext2 partition...  Last place where it was mounted: %s", pFS->m_superBlock.m_pathVolumeLastMountedTo);
 	
 	// Initialize the inode cache array.
-	memset(pFS->m_inodeHashTable, 0, sizeof pFS->m_inodeHashTable);
+	// Note. The key "pointers" here are actually just inode numbers casted to void.
+	pFS->m_pInodeHashTable = HtCreate(FsExt2GetInodeHash, FsExt2KeyEquals, FsExt2OnErase);
 	
 	pFS->m_bMounted = true;
 	pFS->m_pBlockGroups    = NULL;

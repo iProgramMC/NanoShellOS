@@ -8,7 +8,6 @@
 //  ***************************************************************
 #include <vfs.h>
 #include <ext2.h>
-#include <slab.h>
 
 // File operations.
 uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
@@ -115,107 +114,33 @@ void Ext2FreeInodeCacheUnit(Ext2InodeCacheUnit* pUnit)
 		pUnit->m_pBlockBuffer = NULL;
 	}
 	
-	SlabFree(pUnit);
+	MmFree(pUnit);
 }
 
-//quick and dirty hash function. Not cryptographically secure or anything, but good enough for a hash table
-//This is in the range [0 - C_EXT2_HASH_TABLE_BUCKET_COUNT)
-static ALWAYS_INLINE uint32_t Ext2GetInodeHash(uint32_t inodeNumber)
+void FsExt2OnErase(UNUSED const void* key, void* data)
 {
-	return inodeNumber % C_EXT2_HASH_TABLE_BUCKET_COUNT;
+	Ext2InodeCacheUnit* pToFree = data;
+	
+	ASSERT((uint32_t)key == pToFree->m_inodeNumber);
+	
+	Ext2FreeInodeCacheUnit(pToFree);
 }
 
 Ext2InodeCacheUnit* Ext2LookUpInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 {
-	uint32_t hash = Ext2GetInodeHash(inodeNo);
+	Ext2InodeCacheUnit* pUnit = HtLookUp(pFS->m_pInodeHashTable, (void*)inodeNo);
 	
-	Ext2InodeCacheUnit* pUnit = pFS->m_inodeHashTable[hash].pFirst;
-	
-	while (pUnit)
-	{
-		if (pUnit->m_inodeNumber == inodeNo)
-			return pUnit;
-		
-		pUnit = pUnit->pNext;
-	}
-	
-	return NULL;
+	return pUnit;
 }
 
 void Ext2AddInodeCacheUnitToCache(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pUnit)
 {
-	uint32_t hash = Ext2GetInodeHash(pUnit->m_inodeNumber);
-	
-	// Append to the last. If this hash bucket doesn't have a 'last', it also doesn't have a 'first',
-	// so set this unit as the last AND first of this hash bucket.
-	if (pFS->m_inodeHashTable[hash].pLast)
-	{
-		pUnit->pPrev = pFS->m_inodeHashTable[hash].pLast;
-		pUnit->pNext = NULL;
-		pFS->m_inodeHashTable[hash].pLast->pNext = pUnit;
-		pFS->m_inodeHashTable[hash].pLast        = pUnit;
-	}
-	else
-	{
-		pFS->m_inodeHashTable[hash].pLast = pFS->m_inodeHashTable[hash].pFirst = pUnit;
-		pUnit->pPrev = pUnit->pNext = NULL;
-	}
+	HtSet(pFS->m_pInodeHashTable, (void*)pUnit->m_inodeNumber, pUnit);
 }
 
 void Ext2RemoveInodeCacheUnit(Ext2FileSystem* pFS, uint32_t inodeNo)
 {
-	uint32_t hash = Ext2GetInodeHash(inodeNo);
-	
-	// if we're both the first and last
-	if (pFS->m_inodeHashTable[hash].pFirst->m_inodeNumber == inodeNo && pFS->m_inodeHashTable[hash].pFirst == pFS->m_inodeHashTable[hash].pLast)
-	{
-		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pFirst;
-		pFS->m_inodeHashTable[hash].pFirst = pFS->m_inodeHashTable[hash].pLast = NULL;
-		
-		Ext2FreeInodeCacheUnit(pToFree);
-		return;
-	}
-	
-	// if we are the first and not the last, we're bound to have a 'next'
-	if (pFS->m_inodeHashTable[hash].pFirst->m_inodeNumber == inodeNo)
-	{
-		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pFirst;
-		
-		pFS->m_inodeHashTable[hash].pFirst = pToFree->pNext;
-		pFS->m_inodeHashTable[hash].pFirst->pPrev = NULL;
-		
-		Ext2FreeInodeCacheUnit(pToFree);
-		return;
-	}
-	
-	// if we are the last and not the first, we're bound to have a 'prev'
-	if (pFS->m_inodeHashTable[hash].pLast->m_inodeNumber == inodeNo)
-	{
-		Ext2InodeCacheUnit* pToFree = pFS->m_inodeHashTable[hash].pLast;
-		
-		pFS->m_inodeHashTable[hash].pLast = pToFree->pPrev;
-		pFS->m_inodeHashTable[hash].pLast->pNext = NULL;
-		
-		Ext2FreeInodeCacheUnit(pToFree);
-		return;
-	}
-	
-	// we have both a pPrev and a pNext -- only pFirst and pLast don't.
-	Ext2InodeCacheUnit* pUnit = pFS->m_inodeHashTable[hash].pFirst;
-	
-	while (pUnit)
-	{
-		if (pUnit->m_inodeNumber == inodeNo)
-		{
-			pUnit->pPrev->pNext = pUnit->pNext;
-			pUnit->pNext->pPrev = pUnit->pPrev;
-			
-			Ext2FreeInodeCacheUnit(pUnit);
-			return;
-		}
-		
-		pUnit = pUnit->pNext;
-	}
+	HtErase(pFS->m_pInodeHashTable, (void*)inodeNo);
 }
 
 // Adds an inode to the binary search tree.
@@ -223,7 +148,7 @@ Ext2InodeCacheUnit* Ext2AddInodeToCache(Ext2FileSystem* pFS, uint32_t inodeNo, E
 {
 	//SLogMsg("sizeof = %d", sizeof(Ext2InodeCacheUnit));
 	// Create a new inode cache unit:
-	Ext2InodeCacheUnit* pUnit = SlabAllocate(sizeof(Ext2InodeCacheUnit));
+	Ext2InodeCacheUnit* pUnit = MmAllocate(sizeof(Ext2InodeCacheUnit));
 	memset(pUnit, 0, sizeof(Ext2InodeCacheUnit));
 	
 	// Set its inode number.

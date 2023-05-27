@@ -99,7 +99,7 @@ void WmMenuDeInitializeChild(MenuBarTreeItem *this)
 
 MenuBarData* WmCreateMenuBar()
 {
-	MenuBarData* pData = SlabAllocate(sizeof(MenuBarData));
+	MenuBarData* pData = MmAllocate(sizeof(MenuBarData));
 	if (!pData) return NULL;
 	
 	memset(pData, 0, sizeof (*pData));
@@ -113,5 +113,5 @@ void WmDeleteMenuBar(MenuBarData* pData)
 {
 	WmMenuDeInitializeChild(&pData->m_root);
 	
-	SlabFree(pData);
+	MmFree(pData);
 }
