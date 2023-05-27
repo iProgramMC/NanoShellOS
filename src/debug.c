@@ -332,8 +332,6 @@ void KeInterruptSanityCheck()
 
 bool KeCheckInterruptsDisabled()
 {
-	//KeInterruptSanityCheck();
-	
 	return !g_bAreInterruptsEnabled;
 }
 

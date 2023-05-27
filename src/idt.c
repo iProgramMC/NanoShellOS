@@ -112,6 +112,9 @@ void PerformBeep()
 bool      g_killedTaskBecauseOfException = false;
 
 CrashInfo g_taskKilledCrashInfo;
+
+void CrashInfoAdd(CrashInfo* pInfo);
+
 bool g_hasAlreadyThrownException = false;
 bool g_hasAlreadyThrownException1 = false;
 
@@ -159,65 +162,59 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 	//If we're running a task:
 	if (KeGetRunningTask() != NULL)
 	{
-		if (!g_hasAlreadyThrownException1)
+		CrashInfo crashInfo;
+		
+		memset(
+			crashInfo.m_stackTrace,
+			0,
+			sizeof (crashInfo.m_stackTrace)
+		);
+		
+		g_killedTaskBecauseOfException = true;
+		crashInfo.m_pTaskKilled = KeGetRunningTask();
+		crashInfo.m_regs        = *pRegs;
+		crashInfo.m_nErrorCode  = code;
+		
+		strncpy (crashInfo.m_tag, KeGetRunningTask()->m_tag, sizeof crashInfo.m_tag);
+		crashInfo.m_tag[sizeof crashInfo.m_tag - 1] = 0;
+		
+		if (strlen (crashInfo.m_tag) == 0)
+			strcpy (crashInfo.m_tag, "Unnamed task");
+		
+		if (KeGetRunningTask()->m_pProcess)
 		{
-			g_hasAlreadyThrownException1 = true;
-			
-			memset(
-				g_taskKilledCrashInfo.m_stackTrace,
-				0,
-				sizeof (g_taskKilledCrashInfo.m_stackTrace)
-			);
-			
-			//If the task was not using the kernel heap, dispose of its heap.
-			/*if (KeGetRunningTask()->m_pCurrentHeap != NULL)
-			{
-				//FreeHeap switches to the kernel heap after its done freeing everything.
-				FreeHeap (KeGetRunningTask()->m_pCurrentHeap);
-			}*/
-			
-			g_killedTaskBecauseOfException = true;
-			g_taskKilledCrashInfo.m_pTaskKilled = KeGetRunningTask();
-			g_taskKilledCrashInfo.m_regs        = *pRegs;
-			g_taskKilledCrashInfo.m_nErrorCode  = code;
-			
-			strcpy (g_taskKilledCrashInfo.m_tag, KeGetRunningTask()->m_tag);
-			if (strlen (g_taskKilledCrashInfo.m_tag) == 0)
-			{
-				strcpy (g_taskKilledCrashInfo.m_tag, "Generic task");
-			}
-			
-			if (KeGetRunningTask()->m_pProcess)
-			{
-				strcpy (g_taskKilledCrashInfo.m_tag, ((Process*)KeGetRunningTask()->m_pProcess)->sIdentifier);
-			}
-			
-			//Just kill the process
-			// Mark the process to be killed eventually
-			KeGetRunningTask()->m_bSuspended = true;
-			KeGetRunningTask()->m_suspensionType = SUSPENSION_TOTAL;
-			
-			if (ExGetRunningProc())
-				ExGetRunningProc()->bWaitingForCrashAck = true;
-			
-			//Get the stacktrace too
-			StackFrame* stk = (StackFrame*)(pRegs->ebp);
-			int sttri = 0;
-			g_taskKilledCrashInfo.m_stackTrace[sttri++] = pRegs->eip;
-			
-			for (unsigned int frame = 0; stk && frame < 50; frame++)
-			{
-				g_taskKilledCrashInfo.m_stackTrace[sttri++] = stk->eip;
-				stk = stk->ebp;
-			}
-			
-			//Let a task switch come in
-			KeOnExitInterrupt();
-			__asm__("sti");
-			
-			// Wait for a switch
-			while (1) hlt;
+			strncpy(crashInfo.m_tag, ((Process*)KeGetRunningTask()->m_pProcess)->sIdentifier, sizeof crashInfo.m_tag);
+			crashInfo.m_tag[sizeof crashInfo.m_tag - 1] = 0;
 		}
+		
+		//Just kill the process
+		// Mark the process to be killed eventually
+		KeGetRunningTask()->m_bSuspended = true;
+		KeGetRunningTask()->m_suspensionType = SUSPENSION_TOTAL;
+		
+		if (ExGetRunningProc())
+			ExGetRunningProc()->bWaitingForCrashAck = true;
+		
+		//Get the stacktrace too
+		StackFrame* stk = (StackFrame*)(pRegs->ebp);
+		int sttri = 0;
+		crashInfo.m_stackTrace[sttri++] = pRegs->eip;
+		
+		for (unsigned int frame = 0; stk && frame < 50; frame++)
+		{
+			crashInfo.m_stackTrace[sttri++] = stk->eip;
+			stk = stk->ebp;
+		}
+		
+		// Submit this info to our crash service
+		CrashInfoAdd(&crashInfo);
+		
+		//Let a task switch come in
+		KeOnExitInterrupt();
+		__asm__("sti");
+		
+		// Wait for a switch
+		while (1) hlt;
 	}
 	
 	//kernel task or a task crashing baaaadly

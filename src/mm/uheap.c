@@ -565,6 +565,12 @@ void MuiUseHeap (UserHeap* pHeap)
 	
 	if (!pHeap) return;
 	
+	if (!pHeap->m_nPageDirectory)
+	{
+		SLogMsg("ERROR: pHeap->m_nPageDirectory is 0! We're about to triple fault!!");
+		KeStopSystem();
+	}
+	
 	MmUsePageDirectory((uintptr_t)pHeap->m_nPageDirectory);
 }
 

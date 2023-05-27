@@ -4,17 +4,59 @@
 
          Problem Reporting applet
 ******************************************/
-#include <wbuiltin.h>
-#include <task.h>
-#include <process.h>
-#include <debug.h>
 #include <idt.h>
 #include <elf.h>
-#include <vfs.h>
+#include <icon.h>
+#include <print.h>
+#include <string.h>
+#include <window.h>
+#include <widget.h>
+#include "../mm/memoryi.h"
 
-bool KeDidATaskCrash();
-void KeAcknowledgeTaskCrash();//sigh.
-CrashInfo* KeGetCrashedTaskInfo();
+extern bool g_windowManagerRunning;
+CrashInfo *g_AEEQueueFirst, *g_AEEQueueLast;
+
+int g_CrashInfoKey;
+
+// This "key" is used in WaitObject to let the task handler know that we need
+// to wait for a crash.
+
+int* CrashInfoGetKey()
+{
+	return &g_CrashInfoKey;
+}
+
+void CrashInfoAdd(CrashInfo* pInfo)
+{
+	CrashInfo* pMem = MhAllocate(sizeof *pMem, NULL);
+	*pMem = *pInfo;
+	pMem->m_next = NULL;
+	
+	// append to end
+	if (g_AEEQueueLast)
+		g_AEEQueueLast->m_next = pMem;
+	
+	g_AEEQueueLast = pMem;
+	
+	if (!g_AEEQueueFirst)
+		g_AEEQueueFirst = pMem;
+	
+	KeUnsuspendTasksWaitingForObject(CrashInfoGetKey());
+}
+
+CrashInfo* CrashInfoPop()
+{
+	CrashInfo *pPopped = g_AEEQueueFirst;
+	
+	if (!pPopped)
+		return pPopped;
+	
+	g_AEEQueueFirst = g_AEEQueueFirst->m_next;
+	if (!g_AEEQueueFirst)
+		g_AEEQueueLast = NULL;
+	
+	return pPopped;
+}
 
 void CALLBACK CrashReportWndProc( Window* pWindow, int messageType, int parm1, int parm2 )
 {
@@ -33,11 +75,12 @@ void CALLBACK CrashReportWndProc( Window* pWindow, int messageType, int parm1, i
 }
 
 const char* GetBugCheckReasonText(BugCheckReason reason);
+
+void CrashReporterFinalize(CrashInfo* pCrashInfo);
+
 //The argument is assumed to be a pointer to a Registers* structure.  It gets freed automatically by the task.
-void CrashReportWindow( int argument )
+void CrashReportWindow(CrashInfo* pCrashInfo)
 {
-	CrashInfo* pCrashInfo = (CrashInfo*)argument;
-	
 	char string [8192];
 	string[0] = 0;
 	DumpRegistersToString (string, &pCrashInfo->m_regs);
@@ -82,6 +125,8 @@ void CrashReportWindow( int argument )
 		WF_NOMINIMZ
 	);
 	
+	CrashReporterFinalize(pCrashInfo);
+	
 	MmFree (pCrashInfo);
 	
 	if (!pWindow)
@@ -114,106 +159,87 @@ void CrashReportWindow( int argument )
 	while (HandleMessages (pWindow));
 }
 
-void WmOnTaskCrashed(Task *pTask);
-
-void CrashReporterCheck()
+void CrashReporterFinalize(CrashInfo* pCrashInfo)
 {
-	if (KeDidATaskCrash())
-	{
-		// A task died? Call the ambulance!!!
-		cli;
-		CrashInfo crashInfo = *KeGetCrashedTaskInfo();
-		sti;
-		
-		// Allocate the registers so we can pass them onto the new task.
-		CrashInfo* pCrashInfo = MmAllocate (sizeof (CrashInfo));
-		
-		if (!pCrashInfo)
-		{
-			ILogMsg("Could not create crash report task.");
-			ILogMsg("Some task crashed, here is its register dump:");
-			DumpRegisters(&crashInfo.m_regs);
-			return;
-		}
-		
-		memcpy (pCrashInfo, &crashInfo, sizeof(CrashInfo));
-		
-		// Let the kernel know that we have processed its crash report.
-		KeAcknowledgeTaskCrash();
-		
-		// Create a CrashReportWindow instance.
-		int error_code = 0;
-		Task *pTask = KeStartTask (CrashReportWindow, (int)pCrashInfo, &error_code);
-		
-		if (!pTask)
-		{
-			ILogMsg("Could not create crash report task.");
-			ILogMsg("Some task crashed, here is its register dump:");
-			DumpRegisters(&pCrashInfo->m_regs);
-			MmFree(pCrashInfo);
-		}
-		else
-		{
-			KeUnsuspendTask(pTask);
-			KeDetachTask(pTask);
-		}
-		
-		// Kill the process
-		if (crashInfo.m_pTaskKilled->m_pProcess)
-		{
-			Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
-			p->bWaitingForCrashAck = false;
-			ExKillProcess(p);
-		}
-		else
-		{
-			// Just kill the task.
-			KeKillTask(crashInfo.m_pTaskKilled);
-		}
-	}
+	if (!pCrashInfo->m_pTaskKilled) return;
 	
-	// Check for low memory
+	// Kill the process, which also includes our task
+	Process* pProc = pCrashInfo->m_pTaskKilled->m_pProcess;
+	if (pProc)
+	{
+		pProc->bWaitingForCrashAck = false;
+		ExKillProcess(pProc);
+	}
+	else
+	{
+		// Just kill the task.
+		KeKillTask(pCrashInfo->m_pTaskKilled);
+	}
 }
 
-extern bool g_windowManagerRunning;
-extern Task *g_pWindowMgrTask;
-
-void CrashReporterCheckNoWindow()
+void CrashReporterProcessCrash(CrashInfo* pCrashInfo)
 {
-	if (KeDidATaskCrash())
+	if (!g_windowManagerRunning)
 	{
-		// OMG! A task died? Call the ambulance!!!
-		
-		// Allocate the registers so we can pass them onto the new task.
-		CrashInfo* pCrashInfo, crashInfo = *KeGetCrashedTaskInfo();
-		
-		if (crashInfo.m_pTaskKilled != g_pWindowMgrTask)
-		{
-			if (g_windowManagerRunning) return;
-		}
-		
-		pCrashInfo = &crashInfo;
-		
-		// Let the kernel know that we have processed its crash report.
-		KeAcknowledgeTaskCrash();
-		
-		// Print the crash output
+		// If the window manager isn't running currently, simply log the crash to the screen.
 		ILogMsg("Task %x (tag: '%s') has crashed, here're its details:", pCrashInfo->m_pTaskKilled, pCrashInfo->m_tag);
-		Process *p = (Process*)crashInfo.m_pTaskKilled->m_pProcess;
-		KeLogExceptionDetails(BC_EX_DEBUG, &pCrashInfo->m_regs, crashInfo.m_pTaskKilled->m_pProcess);
 		
-		// Kill the process
-		if (crashInfo.m_pTaskKilled->m_pProcess)
-		{
-			p->bWaitingForCrashAck = false;
-			ExKillProcess(p);
-		}
-		else
-		{
-			// Just kill the task.
-			KeKillTask(crashInfo.m_pTaskKilled);
-		}
+		Process *pProc = (Process*)pCrashInfo->m_pTaskKilled->m_pProcess;
+		
+		KeLogExceptionDetails(pCrashInfo->m_nErrorCode, &pCrashInfo->m_regs, pProc);
+		
+		CrashReporterFinalize(pCrashInfo);
+	}
+	else
+	{
+		// Create a crash report window.
+		CrashReportWindow(pCrashInfo);
 	}
 	
-	// Check for low memory
+}
+
+void CrashReporterTask(UNUSED int arg)
+{
+	CrashInfo* pInfo = NULL;
+	
+	while (true)
+	{
+		// clear interrupts to avoid a race condition where a crash could come in
+		// while we check....
+		cli;
+		
+		pInfo = CrashInfoPop();
+		
+		if (!pInfo)
+		{
+			// this turns on interrupts again
+			WaitObject(CrashInfoGetKey());
+			continue;
+		}
+		
+		sti;
+		
+		// we have a crash. Process it!
+		CrashReporterProcessCrash(pInfo);
+		
+		// and free it:
+		MmFree(pInfo);
+	}
+}
+
+void CrashReporterInit()
+{
+	// Launch a task to watch for crashes.
+	int errCode = 0;
+	Task* pTask = KeStartTask(CrashReporterTask, 0, &errCode);
+	if (!pTask)
+	{
+		LogMsg("Error: cannot spawn crash reporter task: %x", errCode);
+		KeStopSystem();
+	}
+	
+	KeTaskAssignTag(pTask, "CrashReporter");
+	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
+	
 }

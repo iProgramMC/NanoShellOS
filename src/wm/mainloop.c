@@ -340,7 +340,6 @@ void WindowManagerTask(__attribute__((unused)) int useless_argument)
 		
 		bool handled = false;
 		UpdateFPSCounter();
-		CrashReporterCheck();
 		bool updated = false;
 		
 		KeUnsuspendTasksWaitingForWM();

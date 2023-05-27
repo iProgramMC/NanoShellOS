@@ -54,6 +54,7 @@ void CrashReporterCheckNoWindow();
 void KiLaunch(TaskedFunction func);
 bool KiEmergencyMode();
 void KiInitializeSlabs();
+void CrashReporterInit();
 
 static int s_stopwatchStart;
 
@@ -155,13 +156,14 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	ShellInit();
 	//TestFontInit();
 	SLogMsg("System ready to roll!");
+	
 	if (KiEmergencyMode())
 		KiLaunch(ShellRun);
 	else
 		KiLaunch(WindowManagerTask);
+	
+	CrashReporterInit();
+	
 	while (true)
-	{
-		CrashReporterCheckNoWindow();
 		hlt;
-	}
 }

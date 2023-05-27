@@ -28,8 +28,10 @@ typedef struct
 __attribute__((packed))
 IdtPointer;
 
-typedef struct
+typedef struct CrashInfo
 {
+	struct CrashInfo* m_next;
+	
 	Registers m_regs;
 	Task*     m_pTaskKilled;
 	uint32_t  m_nErrorCode;
