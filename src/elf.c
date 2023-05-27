@@ -403,7 +403,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 				size_t   nTableSize  = pSectHeader->m_shSize;
 				
 				// allocate the symbol table
-				void *pTableMem = MmAllocate(nTableSize);
+				void *pTableMem = MmAllocatePhy(nTableSize, ALLOCATE_BUT_DONT_WRITE_PHYS);
 				
 				// copy the contents from the ELF data
 				memcpy(pTableMem, pTableStart, nTableSize);
@@ -427,7 +427,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 				size_t   nTableSize  = pSectHeader->m_shSize;
 				
 				// allocate the symbol table
-				void *pTableMem = MmAllocate(nTableSize);
+				void *pTableMem = MmAllocatePhy(nTableSize, ALLOCATE_BUT_DONT_WRITE_PHYS);
 				
 				// copy the contents from the ELF data
 				memcpy(pTableMem, pTableStart, nTableSize);
