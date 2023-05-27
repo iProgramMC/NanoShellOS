@@ -11,7 +11,6 @@
 #include <icon.h>
 #include <task.h>
 #include <misc.h>
-#include "mm/memoryi.h"
 
 #define VISIBLE_DRAW_BORDER_THICKNESS 1
 
@@ -1961,6 +1960,7 @@ bool BgaChangeScreenResolution(int xSize, int ySize)
 	BgaWriteRegister(VBE_DISPI_INDEX_ENABLE, VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED | VBE_DISPI_NOCLEARMEM);
 	return true;
 }
+void* MmAllocateInternal(size_t size, uint32_t* physAddresses, bool bInterruptsEnabled);
 bool VidChangeScreenResolution(int xSize, int ySize)
 {
 	if (!g_IsBGADevicePresent)
@@ -1986,6 +1986,8 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 			return false;
 		}
 		
+		cli;
+		
 		//Assume that everything went ok, and set our main screen VBE data to have that:
 		g_mainScreenVBEData.m_version   = VBEDATA_VERSION_1;
 		g_mainScreenVBEData.m_width     = xSize;
@@ -2000,9 +2002,11 @@ bool VidChangeScreenResolution(int xSize, int ySize)
 		//if  we have a g_framebufferCopy allocated yet, free it and replace it with something new:
 		if (g_framebufferCopy)
 		{
-			MmFree(g_framebufferCopy);
+			MmFreeID(g_framebufferCopy);
 		}
-		g_framebufferCopy = (uint32_t*)MhAllocate(xSize * ySize * 32, NULL);
+		g_framebufferCopy = (uint32_t*)MmAllocateInternal(xSize * ySize * 32, ALLOCATE_BUT_DONT_WRITE_PHYS, false);
+		
+		sti;
 		
 		return true;
 	}
@@ -2059,7 +2063,7 @@ void VidInit()
 		void *final_address = MhMapPhysicalMemory(pointer, MAX_VIDEO_PAGES, true);
 		
 		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
-		g_framebufferCopy = MhAllocate (p, ALLOCATE_BUT_DONT_WRITE_PHYS);
+		g_framebufferCopy = MmAllocateInternal(p, ALLOCATE_BUT_DONT_WRITE_PHYS, false);
 		
 		// initialize the VBE data:
 		VidInitializeVBEData (pInfo, final_address);

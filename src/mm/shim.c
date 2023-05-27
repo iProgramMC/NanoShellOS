@@ -107,47 +107,53 @@ static bool MmIsPartOfSlab(void* ptr)
 	return ((uintptr_t)ptr & 0xFFF) != 0;
 }
 
-void* MmAllocatePhy (size_t size, uint32_t* physAddresses)
+void* MmAllocateInternal(size_t size, uint32_t* physAddresses, bool bInterruptsEnabled)
 {
-	KeVerifyInterruptsEnabled;
+	if (bInterruptsEnabled)
+	{
+		KeVerifyInterruptsEnabled;
+		cli;
+	}
 	
-	// I use this to find and track down leaks in the kernel heap
-	//SLogMsg("%x <== MmAllocatePhyD   %p", pMem, __builtin_return_address(0));
-	
-	// if we don't want a physical address, and the size is less than 1024:
+	void *pMem = NULL;
 	if (!physAddresses && size <= 1024)
 	{
 		// rely on the slab allocator:
-		return SlabAllocate(size);
+		pMem = SlabAllocate(size);
+	}
+	else
+	{
+		pMem = MhAllocate(size, physAddresses);
 	}
 	
-	// clear interrupts - kernel heap isn't something to race on
-	cli;
-	
-	// allocate from the kernel heap
-	void *pMem = MhAllocate(size, physAddresses);
-	
-	// restore interrupts, all good
-	sti;
+	if (bInterruptsEnabled)
+		sti;
 	
 	return pMem;
 }
 
+void* MmAllocatePhy (size_t size, uint32_t* physAddresses)
+{
+	return MmAllocateInternal(size, physAddresses, true);
+}
+
 void* MmAllocate(size_t size)
 {
-	return MmAllocatePhy(size, NULL);
+	return MmAllocateInternal(size, NULL, true);
 }
 
 void* MmAllocateK(size_t size)
 {
-	return MmAllocatePhy(size, NULL);
+	return MmAllocateInternal(size, NULL, true);
 }
 
-void* MmReAllocate(void *oldPtr, size_t newSize)
+void* MmAllocateID(size_t size)
 {
-	// TODO: Make this go through the user heap too.
-	KeVerifyInterruptsEnabled;
-	
+	return MmAllocateInternal(size, NULL, false);
+}
+
+void* MmReAllocateID(void *oldPtr, size_t newSize)
+{
 	if (MmIsPartOfSlab(oldPtr))
 	{
 		int slabSize = SlabGetSize(oldPtr);
@@ -157,15 +163,28 @@ void* MmReAllocate(void *oldPtr, size_t newSize)
 			return oldPtr;
 		
 		// I think it's fine if we just copy:
-		void* pNewMem = MmAllocate(newSize);
+		void* pNewMem = MmAllocateInternal(newSize, NULL, false);
+		
 		memcpy(pNewMem, oldPtr, slabSize);
+		
 		SlabFree(oldPtr);
+		
 		return pNewMem;
 	}
+	else
+	{
+		return MhReAllocate(oldPtr, newSize);
+	}
+}
+
+void* MmReAllocate(void *oldPtr, size_t newSize)
+{
+	KeVerifyInterruptsEnabled;
 	
 	cli;
-	void *pMem = MhReAllocate(oldPtr, newSize);
+	void* pMem = MmReAllocateID(oldPtr, newSize);
 	sti;
+	
 	return pMem;
 }
 
@@ -188,6 +207,14 @@ void MmFreePage(void *pAddr)
 	sti;
 }
 
+void MmFreeID(void *pAddr)
+{
+	if (MmIsPartOfSlab(pAddr))
+		SlabFree(pAddr);
+	else
+		MhFree(pAddr);
+}
+
 void MmFree(void *pAddr)
 {
 	KeVerifyInterruptsEnabled;
@@ -196,13 +223,8 @@ void MmFree(void *pAddr)
 	//SLogMsg("%x => MhFree", pAddr);
 	//PrintBackTrace(KeGetEBP(), KeGetEIP(), "bruh", NULL, false);
 	
-	if (MmIsPartOfSlab(pAddr))
-		return SlabFree(pAddr);
-	
 	cli;
-	
-	MhFree(pAddr);
-	
+	MmFreeID(pAddr);
 	sti;
 }
 

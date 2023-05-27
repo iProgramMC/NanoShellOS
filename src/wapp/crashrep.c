@@ -11,7 +11,6 @@
 #include <string.h>
 #include <window.h>
 #include <widget.h>
-#include "../mm/memoryi.h"
 
 extern bool g_windowManagerRunning;
 CrashInfo *g_AEEQueueFirst, *g_AEEQueueLast;
@@ -28,7 +27,7 @@ int* CrashInfoGetKey()
 
 void CrashInfoAdd(CrashInfo* pInfo)
 {
-	CrashInfo* pMem = MhAllocate(sizeof *pMem, NULL);
+	CrashInfo* pMem = MmAllocateID(sizeof *pMem);
 	*pMem = *pInfo;
 	pMem->m_next = NULL;
 	

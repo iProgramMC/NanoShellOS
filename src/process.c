@@ -6,7 +6,6 @@
 ******************************************/
 #include <process.h>
 #include <time.h>
-#include "mm/memoryi.h"
 
 // note: Process ID 0 is no longer used.
 
@@ -52,7 +51,7 @@ void ExDisposeProcess(Process *pProc)
 	
 	if (pProc->sResourceTable.m_pResources)
 	{
-		MhFree(pProc->sResourceTable.m_pResources);
+		MmFreeID(pProc->sResourceTable.m_pResources);
 	}
 	
 	// Release the cursors we've uploaded...
@@ -66,7 +65,7 @@ void ExDisposeProcess(Process *pProc)
 	pProc->bActive = false;
 	
 	// Free the tasks array.
-	MhFree(pProc->sTasks);
+	MmFreeID(pProc->sTasks);
 	
 	// If there are any tasks waiting for us to terminate, unsuspend those now
 	KeUnsuspendTasksWaitingForProc(pProc);
@@ -74,13 +73,13 @@ void ExDisposeProcess(Process *pProc)
 	// If we have a sym tab loaded:
 	if (pProc->pSymTab)
 	{
-		MhFree(pProc->pSymTab);
+		MmFreeID(pProc->pSymTab);
 		pProc->pSymTab = NULL;
 		pProc->nSymTabEntries = 0;
 	}
 	if (pProc->pStrTab)
 	{
-		MhFree(pProc->pStrTab);
+		MmFreeID(pProc->pStrTab);
 		pProc->pStrTab = NULL;
 	}
 }
@@ -166,7 +165,7 @@ bool ExAddThreadToProcess(Process* pProc, Task* pTask)
 	{
 		int newCap = pProc->nTaskCapacity * 2;
 		
-		Task** pTasksNew = MhReAllocate(pProc->sTasks, newCap * sizeof(Task*));
+		Task** pTasksNew = MmReAllocateID(pProc->sTasks, newCap * sizeof(Task*));
 		if (!pTasksNew)
 			return false;
 		
@@ -240,7 +239,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 	pProc->bAttached = true;
 	pProc->nTasks = 0;
 	pProc->nTaskCapacity = 4096 / sizeof(Task*);
-	pProc->sTasks = MhAllocate(4096, NULL);
+	pProc->sTasks = MmAllocateID(4096);
 	
 	// Create the task itself
 	Task* pTask = KeStartTaskExUnsafeD(pTaskedFunc, nParm, pErrCode, pProc, pProc->sIdentifier, "[Process]", 0);
@@ -249,7 +248,7 @@ Process* ExCreateProcess (TaskedFunction pTaskedFunc, int nParm, const char *pId
 		SLogMsg("Uh oh!");
 		
 		pProc->bActive = false;
-		MhFree(pProc->sTasks);
+		MmFreeID(pProc->sTasks);
 		pProc->sTasks = NULL;
 		pProc->nTaskCapacity = 0;
 		

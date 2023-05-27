@@ -5,7 +5,6 @@
      Window Object Management Module
 ******************************************/
 #include "wi.h"
-#include "../mm/memoryi.h"
 
 #define DIRTY_RECT_TRACK
 
@@ -626,7 +625,7 @@ void* WmCAllocate(size_t sz)
 
 void* WmCAllocateIntsDis(size_t sz)
 {
-	void* pMem = MhAllocate(sz, NULL);
+	void* pMem = MmAllocateID(sz);
 	if (!pMem) return NULL;
 	
 	memset(pMem, 0, sz);

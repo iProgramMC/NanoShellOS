@@ -7,11 +7,11 @@
 #include <elf.h>
 #include <string.h>
 #include <memory.h>
-#include "mm/memoryi.h"
 #include <vfs.h>
 #include <task.h>
 #include <process.h>
 #include <config.h>
+#include "mm/memoryi.h" // The ELF loader has legitimate reason to use memory manager's internal stuff.
 
 //#define ELF_DEBUG
 //#define ELFSYM_DEBUG
@@ -403,7 +403,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 				size_t   nTableSize  = pSectHeader->m_shSize;
 				
 				// allocate the symbol table
-				void *pTableMem = MmAllocatePhy(nTableSize, ALLOCATE_BUT_DONT_WRITE_PHYS);
+				void *pTableMem = MmAllocate(nTableSize);
 				
 				// copy the contents from the ELF data
 				memcpy(pTableMem, pTableStart, nTableSize);
@@ -427,7 +427,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 				size_t   nTableSize  = pSectHeader->m_shSize;
 				
 				// allocate the symbol table
-				void *pTableMem = MmAllocatePhy(nTableSize, ALLOCATE_BUT_DONT_WRITE_PHYS);
+				void *pTableMem = MmAllocate(nTableSize);
 				
 				// copy the contents from the ELF data
 				memcpy(pTableMem, pTableStart, nTableSize);

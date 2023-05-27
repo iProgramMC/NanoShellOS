@@ -188,8 +188,9 @@ void MmFreePage(void* pAddr);
  *
  * See: MmFree, MmReAllocate
  */
-void* MmAllocate (size_t size);
-void* MmAllocateK(size_t size);
+void* MmAllocate  (size_t size);
+void* MmAllocateK (size_t size);
+void* MmAllocateID(size_t size);
 
 /**
  * Does the same thing as MmAllocate, however, if pPhysAddrs is not NULL, or ALLOCATE_BUT_DONT_WRITE_PHYS,
@@ -207,8 +208,9 @@ void* MmAllocatePhy(size_t size, uint32_t* pPhysAddrs);
  * It may be (and is quite optimistic about optimizing it to be as such), however,
  * if it sees no option, it will move the whole block.
  */
-void* MmReAllocate (void* old_ptr, size_t size);
-void* MmReAllocateK(void* old_ptr, size_t size);
+void* MmReAllocate  (void* old_ptr, size_t size);
+void* MmReAllocateK (void* old_ptr, size_t size);
+void* MmReAllocateID(void* old_ptr, size_t size);
 
 /**
  * Frees a memory range allocated with MmAllocate. A NULL pointer is carefully ignored.
@@ -219,8 +221,9 @@ void* MmReAllocateK(void* old_ptr, size_t size);
  * So for example MmFree(MmAllocate(400)) behaves exactly the same as MmFree(MmAllocate(400)+500),
  * but not as MmFree(MmAllocate(400)+4100).
  */
-void MmFree (void* pAddr);
-void MmFreeK(void* pAddr);
+void MmFree  (void* pAddr);
+void MmFreeK (void* pAddr);
+void MmFreeID(void* pAddr);
 
 /**
  * Allocates a copy of the passed in string on the kernel heap.

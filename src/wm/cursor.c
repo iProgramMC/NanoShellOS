@@ -6,7 +6,6 @@
 ******************************************/
 #include <process.h>
 #include "wi.h"
-#include "../mm/memoryi.h"
 
 #define C_MAX_CURSOR_SLOTS (1024)
 #define C_BUILTIN_CURSOR_COUNT (CURSOR_CUSTOM + 1)
@@ -66,7 +65,7 @@ int UploadCursor(Image * pImage, int xOff, int yOff)
 	
 	int nPixels = pImage->width * pImage->height;
 	
-	uint32_t *pBuf = MhAllocate(nPixels * sizeof(uint32_t));
+	uint32_t *pBuf = MmAllocateID(nPixels * sizeof(uint32_t));
 	
 	if (!pBuf)
 	{
@@ -122,6 +121,8 @@ void ReleaseCursor(int cursorID)
 
 void ReleaseCursorsBy(Process* pProc)
 {
+	KeVerifyInterruptsDisabled;
+	
 	uint32_t* s_cursor_buffers[C_MAX_CURSOR_SLOTS];
 	int sp = 0;
 	for (int i = 0; i < C_MAX_CURSOR_SLOTS; i++)
@@ -137,7 +138,7 @@ void ReleaseCursorsBy(Process* pProc)
 	for (int i = 0; i < sp; i++)
 	{
 		if (s_cursor_buffers[i])
-			MhFree(s_cursor_buffers[i]);
+			MmFreeID(s_cursor_buffers[i]);
 	}
 }
 

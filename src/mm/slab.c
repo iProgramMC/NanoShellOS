@@ -79,6 +79,8 @@ int SlabGetSize(void* ptr)
 
 void* SlabTryAllocate(SlabContainer* pCont, SlabItem* pItem)
 {
+	KeVerifyInterruptsDisabled;
+	
 	const int itemCount = sizeof( pItem->m_data ) / pCont->m_itemSize;
 	const int bitmapSize = (itemCount + 31) / 32;
 	const int lastBmpCount = itemCount % 32;
@@ -114,21 +116,19 @@ void* SlabTryAllocate(SlabContainer* pCont, SlabItem* pItem)
 
 void* SlabAllocateByType(int type)
 {
+	KeVerifyInterruptsDisabled;
+	
 	SlabContainer* pCont = &g_Slabs[type];
-	LockAcquire(&pCont->m_lock);
 	
 	for (SlabItem* pItem = pCont->m_pFirst; pItem; pItem = pItem->m_pNext)
 	{
 		void* pThing = SlabTryAllocate(pCont, pItem);
 		if (pThing)
-		{
-			LockFree(&pCont->m_lock);
 			return pThing;
-		}
 	}
 	
 	// Add a new slab item.
-	SlabItem* pItem = MmAllocate(sizeof(SlabItem));
+	SlabItem* pItem = MmAllocateID(sizeof(SlabItem));
 	
 	ASSERT(((int)pItem & 0xFFF) == 0);
 	
@@ -145,15 +145,13 @@ void* SlabAllocateByType(int type)
 	if (pCont->m_pLast == NULL)
 		pCont->m_pLast =  pItem;
 	
-	void* pMem = SlabTryAllocate(pCont, pItem);
-	LockFree(&pCont->m_lock);
-	return pMem;
+	return SlabTryAllocate(pCont, pItem);
 }
 
 // Exposed.
 void* SlabAllocate(int size)
 {
-	KeVerifyInterruptsEnabled; // so that locks can work
+	KeVerifyInterruptsDisabled;
 	
 	int type = SlabSizeToType(size);
 	if (type < 0)
@@ -168,6 +166,8 @@ void* SlabAllocate(int size)
 
 void SlabFree(void* ptr)
 {
+	KeVerifyInterruptsDisabled;
+	
 	// get the parent slab item
 	SlabItem* pItem = (void*)((uintptr_t)ptr & ~(uintptr_t)0xFFF);
 	
@@ -176,11 +176,5 @@ void SlabFree(void* ptr)
 	
 	int dataOffsetItems = dataOffset / dataSize;
 	
-	// clear the bit for that bitmap. Requires a lock since some other thread might
-	// come in and mess with our fetch-modify-store cycle
-	LockAcquire(&pItem->m_pContainer->m_lock);
-	
 	pItem->m_bitmap[dataOffsetItems / 32] &= ~(1 << dataOffsetItems);
-	
-	LockFree(&pItem->m_pContainer->m_lock);
 }

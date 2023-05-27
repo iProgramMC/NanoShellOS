@@ -5,7 +5,6 @@
           Task Scheduler  module
 ******************************************/
 #include <task.h>
-#include "mm/memoryi.h"
 #include <process.h>
 #include <string.h>
 #include <print.h>
@@ -233,7 +232,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 {
 	Process *pProc = (Process*)pProcVoid;
 	// Pre-allocate the stack, since it depends on interrupts being on
-	void *pStack = MhAllocate(C_STACK_BYTES_PER_TASK, NULL);
+	void *pStack = MmAllocateID(C_STACK_BYTES_PER_TASK);
 	if (!pStack)
 	{
 		*pErrorCodeOut = TASK_ERROR_STACK_ALLOC_FAILED;
@@ -255,7 +254,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		
 		// Pre-free the pre-allocated stack. Don't need it lying around
 		if (pStack)
-			MhFree(pStack);
+			MmFreeID(pStack);
 		
 		return NULL;
 	}
@@ -274,7 +273,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 			{
 				*pErrorCodeOut = TASK_ERROR_CANT_ADD_TO_PROC;
 				
-				MhFree(pStack);
+				MmFreeID(pStack);
 				
 				return NULL;
 			}
@@ -491,7 +490,7 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 	{
 		if (killing && pTask->m_pStack)
 		{
-			MhFree(pTask->m_pStack);
+			MmFreeID(pTask->m_pStack);
 		}
 		pTask->m_pStack = NULL;
 		

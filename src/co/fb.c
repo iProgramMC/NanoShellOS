@@ -9,7 +9,7 @@
 #include <console.h>
 #include <video.h>
 #include <string.h>
-#include "../mm/memoryi.h"
+#include <memory.h>
 
 #define USE_SHIFT_SCREEN 1
 
@@ -124,7 +124,7 @@ void CoVbeInit(Console *this)
 	if (!bIntsDisabled)
 		cli;
 	
-	this->textBuffer = MhAllocate(sizeof(short) * this->width * this->height, NULL);
+	this->textBuffer = MmAllocateID(sizeof(short) * this->width * this->height);
 	if (!this->textBuffer)
 	{
 		VidTextOut("ERROR: Could not initialize fullscreen console. :^(", 0, 0, 0xFFFFFF, 0x000000);
