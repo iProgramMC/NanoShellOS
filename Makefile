@@ -54,7 +54,6 @@ run: image
 
 clean:
 	rm -rf $(BUILD_DIR)/*
-	rm -rf fs/User/*
 
 $(KERNEL_TARGET): $(KERNEL_O_FILES)
 	@echo "Linking $@"

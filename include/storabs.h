@@ -9,6 +9,7 @@
 
 #include <main.h>
 #include <string.h>
+#include <ht.h>
 #include <pci.h>
 #include <lock.h>
 
@@ -104,8 +105,11 @@ bool StAhciIsAvailable (uint8_t did);
 
 // A cache unit can store 8 sectors' worth of information (4096 sectors)
 
+struct CacheRegister;
+
 typedef struct
 {
+	struct CacheRegister* m_pParentReg;
 	uint32_t m_lba;        //the LBA of the 8 sectors on disk (LBA + 0 -> LBA + 7)
 	uint32_t m_lastAccess; //GetTickCount() of the last access (read/write).
 	bool     m_bModified;  //if this section was ever written to during its lifetime
@@ -115,12 +119,11 @@ typedef struct
 }
 CacheUnit;
 
-typedef struct
+typedef struct CacheRegister
 {
 	bool       m_bUsed;
 	DriveID    m_driveID;
-	CacheUnit* m_pCacheUnits;
-	size_t     m_nCacheUnitCapacity, m_nCacheUnitCount;
+	HashTable* m_CacheHashTable;
 	SafeLock   m_lock;
 }
 CacheRegister;
@@ -128,10 +131,8 @@ CacheRegister;
 void StCacheInit              (CacheRegister* pReg, DriveID driveID);
 void StDebugDump              (CacheRegister* pReg);
 void StEvictLeastUsedCacheUnit(CacheRegister* pReg);
-void StEvictCacheUnit         (CacheRegister* pReg, uint32_t unit);
-int  StLookUpCacheUnit        (CacheRegister* pReg, uint32_t lba);
+CacheUnit* StLookUpCacheUnit  (CacheRegister* pReg, uint32_t lba);
 CacheUnit* StAddCacheUnit     (CacheRegister* pReg, uint32_t lba, void *pData /* = NULL */);
-CacheUnit* StGetCacheUnit     (CacheRegister* pReg, int unitNo);
 void StFlushAllCacheUnits     (CacheRegister* pReg);
 
 #endif

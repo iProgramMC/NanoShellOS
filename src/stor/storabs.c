@@ -305,10 +305,9 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 		if (lastLbaRead != (clba & ~7)  ||  !pUnit)
 		{
 			lastLbaRead  = (clba & ~7);
-			pUnit = StGetCacheUnit(pReg, StLookUpCacheUnit(pReg, clba));
+			pUnit = StLookUpCacheUnit(pReg, clba);
 			if (!pUnit)
 			{
-				//CLogMsg("caching unit %d", lastLbaRead);
 				pUnit = StAddCacheUnit(pReg, clba, NULL);
 			}
 		}
@@ -354,7 +353,7 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 		if (lastLbaRead != (clba & ~7)  ||  !pUnit)
 		{
 			lastLbaRead  = (clba & ~7);
-			pUnit = StGetCacheUnit(pReg, StLookUpCacheUnit(pReg, clba));
+			pUnit = StLookUpCacheUnit(pReg, clba);
 			if (!pUnit)
 			{
 				//CLogMsg("caching unit %d", lastLbaRead);
