@@ -44,19 +44,20 @@ DriveStatus Ext2ReadBlocks(Ext2FileSystem* pFS, uint32_t blockNo, uint32_t block
 	uint32_t lbaStart = pFS->m_lbaStart + blockNo * pFS->m_sectorsPerBlock, sectorCount = blockCount * pFS->m_sectorsPerBlock;
 	uint8_t* pMem1 = (uint8_t*)pMem;
 	
-	while (sectorCount)
+	while (sectorCount >= 255)
 	{
 		// read!
-		DriveStatus ds = StDeviceRead( lbaStart, pMem1, pFS->m_driveID, 1 );
+		DriveStatus ds = StDeviceRead( lbaStart, pMem1, pFS->m_driveID, 255 );
 		if (ds != DEVERR_SUCCESS)
 			return ds;
 		
-		lbaStart++;
-		sectorCount--;
-		pMem1 += BLOCK_SIZE;
+		lbaStart += 255;
+		sectorCount -= 255;
+		pMem1 += BLOCK_SIZE * 255;
 	}
 	
-	return DEVERR_SUCCESS;
+	// read the last blocks
+	return StDeviceRead( lbaStart, pMem1, pFS->m_driveID, sectorCount );
 }
 
 // Write a number of blocks from the file system. Use `uint8_t mem[pFS->m_blockSize * numBlocks]` or the equivalent MmAllocate to make space for its output.
