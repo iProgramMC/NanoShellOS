@@ -140,6 +140,7 @@ CrashInfo* KeGetCrashedTaskInfo()
  * Exception handlers.  They cause a bugcheck when we get 'em.
  */
 extern Console *g_currentConsole, g_debugConsole;
+extern bool g_bAreInterruptsEnabled;
 void KeOnExitInterrupt();
 
 void IsrExceptionCommon(int code, Registers* pRegs)
@@ -211,7 +212,9 @@ void IsrExceptionCommon(int code, Registers* pRegs)
 		
 		//Let a task switch come in
 		KeOnExitInterrupt();
-		__asm__("sti");
+		
+		g_bAreInterruptsEnabled = true;
+		asm("sti");
 		
 		// Wait for a switch
 		while (1) hlt;
