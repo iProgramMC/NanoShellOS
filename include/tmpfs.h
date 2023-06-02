@@ -66,7 +66,7 @@ uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, voi
 uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
 bool FsTempFileOpen(FileNode* pFileNode, bool read, bool write);
 void FsTempFileClose(FileNode* pFileNode);
-void FsTempFileEmpty(FileNode* pFileNode);
+bool FsTempFileEmpty(FileNode* pFileNode);
 
 // Directory Ops
 bool FsTempDirOpen   (FileNode* pFileNode);

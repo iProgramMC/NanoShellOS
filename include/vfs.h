@@ -52,7 +52,7 @@ typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
 typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
 typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
 typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef void            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
+typedef bool            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
 typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
 typedef int             (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
 typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);

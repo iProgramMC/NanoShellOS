@@ -364,10 +364,10 @@ void Ext2ReadFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32
 void Ext2WriteFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, const void *pMemIn);
 
 // Grow an inode by 'byHowMuch' bytes.
-void Ext2InodeExpand(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
+bool Ext2InodeExpand(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
 
 // Shrink an inode by 'byHowMuch' bytes.
-void Ext2InodeShrink(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
+bool Ext2InodeShrink(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
 
 // Allocates a single block.
 uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);

@@ -150,13 +150,15 @@ void FsCloseDir(FileNode* pNode)
 	}
 }
 
-void FsClearFile(FileNode* pNode)
+bool FsClearFile(FileNode* pNode)
 {
 	if (pNode)
 	{
 		if (pNode->EmptyFile && !pNode->m_bHasDirCallbacks)
-			pNode->EmptyFile(pNode);
+			return pNode->EmptyFile(pNode);
 	}
+	
+	return false;
 }
 
 int FsUnlinkFile(FileNode* pNode, const char* pName)
@@ -530,7 +532,10 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
 		{
-			FsClearFile(pFile);
+			if (!FsClearFile(pFile))
+			{
+				return -EACCES;
+			}
 		}
 	}
 	

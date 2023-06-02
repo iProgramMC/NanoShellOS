@@ -38,6 +38,9 @@ void FsTempFileShrink(FileNode* pFileNode, uint32_t newSize)
 	
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
 	
+	if (!pTFNode->m_bMutable)
+		return;
+	
 	uint32_t sNewCapacityPages = (newSize + PAGE_SIZE - 1) / PAGE_SIZE;
 	uint32_t sNewCapacity      = sNewCapacityPages * PAGE_SIZE;
 	
@@ -120,12 +123,17 @@ void FsTempFileClose(UNUSED FileNode* pFileNode)
 {
 }
 
-void FsTempFileEmpty(FileNode* pFileNode)
+bool FsTempFileEmpty(FileNode* pFileNode)
 {
 	// empty the file entirely.
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
 	
+	if (!pTFNode->m_bMutable)
+		return false;
+	
 	MmFree(pTFNode->m_pFileData);
 	pTFNode->m_pFileData      = NULL;
 	pTFNode->m_nFileSizePages = 0;
+	
+	return true;
 }

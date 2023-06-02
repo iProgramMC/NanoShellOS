@@ -69,7 +69,11 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 	
 	if (offset + size > pInode->m_size)
 	{
-		Ext2InodeExpand(pFS, pUnit, size - (pInode->m_size - offset));
+		// if couldn't expand...
+		if (!Ext2InodeExpand(pFS, pUnit, size - (pInode->m_size - offset)))
+		{
+			size = pInode->m_size - offset;
+		}
 	}
 	
 	if (size == 0) return 0;
@@ -83,13 +87,13 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 	return size;
 }
 
-void Ext2FileEmpty(FileNode* pNode)
+bool Ext2FileEmpty(FileNode* pNode)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	Ext2Inode* pInode = &pUnit->m_inode;
 	
-	Ext2InodeShrink(pFS, pUnit, pInode->m_size);
+	return Ext2InodeShrink(pFS, pUnit, pInode->m_size);
 }
 
 bool Ext2FileOpen(UNUSED FileNode* pNode)
