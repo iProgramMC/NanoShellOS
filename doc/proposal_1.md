@@ -15,74 +15,39 @@ Here is a list of the new function prototypes that will be changed. (The comment
 the function prototype will describe what has changed in the prototype.)
 
 ```cpp
-// Return the file descriptor into an output pointer, instead of directly.
-int FiOpen(int* pOutFD, const char* pFileName, int nOpenFlags);
+// Return an error code (negative number) if something failed.
+int FiRead(int fd, void* pBuf, size_t nBytes);
 
-// No change.
-int FiClose(int fd);
+// Return an error code (negative number) if something failed. Make the pBuf pointer const.
+int FiWrite(int fd, const void* pBuf, size_t nBytes);
 
-// Return the amount of bytes that have been read into a separate output pointer.
-int FiRead(size_t* pOutRead, int fd, void* pBuf, size_t nBytes);
-
-// Return the amount of bytes that have been written into a separate output pointer.
-int FiWrite(size_t* pOutWritten, int fd, const void* pBuf, size_t nBytes);
-
-// Return the offset in the file that the read-write head is at in a separate output pointer.
-int FiTell(int* pOutTold, int fd);
-
-// Return the size of the file in a separate output pointer.
-int FiTellSize(int* pOutToldSize, int fd);
-
-// No change.
-int FiSeek(int fd, int offset, int whence);
-
-// Return the directory descriptor into a separate output pointer.
-int FiOpenDir(int* pOutDD, const char* pFileName);
-
-// No change.
-int FiCloseDir(int dd);
-
-// Allow the user to provide their own space for directory entries.
+// Return 0 for 'successfully retrieved an entry', 1 for 'directory reached its end', or a negative number for an error code.
 int FiReadDir(DirEnt* pSpace, int dd);
 
-// No change.
-int FiSeekDir(int dd, int place);
-
-// No change.
-int FiRewindDir(int dd);
-
-// Returns the directory 'told' value in a separate output pointer.
-int FiTellDir(int* pOutTold, int dd);
-
-// Put 'pOut' first to be consistent with the style.*
-int FiStatAt(StatResult* pOut, int dd, const char* pFileName);
-
-// Put 'pOut' first.
-int FiStat(StatResult* pOut, const char* pFileName);
-
-// Put 'pOut' first.
-int FiLinkStat(StatResult* pOut, const char* pFileName);
-
-// No change.
-int FiChangeDir(const char* pFileName);
-
-// No change.
-int FiUnlinkFile(const char* pFileName);
-
-// No change.
-int FiRename(const char* pFileNameOld, const char* pFileNameNew);
-
-// No change.
-int FiMakeDir(const char* pPath);
-
-// No change.
-int FiRemoveDir(const char* pPath);
-
-// Put 'fdsOut' first. Remove the 'friendly name' as that's an outdated notion. (FileNodes no longer carry a 'name' property)
+// Put 'fdsOut' first, to be consistent with pipe2()'s definition
 int FiCreatePipe(int pFDsOut[2], int nOpenFlags);
+```
 
-// No change.
-int FiIoControl(int fd, unsigned long nRequest, void* pArg);
+An additional proposal would be to update some definitions for internal calls that file system drivers may
+provide:
+```cpp
+// Return an int instead of a uint32_t. Return an error code (negative number) if something failed.
+int FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuf, bool bBlock);
+
+// Return an error code (negative number) if something failed. Make the pBuf pointer const.
+int FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, const void* pBuf, bool bBlock);
+
+// Return an error code if a file could not be opened.
+int FsOpen (FileNode* pNode, bool bRead, bool bWrite);
+
+// Return an error code if a directory could not be opened.
+int FsOpenDir(FileNode* pNode);
+
+// Return an integer instead of echoing back the DirEnt* pointer. See FiReadDir for details.
+int FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
+
+// Return an integer, and place the file node inside of a separate FileNode* pointer.
+int FsFindDir(FileNode* pNode, const char* pName, FileNode** pOutNode);
 ```
 \* - the "style" here being that return value pointers go first, then the rest of the function arguments
 
