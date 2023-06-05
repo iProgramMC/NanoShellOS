@@ -545,6 +545,9 @@ void vprintf(const char* fmt, va_list list)
 	vfprintf(stdout, fmt, list);
 }
 
+const char* strerror(int errnum);
+int GetErrorNumber();
+
 void perror(const char* fmt, ...)
 {
 	char cr[8192];
@@ -558,6 +561,6 @@ void perror(const char* fmt, ...)
 	
 	// print the error now:
 	_I_PutString(": ");
-	_I_PutString(strerror(errno));
+	_I_PutString(strerror(GetErrorNumber()));
 	_I_PutString("\n");
 }

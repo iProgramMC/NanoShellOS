@@ -92,44 +92,63 @@ int memcmp(const void* ap, const void* bp, size_t size)
 	const char* b = (const char*) bp;
 	for (size_t i = 0; i < size; i++)
 	{
-		if (a[i] != b[i]) return a[i] - b[i];
+		if (a[i] != b[i])
+			return a[i] - b[i];
 	}
 	return 0;
 }
 
-void* memmove(void* restrict dstptr, const void* restrict srcptr, size_t size)
+void* memmove(void* dstptr, const void* srcptr, size_t size)
 {
-	uint8_t* dst = (uint8_t*) dstptr;
-	const uint8_t* src = (const uint8_t*) srcptr;
+	uint8_t* dst = dstptr;
+	const uint8_t* src = srcptr;
 	
-	//move forwards
-	if (dst < src)
+	// test for overlap
+	if (src + size > dst || dst + size > src)
 	{
-		for (size_t i = 0; i < size; i++)
-			dst[i] = src[i];
+		// overlap found. depending on the direction, copy a different way
+		if (dst < src)
+		{
+			while (size--)
+				*dst++ = *src++;
+		}
+		//move backwards
+		else
+		{
+			dst += size;
+			src += size;
+			
+			while (size--)
+				*(--dst) = *(--src);
+		}
 	}
-	//move backwards
 	else
 	{
-		for (size_t i = size; i > 0; i--)
-			dst[i-1] = src[i-1];
+		while (size--)
+			*dst++ = *src++;
 	}
 	
 	return dstptr;
 }
 
-void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size)
+void* memcpy(void* dstptr, const void* srcptr, size_t size)
 {
-	return memmove(dstptr, srcptr, size);
+	// simply copy:
+	uint8_t* dst = dstptr;
+	const uint8_t* src = srcptr;
+	
+	while (size--)
+		*dst++ = *src++;
+	
+	return dstptr;
 }
 
 void* memset(void* bufptr, int val, size_t size)
 {
-	uint8_t* buf = (uint8_t*) bufptr;
-	for (size_t i = 0; i < size; i++)
-	{
-		buf[i] = (uint8_t)val;
-	}
+	uint8_t* buf = bufptr;
+	while (size--)
+		*buf++ = val;
+	
 	return bufptr;
 }
 
@@ -196,16 +215,22 @@ long long atoll(const char* str)
 size_t strlen(const char* str) 
 {
 	size_t len = 0;
-	while (str[len])
-	{
+	while (*str++)
 		len++;
-	}
+	
 	return len;
 }
 
-void* strcpy(const char* ds, const char* ss)
+char* strcpy(char* ds, const char* ss)
 {
-	return memcpy((void*)ds, (void*)ss, strlen(ss) + 1);
+	char* dso = ds;
+	
+	while (*ss)
+	{
+		*ds++ = *ss++;
+	}
+	
+	return dso;
 }
 
 void strtolower(char* as)
@@ -252,30 +277,34 @@ void memtoupper(char* as, int w)
 	}
 }
 
-int strcmp(const char* as, const char* bs)
+int strcmp(const char* s1, const char* s2)
 {
-	size_t al = strlen(as);
-	size_t bl = strlen(bs);
-	if (al < bl)
+	while (true)
 	{
-		return -1;
+		// If we've reached the end in both cases, they're equal
+		if (!*s1 && !*s2)
+			return 0;
+		
+		// If either one of these pointers points to a null character,
+		// it's fine.
+		if (*s1 != *s2)
+			return *s1 - *s2;
+		
+		s1++, s2++;
 	}
-	else if (al > bl)
-	{
-		return 1;
-	}
-	else if (al == bl)
-	{
-		return memcmp((void*)as, (void*)bs, al + 1); // Also compare null term
-	}
-	return 0;
 }
 
 char* strcat(char* dest, const char* after)
 {
-	char* end = strlen(dest) + dest;
-	memcpy(end, after, strlen(after) + 1);
-	return dest;
+	char* destold = dest;
+	
+	// go to the end
+	while (*dest++);
+	
+	// strcpy the src string over
+	strcpy(dest, after);
+	
+	return destold;
 }
 
 char* strchr (const char* str, int c);
@@ -337,27 +366,34 @@ char *strdup (const char *pText)
 
 char * strncpy(char *dst, const char *src, size_t n)
 {
-	if (n != 0)
-	{
-		register char *d = dst;
-		register const char *s = src;
-
-		do
-		{
-			if ((*d++ = *s++) == 0)
-			{
-				// null-pad the remaining n-1 bytes
-				while (--n != 0)
-					*d++ = 0;
-				break;
-			}
-		}
-		while (--n != 0);
-	}
-	return (dst);
+	size_t i;
+	for (i = 0; i < n && src[i] != '\0'; i++)
+		dst[i] = src[i];
+	for (; i < n; i++)
+		dst[i] = '\0';
+	return dst;
 }
 
-char* itoa(int value, char* buffer, int radix)
+size_t strlcpy(char *dst, const char *src, size_t n)
+{
+	n--;
+	size_t i;
+	size_t srclen = 0;
+	for (i = 0; i < n && src[i] != '\0'; i++)
+	{
+		dst[i] = src[i];
+		srclen++;
+	}
+	dst[i] = '\0';
+	
+	// traverse the rest of src to get its length:
+	while (src[i++])
+		srclen++;
+	
+	return srclen;
+}
+
+char* ltoa(long ival, char* buffer, int radix)
 {
 	assert(radix > 1 && radix < 37);
 	const char* lut = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -365,9 +401,11 @@ char* itoa(int value, char* buffer, int radix)
 	char temp[50];
 	int i = 0;
 	
-	if (value < 0)
+	unsigned long value = (unsigned long)ival;
+	
+	if (ival < 0)
 	{
-		value = -value;
+		value = -ival;
 		*buffer++ = '-';
 	}
 	
@@ -385,9 +423,9 @@ char* itoa(int value, char* buffer, int radix)
 	return buffer;
 }
 
-char* ltoa(long value, char* buffer, int radix)
+char* itoa(int value, char* buffer, int radix)
 {
-	return itoa((int)value, buffer, radix);
+	return ltoa(value, buffer, radix);
 }
 
 static char* strchr_i(const char* s, int c, bool bReturnNulPos)
@@ -488,16 +526,130 @@ int strncmp(const char *s1, const char *s2, register size_t n)
 	return 0;
 }
 
-char * strstr (const char *s1, const char *s2)
+char* strstr(const char *haystack, const char *needle)
 {
-	const char *p = s1;
-	const size_t len = strlen (s2);
-	for (; (p = strchr (p, *s2)) != 0; p++)
+	const size_t len_nd = strlen(needle);
+	const size_t len_hs = strlen(haystack);
+	
+	if (len_nd > len_hs)
+		return NULL; // needle is too big to be in the haystack
+	
+	if (len_nd == len_hs)
 	{
-		if (strncmp (p, s2, len) == 0)
-			return (char *)p;
+		if (strcmp(haystack, needle) == 0)
+			return (char*)haystack;
+		return NULL;
 	}
-	return (0);
+	
+	const size_t len = len_hs - len_nd;
+	
+	for (size_t i = 0; i < len; i++)
+	{
+		if (strncmp(haystack + i, needle, len_nd) == 0)
+			return (char*)haystack + i;
+	}
+	
+	return NULL;
+}
+
+size_t strspn(const char* s, const char* accept)
+{
+	const uint8_t* str = (const uint8_t*)s;
+	const uint8_t* acc = (const uint8_t*)accept;
+	
+	bool lut[256]; // could be a bitset, but nah, not right now
+	memset (&lut, 0, sizeof lut);
+	while (*acc)
+	{
+		// cast to unsigned because negative indices aren't a thing
+		lut[*acc++] = 1;
+	}
+	
+	size_t matching = 0;
+	
+	while (*str)
+	{
+		if (!lut[*str])
+			return matching;
+		matching++;
+		str++;
+	}
+	
+	return matching;
+}
+
+size_t strcspn(const char* s, const char* reject)
+{
+	const uint8_t* str = (const uint8_t*)s;
+	const uint8_t* rej = (const uint8_t*)reject;
+	
+	bool lut[256]; // could be a bitset, but nah, not right now
+	memset (&lut, 0, sizeof lut);
+	while (*rej)
+	{
+		// cast to unsigned because negative indices aren't a thing
+		lut[*rej++] = 1;
+	}
+	
+	size_t matching = 0;
+	
+	while (*str)
+	{
+		if (lut[*str])
+			return matching;
+		matching++;
+		str++;
+	}
+	
+	return matching;
+}
+
+void* memchr(const void* s, int c, size_t n)
+{
+	const uint8_t* ptr = s;
+	uint8_t match = c;
+	
+	while (n--)
+	{
+		if (*ptr == match)
+			return (void*)ptr;
+		
+		ptr++;
+	}
+	
+	return NULL;
+}
+
+void* memrchr(const void* s, int c, size_t n)
+{
+	const uint8_t* ptr = s;
+	uint8_t match = c;
+	
+	ptr += n;
+	
+	while (n--)
+	{
+		ptr--;
+		
+		if (*ptr == match)
+			return (void*)ptr;
+	}
+	
+	return NULL;
+}
+
+void* rawmemchr(const void* s, int c)
+{
+	const uint8_t* ptr = s;
+	uint8_t match = c;
+	
+	while (true)
+	{
+		if (*ptr == match)
+			return (void*)ptr;
+		
+		ptr++;
+	}
 }
 
 double atof(const char *arr)
