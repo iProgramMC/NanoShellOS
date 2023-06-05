@@ -270,7 +270,7 @@ enum
 		
 		FI_OPEN_DIR_D,
 		FI_CLOSE_DIR,
-		FI_READ_DIR,
+		FI_READ_DIR_LEGACY,
 		FI_SEEK_DIR,
 		FI_REWIND_DIR,
 		FI_TELL_DIR,
@@ -393,6 +393,10 @@ enum
 		KB_GET_KEY_STATE,
 		LCK_ACQUIRE,
 		LCK_FREE,
+		
+	// System Calls V2.6
+		FI_READ_DIR,
+		FI_STAT_LINK,
 };
 
 const void *WindowCall[] = {
@@ -626,7 +630,9 @@ const void *WindowCall[] = {
 		LockAcquire,
 		LockFree,
 		
+	// System Calls V2.5 - 05/06/2023
 		FiReadDir,
+		FiLinkStat,
 };
 
 

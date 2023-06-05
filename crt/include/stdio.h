@@ -8,23 +8,23 @@
 
 // Standard C file access functions
 
-FILE*  fopen (const char* file, const char* mode);
-FILE*  fdopen(int fd, const char* mode);
-int    fclose(FILE* file);
-size_t fread (      void* ptr, size_t size, size_t nmemb, FILE* stream);
-size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream);
-int    fseek (FILE* file, int offset, int whence);
-int    ftell (FILE* file);
-int    fflush(FILE* file);
-int    fputs (const char* s, FILE* stream);
-int    fputc (int c, FILE* stream);
-int    putc  (int c, FILE* stream);
-int    feof  (FILE* file);
-int    getc  (FILE* file);
-void   rewind(FILE* file);
-int    vfprintf (FILE* file, const char* fmt, va_list list);
-int    fprintf  (FILE* file, const char* fmt, ...);
-int    vprintf  (const char* fmt, va_list list);
+FILE* fopen (const char* file, const char* mode);
+FILE* fdopen(int fd, const char* mode);
+int   fclose(FILE* file);
+int   fread (      void* ptr, size_t size, size_t nmemb, FILE* stream);
+int   fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream);
+int   fseek (FILE* file, int offset, int whence);
+int   ftell (FILE* file);
+int   fflush(FILE* file);
+int   fputs (const char* s, FILE* stream);
+int   fputc (int c, FILE* stream);
+int   putc  (int c, FILE* stream);
+int   feof  (FILE* file);
+int   getc  (FILE* file);
+void  rewind(FILE* file);
+int   vfprintf (FILE* file, const char* fmt, va_list list);
+int   fprintf  (FILE* file, const char* fmt, ...);
+int   vprintf  (const char* fmt, va_list list);
 
 // Operations on files
 int remove(const char* filename);

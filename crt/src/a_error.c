@@ -22,7 +22,8 @@ int absolute_value(int a)
 
 int SetErrorNumber(int err)
 {
-	return g_errorNum = absolute_value(err);
+	g_errorNum = absolute_value(err);
+	return -1;
 }
 
 int* GetErrorNumberPointer()

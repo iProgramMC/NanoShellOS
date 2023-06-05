@@ -21,7 +21,7 @@ Window* g_pPreviewWindow;
 
 void CALLBACK VbPreviewWindow();
 
-jmp_buf g_errorJumpBuffer;
+extern jmp_buf g_errorJumpBuffer;
 extern int g_lineNum;
 
 char g_ErrorBuffer[ERROR_BUFFER_SIZE];

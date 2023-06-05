@@ -93,8 +93,10 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 	FiRewindDir (dd);
 	
 	// scan through dir entries
-	DirEnt* pDirEnt;
-	while ((pDirEnt = FiReadDir(dd)) != NULL)
+	DirEnt ent, *pDirEnt = &ent;
+	int err = 0;
+	
+	while ((err = FiReadDir(&ent, dd)) == 0)
 	{
 		if (bareMode)
 		{
@@ -198,6 +200,11 @@ int NsMain (UNUSED int argc, UNUSED char** argv)
 			);
 		}
 		#undef THING
+	}
+	
+	if (err < 0)
+	{
+		LogMsg("ls: %s: %s", FiGetCwd(), strerror(errno));
 	}
 	
 	LogMsgNoCr("\x1B[0m");

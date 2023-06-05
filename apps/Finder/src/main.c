@@ -256,9 +256,10 @@ void ProcessOneSearchQueueItem()
 	
 	//LogMsg("Processing dir '%s'.", ptr);
 	
-	DirEnt* pDirEnt;
+	DirEnt ent, *pDirEnt = &ent;
+	int err = 0;
 	
-	while ((pDirEnt = FiReadDir(dd)))
+	while ((err = FiReadDir(&ent, dd)) == 0)
 	{
 		SetProcessingTextWithFormatting(ptr);
 		

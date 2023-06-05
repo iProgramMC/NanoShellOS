@@ -68,7 +68,7 @@ int open(const char* path, int oflag)
 	if (spot == -1)
 	{
 		SetErrorNumber(-EMFILE);
-		return -EMFILE;
+		return -1;
 	}
 	
 	// FiOpenDebug now supports custom paths...
@@ -77,7 +77,7 @@ int open(const char* path, int oflag)
 	if (fd < 0)
 	{
 		SetErrorNumber(fd);
-		return fd;
+		return -1;
 	}
 	
 	g_OpenedFileDes[spot] = fd;
@@ -88,10 +88,16 @@ int close(int spot)
 {
 	int fd = FileSpotToFileHandle(spot);
 	if (fd < 0)
-		return SetErrorNumber(-EBADF);
+	{
+		SetErrorNumber(-EBADF);
+		return -1;
+	}
 	
 	if (!_I_IsFileOpenedHere(fd))
-		return SetErrorNumber(-EBADF);
+	{
+		SetErrorNumber(-EBADF);
+		return -1;
+	}
 	
 	int rv = _I_FiClose (fd);
 	
@@ -104,7 +110,8 @@ int close(int spot)
 	return rv;
 }
 
-size_t read_stdio(void* buf, unsigned int nbyte)
+// honestly, this needs to be redone too
+int read_stdio(void* buf, unsigned int nbyte)
 {
 	char* bufchar = buf;
 	for (unsigned i = 0; i < nbyte; i++)
@@ -114,13 +121,13 @@ size_t read_stdio(void* buf, unsigned int nbyte)
 		
 		// If we got an 'end of transmission', instantly return
 		if (c == EOT)
-			return i;
+			return (int)i;
 	}
 	
 	return nbyte;
 }
 
-size_t write_stdio(const void* buf, unsigned int nbyte)
+int write_stdio(const void* buf, unsigned int nbyte)
 {
 	const char* bufchar = buf;
 	char b[2];
@@ -134,7 +141,7 @@ size_t write_stdio(const void* buf, unsigned int nbyte)
 	return nbyte;
 }
 
-size_t read(int spot, void* buf, unsigned int nbyte)
+int read(int spot, void* buf, unsigned int nbyte)
 {
 	int filedes = FileSpotToFileHandle(spot);
 	if (filedes < 0)
@@ -148,17 +155,15 @@ size_t read(int spot, void* buf, unsigned int nbyte)
 		return read_stdio(buf, nbyte);
 	}
 	
-	size_t result = _I_FiRead(filedes, buf, nbyte);
+	int result = _I_FiRead(filedes, buf, nbyte);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber(result);
 	
 	return result;
 }
 
-size_t write(int spot, const void* buf, unsigned int nbyte)
+int write(int spot, const void* buf, unsigned int nbyte)
 {
 	int filedes = FileSpotToFileHandle(spot);
 	if (filedes < 0)
@@ -172,12 +177,10 @@ size_t write(int spot, const void* buf, unsigned int nbyte)
 		return write_stdio(buf, nbyte);
 	}
 	
-	size_t result = _I_FiWrite(filedes, (void*)buf, nbyte);
+	int result = _I_FiWrite(filedes, (void*)buf, nbyte);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber((int)result);
 	
 	return result;
 }
@@ -195,10 +198,8 @@ int lseek(int spot, int offset, int whence)
 	
 	int result = _I_FiSeek(filedes, offset, whence);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber((int)result);
 	
 	return result;
 }
@@ -216,10 +217,8 @@ int tellf(int spot)
 	
 	int result = _I_FiTell(filedes);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -237,10 +236,8 @@ int tellsz(int spot)
 	
 	int result = _I_FiTellSize(filedes);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -262,10 +259,8 @@ int ioctl(int spot, unsigned long request, void * argp)
 	
 	int result = _I_FiIoControl(filedes, request, argp);
 	
-	if ((int)result < 0)
-	{
-		SetErrorNumber((int)result);
-	}
+	if (result < 0)
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -316,31 +311,34 @@ int FiCloseDir(int spot)
 				g_OpenedDirDes[i] = -1;
 		}
 	}
+	else
+		return SetErrorNumber(closeRes);
 	
 	return closeRes;
 }
 
-DirEnt* FiReadDir(int spot)
+int FiReadDir(DirEnt* space, int spot)
 {
 	int dd = DirSpotToFileHandle(spot);
 	if (dd < 0)
 	{
 		SetErrorNumber(-EBADF);
-		return NULL;
+		return -1;
 	}
 	
 	if (!_I_IsDirectoryOpenedHere(dd))
 	{
 		SetErrorNumber(-EBADF);
-		return NULL;
+		return -1;
 	}
 	
-	DirEnt* pResult = _I_FiReadDir(dd);
+	int result = _I_FiReadDir(space, dd);
 	
-	if (!pResult)
-		SetErrorNumber(0); // end of stream, I guess?
+	if (result >= 0)
+		return result;
 	
-	return pResult;
+	SetErrorNumber(result);
+	return -1;
 }
 
 int FiSeekDir(int spot, int loc)
@@ -354,7 +352,7 @@ int FiSeekDir(int spot, int loc)
 	
 	int result = _I_FiSeekDir(dd, loc);
 	if (result < 0)
-		SetErrorNumber(result);
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -370,7 +368,7 @@ int FiRewindDir(int spot)
 	
 	int result = _I_FiRewindDir(dd);
 	if (result < 0)
-		SetErrorNumber(result);
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -386,7 +384,7 @@ int FiTellDir(int spot)
 	
 	int result = _I_FiTellDir(dd);
 	if (result < 0)
-		SetErrorNumber(result);
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -402,7 +400,7 @@ int FiStatAt(int spot, const char *pfn, StatResult* pres)
 	
 	int result = _I_FiStatAt(dd, pfn, pres);
 	if (result < 0)
-		SetErrorNumber(result);
+		return SetErrorNumber(result);
 	
 	return result;
 }
@@ -411,7 +409,16 @@ int FiStat(const char *pfn, StatResult* pres)
 {
 	int result = _I_FiStat(pfn, pres);
 	if (result < 0)
-		SetErrorNumber(result);
+		return SetErrorNumber(result);
+	
+	return result;
+}
+
+int FiLinkStat(const char *pfn, StatResult* pres)
+{
+	int result = _I_FiLinkStat(pfn, pres);
+	if (result < 0)
+		return SetErrorNumber(result);
 	
 	return result;
 }

@@ -27,11 +27,10 @@ void SLogMsgNoCr(const char* fmt, ...);
 #define MAGIC_NUMBER_1_FREE (0x00000000)
 #define MAGIC_NUMBER_2_FREE (0x534F534E)
 
+#define C_MEMORY_SIZE (0x40000000)  // 1 GB. Should you need more, move gMemory down in memory (but avoid going below 0x10000000!!)
+
 // since MAGIC_NUMBER_1_FREE is zero
 #define IS_FREE(header) (!((header)->m_magicNo1))
-
-// The pointer returned by malloc(0), or realloc(X, 0), lives here.
-int gZeroByteAllocPtr;
 
 typedef struct MemAreaHeader
 {
@@ -49,10 +48,10 @@ MemAreaHeader;
 uint8_t*  gMemory = (uint8_t*)0x40000000;
 
 // The size of the memory area.
-const uintptr_t gMemorySize = 0x40000000; // 1 GB. Should you need more, move gMemory down in memory (but avoid going below 0x10000000!!)
+const uintptr_t gMemorySize = C_MEMORY_SIZE;
 
 // 262144 entries, so 512 KB. Not Bad. Stores the amount of memory allocations that use this page.
-uint16_t  gMemoryPageReference [gMemorySize / 4096];
+uint16_t  gMemoryPageReference [C_MEMORY_SIZE / 4096];
 
 MemAreaHeader *gLastHeader;
 
@@ -238,7 +237,7 @@ void MemMgrInitializeMemory()
 void* MemMgrAllocateMemory(size_t sz)
 {
 	if (sz == 0)
-		return &gZeroByteAllocPtr;
+		return NULL;
 	
 	// Pad the size to four bytes, or one double word.
 	sz = (sz + SIZE_AND_LOCATION_PADDING - 1) & ~(SIZE_AND_LOCATION_PADDING - 1);
@@ -367,7 +366,7 @@ void* MemMgrAllocateMemory(size_t sz)
 
 void MemMgrFreeMemory(void *pMem)
 {
-	if (pMem == &gZeroByteAllocPtr)
+	if (pMem == NULL)
 		return;
 	
 	// check the padding first
@@ -449,7 +448,7 @@ void MemMgrFreeMemory(void *pMem)
 /*
 void* MemMgrReAllocateMemory(void* pMem, size_t size)
 {
-	if (pMem == &gZeroByteAllocPtr)
+	if (pMem == NULL)
 		pMem = NULL;
 	
 	if (!pMem)

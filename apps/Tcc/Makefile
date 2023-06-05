@@ -14,7 +14,7 @@ LII_DIR=../../crt/include
 
 LGCC=../../tools/libgcc-i686.a
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2 -nostdinc -DNANOSHELL -DONE_SOURCE=0 -DTCC_TARGET_I386 -Wdeclaration-after-statement -fno-strict-aliasing -Wno-pointer-sign -Wno-sign-compare -Wno-unused-result
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -g -fno-exceptions -Wall -Wextra -std=c99 -mno-sse -mno-sse2 -nostdinc -DNANOSHELL -DONE_SOURCE=0 -DTCC_TARGET_I386 -fno-strict-aliasing -Wno-pointer-sign -Wno-sign-compare -Wno-unused-result
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 

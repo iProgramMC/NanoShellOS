@@ -153,10 +153,10 @@ CALL_END
 CALLI(FiClose, FI_CLOSE, int /* err code */, int fd)
 	RARGS(fd)
 CALL_END
-CALLI(FiRead, FI_READ, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+CALLI(FiRead, FI_READ, int /* num bytes read */, int fd, void* pBuf, int nBytes)
 	RARGS(fd, pBuf, nBytes)
 CALL_END
-CALLI(FiWrite, FI_WRITE, size_t /* num bytes read */, int fd, void* pBuf, int nBytes)
+CALLI(FiWrite, FI_WRITE, int /* num bytes read */, int fd, void* pBuf, int nBytes)
 	RARGS(fd, pBuf, nBytes)
 CALL_END
 CALLI(FiTell, FI_TELL, int /* num bytes into file */, int fd)
@@ -283,8 +283,8 @@ CALL_END
 CALLI(FiCloseDir, FI_CLOSE_DIR, int, int dd)
 	RARGS(dd)
 CALL_END
-CALLI(FiReadDir, FI_READ_DIR, DirEnt*, int dd)
-	RARGS(dd)
+CALLI(FiReadDir, FI_READ_DIR, int, DirEnt* p, int dd)
+	RARGS(p, dd)
 CALL_END
 CALLI(FiSeekDir, FI_SEEK_DIR, int, int dd, int loc)
 	RARGS(dd, loc)
@@ -600,4 +600,7 @@ CALL(LockFree, LCK_FREE, void, SafeLock* ptr)
 	SARGS(ptr)
 CALL_END
 
-
+// Calls V2.6
+CALLI(FiLinkStat, FI_STAT_LINK, int, const char *pfn, StatResult* pres)
+	RARGS(pfn, pres)
+CALL_END
