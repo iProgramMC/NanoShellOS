@@ -7,7 +7,7 @@
 ******************************************/
 #include <nsstandard.h>
 
-int NsMain (int argc, char** argv)
+int main(int argc, char** argv)
 {
 	LogMsg("Hello, world! Argument count: '%d'", argc);
 	

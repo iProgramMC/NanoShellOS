@@ -43,7 +43,7 @@ char* arguments_v[] = {
 	NULL
 };
 
-int NsMain(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
     myargc = argc;
     myargv = argv;

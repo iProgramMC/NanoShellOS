@@ -255,7 +255,7 @@ void CloneVbeData()
 	VidSetVbeData(g_pCloneVbeData);
 }
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	VidSetVbeData(NULL); // take over the screen
 	

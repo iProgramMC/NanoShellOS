@@ -23,7 +23,7 @@ void KillWindow(Window* pWindow)
 	while (HandleMessages(pWindow));
 }
 
-int NsMain(UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	// The form builder window
 	VbCreateMainWindow();

@@ -139,7 +139,7 @@ void OpenMainMenu()
 		CreateMainWindow();
 }
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	CreateMainWindow ();
 	if (!g_pMainWindow) return 1;

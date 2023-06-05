@@ -13,7 +13,7 @@ int EditorReadFile(const char * filename);
 
 void EditorRun();
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main(int argc, char** argv)
 {
 	if (argc < 2)
 	{

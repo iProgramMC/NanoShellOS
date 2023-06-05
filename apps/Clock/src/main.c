@@ -81,7 +81,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 	}
 }
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	int screenWidth = GetScreenSizeX(), screenHeight = GetScreenSizeY();
 	

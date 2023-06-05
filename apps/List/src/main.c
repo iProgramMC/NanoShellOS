@@ -7,7 +7,7 @@
 ******************************************/
 #include <nsstandard.h>
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main(int argc, char** argv)
 {
 	enum
 	{

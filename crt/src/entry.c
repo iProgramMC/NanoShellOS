@@ -20,7 +20,7 @@ void abort()
 
 __attribute__((noreturn)) void exit (int number);
 
-int NsMain (int argc, char** argv);
+int main(int argc, char** argv);
 void MemMgrInitializeMemory();
 
 void _I_Setup();
@@ -40,7 +40,7 @@ void _CEntry(const char* arg)
 	// No arguments? Just call with argc of 0
 	if (*arg == 0)
 	{
-		returnValue = NsMain (0, argv);
+		returnValue = main(0, argv);
 		exit (returnValue);
 	}
 	
@@ -61,7 +61,7 @@ void _CEntry(const char* arg)
 		argc--;
 	
 	// Finally call the real entry point
-	returnValue = NsMain (argc, argv);
+	returnValue = main(argc, argv);
 	exit(returnValue);
 	
 	// no return.

@@ -409,7 +409,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 	}
 }
 
-int NsMain (UNUSED int argc, UNUSED char **argv)
+int main()
 {
 	Window* pWindow = g_pMainWindow = CreateWindow ("Finder", CW_AUTOPOSITION, CW_AUTOPOSITION, FINDER_WIDTH, FINDER_HEIGHT, WndProc, WF_ALWRESIZ);
 	

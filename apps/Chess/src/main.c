@@ -581,7 +581,7 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, int parm1, int par
 
 void ChessUpdateMoveList();
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	for (int i = 2; i < 14; i++)
 	{

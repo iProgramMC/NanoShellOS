@@ -211,12 +211,8 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 	}
 }
 
-int NsMain (int argc, char** argv)
+int main()
 {
-	char fmt[100];
-	float variable_a = 6;
-	FormatFloatToString(fmt, 5.f / variable_a, 6);
-	
 	Window* pWindow = CreateWindow (
 		"Calculator",
 		300,
@@ -231,12 +227,7 @@ int NsMain (int argc, char** argv)
 	if (!pWindow)
 		return 1;
 	
-	//memset (&time, 0, sizeof(time));
-	
-	while (HandleMessages (pWindow))
-	{
-		;
-	}
+	while (HandleMessages (pWindow));
 	
 	return 0;
 }

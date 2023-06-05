@@ -537,7 +537,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 	}
 }
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main(int argc, char** argv)
 {
 	Window *pWindow = CreateWindow ("NotepadUser", CW_AUTOPOSITION, CW_AUTOPOSITION, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, WF_ALWRESIZ);
 	

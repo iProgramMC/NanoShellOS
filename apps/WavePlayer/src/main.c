@@ -474,7 +474,7 @@ void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
 	DefaultWindowProc(pWindow, msg, parm1, parm2);
 }
 
-int NsMain (UNUSED int argc, UNUSED char** argv)
+int main()
 {
 	InitSound();
 	

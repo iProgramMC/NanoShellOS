@@ -900,7 +900,7 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm
 	}
 }
 
-int NsMain (UNUSED int argc, UNUSED char **argv)
+int main()
 {
 	// create ourself a window:
 	do {

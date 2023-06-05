@@ -89,7 +89,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 	}
 }
 
-int NsMain (int argc, char** argv)
+int main()
 {
 	Window* pWindow = CreateWindow ("Chart Demo", 150, 150, CHART_WINDOW_WIDTH, CHART_WINDOW_HEIGHT, WndProc, 0);
 	

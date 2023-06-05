@@ -268,8 +268,7 @@ void usage(char * argv[]) {
 			argv[0]);
 }
 
-//we don't use main, we use NsMain.
-int NsMain(int argc, char ** argv) {
+int main(UNUSED int argc, UNUSED char ** argv) {
 
 	char *term = NULL;
 	unsigned int k;

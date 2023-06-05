@@ -125,7 +125,7 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 	}
 }
 
-int NsMain (UNUSED int argc, UNUSED char **argv)
+int main(int argc, char** argv)
 {
 	if ((*argv)[0] == 'e')
 		argv++, argc--;
