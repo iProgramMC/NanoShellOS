@@ -152,7 +152,7 @@ void Ext2FlushSuperBlock(Ext2FileSystem* pFS)
 // TODO
 // OPTIMIZE oh come on, optimize this -iProgramInCpp
 
-void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, void *pMemOut)
+int Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, void *pMemOut)
 {
 	Ext2Inode* pInode = &pCacheUnit->m_inode;
 	if (!pCacheUnit->m_pBlockBuffer)
@@ -177,6 +177,8 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 	// offsetable version
 	uint8_t* pMem = (uint8_t*)pMemOut;
 	
+	int sizeRead = 0;
+	
 	//SLogMsg("blockStart: %d  blockEnd: %d  offsetWithinStartBlock: %d  offsetWithinEndBlock: %d  offset: %d  offsetEnd: %d", blockStart,blockEnd,offsetWithinStartBlock,offsetWithinEndBlock,offset,offsetEnd);
 	
 	for (uint32_t i = blockStart; i <= blockEnd; i++)
@@ -188,7 +190,8 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			if (pCacheUnit->m_nLastBlockRead != blockIndex)
 			{
 				pCacheUnit->m_nLastBlockRead = blockIndex;
-				ASSERT(Ext2ReadBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) == DEVERR_SUCCESS);
+				if (Ext2ReadBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) != DEVERR_SUCCESS)
+					return ERR_IO_ERROR;
 			}
 		}
 		else
@@ -208,6 +211,8 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			memcpy(pMem, pCacheUnit->m_pBlockBuffer + offsetWithinStartBlock, endMin - offsetWithinStartBlock);
 			
 			pMem += (endMin - offsetWithinStartBlock);
+			
+			sizeRead += (int)(endMin - offsetWithinStartBlock);
 		}
 		// Are we at the end?
 		else if (i == blockEnd)
@@ -216,6 +221,8 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			memcpy(pMem, pCacheUnit->m_pBlockBuffer, offsetWithinEndBlock);
 			
 			pMem += offsetWithinEndBlock;
+			
+			sizeRead += offsetWithinEndBlock;
 		}
 		// Nope, read the full block.
 		else
@@ -223,11 +230,14 @@ void Ext2ReadFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, ui
 			memcpy(pMem, pCacheUnit->m_pBlockBuffer, pFS->m_blockSize);
 			
 			pMem += pFS->m_blockSize;
+			sizeRead += (int)pFS->m_blockSize;
 		}
 	}
+	
+	return sizeRead;
 }
 
-void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, const void *pMemIn)
+int Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t offset, uint32_t size, const void *pMemIn)
 {
 	Ext2Inode* pInode = &pCacheUnit->m_inode;
 	if (!pCacheUnit->m_pBlockBuffer)
@@ -249,6 +259,8 @@ void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, u
 	
 	// offsetable version
 	const uint8_t* pMem = (const uint8_t*)pMemIn;
+	
+	int sizeWritten = 0;
 	
 	for (uint32_t i = blockStart; i <= blockEnd; i++)
 	{
@@ -279,6 +291,7 @@ void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, u
 			memcpy(pCacheUnit->m_pBlockBuffer + offsetWithinStartBlock, pMem, endMin - offsetWithinStartBlock);
 			
 			pMem += (endMin - offsetWithinStartBlock);
+			sizeWritten += (int)(endMin - offsetWithinStartBlock);
 		}
 		// Are we at the end?
 		else if (i == blockEnd)
@@ -287,6 +300,7 @@ void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, u
 			memcpy(pCacheUnit->m_pBlockBuffer, pMem, offsetWithinEndBlock);
 			
 			pMem += offsetWithinEndBlock;
+			sizeWritten += offsetWithinEndBlock;
 		}
 		// Nope, read the full block.
 		else
@@ -294,14 +308,18 @@ void Ext2WriteFileSegment(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, u
 			memcpy(pCacheUnit->m_pBlockBuffer, pMem, pFS->m_blockSize);
 			
 			pMem += pFS->m_blockSize;
+			sizeWritten += (int)pFS->m_blockSize;
 		}
 		
 		// Write this block.
 		if (blockIndex)
 		{
-			ASSERT(Ext2WriteBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) == DEVERR_SUCCESS);
+			if (Ext2WriteBlocks(pFS, blockIndex, 1, pCacheUnit->m_pBlockBuffer) != DEVERR_SUCCESS)
+				return ERR_IO_ERROR;
 		}
 	}
+	
+	return sizeWritten;
 }
 
 void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes)

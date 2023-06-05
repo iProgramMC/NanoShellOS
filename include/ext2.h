@@ -19,7 +19,7 @@
 
 // Counts how many buckets a hash table contains.
 #define C_EXT2_HASH_TABLE_BUCKET_COUNT (256)
-
+#define EXT2_INVALID_INODE (~0U)
 #define EXT2_SIGNATURE (0xEF53)
 
 typedef union Ext2SuperBlock
@@ -358,16 +358,16 @@ Ext2InodeCacheUnit *Ext2ReadInode(Ext2FileSystem *pFS, uint32_t inodeNo, bool bF
 uint32_t Ext2GetInodeBlock(Ext2Inode *pInode, Ext2FileSystem *pFS, uint32_t offset);
 
 // Read a part of the inode's data.
-void Ext2ReadFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, void *pMemOut);
+int Ext2ReadFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, void *pMemOut);
 
 // Write a part of the inode's data.
-void Ext2WriteFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, const void *pMemIn);
+int Ext2WriteFileSegment(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pInode, uint32_t offset, uint32_t size, const void *pMemIn);
 
 // Grow an inode by 'byHowMuch' bytes.
-bool Ext2InodeExpand(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
+int Ext2InodeExpand(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
 
 // Shrink an inode by 'byHowMuch' bytes.
-bool Ext2InodeShrink(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
+int Ext2InodeShrink(Ext2FileSystem *pFS, Ext2InodeCacheUnit *pCacheUnit, uint32_t byHowMuch);
 
 // Allocates a single block.
 uint32_t Ext2AllocateBlock(Ext2FileSystem *pFS, uint32_t hint);
@@ -392,7 +392,7 @@ void Ext2FlushSuperBlock(Ext2FileSystem *pFS);
 uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset);
 
 // Adds a directory entry pointing towards a certain inode and increases that inode's link count.
-void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator);
+int Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator);
 
 // Read data from the block and inode bitmaps.
 void Ext2LoadBlockBitmaps(Ext2FileSystem *pFS);
@@ -409,5 +409,24 @@ void Ext2FreeInode(Ext2FileSystem *pFS, uint32_t inodeNo);
 
 // Free an indirection list.
 void Ext2FreeIndirectList(Ext2FileSystem* pFS, uint32_t blockNo, int indirs);
+
+// File operations.
+int Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
+int Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, const void* pBuffer, UNUSED bool block);
+
+int Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent);
+int Ext2FindDir(FileNode* pNode, const char* pName, FileNode** pOut);
+
+int Ext2FileEmpty(FileNode* pNode);
+
+int Ext2UnlinkFile(FileNode* pNode, const char* pName);
+int Ext2RemoveDir (FileNode* pNode);
+
+int Ext2CreateFile(FileNode* pNode, const char* pName);
+int Ext2CreateDir (FileNode* pNode, const char* pName);
+
+int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName);
+
+void Ext2FileOnUnreferenced(FileNode* pNode);
 
 #endif//_EXT2_H

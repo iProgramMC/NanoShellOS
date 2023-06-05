@@ -506,7 +506,7 @@ const void *WindowCall[] = {
 		VidSetVBEData,
 		FiOpenDirD,
 		FiCloseDir,
-		FiReadDir,
+		FiReadDirLegacy,
 		FiSeekDir,
 		FiRewindDir,
 		FiTellDir,
@@ -625,6 +625,8 @@ const void *WindowCall[] = {
 		KbGetKeyState,
 		LockAcquire,
 		LockFree,
+		
+		FiReadDir,
 };
 
 

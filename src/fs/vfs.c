@@ -50,28 +50,32 @@ void FsReleaseReference(FileNode* pNode)
 	}
 }
 
-uint32_t FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
+int FsRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block)
 {
-	if (pNode)
-	{
-		if (!pNode->m_bHasDirCallbacks && pNode->Read)
-			return pNode->Read(pNode, offset, size, pBuffer, block);
-		else return 0;
-	}
-	else return 0;
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (pNode->m_bHasDirCallbacks)
+		return ERR_IS_DIRECTORY;
+	
+	if (!pNode->Read)
+		return ERR_NOT_SUPPORTED;
+	
+	return pNode->Read(pNode, offset, size, pBuffer, block);
 }
 
-uint32_t FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
+int FsWrite(FileNode* pNode, uint32_t offset, uint32_t size, const void* pBuffer, bool block)
 {
-	if (pNode)
-	{
-		if (!pNode->m_bHasDirCallbacks && pNode->Write)
-		{
-			return pNode->Write(pNode, offset, size, pBuffer, block);
-		}
-		else return 0;
-	}
-	else return 0;
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (pNode->m_bHasDirCallbacks)
+		return ERR_IS_DIRECTORY;
+	
+	if (!pNode->Read)
+		return ERR_NOT_SUPPORTED;
+	
+	return pNode->Write(pNode, offset, size, pBuffer, block);
 }
 
 int FsIoControl(FileNode* pNode, unsigned long request, void * argp)
@@ -87,78 +91,108 @@ int FsIoControl(FileNode* pNode, unsigned long request, void * argp)
 	else return -ENOTTY;
 }
 
-bool FsOpen(FileNode* pNode, bool read, bool write)
+int FsOpen(FileNode* pNode, bool read, bool write)
 {
-	if (pNode)
-	{
-		if (!pNode->m_bHasDirCallbacks && pNode->Open)
-			return pNode->Open(pNode, read, write);
-		else return true;
-	}
-	//FIXME: This just assumes the file is prepared for opening.
-	else return true;
-}
-
-void FsClose(FileNode* pNode)
-{
-	if (pNode)
-	{
-		if (!pNode->m_bHasDirCallbacks && pNode->Close)
-			pNode->Close(pNode);
-	}
-}
-
-DirEnt* FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
-{
-	if (pNode)
-	{
-		if (pNode->ReadDir && pNode->m_bHasDirCallbacks)
-			return pNode->ReadDir(pNode, index, pOutputDent);
-		else return NULL;
-	}
-	else return NULL;
-}
-
-FileNode* FsFindDir(FileNode* pNode, const char* pName)
-{
-	if (pNode)
-	{
-		if (pNode->FindDir && pNode->m_bHasDirCallbacks)
-			return pNode->FindDir(pNode, pName);
-		else return NULL;
-	}
-	else return NULL;
-}
-
-bool FsOpenDir(FileNode* pNode)
-{
-	if (pNode)
-	{
-		if (pNode->OpenDir && pNode->m_bHasDirCallbacks)
-			return pNode->OpenDir(pNode);
-		else return true;//Assume it is opened.
-	}
-	else return false;
-}
-
-void FsCloseDir(FileNode* pNode)
-{
-	if (pNode)
-	{
-		if (pNode->CloseDir && pNode->m_bHasDirCallbacks)
-			pNode->CloseDir(pNode);
-	}
-}
-
-bool FsClearFile(FileNode* pNode)
-{
-	if (pNode)
-	{
-		if (pNode->EmptyFile && !pNode->m_bHasDirCallbacks)
-			return pNode->EmptyFile(pNode);
-	}
+	if (!pNode)
+		return ERR_INVALID_PARM;
 	
-	return false;
+	if (pNode->m_bHasDirCallbacks)
+		return ERR_IS_DIRECTORY;
+	
+	// Assume we could open it.
+	if (!pNode->Open)
+		return ERR_SUCCESS;
+	
+	return pNode->Open(pNode, read, write);
+}
+
+int FsClose(FileNode* pNode)
+{
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (pNode->m_bHasDirCallbacks)
+		return ERR_IS_DIRECTORY;
+	
+	// Assume we could close it.
+	if (!pNode->Close)
+		return ERR_SUCCESS;
+	
+	return pNode->Close(pNode);
+}
+
+int FsReadDir(FileNode* pNode, uint32_t* index, DirEnt* pOutputDent)
+{
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (!pNode->m_bHasDirCallbacks)
+		return ERR_NOT_DIRECTORY;
+	
+	if (!pNode->ReadDir)
+		return ERR_NOT_SUPPORTED;
+	
+	return pNode->ReadDir(pNode, index, pOutputDent);
+}
+
+int FsFindDir(FileNode* pNode, const char* pName, FileNode** pFN)
+{
+	*pFN = NULL;
+	
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (!pNode->m_bHasDirCallbacks)
+		return ERR_NOT_DIRECTORY;
+	
+	if (!pNode->FindDir)
+		return ERR_NOT_SUPPORTED;
+	
+	return pNode->FindDir(pNode, pName, pFN);
+}
+
+int FsOpenDir(FileNode* pNode)
+{
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (!pNode->m_bHasDirCallbacks)
+		return ERR_NOT_DIRECTORY;
+	
+	// Assume we could open it.
+	if (!pNode->OpenDir)
+		return ERR_SUCCESS;
+	
+	return pNode->OpenDir(pNode);
+}
+
+int FsCloseDir(FileNode* pNode)
+{
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (!pNode->m_bHasDirCallbacks)
+		return ERR_NOT_DIRECTORY;
+	
+	// Assume we could close it.
+	if (!pNode->CloseDir)
+		return ERR_SUCCESS;
+	
+	return pNode->CloseDir(pNode);
+}
+
+int FsClearFile(FileNode* pNode)
+{
+	if (!pNode)
+		return ERR_INVALID_PARM;
+	
+	if (pNode->m_bHasDirCallbacks)
+		return ERR_NOT_DIRECTORY;
+	
+	if (!pNode->EmptyFile)
+		return ERR_NOT_SUPPORTED;
+	
+	return pNode->EmptyFile(pNode);
 }
 
 int FsUnlinkFile(FileNode* pNode, const char* pName)
@@ -191,7 +225,14 @@ int FsCreateDir(FileNode* pDirNode, const char *pFileName)
 	if (!pDirNode->CreateDir) return -ENOTSUP;
 	if (!pDirNode->m_bHasDirCallbacks) return -ENOTDIR;
 	
-	FileNode* pChildIfExists = FsFindDir(pDirNode, pFileName);
+	FileNode* pChildIfExists = NULL;
+	
+	int result = FsFindDir(pDirNode, pFileName, &pChildIfExists);
+	if (FAILED(result) && result != -ENOENT)
+	{
+		return result;
+	}
+	
 	if (pChildIfExists)
 	{
 		FsReleaseReference(pChildIfExists);
@@ -207,12 +248,19 @@ int FsReadSymbolicLink(FileNode* pNode, char* pBuf)
 	if (pNode->m_length >= PATH_MAX)
 		return -ENAMETOOLONG;
 	
-	for (int i = 0; i < (int)pNode->m_length; i++)
-		pBuf[i] = 65;
+	if (!pNode->Read)
+		return ERR_NOT_SUPPORTED;
 	
-	uint32_t read = pNode->Read(pNode, 0, pNode->m_length, pBuf, true);
-	if (read < pNode->m_length)
-		return -EIO;
+	for (int i = 0; i < (int)pNode->m_length; i++)
+		pBuf[i] = 'A';
+	
+	int read = pNode->Read(pNode, 0, pNode->m_length, pBuf, true);
+	
+	if (read < 0)
+		return read;
+	
+	if (FAILED(read))
+		return ERR_IO_ERROR;
 	
 	pBuf[pNode->m_length] = 0;
 	return 0;
@@ -259,7 +307,15 @@ FileNode* FsResolvePathInternal(FileNode* pStartNode, const char* pPath, bool bR
 			pPath2++;
 		}
 		
-		FileNode* pChild = FsFindDir(pFileNode, sCurrentFileName);
+		FileNode* pChild = NULL;
+		
+		int result = FsFindDir(pFileNode, sCurrentFileName, &pChild);
+		if (FAILED(result))
+		{
+			FsReleaseReference(pFileNode);
+			return NULL;
+		}
+		
 		if (!pChild)
 		{
 			FsReleaseReference(pFileNode);
@@ -485,7 +541,12 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 				if (FsCreateEmptyFile (pDir, fileNameSimple) < 0)
 					return -ENOSPC;
 				
-				pFile = FsFindDir(pDir, fileNameSimple);
+				int err = FsFindDir(pDir, fileNameSimple, &pFile);
+				if (FAILED(err))
+				{
+					FsReleaseReference(pDir);
+					return err;
+				}
 				
 				FsReleaseReference(pDir);
 				
@@ -532,16 +593,16 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 		//If the filenode we opened isn't empty, empty it ourself
 		if (!hasClearedAlready)
 		{
-			if (!FsClearFile(pFile))
-			{
-				return -EACCES;
-			}
+			int result = FsClearFile(pFile);
+			if (FAILED(result))
+				return result;
 		}
 	}
 	
 	//open it:
-	if (!FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0))
-		return -EIO;
+	int res = FsOpen(pFile, (oflag & O_RDONLY) != 0, (oflag & O_WRONLY) != 0);
+	if (res < 0)
+		return res;
 	
 	//we have all the perms, let's write the filenode there:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
@@ -587,7 +648,7 @@ int FrClose (int fd)
 	pDesc->m_bOpen = false;
 	strcpy(pDesc->m_sPath, "");
 	
-	FsClose (pDesc->m_pNode);
+	FsClose(pDesc->m_pNode);
 	
 	FsReleaseReference(pDesc->m_pNode);
 	
@@ -625,9 +686,9 @@ int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 	}
 	
 	// Try to open the Directory
-	bool result = FsOpenDir (pDir);
-	if (!result)
-		return -EIO; // Cannot open the directory
+	int result = FsOpenDir(pDir);
+	if (result < 0)
+		return result; // Cannot open the directory
 	
 	//we have all the perms, let's write the filenode there:
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
@@ -652,7 +713,7 @@ int FrCloseDir (int dd)
 	pDesc->m_bOpen = false;
 	strcpy(pDesc->m_sPath, "");
 	
-	FsCloseDir (pDesc->m_pNode);
+	FsCloseDir(pDesc->m_pNode);
 	
 	FsReleaseReference(pDesc->m_pNode);
 	
@@ -663,18 +724,31 @@ int FrCloseDir (int dd)
 	return -ENOTHING;
 }
 
-DirEnt* FrReadDir(int dd)
+DirEnt* FrReadDirLegacy(int dd)
 {
 	if (!FrIsValidDirDescriptor(dd))
 		return NULL;
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
 	
-	DirEnt* pDirEnt = FsReadDir (pDesc->m_pNode, &pDesc->m_nStreamOffset, &pDesc->m_sCurDirEnt);
-	if (!pDirEnt)
+	int errCode = FsReadDir (pDesc->m_pNode, &pDesc->m_nStreamOffset, &pDesc->m_sCurDirEnt);
+	if (errCode != 0) // if we've reached a failure OR the end
+	{
+		// issue with this API is that there's no way to know what exactly failed.
 		return NULL;
+	}
 	
 	return &pDesc->m_sCurDirEnt;
+}
+
+int FrReadDir(DirEnt* pDirEnt, int dd)
+{
+	if (!FrIsValidDirDescriptor(dd))
+		return ERR_BAD_FILE_DES;
+	
+	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	
+	return FsReadDir(pDesc->m_pNode, &pDesc->m_nStreamOffset, pDirEnt);
 }
 
 int FrSeekDir (int dd, int loc)
@@ -706,7 +780,12 @@ int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 		return -EBADF;
 	
 	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
-	FileNode *pNode = FsFindDir(pDesc->m_pNode, pFileName);
+	FileNode *pNode = NULL;
+	
+	int err = FsFindDir(pDesc->m_pNode, pFileName, &pNode);
+	if (FAILED(err))
+		return err;
+	
 	if (!pNode)
 		return -ENOENT;
 	
@@ -925,7 +1004,19 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 	}
 	
 	// If the file already exists we must overwrite it. If we can't do that, simply bail.
-	FileNode* pNodeWeWillOverwrite = pDirNodeNew->FindDir(pDirNodeNew, pNameNew);
+	FileNode* pNodeWeWillOverwrite = NULL;
+	
+	int result = FsFindDir(pDirNodeNew, pNameNew, &pNodeWeWillOverwrite);
+	
+	// if we failed, and it wasn't because of a 'file not found' error:
+	if (FAILED(result) && result != ERR_NO_FILE)
+	{
+		// bail right away
+		FsReleaseReference(pDirNodeOld);
+		FsReleaseReference(pDirNodeNew);
+		return result;
+	}
+	
 	if (pNodeWeWillOverwrite)
 	{
 		int result = -ENOTSUP; // can't overwrite the entry
@@ -949,7 +1040,7 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 	}
 	
 	// okay, now, we should be able to just perform the rename operation
-	int result = pDirNodeOld->RenameOp(pDirNodeOld, pDirNodeNew, pNameOld, pNameNew);
+	result = pDirNodeOld->RenameOp(pDirNodeOld, pDirNodeNew, pNameOld, pNameNew);
 	
 	FsReleaseReference(pDirNodeOld);
 	FsReleaseReference(pDirNodeNew);
@@ -1065,7 +1156,9 @@ void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, Fil
 		goto _fail;
 	
 	// it worked, look it up:
-	FileNode* pNewNode = FsFindDir(pFN, pFileName);
+	FileNode* pNewNode = NULL;
+	FsFindDir(pFN, pFileName, &pNewNode);
+	
 	if (!pNewNode)
 	{
 		failure = 1;

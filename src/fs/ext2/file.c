@@ -25,7 +25,7 @@ static int FileTypeToExt2TypeHint(int fileType)
 	return E2_DETI_UNKNOWN;
 }
 
-uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
+int Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -51,11 +51,10 @@ uint32_t Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBu
 	pNode->m_accessTime = pUnit->m_inode.m_lastAccessTime = GetEpochTime();
 	
 	// read!
-	Ext2ReadFileSegment(pFS, pUnit, offset, size, pBuffer);
-	return size;
+	return Ext2ReadFileSegment(pFS, pUnit, offset, size, pBuffer);
 }
 
-uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
+int Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, const void* pBuffer, UNUSED bool block)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -70,9 +69,10 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 	if (offset + size > pInode->m_size)
 	{
 		// if couldn't expand...
-		if (!Ext2InodeExpand(pFS, pUnit, size - (pInode->m_size - offset)))
+		int result = Ext2InodeExpand(pFS, pUnit, size - (pInode->m_size - offset));
+		if (FAILED(result))
 		{
-			size = pInode->m_size - offset;
+			return result;
 		}
 	}
 	
@@ -83,11 +83,10 @@ uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pB
 	pNode->m_modifyTime = pUnit->m_inode.m_lastModTime = pNode->m_accessTime;
 	
 	// write!
-	Ext2WriteFileSegment(pFS, pUnit, offset, size, pBuffer);
-	return size;
+	return Ext2WriteFileSegment(pFS, pUnit, offset, size, pBuffer);
 }
 
-bool Ext2FileEmpty(FileNode* pNode)
+int Ext2FileEmpty(FileNode* pNode)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
@@ -96,15 +95,14 @@ bool Ext2FileEmpty(FileNode* pNode)
 	return Ext2InodeShrink(pFS, pUnit, pInode->m_size);
 }
 
-bool Ext2FileOpen(UNUSED FileNode* pNode)
+int Ext2FileOpen(UNUSED FileNode* pNode, UNUSED bool read, UNUSED bool write)
 {
-	//all good
-	return true;
+	return ERR_SUCCESS; // TODO
 }
 
-void Ext2FileClose(UNUSED FileNode* pNode)
+int Ext2FileClose(UNUSED FileNode* pNode)
 {
-	//all good
+	return ERR_SUCCESS;
 }
 
 static uint32_t Ext2CalculateDirEntSize(Ext2DirEnt* pDirEnt)
@@ -118,7 +116,7 @@ static uint32_t Ext2CalculateDirEntSize(Ext2DirEnt* pDirEnt)
 
 // TODO: Don't duplicate the same code. Ext2AddDirectoryEntry, Ext2RemoveDirectoryEntry and Ext2ChangeDirEntryTypeIndicator share similar skeleton.
 
-void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator)
+int Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const char* pName, uint32_t inodeNo, uint8_t typeIndicator)
 {
 	//note: I don't think we want to allocate something in the heap right now.
 	uint8_t buffer[pFS->m_blockSize];
@@ -155,9 +153,12 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 		blockNo = Ext2GetInodeBlock(&pUnit->m_inode, pFS, offset++);
 		
 		if (blockNo == 0) break;
+		if (blockNo == EXT2_INVALID_INODE)
+			return ERR_IO_ERROR;
 		
 		// look through all the dentries
-		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		if (Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+			return ERR_IO_ERROR;
 		
 		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer;
 		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
@@ -190,7 +191,8 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 				memcpy(pDestEnt, newDEntry.pDirEnt, newActualEntrySize);
 				
 				// write!
-				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+				if (Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+					return ERR_IO_ERROR;
 				
 				// force a refresh
 				pUnit->m_nLastBlockRead = ~0u;
@@ -203,7 +205,7 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 				
 				Ext2FlushInode(pFS, pDestUnit);
 				
-				return;
+				return ERR_SUCCESS;
 			}
 			
 			pDirEnt = (Ext2DirEnt*)((uint8_t*)pDirEnt + pDirEnt->m_entrySize);
@@ -219,7 +221,11 @@ void Ext2AddDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUnit, const
 	pNewDirEnt->m_entrySize = pFS->m_blockSize;
 	
 	// Write it
-	ASSERT(Ext2FileWrite(&pUnit->m_node, pUnit->m_inode.m_size, pFS->m_blockSize, buffer, true));
+	int written = Ext2FileWrite(&pUnit->m_node, pUnit->m_inode.m_size, pFS->m_blockSize, buffer, true);
+	if (written < 0)
+		return written;
+	if (written < (int)pFS->m_blockSize)
+		return ERR_NO_SPACE_LEFT;
 	
 	if (offset < 1)
 		offset = 0;
@@ -244,8 +250,11 @@ static int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUn
 		
 		if (blockNo == 0) break;
 		
+		if (blockNo == EXT2_INVALID_INODE) return ERR_IO_ERROR;
+		
 		// look through all the dentries
-		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		if (Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+			return ERR_IO_ERROR;
 		
 		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer, *pPrevDirEnt = pDirEnt;
 		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
@@ -299,7 +308,12 @@ static int Ext2RemoveDirectoryEntry(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUn
 				}
 				
 				// write!
-				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+				if (Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+				{
+					FsReleaseReference(&pDestUnit->m_node);
+					
+					return ERR_IO_ERROR;
+				}
 				
 				// force a refresh
 				pUnit->m_nLastBlockRead = ~0u;
@@ -342,10 +356,15 @@ int Ext2ChangeDirEntryTypeIndicator(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUn
 	{
 		blockNo = Ext2GetInodeBlock(&pUnit->m_inode, pFS, offset++);
 		
-		if (blockNo == 0) break;
+		if (blockNo == 0)
+			break;
+		
+		if (blockNo == EXT2_INVALID_INODE)
+			return ERR_IO_ERROR;
 		
 		// look through all the dentries
-		ASSERT(Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+		if (Ext2ReadBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+			return ERR_IO_ERROR;
 		
 		Ext2DirEnt* pDirEnt = (Ext2DirEnt*)pFS->m_pBlockBuffer;
 		Ext2DirEnt* pEndPoint = (Ext2DirEnt*)(pFS->m_pBlockBuffer + pFS->m_blockSize);
@@ -360,7 +379,9 @@ int Ext2ChangeDirEntryTypeIndicator(Ext2FileSystem *pFS, Ext2InodeCacheUnit* pUn
 				//we found the entry! Replace its type indicator.
 				pDirEnt->m_typeIndicator = typeIndicator;
 				
-				ASSERT(Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) == DEVERR_SUCCESS);
+				if (Ext2WriteBlocks(pFS, blockNo, 1, pFS->m_pBlockBuffer) != DEVERR_SUCCESS)
+					return ERR_IO_ERROR;
+				
 				pUnit->m_nLastBlockRead = ~0u;
 				
 				return ENOTHING;
@@ -379,13 +400,12 @@ int Ext2RenameDirectoryEntry(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pOldUnit, 
 	uint32_t inodeNo       = 0;
 	uint8_t  typeIndicator = 0;
 	
-	// remove the old entry. Make sure to not actually delete the inode.
-	int result = Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, false, 0, &inodeNo, &typeIndicator);
+	// Add a new link.
+	int result = Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
 	if (result < 0) return result;
 	
-	Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
-	
-	return -ENOTHING;
+	// remove the old entry. Make sure to not actually delete the inode.
+	return Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, false, 0, &inodeNo, &typeIndicator);
 }
 
 int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName)
@@ -402,7 +422,7 @@ int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, c
 }
 void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 
-DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
+int Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent, bool bSkipDotAndDotDot)
 {
 	// Read the directory entry, starting at (*index).
 	
@@ -414,12 +434,17 @@ DirEnt* Ext2ReadDirInternal(FileNode* pNode, uint32_t * index, DirEnt* pOutputDe
 	
 try_again:;
 	
-	if (!Ext2FileRead(pNode, *index, sizeof(uint32_t) + sizeof(uint16_t), tempBuffer, true)) return NULL;
+	int toRead = sizeof(uint32_t) + sizeof(uint16_t);
+	int readIn = Ext2FileRead(pNode, *index, toRead, tempBuffer, true);
+	
+	if (FAILED(readIn))
+		return readIn;
+	
+	if (readIn < toRead)
+		return 1; // at end
 	
 	// The entry length is in tempBuffer[1].
 	tempBuffer[1] &= 0xFFFF;
-	
-	//if (tempBuffer[1] == 0) return NULL;
 	
 	union
 	{
@@ -432,7 +457,11 @@ try_again:;
 	// if it's bigger, chances are it's a Padding entry.
 	if (tempBuffer[1] < pFS->m_blockSize)
 	{
-		if (!Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData, true)) return NULL;
+		int result = Ext2FileRead(pNode, *index, tempBuffer[1], d.EntryData, true);
+		if (result == 0)
+			return 1; // at end
+		if (FAILED(result))
+			return result;
 	}
 	
 	(*index) += d.dirEnt->m_entrySize;
@@ -446,7 +475,9 @@ try_again:;
 	
 	if (tempBuffer[1] >= pFS->m_blockSize)
 	{
-		return NULL;
+		// We have a corrupted directory on our hands.
+		SLogMsg("Error: Corrupted directory entry has length %d bigger than a block?!", tempBuffer[1]);
+		return ERR_IO_ERROR;
 	}
 	
 	d.dirEnt->m_name[d.dirEnt->m_nameLength] = 0;
@@ -478,48 +509,56 @@ try_again:;
 		default:                pOutputDent->m_type = FILE_TYPE_NONE;          break;
 	}
 	
-	return pOutputDent;
+	return 0;
 }
 
-DirEnt* Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
+int Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent)
 {
 	return Ext2ReadDirInternal(pNode, index, pOutputDent, true);
 }
 
-FileNode* Ext2FindDir(FileNode* pNode, const char* pName)
+int Ext2FindDir(FileNode* pNode, const char* pName, FileNode** pFNOut)
 {
+	*pFNOut = NULL;
+	
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
 	DirEnt space; uint32_t index = 0;
 	
-	while (Ext2ReadDirInternal(pNode, &index, &space, false) != NULL)
+	int err = 0;
+	while ((err = Ext2ReadDirInternal(pNode, &index, &space, false)) == 0)
 	{
 		if (strcmp(space.m_name, pName) == 0)
 		{
 			// Load the inode
 			Ext2InodeCacheUnit* pCU = Ext2ReadInode(pFS, space.m_inode, false);
-			
-			if (!pCU) return NULL;
+			if (!pCU) return ERR_IO_ERROR;
 			
 			FsAddReference(&pCU->m_node);
 			
-			return &pCU->m_node;
+			*pFNOut =  &pCU->m_node;
+			
+			return ERR_SUCCESS;
 		}
 	}
 	
-	return NULL;
+	// if it stopped because we failed, return _that_ error code
+	if (FAILED(err))
+		return err;
+	
+	return ERR_NO_FILE;
 }
 
 // Create a hard link. Will cause an I/O error on FAT32, because it doesn't actually support hard links.
-void Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, Ext2InodeCacheUnit* pDestinationInode)
+int Ext2CreateHardLinkTo(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, Ext2InodeCacheUnit* pDestinationInode)
 {
-	Ext2AddDirectoryEntry(pFS, pCurrentDir, pName, pDestinationInode->m_inodeNumber, FileTypeToExt2TypeHint(pDestinationInode->m_node.m_type));
+	return Ext2AddDirectoryEntry(pFS, pCurrentDir, pName, pDestinationInode->m_inodeNumber, FileTypeToExt2TypeHint(pDestinationInode->m_node.m_type));
 }
 
 // Creates a new empty inode.
 int Ext2CreateFileAndInode(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCurrentDir, const char* pName, uint8_t typeIndicator, uint32_t* pInodeOut)
 {
 	uint32_t inodeNo = Ext2AllocateInode(pFS);
-	if (inodeNo == ~0u) return -ENOSPC;
+	if (inodeNo == EXT2_INVALID_INODE) return -ENOSPC;
 	
 	// Clear the inode. It will have a reference count of zero.
 	Ext2InodeCacheUnit fakeUnit;
@@ -603,8 +642,9 @@ int Ext2CreateDir(FileNode* pFileNode, const char* pName)
 	memset(pDotDotEntry->m_name, '.', 2);
 	
 	// Look up the file.
-	FileNode* pNewFile = Ext2FindDir(pFileNode, pName);
-	if (!pNewFile) return -EIO;
+	FileNode* pNewFile;
+	int err = Ext2FindDir(pFileNode, pName, &pNewFile);
+	if (!pNewFile) return err;
 	
 	// Write it to the file.
 	Ext2FileWrite(pNewFile, 0, pFS->m_blockSize, buffer, true);
@@ -702,7 +742,8 @@ int Ext2RemoveDir(FileNode* pNode)
 	
 	// check if we are empty
 	DirEnt de; uint32_t index = 0;
-	while (Ext2ReadDir(pNode, &index, &de) != NULL)
+	int err = 0;
+	while ((err = Ext2ReadDir(pNode, &index, &de)) == 0)
 	{
 		// if it's not '.' or '..'
 		if (strcmp(de.m_name, ".") != 0 && strcmp(de.m_name, "..") != 0)
@@ -712,8 +753,12 @@ int Ext2RemoveDir(FileNode* pNode)
 		}
 	}
 	
+	if (FAILED(err))
+		return ERR_IO_ERROR;
+	
 	// if there is a '..' entry, we can remove ourselves.
-	FileNode* pDotDotEntry = Ext2FindDir(pNode, "..");
+	FileNode* pDotDotEntry = NULL;
+	Ext2FindDir(pNode, "..", &pDotDotEntry);
 	if (!pDotDotEntry) return -EBUSY;
 	
 	// if there's a link across file systems for some reason (e.g. if something's mounted INSIDE of this file system)

@@ -991,8 +991,11 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		
 		FiRewindDir(dd);
 		
-		DirEnt* pDirEnt;
-		while ((pDirEnt = FiReadDir(dd)) != NULL)
+		DirEnt ent, *pDirEnt = &ent;
+		memset(pDirEnt, 0, sizeof ent);
+		int err = 0;
+		
+		while (!(err = FiReadDir(pDirEnt, dd)))
 		{
 			if (bareMode)
 			{
@@ -1127,6 +1130,11 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 				);
 			}
 			#undef THING
+		}
+		
+		if (err < 0)
+		{
+			LogMsg("ls: %s: %s", FiGetCwd(), GetErrNoString(err));
 		}
 		
 		LogMsgNoCr("\x1B[0m");

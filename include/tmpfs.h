@@ -62,17 +62,17 @@ void FsTempFileOnUnreferenced(FileNode* pFileNode);
 
 // File Ops
 void FsTempFileShrink(FileNode* pFileNode, uint32_t newSize);
-uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
-uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
-bool FsTempFileOpen(FileNode* pFileNode, bool read, bool write);
-void FsTempFileClose(FileNode* pFileNode);
-bool FsTempFileEmpty(FileNode* pFileNode);
+int FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
+int FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, const void* pBuffer, bool bBlock);
+int FsTempFileOpen(FileNode* pFileNode, bool read, bool write);
+int FsTempFileClose(FileNode* pFileNode);
+int FsTempFileEmpty(FileNode* pFileNode);
 
 // Directory Ops
-bool FsTempDirOpen   (FileNode* pFileNode);
-void FsTempDirClose  (FileNode* pFileNode);
-DirEnt* FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt);
-FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName);
+int FsTempDirOpen   (FileNode* pFileNode);
+int FsTempDirClose  (FileNode* pFileNode);
+int FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt);
+int FsTempDirLookup(FileNode* pFileNode, const char* pName, FileNode** pFileNdoe);
 int FsTempDirCreate   (FileNode* pFileNode, const char* pName);
 int FsTempDirCreateDir(FileNode* pFileNode, const char* pName);
 int FsTempDirUnlink   (FileNode* pFileNode, const char* pName);

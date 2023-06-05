@@ -24,14 +24,15 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 int FrClose(int fd);
 int FrOpenDirD(const char* pFileName, const char* srcFile, int srcLine);
 int FrCloseDir(int dd);
-DirEnt* FrReadDir(int dd);
+DirEnt* FrReadDirLegacy(int dd);
+int FrReadDir(DirEnt* pDirEnt, int dd);
 int FrSeekDir(int dd, int loc);
 int FrTellDir(int dd);
 int FrStatAt (int dd, const char *pFileName, StatResult* pOut);
 int FrStat(const char *pFileName, StatResult* pOut);
 int FrLinkStat(const char *pFileName, StatResult* pOut);
-size_t FrRead (int fd, void *pBuf, int nBytes);
-size_t FrWrite(int fd, void *pBuf, int nBytes);
+int FrRead (int fd, void *pBuf, int nBytes);
+int FrWrite(int fd, void *pBuf, int nBytes);
 int FrIoControl(int fd, unsigned long request, void * argp);
 int FrSeek (int fd, int offset, int whence);
 int FrTell (int fd);
@@ -82,11 +83,20 @@ int FiCloseDir(int dd)
 	return returnValue;
 }
 
-DirEnt* FiReadDir(int dd)
+DirEnt* FiReadDirLegacy(int dd)
 {
 	DirEnt* returnValue;
 	USING_LOCK(&g_FileSystemLock, {
-		returnValue = FrReadDir(dd);
+		returnValue = FrReadDirLegacy(dd);
+	});
+	return returnValue;
+}
+
+int FiReadDir(DirEnt* pDirEnt, int dd)
+{
+	int returnValue;
+	USING_LOCK(&g_FileSystemLock, {
+		returnValue = FrReadDir(pDirEnt, dd);
 	});
 	return returnValue;
 }
@@ -136,18 +146,18 @@ int FiLinkStat(const char *pFileName, StatResult* pOut)
 	return returnValue;
 }
 
-size_t FiRead (int fd, void *pBuf, int nBytes)
+int FiRead(int fd, void *pBuf, int nBytes)
 {
-	size_t returnValue;
+	int returnValue;
 	USING_LOCK(&g_FileSystemLock, {
 		returnValue = FrRead(fd, pBuf, nBytes);
 	});
 	return returnValue;
 }
 
-size_t FiWrite(int fd, void *pBuf, int nBytes)
+int FiWrite(int fd, void *pBuf, int nBytes)
 {
-	size_t returnValue;
+	int returnValue;
 	USING_LOCK(&g_FileSystemLock, {
 		returnValue = FrWrite(fd, pBuf, nBytes);
 	});

@@ -472,7 +472,8 @@ static void UpdateDirectoryListing (Window* pWindow)
 		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1, false);
 	}
 	
-	DirEnt* pEnt = NULL;
+	DirEnt ent, *pEnt = &ent;
+	int err = 0;
 	
 	int dd = FiOpenDir (g_cabinetCWD);
 	if (dd < 0)
@@ -483,7 +484,7 @@ static void UpdateDirectoryListing (Window* pWindow)
 	
 	int filesDone = 0;
 	
-	while ((pEnt = FiReadDir (dd)) != 0)
+	while ((err = FiReadDir(pEnt, dd)) == 0)
 	{
 		StatResult statResult;
 		int res = 0;
@@ -532,6 +533,11 @@ static void UpdateDirectoryListing (Window* pWindow)
 		stat_done:
 			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pName, pEnt->m_type), (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, bIsSymLink);
 		}
+	}
+	
+	if (err < 0)
+	{
+		SLogMsg("Couldn't fully read directory: %s", GetErrNoString(err));
 	}
 	
 	FiCloseDir(dd);

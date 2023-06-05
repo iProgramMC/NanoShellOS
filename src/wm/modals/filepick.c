@@ -65,8 +65,12 @@ void FilePickerUpdate (Window *pWindow)
 		return;
 	}
 	
-	DirEnt* pEnt = NULL;
-	while ((pEnt = FiReadDir(dd)) != 0)
+	DirEnt ent, *pEnt = &ent;
+	memset(&ent, 0, sizeof ent);
+	
+	int err = 0;
+	
+	while ((err = FiReadDir(pEnt, dd)) == 0)
 	{
 		int iconFlags = 0;
 		int icon = CabGetIconBasedOnName(pEnt->m_name, pEnt->m_type);
@@ -83,6 +87,11 @@ void FilePickerUpdate (Window *pWindow)
 		}
 		
 		AddElementToList(pWindow, FP_DIR_LISTING, pEnt->m_name, iconFlags | icon);
+	}
+	
+	if (err < 0)
+	{
+		SLogMsg("Couldn't fully read directory: %s", GetErrNoString(err));
 	}
 	
 	FiCloseDir(dd);

@@ -37,6 +37,7 @@ enum
 };
 	
 #define ERR_NOTHING                (-ENOTHING)
+#define ERR_SUCCESS                (-ENOTHING)
 #define ERR_ACCESS_DENIED          (-EACCES)
 #define ERR_FILE_EXISTS            (-EEXIST)
 #define ERR_INTERRUPTED            (-EINTR)
@@ -64,8 +65,11 @@ enum
 
 enum
 {
-	ERR_CANCELED      = 0x80000002, ECANCELED = -ERR_CANCELED,
-	ERR_FILE_TOO_BIG  = 0x80000003, EFBIG     = -ERR_FILE_TOO_BIG,
+	ERR_CANCELED      = 0x8000002, ECANCELED = -ERR_CANCELED,
+	ERR_FILE_TOO_BIG  = 0x8000003, EFBIG     = -ERR_FILE_TOO_BIG,
 };
+
+#define SUCCEEDED(ReturnValue) ((ReturnValue) >= 0)
+#define FAILED(ReturnValue) ((ReturnValue) < 0)
 
 const char *GetErrNoString(int errno);

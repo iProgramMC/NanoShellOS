@@ -9,24 +9,6 @@
 #include <vfs.h>
 #include <ext2.h>
 
-// File operations.
-uint32_t Ext2FileRead (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
-uint32_t Ext2FileWrite(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block);
-
-DirEnt   *Ext2ReadDir(FileNode* pNode, uint32_t * index, DirEnt* pOutputDent);
-FileNode *Ext2FindDir(FileNode* pNode, const char* pName);
-
-bool Ext2FileEmpty(FileNode* pNode);
-void Ext2FileOnUnreferenced(FileNode* pNode);
-
-int Ext2UnlinkFile(FileNode* pNode, const char* pName);
-int Ext2RemoveDir (FileNode* pNode);
-
-int Ext2CreateFile(FileNode* pNode, const char* pName);
-int Ext2CreateDir (FileNode* pNode, const char* pName);
-
-int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName);
-
 // *************************
 //   Section : Inode Cache
 // *************************
@@ -560,7 +542,7 @@ void Ext2SetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset, 
 }
 
 // Expands an inode by 'byHowMuch' bytes.
-bool Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
+int Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
 {
 	uint32_t inodeNo = pCacheUnit->m_inodeNumber;
 	
@@ -584,7 +566,8 @@ bool Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	uint32_t blockInodeOffs = (uint32_t)(thing % pFS->m_blockSize);
 	
 	uint8_t bytes[pFS->m_blockSize];
-	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	if (Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
+		return ERR_IO_ERROR;
 	
 	Ext2Inode* pInodePlaceOnDisk = (Ext2Inode*)(bytes + blockInodeOffs);
 	
@@ -601,7 +584,7 @@ bool Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 		uint32_t newBlock = Ext2AllocateBlock(pFS, pCacheUnit->m_nBlockAllocHint);
 		
 		// If a block couldn't be allocated, we have run out of space and we need to stop resizing immediately.
-		if (newBlock == ~0u)
+		if (newBlock == EXT2_INVALID_INODE)
 		{
 			bSuccessfulResize = false;
 			
@@ -635,13 +618,14 @@ bool Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 		pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(blockSizeNew, pFS->m_blockSize);
 		
 		// Write the block containing the inode back to disk.
-		ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+		if (Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
+			return ERR_IO_ERROR;
 	}
 	
-	return bSuccessfulResize;
+	return bSuccessfulResize ? ERR_SUCCESS : ERR_IO_ERROR;
 }
 
-bool Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
+int Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_t byHowMuch)
 {
 	uint32_t inodeNo = pCacheUnit->m_inodeNumber;
 	
@@ -665,7 +649,8 @@ bool Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	uint32_t blockInodeOffs = (uint32_t)(thing % pFS->m_blockSize);
 	
 	uint8_t bytes[pFS->m_blockSize];
-	ASSERT(Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	if (Ext2ReadBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
+		return ERR_IO_ERROR;
 	
 	Ext2Inode* pInodePlaceOnDisk = (Ext2Inode*)(bytes + blockInodeOffs);
 	
@@ -700,9 +685,10 @@ bool Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32
 	pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(blockSizeNew, pFS->m_blockSize);
 	
 	// Write the block containing the inode back to disk.
-	ASSERT(Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) == DEVERR_SUCCESS);
+	if (Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
+		return ERR_IO_ERROR;
 	
-	return true;
+	return ERR_SUCCESS;
 }
 
 

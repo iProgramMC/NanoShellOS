@@ -44,22 +44,22 @@ enum
 #define PERM_EXEC  (4)
 
 // Function pointer definitions so we can just call `file_node->Read(...);` etc.
-typedef uint32_t 		(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
-typedef uint32_t 		(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
-typedef bool     		(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
-typedef void     		(*FileCloseFunc)      (struct FSNodeS*);
-typedef bool            (*FileOpenDirFunc)    (struct FSNodeS*);
-typedef void            (*FileCloseDirFunc)   (struct FSNodeS*);
-typedef struct DirEntS* (*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
-typedef struct FSNodeS* (*FileFindDirFunc)    (struct FSNodeS*, const char* pName);
-typedef bool            (*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
-typedef int             (*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
-typedef int             (*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
-typedef int             (*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
-typedef int             (*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
-typedef int             (*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
-typedef int             (*FileIoControlFunc)  (struct FSNodeS* pFileNode, unsigned long request, void * argp);
-typedef void            (*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
+typedef int(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
+typedef int(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, const void*, bool bBlock);
+typedef int(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
+typedef int(*FileCloseFunc)      (struct FSNodeS*);
+typedef int(*FileOpenDirFunc)    (struct FSNodeS*);
+typedef int(*FileCloseDirFunc)   (struct FSNodeS*);
+typedef int(*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
+typedef int(*FileFindDirFunc)    (struct FSNodeS*, const char* pName, struct FSNodeS** pOut);
+typedef int(*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
+typedef int(*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int(*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
+typedef int(*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+typedef int(*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
+typedef int(*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
+typedef int(*FileIoControlFunc)  (struct FSNodeS* pFileNode, unsigned long request, void * argp);
+typedef void(*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
 #define C_FILE_NODES_PER_POOL_UNIT 64
@@ -184,15 +184,15 @@ FileNode* FsGetRootNode();
 //Remember the definitions above.
 
 //These are NOT thread safe!  So don't use these.  Instead, use FiXXX functions that work on file descriptors instead.
-uint32_t FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block);
-uint32_t FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block);
-bool     FsOpen      (FileNode* pNode, bool read, bool write);
-void     FsClose     (FileNode* pNode);
-bool     FsOpenDir   (FileNode* pNode);
-void     FsCloseDir  (FileNode* pNode);
-DirEnt*  FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
-FileNode*FsFindDir   (FileNode* pNode, const char* pName); //<-- Note: After using this function's output, use FsReleaseReference!!!
-int      FsUnlinkFile(FileNode* pNode, const char* pName);
+int FsRead      (FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, bool block);
+int FsWrite     (FileNode* pNode, uint32_t offset, uint32_t size, const void* pBuffer, bool block);
+int FsOpen      (FileNode* pNode, bool read, bool write);
+int FsClose     (FileNode* pNode);
+int FsOpenDir   (FileNode* pNode);
+int FsCloseDir  (FileNode* pNode);
+int FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
+int FsFindDir   (FileNode* pNode, const char* pName, FileNode** pOut); //<-- Note: After using this function's output, use FsReleaseReference!!!
+int FsUnlinkFile(FileNode* pNode, const char* pName);
 
 // If the path points to a symbolic link, depending on bResolveThroughSymLinks, it does the following:
 // - True:  Goes down the symbolic link chain (at a depth of 16), until the file is reached.
@@ -319,10 +319,10 @@ void FsInit ();
 	int FiClose (int fd);
 	
 	// Reads from a file.
-	size_t FiRead (int fd, void *pBuf, int nBytes);
+	int FiRead (int fd, void *pBuf, int nBytes);
 	
 	// Writes to a file.
-	size_t FiWrite (int fd, void *pBuf, int nBytes);
+	int FiWrite (int fd, void *pBuf, int nBytes);
 	
 	// Returns the current stream position of a file.
 	int FiTell (int fd);
@@ -333,7 +333,6 @@ void FsInit ();
 	// Seeks around a file, if it's seekable.
 	int FiSeek (int fd, int offset, int whence);
 	
-	
 	// Opens a directory and returns a descriptor
 	int FiOpenDirD (const char* pFileName, const char* srcFile, int srcLine);
 	#define FiOpenDir(pFileName) FiOpenDirD(pFileName, __FILE__, __LINE__)
@@ -342,7 +341,8 @@ void FsInit ();
 	int FiCloseDir (int dd);
 	
 	// Reads a directory entry from the directory and advances the stream pointer.
-	DirEnt* FiReadDir (int dd);
+	int FiReadDir(DirEnt* pDirEnt, int dd);
+	DirEnt* FiReadDirLegacy(int dd);
 	
 	// Seeks on a directory descriptor.
 	int FiSeekDir (int dd, int loc);

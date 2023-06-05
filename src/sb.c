@@ -73,7 +73,7 @@ typedef double f64;
 #define SAMPLE_RATE     44100
 #define BUFFER_MS       100
 
-#define BUFFER_SIZE ((size_t) (SAMPLE_RATE * (BUFFER_MS / 1000.0)))
+#define BUFFER_SIZE ((size_t) (SAMPLE_RATE * BUFFER_MS / 1000))
 
 static i16 gSoundBuffer[BUFFER_SIZE];
 static bool gBufferFlip = false;
@@ -335,16 +335,15 @@ void SbInit()
 }
 
 // File system interface
-static uint32_t FsSoundBlasterRead (UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer, UNUSED bool bBlock)
+static int FsSoundBlasterRead (UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer, UNUSED bool bBlock)
 {
 	return 0;//This is a write only file
 }
 
-static uint32_t FsSoundBlasterWrite(UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED void *pBuffer, UNUSED bool bBlock)
+static int FsSoundBlasterWrite(UNUSED FileNode *pNode, UNUSED uint32_t offset, UNUSED uint32_t size, UNUSED const void *pBuffer, UNUSED bool bBlock)
 {
 	//Offset will be ignored.
-	SbWriteData (pBuffer, size, bBlock);
-	return size;
+	return SbWriteData (pBuffer, size, bBlock);
 }
 
 int FsSoundBlasterIoControl(UNUSED FileNode* pNode, unsigned long request, void * argp)

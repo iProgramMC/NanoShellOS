@@ -11,9 +11,6 @@
 #include <memory.h>
 #include <misc.h>
 
-uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
-uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, bool bBlock);
-
 void FsTempDirSetup(FileNode* pFileNode, FileNode* pParentNode)
 {
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
@@ -59,28 +56,27 @@ void FsTempDirSetup(FileNode* pFileNode, FileNode* pParentNode)
 	}
 }
 
-bool FsTempDirOpen(UNUSED FileNode* pFileNode)
+int FsTempDirOpen(UNUSED FileNode* pFileNode)
 {
-	// all good.
-	return true;
+	return ERR_SUCCESS;
 }
 
-void FsTempDirClose(UNUSED FileNode* pFileNode)
+int FsTempDirClose(UNUSED FileNode* pFileNode)
 {
-	// okay
+	return ERR_SUCCESS;
 }
 
-DirEnt* FsTempDirReadInternal(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt, bool bSkipDotAndDotDot, TempFSNode** pOutNode)
+int FsTempDirReadInternal(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt, bool bSkipDotAndDotDot, TempFSNode** pOutNode)
 {
 	TempFSDirEntry dirEntry;
 	memset(&dirEntry, 0, sizeof dirEntry);
 	
 go_again:;
-	uint32_t read = FsTempFileRead(pFileNode, *pOffset, sizeof dirEntry, &dirEntry, true);
-	if (read < sizeof dirEntry)
+	int read = FsTempFileRead(pFileNode, *pOffset, sizeof dirEntry, &dirEntry, true);
+	if (read < (int)sizeof dirEntry)
 	{
 		// we couldn't read enough data. we're probably at the end.
-		return NULL;
+		return 1;
 	}
 	
 	*pOffset += sizeof dirEntry;
@@ -105,35 +101,38 @@ go_again:;
 	if (pOutNode)
 		*pOutNode = dirEntry.m_pNode;
 	
-	return pDirEnt;
+	return 0;
 }
 
-DirEnt* FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt)
+int FsTempDirRead(FileNode* pFileNode, uint32_t* pOffset, DirEnt* pDirEnt)
 {
 	return FsTempDirReadInternal(pFileNode, pOffset, pDirEnt, true, NULL);
 }
 
-FileNode* FsTempDirLookup(FileNode* pFileNode, const char* pName)
+int FsTempDirLookup(FileNode* pFileNode, const char* pName, FileNode** pFNOut)
 {
+	*pFNOut = NULL;
+	
 	DirEnt ent;
 	memset(&ent, 0, sizeof ent);
 	
-	DirEnt* pDirEnt = NULL;
 	uint32_t offset = 0;
+	int err = 0;
 	
-	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, false, NULL)))
+	while ((err = FsTempDirReadInternal(pFileNode, &offset, &ent, false, NULL)) == 0)
 	{
-		if (strcmp(pDirEnt->m_name, pName) == 0)
+		if (strcmp(ent.m_name, pName) == 0)
 		{
-			FileNode* pFN = (FileNode*)pDirEnt->m_inode;
+			FileNode* pFN = (FileNode*)ent.m_inode;
 			
 			FsAddReference(pFN);
 			
-			return pFN;
+			*pFNOut = pFN;
+			return ERR_SUCCESS;
 		}
 	}
 	
-	return NULL;
+	return ERR_NO_FILE;
 }
 
 int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pName)
@@ -153,10 +152,10 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 	
 	while (true)
 	{
-		uint32_t readIn = FsTempFileRead(pFileNode, offset, sizeof dent, &dent, false);
+		int readIn = FsTempFileRead(pFileNode, offset, sizeof dent, &dent, false);
 		
 		// we've read enough...
-		if (readIn < sizeof dent)
+		if (readIn < (int)sizeof dent)
 			break;
 		
 		if (dent.m_filename[0] == 0 && offset_spot < 0)
@@ -179,8 +178,8 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 	dent.m_pNode = (TempFSNode*)pChildNode->m_implData;
 	
 	// write it.
-	uint32_t written = FsTempFileWrite(pFileNode, offset, sizeof dent, &dent, false);
-	if (written < sizeof dent)
+	int written = FsTempFileWrite(pFileNode, offset, sizeof dent, &dent, false);
+	if (written < (int)sizeof dent)
 	{
 		// who knows why the write failed.. probably due to a lack of memory
 		return -ENOSPC;
@@ -275,11 +274,12 @@ int FsTempDirUnlinkInternal(FileNode* pFileNode, const char* pName, uint32_t ino
 	DirEnt ent;
 	memset(&ent, 0, sizeof ent);
 	
-	DirEnt* pDirEnt = NULL;
+	DirEnt* pDirEnt = &ent;
+	int err = 0;
 	uint32_t offset = 0;
 	TempFSNode* pTFSNode = NULL;
 	
-	while ((pDirEnt = FsTempDirReadInternal(pFileNode, &offset, &ent, true, &pTFSNode)))
+	while ((err = FsTempDirReadInternal(pFileNode, &offset, &ent, true, &pTFSNode)) == 0)
 	{
 		if ((!bByInode && strcmp(pDirEnt->m_name, pName) == 0) || (bByInode && pDirEnt->m_inode == inodeNo))
 		{
@@ -320,7 +320,9 @@ int FsTempDirUnlink(FileNode* pFileNode, const char* pName)
 int FsTempDirRemoveDir(FileNode* pFileNode)
 {
 	// look up our parent.
-	FileNode* pParentNode = FsTempDirLookup(pFileNode, "..");
+	FileNode* pParentNode;
+	
+	FsTempDirLookup(pFileNode, "..", &pParentNode);
 	
 	// we can't delete a directory with no parent, you know
 	if (!pParentNode)
@@ -335,7 +337,8 @@ int FsTempDirRemoveDir(FileNode* pFileNode)
 	DirEnt* pDirEnt = NULL;
 	uint32_t offset = 0;
 	
-	while ((pDirEnt = FsTempDirRead(pFileNode, &offset, &ent)))
+	int err = 0;
+	while ((err = FsTempDirRead(pFileNode, &offset, &ent)) == 0)
 	{
 		if (strcmp(pDirEnt->m_name, ".") == 0)
 			dotDirFlags |= 1;
@@ -378,10 +381,12 @@ int FsTempDirRemoveDir(FileNode* pFileNode)
 
 int FsTempDirRenameOp (FileNode* pFileNodeSrc, FileNode* pFileNodeDst, const char* pFileNameSrc, const char* pFileNameDst)
 {
-	FileNode* pManipulatedFile = FsTempDirLookup(pFileNodeSrc, pFileNameSrc);
+	FileNode* pManipulatedFile = NULL;
 	
-	if (!pManipulatedFile)
-		return -ENOENT;
+	int err = FsTempDirLookup(pFileNodeSrc, pFileNameSrc, &pManipulatedFile);
+	
+	if (FAILED(err))
+		return err;
 	
 	// add a link to it in the destination
 	FsTempDirAddEntry(pFileNodeDst, pManipulatedFile, pFileNameDst);

@@ -122,10 +122,10 @@ short UartGetPortBase(uint8_t com_num)
 	return g_uart_port_bases[com_num];
 }
 
-static uint32_t FsSerialRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool bBlock)
+static int FsSerialRead(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, void* pBuffer, bool bBlock)
 {
 	char* pText = (char*)pBuffer;
-	for (uint32_t i = 0; i < size; i++)
+	for (int i = 0; i < (int)size; i++)
 	{
 		if (!UartReadSingleChar(pNode->m_inode, pText + i, bBlock))
 			return i;
@@ -134,10 +134,10 @@ static uint32_t FsSerialRead(UNUSED FileNode* pNode, UNUSED uint32_t offset, uin
 	return size;
 }
 
-static uint32_t FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, UNUSED void* pBuffer, bool bBlock)
+static int FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size, const void* pBuffer, bool bBlock)
 {
 	const char* pText = (const char*)pBuffer;
-	for (uint32_t i = 0; i < size; i++)
+	for (int i = 0; i < (int)size; i++)
 	{
 		if (!UartWriteSingleChar(pNode->m_inode, *(pText++), bBlock))
 			return i;

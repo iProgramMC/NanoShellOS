@@ -11,7 +11,7 @@
 #include <memory.h>
 #include <time.h>
 
-uint32_t FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
+int FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
 {
 	if (offset >= pFileNode->m_length)
 		return 0;
@@ -61,7 +61,7 @@ void FsTempFileShrink(FileNode* pFileNode, uint32_t newSize)
 	pFileNode->m_length = newSize;
 }
 
-uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
+int FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, const void* pBuffer, UNUSED bool bBlock)
 {
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
 	
@@ -113,27 +113,32 @@ uint32_t FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, vo
 	return size;
 }
 
-bool FsTempFileOpen(UNUSED FileNode* pFileNode, UNUSED bool read, UNUSED bool write)
+int FsTempFileOpen(FileNode* pFileNode, UNUSED bool read, bool write)
 {
-	// all good.
-	return true;
+	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
+	
+	if (write && !pTFNode->m_bMutable)
+		return ERR_ACCESS_DENIED; // can't write!
+	
+	return ERR_SUCCESS;
 }
 
-void FsTempFileClose(UNUSED FileNode* pFileNode)
+int FsTempFileClose(UNUSED FileNode* pFileNode)
 {
+	return ERR_SUCCESS;
 }
 
-bool FsTempFileEmpty(FileNode* pFileNode)
+int FsTempFileEmpty(FileNode* pFileNode)
 {
 	// empty the file entirely.
 	TempFSNode* pTFNode = (TempFSNode*)pFileNode->m_implData;
 	
 	if (!pTFNode->m_bMutable)
-		return false;
+		return ERR_NOT_SUPPORTED;
 	
 	MmFree(pTFNode->m_pFileData);
 	pTFNode->m_pFileData      = NULL;
 	pTFNode->m_nFileSizePages = 0;
 	
-	return true;
+	return ERR_SUCCESS;
 }
