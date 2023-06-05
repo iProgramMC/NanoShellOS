@@ -11,6 +11,8 @@
 #include "crtlib.h"
 #include "crtinternal.h"
 
+static THREAD_LOCAL struct tm s_tm;
+
 void sleep(int ms)
 {
 	TmSleep(ms);
@@ -135,6 +137,5 @@ struct tm* localtime_r(const time_t* timep, struct tm * result)
 
 struct tm* localtime(const time_t* timep)
 {
-	static struct tm s_tm;
 	return localtime_r(timep, &s_tm);
 }

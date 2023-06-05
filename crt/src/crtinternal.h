@@ -25,4 +25,8 @@
 #undef SARGS
 #undef CALL_END
 
+// currently, this does nothing. However, it's safe to say we will need it when we
+// move to a multithreaded version of this libc
+#define THREAD_LOCAL 
+
 #endif//_CRTINTERNAL_H

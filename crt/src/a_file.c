@@ -755,3 +755,75 @@ char* getcwd(char* buf, size_t sz)
 	buf[sz - 1] = 0;
 	return buf;
 }
+
+// Standard C wrappers for directory ops
+DIR* opendir(const char* dirname)
+{
+	int dd = FiOpenDir(dirname);
+	if (dd < 0)
+		return NULL; // errno is already set
+	
+	DIR* dir = malloc(sizeof(DIR));
+	dir->m_DirHandle = dd;
+	return dir;
+}
+
+int closedir(DIR* dirp)
+{
+	int result = FiCloseDir(dirp->m_DirHandle);
+	if (result < 0)
+		return -1;
+	
+	free(dirp);
+	return 0;
+}
+
+void rewinddir(DIR* dirp)
+{
+	// seek to the beginning, ie. 0
+	FiSeekDir(dirp->m_DirHandle, 0);
+}
+
+int telldir(DIR* dirp)
+{
+	return FiTellDir(dirp->m_DirHandle);
+}
+
+void seekdir(DIR* dirp, int told)
+{
+	FiSeekDir(dirp->m_DirHandle, told);
+}
+
+struct dirent* readdir(DIR* dirp)
+{
+	// keep an offset that we can fill in.
+	int offset = FiTellDir(dirp->m_DirHandle);
+	
+	// if we couldn't grab the telldir result, just bail. FiTellDir set an errno anyways
+	if (offset < 0)
+		return NULL;
+	
+	// note: It doesn't matter if we skip some entries (. and ..), those will be
+	// skipped again if we seekdir() to dirent->d_off and readdir() again.
+	
+	// perform the actual read
+	int result = FiReadDir(&dirp->m_NDirEnt, dirp->m_DirHandle);
+	
+	// if we got nothing (i.e. either hit the end, or had an error),
+	// return null. FiReadDir sets an errno if something happened.
+	if (result != 0)
+		return NULL;
+	
+	// fill out the entries here:
+	DirEnt* pDirEnt = &dirp->m_NDirEnt;
+	struct dirent* ptr = &dirp->m_PDirEnt; // posix dirent
+	
+	strcpy(ptr->d_name, pDirEnt->m_name);
+	
+	ptr->d_reclen = sizeof(*ptr);
+	ptr->d_ino    = pDirEnt->m_inode;
+	ptr->d_type   = pDirEnt->m_type;
+	ptr->d_off    = offset;
+	
+	return ptr;
+}

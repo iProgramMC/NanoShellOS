@@ -29,14 +29,6 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-typedef struct DirEntS
-{
-	char     m_name[128]; //+nullterm, so 127 concrete chars
-	uint32_t m_inode;     //device specific
-	uint32_t m_type;
-}
-DirEnt;
-
 typedef struct
 {
 	uint32_t m_type;
@@ -57,8 +49,9 @@ enum
 	FILE_TYPE_CHAR_DEVICE,
 	FILE_TYPE_BLOCK_DEVICE,
 	FILE_TYPE_PIPE,
+	FILE_TYPE_SYMBOLIC_LINK,
 	FILE_TYPE_DIRECTORY  = 8,
-	FILE_TYPE_MOUNTPOINT = 16 //to be OR'd into the other flags
+	FILE_TYPE_MOUNTPOINT = 16, //to be OR'd into the other flags
 };
 
 enum

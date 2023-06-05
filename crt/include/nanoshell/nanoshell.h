@@ -15,6 +15,7 @@
 #include <setjmp.h>
 #include <alloca.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
 #include <time.h>
 

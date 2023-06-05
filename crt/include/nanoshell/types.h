@@ -19,6 +19,7 @@
 #include <nanoshell/time_types.h>
 #include <nanoshell/unistd_types.h>
 #include <nanoshell/mman_types.h>
+#include <nanoshell/dirent_types.h>
 #include <nanoshell/graphics_types.h>
 #include <nanoshell/lock_types.h>
 #include <nanoshell/keyboard.h>

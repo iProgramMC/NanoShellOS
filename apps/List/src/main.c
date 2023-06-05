@@ -7,8 +7,6 @@
 ******************************************/
 #include <nsstandard.h>
 
-Console* GetConsole();
-
 int NsMain (UNUSED int argc, UNUSED char** argv)
 {
 	enum

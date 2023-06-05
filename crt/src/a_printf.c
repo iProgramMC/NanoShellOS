@@ -544,3 +544,20 @@ void vprintf(const char* fmt, va_list list)
 {
 	vfprintf(stdout, fmt, list);
 }
+
+void perror(const char* fmt, ...)
+{
+	char cr[8192];
+	va_list list;
+	va_start(list, fmt);
+	vsnprintf(cr, sizeof(cr), fmt, list);
+	
+	_I_PutString(cr);
+	
+	va_end(list);
+	
+	// print the error now:
+	_I_PutString(": ");
+	_I_PutString(strerror(errno));
+	_I_PutString("\n");
+}

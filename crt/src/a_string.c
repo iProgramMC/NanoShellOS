@@ -537,14 +537,6 @@ double atof(const char *arr)
 	return  value;
 }
 
-// String to Unsigned X.
-
-#include <errno.h>
-#include <string.h>
-#include <ctype.h>
-
-// String to Unsigned X.
-
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
