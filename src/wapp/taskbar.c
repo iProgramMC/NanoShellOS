@@ -754,7 +754,7 @@ void TaskbarCreateControls(Window* pWindow)
 			2,
 			yPos,
 			g_NanoShellButtonWidth + 10 - 4,
-			taskbarHeight - yPos - 4 - yOffset
+			taskbarHeight - yPos - 4 - yOffset - TASKBAR_BUTTON_HEIGHT * 2
 		);
 	}
 	else
