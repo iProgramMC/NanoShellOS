@@ -11,32 +11,17 @@
 #define EVENT_UPDATE_TASKBAR_CTLS (EVENT_USER + 1)
 #define EVENT_UPDATE_TASK_LIST    (EVENT_USER + 2)
 
-bool g_bShowDate = true;
-bool g_bShowTimeSeconds = true;
-
-void HomeMenu$LoadConfig(Window* pWindow);
-
-extern int g_nLauncherItems;
-extern LauncherItem* g_pLauncherItems;
-extern int           g_nLauncherDVer;
-
-// Taskbar
-#if 1
+#define C_MAX_GRAPH_FRAMES (30)
 
 #define TASKBAR_WIDTH (GetScreenWidth())
 #define TASKBAR_HEIGHT (TITLE_BAR_HEIGHT + 9) // padding around button: 4 px, padding around text: 2 px
 #define TASKBAR_BUTTON_WIDTH 80
 #define TASKBAR_BUTTON_HEIGHT (TITLE_BAR_HEIGHT + 2)
 #define TASKBAR_TIME_THING_WIDTH 50
-#define TASKBAR_DATE_THING_WIDTH 150
-
-WindowMenu g_taskbarMenu;
-WindowMenu g_taskbarRightClickMenu;
+#define TASKBAR_DATE_THING_WIDTH 100
 
 #define TASKBAR_MENU_ORIGINAL_ID    (999)
 #define TASKBAR_RC_MENU_ORIGINAL_ID (998)
-
-extern Rectangle g_TaskbarMargins;
 
 enum
 {
@@ -47,17 +32,50 @@ enum
 	DOCK_RIGHT,
 };
 
-const char *g_pNanoShellText = "NanoShell";
-int g_NanoShellButtonWidth = 0; // measured at startup
-//int g_taskbarDock = DOCK_TOP;
-int g_taskbarDock = DOCK_BOTTOM;
-
 enum {
 	TASKBAR_HELLO = 0x1,
 	TASKBAR_START_TEXT,
 	TASKBAR_TIME_TEXT,
 	TASKBAR_DATE_TEXT,
 };
+
+typedef struct
+{
+	int  m_CpuGraphHistory[C_MAX_GRAPH_FRAMES];
+	int  m_MemGraphHistory[C_MAX_GRAPH_FRAMES];
+	
+	bool m_HasCalculatedRects;
+	
+	Rectangle m_CpuRect;
+	Rectangle m_MemRect;
+}
+TaskBarData;
+
+bool g_bShowDate = true;
+bool g_bShowTimeSeconds = true;
+
+// tiny graphs that show the CPU usage.
+bool g_bShowCPUUsage = true;
+bool g_bShowMemUsage = false;
+
+const char *g_pNanoShellText = "NanoShell";
+int g_NanoShellButtonWidth = 0; // measured at startup
+//int g_taskbarDock = DOCK_TOP;
+int g_taskbarDock = DOCK_BOTTOM;
+
+void HomeMenu$LoadConfig(Window* pWindow);
+
+extern int g_nLauncherItems;
+extern LauncherItem* g_pLauncherItems;
+extern int           g_nLauncherDVer;
+
+WindowMenu g_taskbarMenu;
+WindowMenu g_taskbarRightClickMenu;
+
+Window* g_pTaskBarWindow;
+
+extern Rectangle g_TaskbarMargins;
+extern bool g_TaskListCompact;
 
 void ConfirmShutdown(Window* pWindow)
 {
@@ -101,6 +119,187 @@ const char* TaskbarGetNumeralEnding(int num)
 	return "th";
 }
 
+TaskBarData* TaskbarGetData(Window* pWindow)
+{
+	return pWindow->m_data;
+}
+
+void TaskbarRecalculateGraphRectsIfNeeded(Window* pWindow, int taskbarWidth, int taskbarHeight)
+{
+	TaskBarData* pData = TaskbarGetData(pWindow);
+	Rectangle rect;
+	
+	if (pData->m_HasCalculatedRects) return;
+	
+	int graphWidth = (taskbarWidth - 6) / 2;
+	if (graphWidth > C_MAX_GRAPH_FRAMES)
+		graphWidth = C_MAX_GRAPH_FRAMES;
+	
+	bool bIsVerticalLayout = g_taskbarDock == DOCK_LEFT || g_taskbarDock == DOCK_RIGHT;
+	
+	if (bIsVerticalLayout)
+	{
+		int graphHeight = TASKBAR_BUTTON_HEIGHT;
+		
+		rect.left = 0;
+		rect.right = taskbarWidth;
+		rect.bottom = taskbarHeight - 3;
+		rect.top = rect.bottom - graphHeight;
+		
+		// make sure we're at the middle
+		rect.left = (rect.left + rect.right) / 2;
+		rect.right = rect.left;
+		
+		rect.top += 2;
+		rect.bottom -= 2;
+		
+		// if both are on
+		if (g_bShowCPUUsage && g_bShowMemUsage)
+		{
+			Rectangle cpuRect, memRect;
+			cpuRect = memRect = rect;
+			
+			cpuRect.right -= 3; // 2 for the edge we'll draw, 1 for the gap
+			cpuRect.left = cpuRect.right - graphWidth;
+			
+			memRect.left += 3; // same thing
+			memRect.right = memRect.left + graphWidth;
+			
+			pData->m_CpuRect = cpuRect;
+			pData->m_MemRect = memRect;
+		}
+		else
+		{
+			// one of them is on
+			rect.left  -= graphWidth / 2;
+			rect.right = rect.left + graphWidth;
+			
+			// just set them both, it's fine
+			pData->m_CpuRect = pData->m_MemRect = rect;
+		}
+	}
+	else
+	{
+		int graphHeight = taskbarHeight - 6;
+		
+		rect.left = rect.right = taskbarWidth - 4;
+		rect.top = (taskbarHeight - graphHeight) / 2;
+		rect.bottom = rect.top + graphHeight;
+		
+		rect.top += 2;
+		rect.bottom -= 2;
+		
+		if (g_taskbarDock == DOCK_BOTTOM)
+			rect.bottom++, rect.top++;
+		else if (g_taskbarDock == DOCK_TOP)
+			rect.bottom--, rect.top--;
+		else
+			rect.right--, rect.left--;
+		
+		// if both are on
+		if (g_bShowCPUUsage && g_bShowMemUsage)
+		{
+			Rectangle cpuRect, memRect;
+			cpuRect = memRect = rect;
+			
+			// the CPU rect comes to the left, so we'll do the mem rect first:
+			memRect.left = memRect.right - graphWidth;
+			
+			// update the CPU rect now
+			cpuRect.right = memRect.left - 6; // 2x DrawEdge edges, 2 px gap
+			cpuRect.left  = cpuRect.right - graphWidth;
+			
+			pData->m_CpuRect = cpuRect;
+			pData->m_MemRect = memRect;
+		}
+		else
+		{
+			// just set them both to the same, it's fine
+			rect.left = rect.right - graphWidth;
+			pData->m_CpuRect = pData->m_MemRect = rect;
+		}
+	}
+	
+	pData->m_HasCalculatedRects = true;
+}
+
+extern uint64_t g_cpu_time_total, g_idle_time_total;
+
+// note: pDataPoints is an array of C_MAX_GRAPH_FRAMES
+void TaskbarAddDataPointToGraph(int* pDataPoints, int newDataPoint)
+{
+	memmove(pDataPoints, &pDataPoints[1], sizeof(int) * (C_MAX_GRAPH_FRAMES - 1));
+	pDataPoints[C_MAX_GRAPH_FRAMES - 1] = newDataPoint;
+}
+
+void TaskbarUpdateGraphs(Window* pWindow)
+{
+	TaskBarData* pData = TaskbarGetData(pWindow);
+	// calculate idle time
+	
+	cli; // make sure the values are frozen and don't change. Kinda wack
+	uint64_t cpuUsagePercent64 = g_idle_time_total * 100 / g_cpu_time_total;
+	sti;
+	
+	int cpuUsagePercent = (int)cpuUsagePercent64;
+	
+	// calculate memory percentage
+	// TODO: we'll make it go wack for now
+	int memUsagePercent = GetRandom() % 100;
+	
+	TaskbarAddDataPointToGraph(pData->m_CpuGraphHistory, 100 - cpuUsagePercent);
+	TaskbarAddDataPointToGraph(pData->m_MemGraphHistory, memUsagePercent);
+}
+
+// note: pDataPoints is an array of C_MAX_GRAPH_FRAMES
+void TaskbarPaintGraph(Rectangle rect, int* pDataPoints, unsigned color)
+{
+	int rectWidth  = rect.right - rect.left;
+	int rectHeight = rect.bottom - rect.top;
+	
+	VidFillRect(0x000000, rect.left, rect.top, rect.right - 1, rect.bottom - 1);
+	
+	int offset = C_MAX_GRAPH_FRAMES - rectWidth;
+	
+	for (int x = 0; x < rectWidth; x++)
+	{
+		// rescale from a 0-100 scale to a 0-rectHeight scale
+		int newPoint = pDataPoints[x + offset] * rectHeight / 101;
+		
+		if (pDataPoints[x + offset] != 0 && newPoint == 0)
+			newPoint = 1;
+		
+		int y1 = rect.top + rectHeight - newPoint, y2 = rect.top + rectHeight - 1;
+		VidDrawVLine(color, y1, y2, rect.left + x);
+	}
+
+	rect.left   -= 2;
+	rect.right  += 2;
+	rect.top    -= 2;
+	rect.bottom += 2;
+	
+	DrawEdge(rect, DRE_SUNKEN, 0);
+}
+
+void TaskbarRepaintGraphs(Window* pWindow)
+{
+	// if we don't have either CPU or MEM graph, just quit:
+	if (!g_bShowCPUUsage && !g_bShowMemUsage)
+		return;
+	
+	Rectangle rect = GetWindowClientRect(pWindow, true);
+	int taskbarWidth  = rect.right - rect.left;
+	int taskbarHeight = rect.bottom - rect.top;
+	
+	TaskBarData* pData = TaskbarGetData(pWindow);
+	
+	// if needed, recalculate the rectangles for CPU and memory
+	TaskbarRecalculateGraphRectsIfNeeded(pWindow, taskbarWidth, taskbarHeight);
+	
+	TaskbarPaintGraph(pData->m_CpuRect, pData->m_CpuGraphHistory, 0x00FF00);
+	TaskbarPaintGraph(pData->m_MemRect, pData->m_MemGraphHistory, 0x00FFFF);
+}
+
 void UpdateTaskbar (Window* pWindow, bool bUpdateTaskList)
 {
 	if (!bUpdateTaskList)
@@ -130,6 +329,8 @@ void UpdateTaskbar (Window* pWindow, bool bUpdateTaskList)
 	{
 		CallControlCallback(pWindow, TASKBAR_START_TEXT, EVENT_PAINT, 0, 0);
 	}
+	
+	TaskbarRepaintGraphs(pWindow);
 }
 
 static void TaskbarCreateMenuEntry (Window* pWindow, WindowMenu* pMenu, const char* pString, int occi, int nComboID, int nIconID)
@@ -241,9 +442,7 @@ void RunPopupEntry(__attribute__((unused)) int arg)
 	//ShowWindow(pWindow);
 	
 	// event loop:
-#if THREADING_ENABLED
 	while (HandleMessages (pWindow));
-#endif
 }
 
 void LaunchRun()
@@ -259,8 +458,6 @@ void LaunchRun()
 	
 	DebugLogMsg("Created run popup task. pointer returned:%x, errorcode:%x", pTask, errorCode);
 }
-
-Window* g_pTaskBarWindow;
 
 int TaskbarGetFlags()
 {
@@ -393,6 +590,8 @@ void TaskbarPopOut(int buttonID)
 
 void TaskbarCreateControls(Window* pWindow)
 {
+	TaskbarGetData(pWindow)->m_HasCalculatedRects = false;
+	
 	if (!g_taskbarMenu.nMenuEntries)
 	{
 		int nEntries = g_nLauncherItems + 2 + 2 + 2 + 3;
@@ -446,7 +645,6 @@ void TaskbarCreateControls(Window* pWindow)
 		CI("Dock to bottom", 4, ICON_COUNT);
 		CI("Dock to left",   5, ICON_COUNT);
 		CI("Dock to right",  6, ICON_COUNT);
-	#endif
 		
 		pMenu->nLineSeparators = 1;
 		pMenu->nWidth    = 150;
@@ -473,19 +671,41 @@ void TaskbarCreateControls(Window* pWindow)
 	
 	int hJustify = bIsVerticalLayout ? TEXTSTYLE_HCENTERED : TEXTSTYLE_RJUSTIFY;
 	
+	int xOffset = 0;
+	
 	if (bIsVerticalLayout)
-		RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
+	{
+		if (g_bShowCPUUsage || g_bShowMemUsage)
+			yOffset += TASKBAR_BUTTON_HEIGHT + 8;
+		
+		RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT - yOffset, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
+	}
 	else
-		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH, 3 + yOffset, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+	{
+		if (g_bShowCPUUsage)
+		{
+			xOffset += C_MAX_GRAPH_FRAMES;
+		}
+		if (g_bShowMemUsage)
+		{
+			if (xOffset)
+				xOffset += 2;
+			xOffset += 4 + C_MAX_GRAPH_FRAMES;
+		}
+		if (g_bShowCPUUsage || g_bShowMemUsage)
+			xOffset += 10;
+		
+		RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - xOffset, 3 + yOffset, TASKBAR_TIME_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+	}
 	
 	AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_TIME_TEXT, 0, TEXTSTYLE_VCENTERED | hJustify | TEXTSTYLE_FORCEBGCOL);
 	
 	if (g_bShowDate)
 	{
 		if (bIsVerticalLayout)
-			RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT * 2, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
+			RECT (r, 2, taskbarHeight - TASKBAR_BUTTON_HEIGHT * 2 - yOffset, taskbarWidth - 4, TASKBAR_BUTTON_HEIGHT);
 		else
-			RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH, 3 + yOffset, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
+			RECT (r, taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - TASKBAR_DATE_THING_WIDTH - xOffset, 3 + yOffset, TASKBAR_DATE_THING_WIDTH, TASKBAR_BUTTON_HEIGHT);
 		
 		AddControlEx(pWindow, CONTROL_TEXTCENTER, ANCHOR_LEFT_TO_RIGHT | ANCHOR_RIGHT_TO_RIGHT, r, "?", TASKBAR_DATE_TEXT, 0, TEXTSTYLE_VCENTERED | hJustify | TEXTSTYLE_FORCEBGCOL);
 	}
@@ -540,8 +760,6 @@ void TaskbarCreateControls(Window* pWindow)
 	}
 	
 	AddControlEx(pWindow, CONTROL_TASKLIST, ANCHOR_BOTTOM_TO_BOTTOM | ANCHOR_RIGHT_TO_RIGHT, r, NULL, TASKBAR_START_TEXT, 0, 0);
-	
-	pWindow->m_data = (void*)(launcherItemPosX + 400);
 }
 
 void TaskbarRemoveControls(Window *pWindow)
@@ -560,8 +778,6 @@ void TaskbarRemoveControls(Window *pWindow)
 		}
 	}
 }
-
-extern bool g_TaskListCompact;
 
 void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList)
 {
@@ -585,6 +801,9 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 	{
 		case EVENT_CREATE:
 		{
+			TaskBarData* pData = pWindow->m_data = MmAllocate(sizeof(TaskBarData));
+			memset(pData, 0, sizeof *pData);
+			
 			// Load config:
 			HomeMenu$LoadConfig(pWindow);
 			TaskbarCreateControls(pWindow);
@@ -593,8 +812,16 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			
 			break;
 		}
+		case EVENT_DESTROY:
+		{
+			if (pWindow->m_data)
+				MmFree(pWindow->m_data);
+			pWindow->m_data = NULL;
+			break;
+		}
 		case EVENT_UPDATE:
 		{
+			TaskbarUpdateGraphs(pWindow);
 			UpdateTaskbar(pWindow, false);
 			break;
 		}
@@ -756,12 +983,14 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
 }
+
 void RequestTaskbarUpdate()
 {
 	if (!g_pTaskBarWindow) return;
 	
 	WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE_TASK_LIST, 0, 0);
 }
+
 void TaskbarEntry(__attribute__((unused)) int arg)
 {
 	if (g_pTaskBarWindow) return;

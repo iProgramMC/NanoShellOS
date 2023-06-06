@@ -62,22 +62,22 @@ extern Task     g_runningTasks[];
 extern Process  gProcesses[];
 extern uint64_t g_kernelCpuTimeTotal;
 
-static uint64_t s_cpu_time[C_MAX_TASKS], s_cpu_time_total = 0, s_idle_time_total;
+uint64_t g_cpu_time[C_MAX_TASKS], g_cpu_time_total = 0, g_idle_time_total;
 
 // This allows multiple instances of SystemMonitor to run at the same time.
 void MonitorSystem()
 {
 	//pause everything while we get timing information from these tasks
 	KeVerifyInterruptsDisabled;
-	s_cpu_time_total = s_idle_time_total = g_kernelCpuTimeTotal;
+	g_cpu_time_total = g_idle_time_total = g_kernelCpuTimeTotal;
 	
 	g_kernelCpuTimeTotal = 0;
 	for (int i = 0; i < C_MAX_TASKS; i++)
 	{
-		s_cpu_time[i] = g_runningTasks[i].m_cpuTimeTotal;
+		g_cpu_time[i] = g_runningTasks[i].m_cpuTimeTotal;
 		g_runningTasks[i].m_cpuTimeTotal = 0;
 		if (g_runningTasks[i].m_bExists)
-			s_cpu_time_total += s_cpu_time[i];
+			g_cpu_time_total += g_cpu_time[i];
 	}
 }
 
@@ -211,7 +211,7 @@ int UpdateSystemMonitorLists(Window* pWindow)
 	int cpu_usage_idle_percent = 0;
 	// update kernel idle process
 	{
-		uint64_t cpu_usage_percent_64 = s_idle_time_total * 100 / s_cpu_time_total;
+		uint64_t cpu_usage_percent_64 = g_idle_time_total * 100 / g_cpu_time_total;
 		cpu_usage_idle_percent = (int)cpu_usage_percent_64;
 		
 		AddProcessToList(pWindow, 0, 0, "System idle", SUSPENSION_IDLE, cpu_usage_idle_percent, ICON_APPLICATION, NULL);
@@ -224,11 +224,11 @@ int UpdateSystemMonitorLists(Window* pWindow)
 		Task* pTask = g_runningTasks + i;
 		if (pTask->m_bExists)
 		{
-			uint64_t time1 = s_cpu_time[i];
+			uint64_t time1 = g_cpu_time[i];
 			
-			//SLogMsg("TID %d  usage: %l out of %l", i, time1, s_cpu_time_total);
+			//SLogMsg("TID %d  usage: %l out of %l", i, time1, g_cpu_time_total);
 			
-			uint64_t cpu_usage_percent_64 = time1 * 100 / s_cpu_time_total;
+			uint64_t cpu_usage_percent_64 = time1 * 100 / g_cpu_time_total;
 			int cpu_usage_percent = (int)cpu_usage_percent_64;
 			
 			const char * name;

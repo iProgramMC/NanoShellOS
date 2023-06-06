@@ -656,8 +656,6 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	pBlock->nElfErrorCodeExec = 0;
 	pBlock->nParentTaskRID    = KeGetRunningTask()->m_nIdentifier;
 	
-	SLogMsg("Block : %p", pBlock);
-	
 	// Create a new process
 	int erc = 0;
 	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc, pBlock);
