@@ -77,6 +77,8 @@ Window* g_pTaskBarWindow;
 extern Rectangle g_TaskbarMargins;
 extern bool g_TaskListCompact;
 
+void CplTaskbar(Window* pWindow); // src/cpanel/taskbar.c
+
 void ConfirmShutdown(Window* pWindow)
 {
 	int result = ShutdownBox(pWindow);
@@ -561,24 +563,24 @@ void TaskbarPopOut(int buttonID)
 	
 	// The ID for 'pop the taskbar out' will be reused for 'dock to top'.
 	
-	if (buttonID == 3)
+	if (buttonID == 4)
 	{
 		g_taskbarDock = g_taskbarDock == POP_OUT ? DOCK_TOP : POP_OUT;
 		
 		if (g_taskbarDock == POP_OUT)
-			g_taskbarRightClickMenu.nMenuEntries = 6;
+			g_taskbarRightClickMenu.nMenuEntries = 7;
 		else
-			g_taskbarRightClickMenu.nMenuEntries = 3;
+			g_taskbarRightClickMenu.nMenuEntries = 4;
 	}
 	else
 	{
-		g_taskbarDock = buttonID - 3 + DOCK_TOP;
-		g_taskbarRightClickMenu.nMenuEntries = 3;
+		g_taskbarDock = buttonID - 4 + DOCK_TOP;
+		g_taskbarRightClickMenu.nMenuEntries = 4;
 	}
 	
-	strcpy(g_taskbarRightClickMenu.pMenuEntries[2].sText, TaskbarGetPopoutToggleText());
+	strcpy(g_taskbarRightClickMenu.pMenuEntries[3].sText, TaskbarGetPopoutToggleText());
 	
-	g_taskbarRightClickMenu.pMenuEntries[2].nIconID =  (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT;
+	g_taskbarRightClickMenu.pMenuEntries[3].nIconID =  (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT;
 	
 	// note: the icon is only shown once to not be jarring.
 	
@@ -633,7 +635,7 @@ void TaskbarCreateControls(Window* pWindow)
 	
 	if (!g_taskbarRightClickMenu.nMenuEntries)
 	{
-		int nEntries = 6;
+		int nEntries = 7;
 		
 		WindowMenu* pMenu = &g_taskbarRightClickMenu;
 		
@@ -644,12 +646,13 @@ void TaskbarCreateControls(Window* pWindow)
 		int index = 0;
 		
 	#define CI(text, id, icon) TaskbarCreateMenuEntry(pWindow, &pMenu->pMenuEntries[index++], text, TASKBAR_RC_MENU_ORIGINAL_ID, id, icon);
-		CI("Open System Monitor", 1, ICON_SYSMON);
+		CI("System Monitor", 1, ICON_SYSMON);
 		CI("", 2, ICON_NULL);
-		CI(TaskbarGetPopoutToggleText(), 3, (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT);
-		CI("Dock to bottom", 4, ICON_COUNT);
-		CI("Dock to left",   5, ICON_COUNT);
-		CI("Dock to right",  6, ICON_COUNT);
+		CI("Taskbar settings", 3, ICON_FOLDER_SETTINGS);
+		CI(TaskbarGetPopoutToggleText(), 4, (g_taskbarDock == POP_OUT) ? ICON_TASKBAR_DOCK : ICON_TASKBAR_POPOUT);
+		CI("Dock to bottom", 5, ICON_COUNT);
+		CI("Dock to left",   6, ICON_COUNT);
+		CI("Dock to right",  7, ICON_COUNT);
 		
 		pMenu->nLineSeparators = 1;
 		pMenu->nWidth    = 150;
@@ -932,10 +935,13 @@ void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, i
 					case 1://System Mon
 						LaunchSystem();
 						break;
-					case 3://Pop out / dock top
-					case 4://Dock bottom
-					case 5://Dock left
-					case 6://Dock right
+					case 3:
+						CplTaskbar(pWindow);
+						break;
+					case 4://Pop out / dock top
+					case 5://Dock bottom
+					case 6://Dock left
+					case 7://Dock right
 						TaskbarPopOut(parm2);
 						break;
 				}
