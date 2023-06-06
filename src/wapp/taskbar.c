@@ -56,7 +56,7 @@ bool g_bShowTimeSeconds = true;
 
 // tiny graphs that show the CPU usage.
 bool g_bShowCPUUsage = true;
-bool g_bShowMemUsage = false;
+bool g_bShowMemUsage = true;
 
 const char *g_pNanoShellText = "NanoShell";
 int g_NanoShellButtonWidth = 0; // measured at startup
@@ -244,8 +244,10 @@ void TaskbarUpdateGraphs(Window* pWindow)
 	int cpuUsagePercent = (int)cpuUsagePercent64;
 	
 	// calculate memory percentage
-	// TODO: we'll make it go wack for now
-	int memUsagePercent = GetRandom() % 100;
+	uint64_t npp = MpGetNumAvailablePages(), nfpp = MpGetNumFreePages();
+	uint64_t nupp = npp - nfpp;
+	
+	int memUsagePercent = (int)(nupp * 100 / npp);
 	
 	TaskbarAddDataPointToGraph(pData->m_CpuGraphHistory, 100 - cpuUsagePercent);
 	TaskbarAddDataPointToGraph(pData->m_MemGraphHistory, memUsagePercent);
@@ -296,8 +298,11 @@ void TaskbarRepaintGraphs(Window* pWindow)
 	// if needed, recalculate the rectangles for CPU and memory
 	TaskbarRecalculateGraphRectsIfNeeded(pWindow, taskbarWidth, taskbarHeight);
 	
-	TaskbarPaintGraph(pData->m_CpuRect, pData->m_CpuGraphHistory, 0x00FF00);
-	TaskbarPaintGraph(pData->m_MemRect, pData->m_MemGraphHistory, 0x00FFFF);
+	if (g_bShowCPUUsage)
+		TaskbarPaintGraph(pData->m_CpuRect, pData->m_CpuGraphHistory, 0x00FF00);
+	
+	if (g_bShowMemUsage)
+		TaskbarPaintGraph(pData->m_MemRect, pData->m_MemGraphHistory, 0x00FFFF);
 }
 
 void UpdateTaskbar (Window* pWindow, bool bUpdateTaskList)
@@ -746,7 +751,7 @@ void TaskbarCreateControls(Window* pWindow)
 			2,
 			yPos,
 			g_NanoShellButtonWidth + 10 - 4,
-			taskbarHeight - yPos - 4
+			taskbarHeight - yPos - 4 - yOffset
 		);
 	}
 	else
@@ -754,7 +759,7 @@ void TaskbarCreateControls(Window* pWindow)
 		RECT (r,
 			launcherItemPosX,
 			2 + yOffset,
-			taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX,
+			taskbarWidth - 6 - TASKBAR_TIME_THING_WIDTH - g_bShowDate * TASKBAR_DATE_THING_WIDTH - launcherItemPosX - xOffset,
 			TASKBAR_BUTTON_HEIGHT + 2 + (taskbarHeight - TASKBAR_HEIGHT)
 		);
 	}
@@ -779,13 +784,19 @@ void TaskbarRemoveControls(Window *pWindow)
 	}
 }
 
-void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList)
+void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList, bool bShowCPUUsage, bool bShowMEMUsage)
 {
-	if (bShowDate != g_bShowDate || bShowTimeSecs != g_bShowTimeSeconds || bCompactTaskList != g_TaskListCompact)
+	if (bShowDate != g_bShowDate ||
+		bShowTimeSecs != g_bShowTimeSeconds ||
+		bCompactTaskList != g_TaskListCompact ||
+		bShowCPUUsage != g_bShowCPUUsage ||
+		bShowMEMUsage != g_bShowMemUsage)
 	{
 		g_bShowDate        = bShowDate;
 		g_bShowTimeSeconds = bShowTimeSecs;
 		g_TaskListCompact  = bCompactTaskList;
+		g_bShowCPUUsage    = bShowCPUUsage;
+		g_bShowMemUsage    = bShowMEMUsage;
 		WindowRegisterEvent(g_pTaskBarWindow, EVENT_UPDATE_TASKBAR_CTLS, 0, 0);
 	}
 }

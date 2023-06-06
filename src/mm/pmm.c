@@ -21,6 +21,7 @@ extern uint32_t e_placement;
 uint32_t g_frameBitset [FRAME_BITSET_SIZE_INTS];
 
 int g_numPagesAvailable = 0;
+int g_pmmBitsSet = 0;
 
 int MpGetNumAvailablePages()
 {
@@ -34,8 +35,12 @@ void MpSetFrame (uint32_t frameAddr)
 {
 	uint32_t frame = frameAddr >> 12;
 	uint32_t idx =  INDEX_FROM_BIT (frame),
-			 off = OFFSET_FROM_BIT (frame);
-	g_frameBitset[idx] |= (1 << off);
+			 off = OFFSET_FROM_BIT (frame), flag = (1 << off);
+	
+	if (~g_frameBitset[idx] & flag)
+		g_pmmBitsSet++;
+	
+	g_frameBitset[idx] |= flag;
 }
 void MpClearFrame (uint32_t frameAddr)
 {
@@ -43,8 +48,12 @@ void MpClearFrame (uint32_t frameAddr)
 	
 	uint32_t frame = frameAddr >> 12;
 	uint32_t idx = INDEX_FROM_BIT (frame),
-			 off = OFFSET_FROM_BIT (frame);
-	g_frameBitset[idx] &= ~(1 << off);
+			 off = OFFSET_FROM_BIT (frame), flag = (1 << off);
+	
+	if (g_frameBitset[idx] & flag)
+		g_pmmBitsSet--;
+	
+	g_frameBitset[idx] &= ~flag;
 }
 
 uint32_t MpFindFreeFrame()
@@ -71,23 +80,7 @@ uint32_t MpFindFreeFrame()
 
 int MpGetNumFreePages()
 {
-	int result = 0;
-	for (uint32_t i = 0; i < FRAME_BITSET_SIZE_INTS; i++)
-	{
-		// Any bit free?
-		if (g_frameBitset[i] != 0xFFFFFFFF)
-		{
-			// yes, which?
-			for (int j = 0; j < 32; j++)
-			{
-				if (!(g_frameBitset[i] & (1 << j)))
-					result++;
-			}
-		}
-		//no, continue
-	}
-	
-	return result;
+	return g_numPagesAvailable - g_pmmBitsSet;
 }
 
 uintptr_t MpRequestFrame(bool bIsKernelHeap)
@@ -185,4 +178,5 @@ void MpInitialize(multiboot_info_t* mbi)
 	}
 	
 	g_numPagesAvailable = MpGetNumFreePages();
+	g_pmmBitsSet = 0;
 }
