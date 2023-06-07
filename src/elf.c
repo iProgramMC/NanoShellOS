@@ -14,7 +14,7 @@
 #include <config.h>
 #include "mm/memoryi.h" // The ELF loader has legitimate reason to use memory manager's internal stuff.
 
-//#define ELF_DEBUG
+#define ELF_DEBUG
 //#define ELFSYM_DEBUG
 
 #ifdef ELF_DEBUG
@@ -23,11 +23,58 @@
 #define EDLogMsg(...)
 #endif
 
-typedef struct 
+SafeLock g_ElfSharedObjectLock;
+ElfSharedObject g_ElfSharedObjects[C_MAX_ELF_LIBRARIES];
+
+ElfSharedObject* ElfCreateEmptySharedObject()
 {
-	UserHeap* m_heap;
+	LockAcquire(&g_ElfSharedObjectLock);
+	
+	ElfSharedObject* pObj = NULL;
+	for (int i = 0; i < C_MAX_ELF_LIBRARIES; i++)
+	{
+		if (!g_ElfSharedObjects[i].m_bUsed)
+		{
+			pObj = &g_ElfSharedObjects[i];
+			pObj->m_bUsed = true;
+			break;
+		}
+	}
+	
+	LockFree(&g_ElfSharedObjectLock);
+	return pObj;
 }
-ElfProcess;
+
+bool ElfTryFreeSharedObject(ElfSharedObject* pSO)
+{
+	bool bInterruptsWereCleared = false;
+	if (!KeCheckInterruptsDisabled())
+	{
+		bInterruptsWereCleared = true;
+		// clear interrupts to ensure that no more users are coming:
+		cli;
+	}
+	
+	// If there are still people using this library, bail
+	if (pSO->m_nUsers)
+		goto EndFailure;
+	
+	pSO->m_bUsed = false;
+	
+	// We keep the interrupts cleared to free these:
+	MmFreeID(pSO->m_pPtr);
+	MmFreeID(pSO->m_pSymTab);
+	MmFreeID(pSO->m_pStrTab);
+	
+	if (bInterruptsWereCleared)
+		sti;
+	return true;
+	
+EndFailure:
+	if (bInterruptsWereCleared)
+		sti;
+	return false;
+}
 
 const char* ElfGetArchitectureString(uint16_t machine, uint8_t word_size)
 {
@@ -121,26 +168,6 @@ void ElfDumpInfo(ElfHeader* pHeader)
 }
 
 extern int g_lastReturnCode;
-
-typedef struct
-{
-	void*  pFileData;
-	size_t nFileSize;
-	bool   bGui;        //false if ran from command shell
-	bool   bAsync;      //false if the parent is waiting for this to finish
-	bool   bExecDone;   //true if the execution of this process has completed
-	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
-	char   sArgs[1024];
-	char   sFileName[PATH_MAX+5];
-	int    nElfErrorCode;     // The error code that the ELF executive returns if the ELF file didn't run
-	int    nElfErrorCodeExec; // The error code that the ELF file itself returns.
-	void*  pSymTab;
-	void*  pStrTab;
-	bool   bSetUpSymTab;
-	int    nSymTabEntries;
-	uint64_t nParentTaskRID;
-}
-ElfLoaderBlock;
 
 // TODO: Maybe update this to outside of the elf bubble? It could work for other executable files too
 
@@ -305,30 +332,16 @@ void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pn
 	*pSymbolsPtr = pNewSymbols;
 }
 
-static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut, ElfLoaderBlock* pLoaderBlock)
+// Hint is for relocatables
+static int ElfLoadProgram(ElfProcess* pProcess, ElfHeader* pHeader, ElfLoaderBlock* pLoaderBlock)
 {
-	EDLogMsg("Loading elf file");
-	
-	// The heap associated with this process
-	UserHeap *pHeap  = MuGetCurrentHeap();
-	
-	ElfProcess proc;
-	memset(&proc, 0, sizeof(proc));
-	
-	proc.m_heap = pHeap;
-	
+	void* pElfFile = pHeader;
 	uint8_t* pElfData = (uint8_t*)pElfFile; //to do arithmetic with this
-	//check the header.
-	ElfHeader* pHeader = (ElfHeader*)pElfFile;
-	
-	int errCode = ElfIsSupported(pHeader);
-	if (errCode != 1) //not supported.
-	{
-		LogMsg("Got error %d while loading the elf.", errCode);
-		return errCode;
-	}
 	
 	bool failed = false;
+	
+	uint32_t relocationOffset = 0, maxSize = 0;
+	// Navigate the program headers. If one 
 	
 	EDLogMsg("(loading prog hdrs into memory...)");
 	for (int i = 0; i < pHeader->m_phNum; i++)
@@ -354,7 +367,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		}
 		else
 		{
-			if (!ElfMapAddress(&proc, addr, size1, &pElfData[offs], size2))
+			if (!ElfMapAddress(pProcess, addr, size1, &pElfData[offs], size2))
 			{
 				failed = true;
 				break;
@@ -463,6 +476,37 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		return ELF_INVALID_SEGMENTS;
 	}
 	
+	return ELF_ERROR_NONE;
+}
+
+static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, int *pErrCodeOut, ElfLoaderBlock* pLoaderBlock)
+{
+	EDLogMsg("Loading elf file");
+	
+	// The heap associated with this process
+	UserHeap *pHeap  = MuGetCurrentHeap();
+	
+	ElfProcess proc;
+	memset(&proc, 0, sizeof(proc));
+	
+	proc.m_heap = pHeap;
+	
+	uint8_t* pElfData = (uint8_t*)pElfFile; //to do arithmetic with this
+	//check the header.
+	ElfHeader* pHeader = (ElfHeader*)pElfFile;
+	
+	int errCode = ElfIsSupported(pHeader);
+	if (errCode != 1) //not supported.
+	{
+		LogMsg("Got error %d while loading the elf.", errCode);
+		return errCode;
+	}
+	
+	// load the program into memory:
+	int result = ElfLoadProgram(&proc, pHeader, pLoaderBlock);
+	if (result != ELF_ERROR_NONE)
+		return result;
+	
 	// now, copy the symtab and strtab data into the process' structure
 	Process* pThisProcess = ExGetRunningProc();
 	pThisProcess->pSymTab = pLoaderBlock->pSymTab;
@@ -507,6 +551,11 @@ const char *gElfErrorCodes[] =
 	"The execution of this program was terminated.",
 	"The execution of this file is not permitted at the moment.",
 	"The execution of program files is not permitted. Please contact your system administrator.",
+	"The resource table of the image file %s is not ordered."
+	"The shared library %s could not be loaded because there are too many libraries loaded.",
+	"The shared library %s could not be loaded because of an invalid program segment layout.",
+	"The shared library %s could not be loaded because of a corrupted relocation entry.",
+	"The shared library %s could not be loaded because the system has run out of memory.",
 };
 
 const char *ElfGetErrorMsg (int error_code)

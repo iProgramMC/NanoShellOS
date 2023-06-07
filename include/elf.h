@@ -11,6 +11,8 @@
 #include <process.h>
 #include <main.h>
 
+#define C_MAX_ELF_LIBRARIES (32)
+
 #define SAFE_FREE(ptr) do { \
 	if (ptr) { \
 		MmFree(ptr); \
@@ -112,6 +114,8 @@ enum {
 	ELF_TYPE_NONE = 0, 	//Unknown
 	ELF_TYPE_RELOC,		//Relocatable file
 	ELF_TYPE_EXEC,		//Executable file
+	ELF_TYPE_DYN,		//Shared object
+	ELF_TYPE_CORE,		//Core dump file
 };
 
 #define ELF_MACH_386	3 //x86 Machine type
@@ -136,6 +140,10 @@ enum {
 	ELF_EXEC_BLOCKED,
 	ELF_EXEC_BLOCKED_GLOBALLY,
 	ELF_RESOURCE_TABLE_NOT_ORDERED,
+	ELF_LIB_TOO_MANY_LIBRARIES,
+	ELF_LIB_INVALID_PROGHDRS,
+	ELF_LIB_BAD_RELOC_ENTRY,
+	ELF_LIB_OUT_OF_MEMORY,
 	ELF_ERR_COUNT,
 };
 
@@ -155,6 +163,52 @@ enum
 	SHT_DYNSYM,
 	//...
 };
+
+typedef struct 
+{
+	UserHeap* m_heap;
+}
+ElfProcess;
+
+typedef struct
+{
+	// If the shared library is used.
+	bool m_bUsed;
+	
+	// The pointer to the shared object. To unload it, simply MmFree() it.
+	void* m_pPtr;
+	
+	// Amount of users of the object. If it's 0, it can be unloaded at any time.
+	// A user is an object file that hooked into the library.
+	int m_nUsers;
+	
+	// The symbol table of the shared object.
+	void* m_pSymTab;
+	
+	// The string table of the shared object.
+	void* m_pStrTab;
+}
+ElfSharedObject;
+
+typedef struct
+{
+	void*  pFileData;
+	size_t nFileSize;
+	bool   bGui;        //false if ran from command shell
+	bool   bAsync;      //false if the parent is waiting for this to finish
+	bool   bExecDone;   //true if the execution of this process has completed
+	int    nHeapSize;   //can be dictated by user settings later, for now it should be 512
+	char   sArgs[1024];
+	char   sFileName[PATH_MAX+5];
+	int    nElfErrorCode;     // The error code that the ELF executive returns if the ELF file didn't run
+	int    nElfErrorCodeExec; // The error code that the ELF file itself returns.
+	void*  pSymTab;
+	void*  pStrTab;
+	bool   bSetUpSymTab;
+	int    nSymTabEntries;
+	uint64_t nParentTaskRID;
+}
+ElfLoaderBlock;
 
 const char *ElfGetErrorMsg (int error_code);
 int ElfRunProgram(const char *pFileName, const char *args, bool bAsync, bool bGui, UNUSED int nHeapSize, int *pElfErrorCodeOut);
