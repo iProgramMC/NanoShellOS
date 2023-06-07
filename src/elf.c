@@ -8,6 +8,7 @@
 #include <string.h>
 #include <memory.h>
 #include <vfs.h>
+#include <misc.h>
 #include <task.h>
 #include <process.h>
 #include <config.h>
@@ -96,16 +97,20 @@ void ElfCleanup (UNUSED ElfProcess* pProcess)
 {
 }
 
-void ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
+bool ElfMapAddress(ElfProcess* pProc, void *virt, size_t size, void* data, size_t fileSize)
 {
 	uintptr_t virtHint = (uintptr_t)virt & ~(PAGE_SIZE - 1), virtOffset = (uintptr_t)virt & (PAGE_SIZE - 1);
 	
 	size_t sizePages = (((size + virtOffset - 1) >> 12) + 1);
 	
-	MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, CLOBBER_SKIP, false, PAGE_BIT_SCRUB_ZERO);
+	if (!MuMapMemoryFixedHint(pProc->m_heap, virtHint, sizePages, NULL, true, CLOBBER_SKIP, false, PAGE_BIT_SCRUB_ZERO))
+	{
+		return false;
+	}
 	
 	//memset((void*)virtHint, 0, sizePages * PAGE_SIZE);
 	memcpy(virt, data, fileSize);
+	return true;
 }
 
 void ElfDumpInfo(ElfHeader* pHeader)
@@ -203,19 +208,54 @@ ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address)
 	return ElfGetSymbolAtAddress(&lb, address);
 }
 
-int ElfSymbolCompare(void* p1v, void* p2v, UNUSED void* ctx)
+bool ElfSymbolLessThan(ElfSymbol* p1, ElfSymbol* p2)
 {
-	ElfSymbol *p1 = p1v, *p2 = p2v;
-	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue - p2->m_stValue;
-	if (p1->m_stSize  != p2->m_stSize)  return p1->m_stSize  - p2->m_stSize;
-	if (p1->m_stInfo  != p2->m_stInfo)  return p1->m_stInfo  - p2->m_stInfo;
-	if (p1->m_stName  != p2->m_stName)  return p1->m_stName  - p2->m_stName;
-	return 0;
+	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue < p2->m_stValue;
+	if (p1->m_stSize  != p2->m_stSize)  return p1->m_stSize  < p2->m_stSize;
+	if (p1->m_stInfo  != p2->m_stInfo)  return p1->m_stInfo  < p2->m_stInfo;
+	if (p1->m_stName  != p2->m_stName)  return p1->m_stName  < p2->m_stName;
+	return false;
+}
+
+// merge sort implementation
+void ElfSortSymbolsSub(ElfSymbol* pSymbols, ElfSymbol* pTempStorage, int left, int right)
+{
+	// do we have a trivial problem?
+	if (left >= right) return;
+	
+	int mid = (left + right) / 2;
+	
+	// sort the first half
+	ElfSortSymbolsSub(pSymbols, pTempStorage, left, mid);
+	
+	// sort the second half
+	ElfSortSymbolsSub(pSymbols, pTempStorage, mid + 1, right);
+	
+	// interleave the halves
+	int indexL = left, indexR = mid + 1, indexI = 0;
+	while (indexL <= mid && indexR <= right)
+	{
+		if (ElfSymbolLessThan(&pSymbols[indexL], &pSymbols[indexR]))
+			pTempStorage[indexI++] = pSymbols[indexL++];
+		else
+			pTempStorage[indexI++] = pSymbols[indexR++];
+	}
+	
+	// append the other parts
+	while (indexL <=   mid) pTempStorage[indexI++] = pSymbols[indexL++];
+	while (indexR <= right) pTempStorage[indexI++] = pSymbols[indexR++];
+	
+	// copy the elements back into the array
+	memcpy(&pSymbols[left], pTempStorage, (right - left + 1) * sizeof (ElfSymbol));
 }
 
 void ElfSortSymbols(ElfSymbol* pSymbols, int nEntries)
 {
-	HeapSort(pSymbols, sizeof(ElfSymbol), nEntries, ElfSymbolCompare, NULL);
+	ElfSymbol* pIntermediateStorage = MmAllocate(nEntries * sizeof (ElfSymbol));
+	
+	ElfSortSymbolsSub(pSymbols, pIntermediateStorage, 0, nEntries - 1);
+	
+	MmFree(pIntermediateStorage);
 }
 
 void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pnEntries)
@@ -314,139 +354,138 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		}
 		else
 		{
-			ElfMapAddress (&proc, addr, size1, &pElfData[offs], size2);
+			if (!ElfMapAddress(&proc, addr, size1, &pElfData[offs], size2))
+			{
+				failed = true;
+				break;
+			}
 		}
 	}
 	
 	if (failed) return ELF_INVALID_SEGMENTS;
+	
+	EDLogMsg("(loaded and mapped everything, activating heap!)");
+	
+	int strTabShLink = -1, symTabIndex = -1;
+	
+	for (int i = 0; i < pHeader->m_shNum; i++)
 	{
-		EDLogMsg("(loaded and mapped everything, activating heap!)");
-		MuUseHeap (pHeap);
+		ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
 		
-		int strTabShLink = -1, symTabIndex = -1;
-		
-		for (int i = 0; i < pHeader->m_shNum; i++)
+		if (pSectHeader->m_type == SHT_SYMTAB)
 		{
-			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
-			
-			if (pSectHeader->m_type == SHT_SYMTAB)
-			{
-				strTabShLink = pSectHeader->m_shLink;
-				symTabIndex  = i;
-				break;
-			}
+			strTabShLink = pSectHeader->m_shLink;
+			symTabIndex  = i;
+			break;
 		}
-		
-		ElfSectHeader* pShStrTabHdr = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + pHeader->m_shStrNdx * pHeader->m_shEntSize);
-		
-		for (int i = 0; i < pHeader->m_shNum; i++)
-		{
-			ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
-			if (pSectHeader->m_type == SHT_NOBITS)
-			{
-				
-			}
-			if (pSectHeader->m_type == SHT_PROGBITS)
-			{
-				// check the header's name
-				const char* pName = (const char*)(pElfData + pShStrTabHdr->m_offset + pSectHeader->m_name);
-				
-				if (strcmp(pName, ".nanoshell") == 0)
-					ExSetProgramInfo((ProgramInfo*)pSectHeader->m_addr);
-				else if (strcmp(pName, ".nanoshell_resources") == 0)
-					if (!ExLoadResourceTable((void*)pSectHeader->m_addr))
-					{
-						failed = true;
-						break;
-					}
-			}
-			if (pSectHeader->m_type == SHT_SYMTAB)
-			{
-				SLogMsg("Found SymTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
-				
-				uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
-				size_t   nTableSize  = pSectHeader->m_shSize;
-				
-				// allocate the symbol table
-				void *pTableMem = MmAllocate(nTableSize);
-				
-				// copy the contents from the ELF data
-				memcpy(pTableMem, pTableStart, nTableSize);
-				
-				// set the loader block's relevant fields
-				pLoaderBlock->pSymTab = pTableMem;
-				pLoaderBlock->nSymTabEntries = nTableSize / sizeof(ElfSymbol);
-				
-				// have we loaded the strtab?
-				if (pLoaderBlock->pStrTab && !pLoaderBlock->bSetUpSymTab)
-				{
-					ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
-					pLoaderBlock->bSetUpSymTab = true;
-				}
-			}
-			if (pSectHeader->m_type == SHT_STRTAB && i == strTabShLink)
-			{
-				SLogMsg("Found StrTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
-				
-				uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
-				size_t   nTableSize  = pSectHeader->m_shSize;
-				
-				// allocate the symbol table
-				void *pTableMem = MmAllocate(nTableSize);
-				
-				// copy the contents from the ELF data
-				memcpy(pTableMem, pTableStart, nTableSize);
-				
-				// set the loader block's relevant fields
-				pLoaderBlock->pStrTab = pTableMem;
-				
-				// have we loaded the symtab?
-				if (pLoaderBlock->pSymTab && !pLoaderBlock->bSetUpSymTab)
-				{
-					ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
-					pLoaderBlock->bSetUpSymTab = true;
-				}
-			}
-		}
-		
-		// now, copy the symtab and strtab data into the process' structure
-		Process* pThisProcess = ExGetRunningProc();
-		pThisProcess->pSymTab = pLoaderBlock->pSymTab;
-		pThisProcess->pStrTab = pLoaderBlock->pStrTab;
-		pThisProcess->nSymTabEntries = pLoaderBlock->nSymTabEntries;
-		
-		EDLogMsg("The ELF setup is done, jumping to the entry! Wish us luck!!!");
-		
-		// test out the resource stuff
-		Resource* pResource = ExLookUpResource(10000);
-		
-		if (!pResource)
-		{
-			SLogMsg("Resource 10000 not found.");
-		}
-		else
-		{
-			SLogMsg("Resource 10000 Found Type %d", pResource->m_type);
-		}
-		
-		//now that we have switched, call the entry func:
-		ElfEntry entry = (ElfEntry)pHeader->m_entry;
-		
-		// this is a bit complex, but I'll break it down. This does a couple things:
-		// - push `pArgs` as the only argument (%1)
-		// - call `entry` (%2)
-		// - restore esp to normal
-		// - mark ebx, esi, and edi as being clobbered
-		// - the return value is in %0 (eax)
-		int returnValue = 0;
-		asm("pushl %1\ncall *%2\nadd $4, %%esp" : "=a"(returnValue) : "r"(pArgs), "r"(entry) : "ebx", "esi", "edi");
-		
-		EDLogMsg("Executable has exited.");
-		
-		*pErrCodeOut = g_lastReturnCode = returnValue;
 	}
 	
-	return failed ? ELF_INVALID_SEGMENTS : ELF_ERROR_NONE;
+	ElfSectHeader* pShStrTabHdr = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + pHeader->m_shStrNdx * pHeader->m_shEntSize);
+	
+	for (int i = 0; i < pHeader->m_shNum; i++)
+	{
+		ElfSectHeader* pSectHeader = (ElfSectHeader*)(pElfData + pHeader->m_shOffs + i * pHeader->m_shEntSize);
+		if (pSectHeader->m_type == SHT_NOBITS)
+		{
+			
+		}
+		if (pSectHeader->m_type == SHT_PROGBITS)
+		{
+			// check the header's name
+			const char* pName = (const char*)(pElfData + pShStrTabHdr->m_offset + pSectHeader->m_name);
+			
+			if (strcmp(pName, ".nanoshell") == 0)
+			{
+				ExSetProgramInfo((ProgramInfo*)pSectHeader->m_addr);
+			}
+			else if (strcmp(pName, ".nanoshell_resources") == 0)
+			{
+				if (!ExLoadResourceTable((void*)pSectHeader->m_addr))
+				{
+					failed = true;
+					break;
+				}
+			}
+		}
+		if (pSectHeader->m_type == SHT_SYMTAB)
+		{
+			SLogMsg("Found SymTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
+			
+			uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
+			size_t   nTableSize  = pSectHeader->m_shSize;
+			
+			// allocate the symbol table
+			void *pTableMem = MmAllocate(nTableSize);
+			
+			// copy the contents from the ELF data
+			memcpy(pTableMem, pTableStart, nTableSize);
+			
+			// set the loader block's relevant fields
+			pLoaderBlock->pSymTab = pTableMem;
+			pLoaderBlock->nSymTabEntries = nTableSize / sizeof(ElfSymbol);
+			
+			// have we loaded the strtab?
+			if (pLoaderBlock->pStrTab && !pLoaderBlock->bSetUpSymTab)
+			{
+				ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
+				pLoaderBlock->bSetUpSymTab = true;
+			}
+		}
+		if (pSectHeader->m_type == SHT_STRTAB && i == strTabShLink)
+		{
+			SLogMsg("Found StrTab. m_offset: %x Size: %x", pSectHeader->m_offset, pSectHeader->m_shSize);
+			
+			uint8_t* pTableStart = &pElfData[pSectHeader->m_offset];
+			size_t   nTableSize  = pSectHeader->m_shSize;
+			
+			// allocate the symbol table
+			void *pTableMem = MmAllocate(nTableSize);
+			
+			// copy the contents from the ELF data
+			memcpy(pTableMem, pTableStart, nTableSize);
+			
+			// set the loader block's relevant fields
+			pLoaderBlock->pStrTab = pTableMem;
+			
+			// have we loaded the symtab?
+			if (pLoaderBlock->pSymTab && !pLoaderBlock->bSetUpSymTab)
+			{
+				ElfSetupSymTabEntries((ElfSymbol**)&pLoaderBlock->pSymTab, (const char*)pLoaderBlock->pStrTab, &pLoaderBlock->nSymTabEntries);
+				pLoaderBlock->bSetUpSymTab = true;
+			}
+		}
+	}
+	
+	if (failed)
+	{
+		MmFree(pLoaderBlock->pSymTab);
+		MmFree(pLoaderBlock->pStrTab);
+		return ELF_INVALID_SEGMENTS;
+	}
+	
+	// now, copy the symtab and strtab data into the process' structure
+	Process* pThisProcess = ExGetRunningProc();
+	pThisProcess->pSymTab = pLoaderBlock->pSymTab;
+	pThisProcess->pStrTab = pLoaderBlock->pStrTab;
+	pThisProcess->nSymTabEntries = pLoaderBlock->nSymTabEntries;
+	
+	//now that we have switched, call the entry func:
+	ElfEntry entry = (ElfEntry)pHeader->m_entry;
+	
+	// this is a bit complex, but I'll break it down. This does a couple things:
+	// - push `pArgs` as the only argument (%1)
+	// - call `entry` (%2)
+	// - restore esp to normal
+	// - mark ebx, esi, and edi as being clobbered
+	// - the return value is in %0 (eax)
+	int returnValue = 0;
+	asm("pushl %1\ncall *%2\nadd $4, %%esp" : "=a"(returnValue) : "r"(pArgs), "r"(entry) : "ebx", "esi", "edi");
+	
+	EDLogMsg("Executable has exited.");
+	
+	*pErrCodeOut = g_lastReturnCode = returnValue;
+	
+	return ELF_ERROR_NONE;
 }
 
 const char *gElfErrorCodes[] =
