@@ -464,6 +464,8 @@ try_again:;
 			return result;
 	}
 	
+	memcpy(d.dirEnt, tempBuffer, toRead);
+	
 	(*index) += d.dirEnt->m_entrySize;
 	
 	// if the inode is zero
@@ -531,7 +533,11 @@ int Ext2FindDir(FileNode* pNode, const char* pName, FileNode** pFNOut)
 		{
 			// Load the inode
 			Ext2InodeCacheUnit* pCU = Ext2ReadInode(pFS, space.m_inode, false);
-			if (!pCU) return ERR_IO_ERROR;
+			if (!pCU)
+			{
+				SLogMsg("Couldn't read inode %d", space.m_inode);
+				return ERR_IO_ERROR;
+			}
 			
 			FsAddReference(&pCU->m_node);
 			
