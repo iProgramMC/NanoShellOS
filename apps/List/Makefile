@@ -5,4 +5,76 @@ SRC_DIR=src
 APP_C_FILES=$(shell find $(SRC_DIR) -type f -name '*.c')
 APP_S_FILES=$(shell find $(SRC_DIR) -type f -name '*.asm')
 
-include ../CommonMakefile
+USERLDFLAGS = -L ../../crt2/lib -lnanoshell -lcrts --dynamic-linker nanoshelllinker
+
+# NanoShell Operating System
+
+# Common Makefile. This is supposed to be included by built in applications, and not spawned by itself..
+
+INC_DIR=include
+BLD_DIR=build
+LIS_DIR=../../crt/src
+LII_DIR=../../crt/include
+
+LGCC=../../tools/libgcc-i686.a
+
+CC=clang
+LD=ld
+AS=nasm
+STRIP=strip
+
+USERLDFLAGS ?=
+
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -ffreestanding -target i686-elf -O2 -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2 $(USERCFLAGS)
+LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000 $(USERLDFLAGS)
+ASFLAGS=-f elf32
+
+# Compile the application
+APP_TARGET=$(APPLICATION_NAME).nse
+
+APP_O_FILES=$(patsubst $(SRC_DIR)/%,$(BLD_DIR)/%.o,$(APP_C_FILES) $(APP_S_FILES))
+
+all: application
+
+clean:
+	rm -rf $(BLD_DIR)/*
+	rm -f $(APP_TARGET)
+
+application: $(APP_TARGET)
+
+# Build Resource File
+
+RC = ../../tools/rc
+
+RESOURCE=resource.rc
+RESOURCE_COMPILED=$(BLD_DIR)/rescomp.asm
+RESOURCE_COMP_OBJ=$(BLD_DIR)/rescomp.o
+
+ifeq ("$(wildcard $(RESOURCE))", "")
+RESOURCE_COMP_OBJ := 
+else
+$(RESOURCE_COMP_OBJ): $(RESOURCE_COMPILED)
+	@mkdir -p $(dir $@)
+	@echo "assembling resource file"
+	@$(AS) $(ASFLAGS) -o $@ $^
+	
+$(RESOURCE_COMPILED): $(RESOURCE)
+	@mkdir -p $(dir $@)
+	@$(RC) $< $@ /S
+endif
+
+$(APP_TARGET): $(APP_O_FILES) $(RESOURCE_COMP_OBJ)
+	@echo "linking: $@"
+	@echo $(APP_O_FILES) $(RESOURCE_COMP_OBJ)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LGCC)
+
+# Build Source
+$(BLD_DIR)/%.asm.o: $(SRC_DIR)/%.asm
+	@mkdir -p $(dir $@)
+	@echo "assembling: $<"
+	@$(AS) $(ASFLAGS) -o $@ $^
+
+$(BLD_DIR)/%.c.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	@echo "compiling: $<"
+	@$(CC) $(CFLAGS) -c $< -o $@

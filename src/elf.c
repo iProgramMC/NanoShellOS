@@ -203,54 +203,19 @@ ElfSymbol* ExLookUpSymbol(Process* pProc, uintptr_t address)
 	return ElfGetSymbolAtAddress(&lb, address);
 }
 
-bool ElfSymbolLessThan(ElfSymbol* p1, ElfSymbol* p2)
+int ElfSymbolCompare(void* p1v, void* p2v, UNUSED void* ctx)
 {
-	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue < p2->m_stValue;
-	if (p1->m_stSize  != p2->m_stSize)  return p1->m_stSize  < p2->m_stSize;
-	if (p1->m_stInfo  != p2->m_stInfo)  return p1->m_stInfo  < p2->m_stInfo;
-	if (p1->m_stName  != p2->m_stName)  return p1->m_stName  < p2->m_stName;
-	return false;
-}
-
-// merge sort implementation
-void ElfSortSymbolsSub(ElfSymbol* pSymbols, ElfSymbol* pTempStorage, int left, int right)
-{
-	// do we have a trivial problem?
-	if (left >= right) return;
-	
-	int mid = (left + right) / 2;
-	
-	// sort the first half
-	ElfSortSymbolsSub(pSymbols, pTempStorage, left, mid);
-	
-	// sort the second half
-	ElfSortSymbolsSub(pSymbols, pTempStorage, mid + 1, right);
-	
-	// interleave the halves
-	int indexL = left, indexR = mid + 1, indexI = 0;
-	while (indexL <= mid && indexR <= right)
-	{
-		if (ElfSymbolLessThan(&pSymbols[indexL], &pSymbols[indexR]))
-			pTempStorage[indexI++] = pSymbols[indexL++];
-		else
-			pTempStorage[indexI++] = pSymbols[indexR++];
-	}
-	
-	// append the other parts
-	while (indexL <=   mid) pTempStorage[indexI++] = pSymbols[indexL++];
-	while (indexR <= right) pTempStorage[indexI++] = pSymbols[indexR++];
-	
-	// copy the elements back into the array
-	memcpy(&pSymbols[left], pTempStorage, (right - left + 1) * sizeof (ElfSymbol));
+	ElfSymbol *p1 = p1v, *p2 = p2v;
+	if (p1->m_stValue != p2->m_stValue) return p1->m_stValue - p2->m_stValue;
+	if (p1->m_stSize  != p2->m_stSize)  return p1->m_stSize  - p2->m_stSize;
+	if (p1->m_stInfo  != p2->m_stInfo)  return p1->m_stInfo  - p2->m_stInfo;
+	if (p1->m_stName  != p2->m_stName)  return p1->m_stName  - p2->m_stName;
+	return 0;
 }
 
 void ElfSortSymbols(ElfSymbol* pSymbols, int nEntries)
 {
-	ElfSymbol* pIntermediateStorage = MmAllocate(nEntries * sizeof (ElfSymbol));
-	
-	ElfSortSymbolsSub(pSymbols, pIntermediateStorage, 0, nEntries - 1);
-	
-	MmFree(pIntermediateStorage);
+	HeapSort(pSymbols, sizeof(ElfSymbol), nEntries, ElfSymbolCompare, NULL);
 }
 
 void ElfSetupSymTabEntries(ElfSymbol** pSymbolsPtr, const char* pStrTab, int* pnEntries)

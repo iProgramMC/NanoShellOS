@@ -33,6 +33,8 @@ fs/Bin/Chess.nse
 fs/Tests/*.png
 fs/User/*
 
+crt2/build/*
+crt2/lib/*
 crt/build_libnanoshell
 crt/build_crt1
 crt/crt1.o

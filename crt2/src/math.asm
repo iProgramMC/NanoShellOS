@@ -1,0 +1,1 @@
+; Everything in this file is now linked from libgcc.
