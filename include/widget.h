@@ -30,6 +30,9 @@ enum
 	TEDC_UNDO,
 	TEDC_SELECT_ALL,
 	TEDC_DELETE,
+	
+	TEDC_GETLINEEND, // `parm` pointer to an integer
+	TEDC_SETLINEEND, // `parm` pointer to an integer
 };
 
 #define IMAGECTL_PAN  (1)

@@ -8,6 +8,8 @@
 #include "../wi.h"
 #include <clip.h>
 
+// TODO: Support Macintosh(CR) line ending?
+
 // maybe these properties should be controlled by system metrics
 #define TAB_WIDTH        (4)
 #define CURSOR_THICKNESS (2)
@@ -21,6 +23,14 @@
 #define ROUND_TO_PO2(thing, po2) (((thing) + (po2) - 1) & ~(po2 - 1))
 
 int g_TextCursorFlashSpeed = 500; // 2 hz.
+
+enum
+{
+	LEND_NONE,
+	LEND_LF,
+	LEND_CR,
+	LEND_CRLF, // == LEND_CR | LEND_LF
+};
 
 typedef enum
 {
@@ -52,6 +62,7 @@ typedef struct
 	char*  m_text;
 	size_t m_length;
 	size_t m_capacity;
+	int    m_lineEnding;
 	int    m_lengthPixels;
 }
 TextLine;
@@ -81,6 +92,7 @@ typedef struct
 	int       m_selectX1, m_selectY1; // The position of the first selected character
 	int       m_selectX2, m_selectY2; // The position of the first unselected character. After m_select*1
 	int       m_grabbedX, m_grabbedY; // used internally in the PreUpdateSelection function
+	int       m_currentLineEnding;
 }
 TextInputDataEx;
 
@@ -153,7 +165,7 @@ static const char* TextInput_GetRawText(Control* this)
 	
 	for (size_t i = 0; i < pData->m_num_lines; i++)
 	{
-		sz += pData->m_lines[i].m_length + (i != 0);
+		sz += pData->m_lines[i].m_length + (i != 0) * 2;
 	}
 	
 	pData->m_cachedData = MmAllocate(sz);
@@ -164,8 +176,18 @@ static const char* TextInput_GetRawText(Control* this)
 	{
 		if (i != 0)
 		{
-			head[0] = '\n';
-			head++;
+			int lineEnd = pData->m_lines[i - 1].m_lineEnding;
+			
+			if (lineEnd & LEND_CR)
+			{
+				head[0] = '\r';
+				head++;
+			}
+			if (lineEnd & LEND_LF)
+			{
+				head[0] = '\n';
+				head++;
+			}
 			head[0] = 0;
 		}
 		
@@ -275,6 +297,7 @@ static void TextInput_Clear(Control* this)
 	pData->m_maxScrollY = 0;
 	
 	pData->m_dirty = true;
+	pData->m_currentLineEnding = LEND_LF;
 }
 
 TextLine* TextInput_AddLine(Control* ctl)
@@ -290,7 +313,12 @@ TextLine* TextInput_AddLine(Control* ctl)
 	
 	this->m_dirty = true;
 	
-	return &this->m_lines[this->m_num_lines++];
+	TextLine* pLine = &this->m_lines[this->m_num_lines++];
+	
+	memset(pLine, 0, sizeof *pLine);
+	pLine->m_lineEnding = this->m_currentLineEnding;
+	
+	return pLine;
 }
 
 static void TextInput_UpdateScrollBars(Control* this)
@@ -364,6 +392,8 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	TextInputDataEx* pData = TextInput_GetData(this);
 	const char* nextNl = strchr(pText, '\n');
 	
+	int lineEnding = LEND_LF;
+	
 	// if we didn't find the next newline, we're on the last line
 	if (!nextNl)
 	{
@@ -372,6 +402,11 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	}
 	
 	size_t sz = nextNl - pText;
+	if (pText[sz - 1] == '\r')
+	{
+		lineEnding |= LEND_CR;
+		sz--;
+	}
 	
 	// Append a new line.
 	TextLine* line = TextInput_AddLine(this);
@@ -384,6 +419,7 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	memcpy(line->m_text, pText, sz);
 	line->m_text[sz] = 0;
 	line->m_lengthPixels = 0;
+	line->m_lineEnding   = lineEnding;
 	
 	TextInput_CalculateLinePixelWidth(this, line);
 	
@@ -394,7 +430,7 @@ static const char* TextInput_AppendLineToEnd(Control* this, const char* pText, b
 	
 	TextInput_UpdateScrollBars(this);
 	
-	return pText + sz + 1;
+	return nextNl + 1;
 }
 
 static void TextInput_RepaintLine(Control* pCtl, int lineNum);
@@ -725,6 +761,31 @@ static void TextInput_Select(Control* this, int startY, int startX, int endY, in
 	}
 }
 
+static void TextInput_DetermineLineEnding(Control* this)
+{
+	TextInputDataEx* pData = TextInput_GetData(this);
+	
+	int linesCount[4] = { 0 };
+	
+	for (size_t i = 0; i < pData->m_num_lines; i++)
+	{
+		TextLine* pLine = &pData->m_lines[i];
+		
+		// this is fine as long as someone doesn't mess with m_lineEnding and set it to an unstandard value
+		linesCount[pLine->m_lineEnding]++;
+	}
+	
+	int maxLines = 0, lineEndingWinner = LEND_LF;
+	for (int i = 0; i < 4; i++)
+	{
+		if (maxLines < linesCount[i])
+			maxLines = linesCount[i], lineEndingWinner = i;
+	}
+	
+	pData->m_currentLineEnding = lineEndingWinner;
+	SLogMsg("Line ending detected: %s%s", &"\0CR"[!!(lineEndingWinner & LEND_CR)], &"\0LF"[!!(lineEndingWinner & LEND_LF)]);
+}
+
 static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 {
 	TextInput_Clear(this);
@@ -751,6 +812,7 @@ static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 	}
 	
 	TextInput_Select(this, -1, -1, -1, -1);
+	TextInput_DetermineLineEnding(this);
 }
 
 // This concatenates 'lineSrc' to the end of 'lineDst'.
@@ -1468,6 +1530,23 @@ void TextInput_PerformCommand(Control *pCtl, int command, void* parm)
 {
 	switch (command)
 	{
+		case TEDC_GETLINEEND:
+		{
+			TextInputDataEx* pData = TextInput_GetData(pCtl);
+			*((int*)parm) = pData->m_currentLineEnding;
+			break;
+		}
+		case TEDC_SETLINEEND:
+		{
+			TextInputDataEx* pData = TextInput_GetData(pCtl);
+			int prm = *((int*)parm);
+			
+			if (prm < 0 || prm >= 4)
+				prm = LEND_LF;
+			
+			pData->m_currentLineEnding = prm;
+			break;
+		}
 		case TEDC_PASTE:
 		{
 			char* pThing = TextInput_FetchClipboardContents();
@@ -1613,6 +1692,7 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int pa
 			memset(pData, 0, sizeof *pData);
 			this->m_dataPtr = pData;
 			
+			pData->m_currentLineEnding = LEND_LF;
 			pData->m_pWindow = pWindow;
 			pData->m_selectX1 = pData->m_selectX2 = pData->m_selectY1 = pData->m_selectY2 = -1;
 			
