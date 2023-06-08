@@ -298,6 +298,8 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 		StCacheInit(pReg, driveId);
 	}
 	
+	DriveStatus ds = DEVERR_SUCCESS;
+	
 	// Ok, now perform the read itself.
 	uint32_t lastLbaRead = ~0; CacheUnit *pUnit = NULL;
 	for (uint32_t clba = lba, index = 0; index < nBlocks; clba++, index++)
@@ -308,19 +310,20 @@ DriveStatus StDeviceRead(uint32_t lba, void* pDest, DriveID driveId, uint8_t nBl
 			pUnit = StLookUpCacheUnit(pReg, clba);
 			if (!pUnit)
 			{
-				pUnit = StAddCacheUnit(pReg, clba, NULL);
+				pUnit = StAddCacheUnit(pReg, clba, NULL, &ds);
 			}
 		}
 		
-		ASSERT(pUnit && "huh?");
+		if (!pUnit) break;
 		
 		int blockNo = clba & 7;
 		pUnit->m_lastAccess = GetTickCount();
 		memcpy (pDestBytes + index * BLOCK_SIZE, pUnit->m_pData + blockNo * BLOCK_SIZE, BLOCK_SIZE);
 	}
+	
 	LockFree(&pReg->m_lock);
 	
-	return DEVERR_SUCCESS;
+	return ds;
 	
 	#else
 	return StDeviceReadNoCache(lba, pDest, driveId, nBlocks);
@@ -346,6 +349,8 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 		StCacheInit(pReg, driveId);
 	}
 	
+	DriveStatus ds = DEVERR_SUCCESS;
+	
 	// Ok, now perform the read itself.
 	uint32_t lastLbaRead = ~0; CacheUnit *pUnit = NULL;
 	for (uint32_t clba = lba, index = 0; index < nBlocks; clba++, index++)
@@ -357,20 +362,21 @@ DriveStatus StDeviceWrite(uint32_t lba, const void* pSrc, DriveID driveId, uint8
 			if (!pUnit)
 			{
 				//CLogMsg("caching unit %d", lastLbaRead);
-				pUnit = StAddCacheUnit(pReg, clba, NULL);
+				pUnit = StAddCacheUnit(pReg, clba, NULL, &ds);
 			}
 		}
 		
-		ASSERT(pUnit && "huh?");
+		if (!pUnit) break;
 		
 		int blockNo = clba & 7;
 		pUnit->m_bModified  = true;
 		pUnit->m_lastAccess = GetTickCount();
 		memcpy (pUnit->m_pData + blockNo * BLOCK_SIZE, pSrcBytes + index * BLOCK_SIZE, BLOCK_SIZE);
 	}
+	
 	LockFree(&pReg->m_lock);
 	
-	return DEVERR_SUCCESS;
+	return ds;
 	
 	#else
 	return StDeviceWriteNoCache(lba, pSrc, driveId, nBlocks);

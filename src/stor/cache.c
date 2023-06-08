@@ -87,10 +87,11 @@ CacheUnit* StLookUpCacheUnit(CacheRegister* pReg, uint32_t lba)
 	return HtLookUp(pReg->m_CacheHashTable, (void*)lba);
 }
 
-CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData)
+CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData, DriveStatus* pDrvStatus)
 {
 	// The LBA should be divisible by 8. This means we need to chop off the last 3 bits.
 	lba &= ~7;
+	*pDrvStatus = DEVERR_SUCCESS;
 	
 	CacheUnit* pUnit = MmAllocate(sizeof *pUnit);
 	if (!pUnit)
@@ -119,10 +120,15 @@ CacheUnit* StAddCacheUnit(CacheRegister* pReg, uint32_t lba, void *pData)
 	if (!pData)
 	{
 		DriveStatus d = StDeviceReadNoCache(pUnit->m_lba, pUnit->m_pData, pReg->m_driveID, PAGE_SIZE / BLOCK_SIZE);
+		*pDrvStatus = d;
 		if (d != DEVERR_SUCCESS)
 		{
 			SLogMsg("I/O read operation failed on drive %d. This is bad!", pReg->m_driveID);
-			ASSERT(!"Huh?");
+			
+			MmFree(pUnit->m_pData);
+			MmFree(pUnit);
+			
+			return NULL;
 		}
 	}
 	else

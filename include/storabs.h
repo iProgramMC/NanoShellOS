@@ -132,7 +132,7 @@ void StCacheInit              (CacheRegister* pReg, DriveID driveID);
 void StDebugDump              (CacheRegister* pReg);
 void StEvictLeastUsedCacheUnit(CacheRegister* pReg);
 CacheUnit* StLookUpCacheUnit  (CacheRegister* pReg, uint32_t lba);
-CacheUnit* StAddCacheUnit     (CacheRegister* pReg, uint32_t lba, void *pData /* = NULL */);
+CacheUnit* StAddCacheUnit     (CacheRegister* pReg, uint32_t lba, void *pData /* = NULL */, DriveStatus* pDrvStatus);
 void StFlushAllCacheUnits     (CacheRegister* pReg);
 
 #endif

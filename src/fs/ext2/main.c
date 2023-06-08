@@ -566,8 +566,6 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsUtilAddArbitraryFileNode("/", name, &pCacheUnit->m_node);
-	
-	SLogMsg("sizeof(FileNode) = %d", sizeof(FileNode));
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
@@ -596,8 +594,15 @@ void FsExt2Init()
 			MasterBootRecord s;
 		} mbr;
 		
+		memset(mbr.bytes, 0, sizeof mbr.bytes);
+		
 		// read one sector from block 0
-		StDeviceRead( 0, mbr.bytes, i, 1 );
+		DriveStatus ds = StDeviceRead( 0, mbr.bytes, i, 1 );
+		if (ds != DEVERR_SUCCESS)
+		{
+			LogMsg("Device failure %x on drive %d while trying to find an Ext2 file system! Not proceeding!", ds);
+			continue;
+		}
 		
 		// probe each partition
 		for (int pi = 0; pi < 4; pi++)

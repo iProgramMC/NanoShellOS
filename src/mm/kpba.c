@@ -163,7 +163,7 @@ void* MhSetupPagePMem(int index, uintptr_t physIn, bool bReadWrite)
 	KeVerifyInterruptsDisabled;
 	
 	// Mark this page entry as present, and return its address.
-	int permBits = PAGE_BIT_PRESENT | PAGE_BIT_USERSUPER | PAGE_BIT_MMIO;
+	int permBits = PAGE_BIT_PRESENT | PAGE_BIT_USERSUPER | PAGE_BIT_MMIO | PAGE_BIT_CACHEDISABLE;
 	if (bReadWrite)
 		permBits |= PAGE_BIT_READWRITE;
 	
