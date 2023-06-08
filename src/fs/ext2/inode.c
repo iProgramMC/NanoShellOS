@@ -9,6 +9,26 @@
 #include <vfs.h>
 #include <ext2.h>
 
+const FileNodeOps g_Ext2FileOps =
+{
+	.OnUnreferenced = Ext2FileOnUnreferenced,
+	.Read      = Ext2FileRead,
+	.Write     = Ext2FileWrite,
+	.EmptyFile = Ext2FileEmpty,
+};
+
+const FileNodeOps g_Ext2DirOps =
+{
+	.OnUnreferenced = Ext2FileOnUnreferenced,
+	.ReadDir    = Ext2ReadDir,
+	.FindDir    = Ext2FindDir,
+	.CreateFile = Ext2CreateFile,
+	.UnlinkFile = Ext2UnlinkFile,
+	.CreateDir  = Ext2CreateDir,
+	.RemoveDir  = Ext2RemoveDir,
+	.RenameOp   = Ext2RenameOp,
+};
+
 // *************************
 //   Section : Inode Cache
 // *************************
@@ -63,28 +83,17 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	
 	pFileNode->m_length     = pInode->m_size;
 	
-	pFileNode->OnUnreferenced = Ext2FileOnUnreferenced;
-	
 	// TODO: Read() and Write() calls if this is file.
 	// TODO: ReadDir() and other calls if this is a directory.
 	if (pFileNode->m_type == FILE_TYPE_DIRECTORY)
 	{
 		pFileNode->m_bHasDirCallbacks = true;
-		pFileNode->ReadDir    = Ext2ReadDir;
-		pFileNode->FindDir    = Ext2FindDir;
-		pFileNode->CreateDir  = Ext2CreateDir;
-		pFileNode->CreateFile = Ext2CreateFile;
-		pFileNode->UnlinkFile = Ext2UnlinkFile;
-		pFileNode->RemoveDir  = Ext2RemoveDir;
-		pFileNode->RenameOp   = Ext2RenameOp;
+		pFileNode->m_pFileOps = &g_Ext2DirOps;
 	}
 	else
 	{
 		pFileNode->m_bHasDirCallbacks = false;
-		pFileNode->Read  = Ext2FileRead;
-		pFileNode->Write = Ext2FileWrite;
-		
-		pFileNode->EmptyFile = Ext2FileEmpty;
+		pFileNode->m_pFileOps = &g_Ext2FileOps;
 	}
 }
 

@@ -108,16 +108,21 @@ void FsPipeOnUnreferenced(FileNode* pPipeNode)
 	MmFree(pPipeNode);
 }
 
+const FileNodeOps g_PipeFileOps =
+{
+	.OnUnreferenced = FsPipeOnUnreferenced,
+	.Read  = FsPipeRead,
+	.Write = FsPipeWrite,
+};
+
 void FsPipeInitialize(FileNode* pPipeNode)
 {
 	pPipeNode->m_type             = FILE_TYPE_PIPE;
 	pPipeNode->m_pipe.buffer      = MmAllocate(C_DEFAULT_PIPE_SIZE);
 	pPipeNode->m_pipe.bufferSize  = C_DEFAULT_PIPE_SIZE;
 	pPipeNode->m_pipe.bufferTail  = pPipeNode->m_pipe.bufferHead = 0;
-	pPipeNode->OnUnreferenced     = FsPipeOnUnreferenced;
 	pPipeNode->m_bHasDirCallbacks = true;
-	pPipeNode->Read               = FsPipeRead;
-	pPipeNode->Write              = FsPipeWrite;
+	pPipeNode->m_pFileOps         = &g_PipeFileOps;
 }
 
 FileNode* FsRootAddArbitraryFileNodeToRoot(const char* pFileName, FileNode* pFileNode);

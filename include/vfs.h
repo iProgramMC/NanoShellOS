@@ -43,28 +43,66 @@ enum
 #define PERM_WRITE (2)
 #define PERM_EXEC  (4)
 
-// Function pointer definitions so we can just call `file_node->Read(...);` etc.
+// Function pointer definitions so we can just call `file_node->m_fileOps->Read(...);` etc.
+
+// Reads data from a file node.
 typedef int(*FileReadFunc)       (struct FSNodeS*, uint32_t, uint32_t, void*, bool bBlock);
+// Writes data to a file node.
 typedef int(*FileWriteFunc)      (struct FSNodeS*, uint32_t, uint32_t, const void*, bool bBlock);
+// Tries to open a file node.
 typedef int(*FileOpenFunc)       (struct FSNodeS*, bool, bool);
+// Lets the underlying file system know that the file has been closed.
 typedef int(*FileCloseFunc)      (struct FSNodeS*);
+// Tries to open a directory file node.
 typedef int(*FileOpenDirFunc)    (struct FSNodeS*);
+// Lets the underlying file system know that the directory has been closed.
 typedef int(*FileCloseDirFunc)   (struct FSNodeS*);
+// Reads a single directory entry. Returns 1 if reached the end, 0 if an entry was read, or a negative number for an error.
 typedef int(*FileReadDirFunc)    (struct FSNodeS*, uint32_t*, struct DirEntS*);
+// Attempts to locate a file in a directory. A returned FileNode* must be released with FsReleaseReference().
 typedef int(*FileFindDirFunc)    (struct FSNodeS*, const char* pName, struct FSNodeS** pOut);
+// Clear a file's contents.
 typedef int(*FileEmptyFileFunc)  (struct FSNodeS* pFileNode);
+// Create a file in a directory.
 typedef int(*FileCreateFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+// Create a directory in a directory.
 typedef int(*FileCreateDirFunc)  (struct FSNodeS* pFileNode, const char* pName);
+// Removes a directory entry (hard link) from a directory.
 typedef int(*FileUnlinkFileFunc) (struct FSNodeS* pDirectoryNode, const char* pName);
+// Removes an empty directory from a directory.
 typedef int(*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
+// Renames a file. pSourceDir and pDestinationDir will be part of the same file system.
 typedef int(*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
+// Sends an I/O control request to a device file.
 typedef int(*FileIoControlFunc)  (struct FSNodeS* pFileNode, unsigned long request, void * argp);
+// Lets the underlying file system know that the file node was totally unreferenced (its reference count is now 0)
 typedef void(*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
 // If C_FILE_NODES_PER_POOL_UNIT is over 64, be sure to adjust m_bNodeFree accordingly.
 #define C_FILE_NODES_PER_POOL_UNIT 64
 
 struct tagFsPoolUnit;
+
+typedef struct FileNodeOps
+{
+	FileOnUnreferencedFunc OnUnreferenced;
+	FileReadFunc       Read;
+	FileWriteFunc      Write;
+	FileOpenFunc       Open;
+	FileCloseFunc      Close;
+	FileEmptyFileFunc  EmptyFile;
+	FileIoControlFunc  IoControl;
+	FileOpenDirFunc    OpenDir;
+	FileReadDirFunc    ReadDir;
+	FileFindDirFunc    FindDir;
+	FileCloseDirFunc   CloseDir;
+	FileCreateFileFunc CreateFile;
+	FileCreateDirFunc  CreateDir;
+	FileUnlinkFileFunc UnlinkFile;
+	FileRemoveDirFunc  RemoveDir;
+	FileRenameOpFunc   RenameOp;
+}
+FileNodeOps;
 
 typedef struct FSNodeS
 {
@@ -108,47 +146,7 @@ typedef struct FSNodeS
 	uint32_t m_createTime;
 	uint32_t m_accessTime;
 	
-	// This function is called everytime the reference count of a file reaches zero.
-	FileOnUnreferencedFunc OnUnreferenced;
-	
-	union
-	{
-		struct
-		{
-			// File callbacks
-			FileReadFunc       Read;
-			FileWriteFunc      Write;
-			FileOpenFunc       Open;
-			FileCloseFunc      Close;
-			// Removes all the contents of a file.
-			FileEmptyFileFunc  EmptyFile;
-			// Sends a request to the underlying device.
-			FileIoControlFunc  IoControl;
-		};
-		
-		struct
-		{
-			// Opens a directory, and loads it into the file system structure.
-			FileOpenDirFunc    OpenDir;
-			// Returns the N-th child of a directory.
-			FileReadDirFunc    ReadDir;
-			// Tries to find a child with a name in a directory.
-			FileFindDirFunc    FindDir;
-			// Closes a directory.
-			FileCloseDirFunc   CloseDir;
-			// Creates an empty file and sets it up inside the file system.
-			FileCreateFileFunc CreateFile;
-			// Creates an empty directory and sets up all the necessary stuff.
-			FileCreateDirFunc  CreateDir;
-			// Removes a specific link. On FAT32, this will always delete the file, since cluster chains don't have reference counts.
-			// On Ext2, this removes one of the links to the file's inode. If there are no more links, the inode itself is deleted.
-			FileUnlinkFileFunc UnlinkFile;
-			// Removes an empty directory.
-			FileRemoveDirFunc  RemoveDir;
-			// This operation is a bit strange, in that it takes two file nodes (neither must necessarily be this one).
-			FileRenameOpFunc   RenameOp;
-		};
-	};
+	const FileNodeOps* m_pFileOps;
 }
 FileNode;
 

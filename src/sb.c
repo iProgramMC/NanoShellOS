@@ -361,6 +361,13 @@ int FsSoundBlasterIoControl(UNUSED FileNode* pNode, unsigned long request, void 
 
 void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pSrcNode);
 
+const FileNodeOps g_SbFileOps =
+{
+	.Read      = FsSoundBlasterRead,
+	.Write     = FsSoundBlasterWrite,
+	.IoControl = FsSoundBlasterIoControl,
+};
+
 void SbSetUpFile()
 {
 	FileNode node, *pNode = &node;
@@ -376,9 +383,7 @@ void SbSetUpFile()
 	pNode->m_inode   = 0;
 	pNode->m_length  = 0;
 	pNode->m_bHasDirCallbacks = false;
-	pNode->Read      = FsSoundBlasterRead;
-	pNode->Write     = FsSoundBlasterWrite;
-	pNode->IoControl = FsSoundBlasterIoControl;
+	pNode->m_pFileOps = &g_SbFileOps;
 	
 	FsUtilAddArbitraryFileNode("/Device", "Sb16", pNode);
 }

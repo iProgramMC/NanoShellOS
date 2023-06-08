@@ -153,7 +153,15 @@ static int FsSerialWrite(FileNode* pNode, UNUSED uint32_t offset, uint32_t size,
 	
 	return size;
 }
+
 void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, FileNode* pSrcNode);;
+
+const FileNodeOps g_UartFileOps =
+{
+	.Read      = FsSerialRead,
+	.Write     = FsSerialWrite,
+	//.IoControl = FsSerialIoControl,
+};
 
 void UartInit(uint8_t com_num)
 {
@@ -216,8 +224,7 @@ void UartInit(uint8_t com_num)
 	pNode->m_inode  = com_num;
 	pNode->m_length = 0;
 	pNode->m_bHasDirCallbacks = false;
-	pNode->Read     = FsSerialRead;
-	pNode->Write    = FsSerialWrite;
+	pNode->m_pFileOps = &g_UartFileOps;
 	
 	FsUtilAddArbitraryFileNode("/Device", name, pNode);
 	

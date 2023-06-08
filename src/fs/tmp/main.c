@@ -11,6 +11,30 @@
 #include <memory.h>
 #include <time.h>
 
+const FileNodeOps g_TmpFileOps =
+{
+	.OnUnreferenced = FsTempFileOnUnreferenced,
+	.Open      = FsTempFileOpen,
+	.Close     = FsTempFileClose,
+	.Read      = FsTempFileRead,
+	.Write     = FsTempFileWrite,
+	.EmptyFile = FsTempFileEmpty,
+};
+
+const FileNodeOps g_TmpDirOps =
+{
+	.OnUnreferenced = FsTempFileOnUnreferenced,
+	.OpenDir    = FsTempDirOpen,
+	.CloseDir   = FsTempDirClose,
+	.ReadDir    = FsTempDirRead,
+	.FindDir    = FsTempDirLookup,
+	.CreateFile = FsTempDirCreate,
+	.UnlinkFile = FsTempDirUnlink,
+	.CreateDir  = FsTempDirCreateDir,
+	.RemoveDir  = FsTempDirRemoveDir,
+	.RenameOp   = FsTempDirRenameOp,
+};
+
 TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)
 {
 	TempFSNode* pTFNode = MmAllocate(sizeof(TempFSNode));
@@ -38,22 +62,12 @@ TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)
 	pFNode->m_createTime = pFNode->m_modifyTime;
 	pFNode->m_accessTime = pFNode->m_modifyTime;
 	
-	pFNode->OnUnreferenced = FsTempFileOnUnreferenced;
-	
 	if (bDirectory)
 	{
 		pFNode->m_type = FILE_TYPE_DIRECTORY;
 		pFNode->m_bHasDirCallbacks = true;
 		
-		pFNode->OpenDir        = FsTempDirOpen;
-		pFNode->CloseDir       = FsTempDirClose;
-		pFNode->ReadDir        = FsTempDirRead;
-		pFNode->FindDir        = FsTempDirLookup;
-		pFNode->CreateFile     = FsTempDirCreate;
-		pFNode->CreateDir      = FsTempDirCreateDir;
-		pFNode->UnlinkFile     = FsTempDirUnlink;
-		pFNode->RemoveDir      = FsTempDirRemoveDir;
-		pFNode->RenameOp       = FsTempDirRenameOp;
+		pFNode->m_pFileOps = &g_TmpDirOps;
 		
 		FsTempDirSetup(pFNode, pParentDir);
 	}
@@ -62,11 +76,7 @@ TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)
 		pFNode->m_type = FILE_TYPE_FILE;
 		pFNode->m_bHasDirCallbacks = false;
 		
-		pFNode->Open      = FsTempFileOpen;
-		pFNode->Close     = FsTempFileClose;
-		pFNode->Read      = FsTempFileRead;
-		pFNode->Write     = FsTempFileWrite;
-		pFNode->EmptyFile = FsTempFileEmpty;
+		pFNode->m_pFileOps = &g_TmpFileOps;
 	}
 	
 	return pTFNode;
@@ -147,6 +157,6 @@ void FsTempInit()
 
 void FsInitializeDevicesDir()
 {
-	g_pRootNode->CreateDir(g_pRootNode, "Device");
+	g_pRootNode->m_pFileOps->CreateDir(g_pRootNode, "Device");
 }
 
