@@ -566,6 +566,8 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsUtilAddArbitraryFileNode("/", name, &pCacheUnit->m_node);
+	
+	SLogMsg("sizeof(FileNode) = %d", sizeof(FileNode));
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)

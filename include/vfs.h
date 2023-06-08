@@ -68,29 +68,30 @@ struct tagFsPoolUnit;
 
 typedef struct FSNodeS
 {
-	uint32_t           m_refCount;
-	void*              m_pFileSystemHandle; // used to check if two FileNodes are part of the same file system
+	uint32_t m_refCount;
+	void*    m_pFileSystemHandle; // used to check if two FileNodes are part of the same file system
 	
 	// specific to the parent directory's file system and may not be modified by the child.
 	// This is used for mountpoints.
-	void*              m_pParentSpecific;
+	void*    m_pParentSpecific;
 	
-	//note: try not to use the m_name field. On ext2, it's going to always be the first thing that was found with that inode.
-	//char 	           m_name[128]; //+nullterm, so actually 127 chars
-	uint32_t           m_type;
-	uint32_t           m_perms;
-	uint32_t           m_inode;      //device specific
-	uint32_t           m_length;     //file size
+	uint8_t  m_type;
+	uint8_t  m_perms;
+	bool     m_bHasDirCallbacks;
+	
+	
+	uint32_t m_inode;      //device specific
+	uint32_t m_length;     //file size
 	
 	// implementation data
 	union
 	{
 		struct
 		{
-			uint32_t           m_implData;
-			uint32_t           m_implData1;
-			uint32_t           m_implData2;
-			uint32_t           m_implData3;
+			uint32_t m_implData;
+			uint32_t m_implData1;
+			uint32_t m_implData2;
+			uint32_t m_implData3;
 		};
 		struct
 		{
@@ -103,14 +104,12 @@ typedef struct FSNodeS
 	};
 	
 	// timing
-	uint32_t           m_modifyTime;
-	uint32_t           m_createTime;
-	uint32_t           m_accessTime;
+	uint32_t m_modifyTime;
+	uint32_t m_createTime;
+	uint32_t m_accessTime;
 	
 	// This function is called everytime the reference count of a file reaches zero.
 	FileOnUnreferencedFunc OnUnreferenced;
-	
-	bool m_bHasDirCallbacks;
 	
 	union
 	{
