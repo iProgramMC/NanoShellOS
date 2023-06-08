@@ -81,7 +81,10 @@ Also, a working windowed shell! It's less than perfect, but for now it works wel
 **2022-01-31**: Minimizable windows, and DOOM!
 
 <img src="/images/2022_01_29_17_21_34.png"/>
-<img src="/images/2022_01_31_18_21_34.png"/>
+
+Those free-floating icons above the launcher are minimized windows. You could right click them to restore them.
+
+<img src="/images/2022_01_31_18_48_49.png"/>
 
 You can now commit gross acts of murder in NanoShell.
 
@@ -126,7 +129,7 @@ I've got nothing to show, however the experimental repository is left pretty muc
 
 **2022-11-07**: The Great Comeback
 
-For the great ccomeback I started by adding basic ANSI code support, and then ported [NyanCat](https://github.com/klange/nyancat) to test it out. It works like a charm here :)
+For the great comeback I started by adding basic ANSI code support, and then ported [NyanCat](https://github.com/klange/nyancat) to test it out. It works like a charm here :)
 
 <img src="/images/2022_11_07_19_35_35.png"/>
 
@@ -160,4 +163,6 @@ And with that, this little screenshot tour of the first year of NanoShell is ove
 I've also been working on a [64-bit NanoShell](https://github.com/iProgramMC/NanoShell64), however it's in the experimental phase right now and this NanoShell still has interest from me.
 
 
-*iProgramInCpp, 2022-01-19*
+See you in 2024!
+
+*iProgramInCpp, 2023-01-19*
