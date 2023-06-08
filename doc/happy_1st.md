@@ -71,7 +71,7 @@ using the new Cabinet. The NanoShell Version Applet is loaded from the VFS.
 **2022-01-19**: This repository's publication! Also, a less than perfect FAT32 driver, and a working windowed shell!
 
 <img src="/images/2022_01_19_13_33_49.png"/>
-<img src="/images/2022_01_19_19_15_45.png"/>
+<img src="/images/2022_01_19_15_45_49.png"/>
 
 Err, yeah. Not looking great.
 
