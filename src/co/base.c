@@ -470,10 +470,10 @@ void CoVisComOnAnsiEscCode(Console *this)
 					
 					switch (lastChar)
 					{
-						case 'A': cy--; break;
-						case 'B': cy++; break;
-						case 'D': cx--; break;
-						case 'C': cx++; break;
+						case 'A': cy -= pos; break;
+						case 'B': cy += pos; break;
+						case 'D': cx -= pos; break;
+						case 'C': cx += pos; break;
 					}
 					
 					if (cx < 0) cx = 0;

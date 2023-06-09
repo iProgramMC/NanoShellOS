@@ -529,7 +529,6 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 			if (parm1 & 0x80) break;
 			
 			uint8_t code = (uint8_t)parm1;
-			bool bNeedRepaint = false;
 			TableViewData* table = &this->m_tableViewData;
 			
 			int selectedRow = table->m_selected_row;
@@ -541,17 +540,12 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 				{
 					if (selectedRow == -1) break;
 					
-					int old_row = selectedRow;
-					
 					selectedRow--;
 					if (selectedRow < 0)
 						selectedRow = 0;
 					
 					if (rowScroll >= selectedRow)
 						rowScroll  = selectedRow;
-					
-					if (selectedRow != old_row)
-						bNeedRepaint = true;
 					
 					break;
 				}
@@ -561,17 +555,12 @@ bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int par
 					
 					int rowsPerSize = (this->m_rect.bottom - this->m_rect.top - (TITLE_BAR_HEIGHT - 2) + TABLE_ITEM_HEIGHT - 1) / TABLE_ITEM_HEIGHT;
 					
-					int old_row = selectedRow;
-					
 					selectedRow++;
 					if (selectedRow >= table->m_row_count)
 						selectedRow  = table->m_row_count - 1;
 					
 					if (rowScroll <= selectedRow - rowsPerSize + 2)
 						rowScroll  = selectedRow - rowsPerSize + 2;
-					
-					if (selectedRow != old_row)
-						bNeedRepaint = true;
 					
 					break;
 				}

@@ -358,7 +358,7 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 		EDLogMsg("(loaded and mapped everything, activating heap!)");
 		MuUseHeap (pHeap);
 		
-		int strTabShLink = -1, symTabIndex = -1;
+		int strTabShLink = -1;
 		
 		for (int i = 0; i < pHeader->m_shNum; i++)
 		{
@@ -367,7 +367,6 @@ static int ElfExecute (void *pElfFile, UNUSED size_t size, const char* pArgs, in
 			if (pSectHeader->m_type == SHT_SYMTAB)
 			{
 				strTabShLink = pSectHeader->m_shLink;
-				symTabIndex  = i;
 				break;
 			}
 		}

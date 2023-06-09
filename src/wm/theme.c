@@ -635,22 +635,21 @@ void ThmLoadFont(ConfigEntry *pEntry)
 {
 	//load some properties
 	ConfigEntry
-	* pBmpPath, * pFntPath, * pSysFont, * pTibFont, * pBmpSize, * pChrHeit;
+	* pBmpPath, * pFntPath, * pSysFont, * pTibFont, * pChrHeit;
 	
-	char buffer1[128], buffer2[128], buffer3[128], buffer4[128], buffer5[128], buffer6[128];
+	char buffer1[128], buffer2[128], buffer3[128], buffer4[128], buffer5[128];
 	//TODO: Ensure safety
 	sprintf(buffer1, "%s::Bitmap",       pEntry->value);
 	sprintf(buffer2, "%s::FontData",     pEntry->value);
 	sprintf(buffer3, "%s::SystemFont",   pEntry->value);
 	sprintf(buffer4, "%s::TitleBarFont", pEntry->value);
-	sprintf(buffer6, "%s::ChrHeight",    pEntry->value);
+	sprintf(buffer5, "%s::ChrHeight",    pEntry->value);
 	
 	pBmpPath = CfgGetEntry (buffer1),
 	pFntPath = CfgGetEntry (buffer2),
 	pSysFont = CfgGetEntry (buffer3),
 	pTibFont = CfgGetEntry (buffer4);
-	pBmpSize = CfgGetEntry (buffer5);
-	pChrHeit = CfgGetEntry (buffer6);
+	pChrHeit = CfgGetEntry (buffer5);
 	
 	if (!pBmpPath || !pFntPath) return;
 	

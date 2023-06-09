@@ -265,7 +265,7 @@ void KbGetString(char* buffer, int max_size)
 
 KeyState KbGetKeyState(unsigned char keycode)
 {
-	if (keycode >= 128 && keycode <= 0) return KEY_RELEASED;
+	if (keycode >= 128 || keycode < 0) return KEY_RELEASED;
 	return keyboardState[keycode];
 }
 bool ShiftPressed()

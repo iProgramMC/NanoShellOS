@@ -79,8 +79,8 @@ void WidgetImage_BlitImageFast(Image* pImage, int x, int y, int width, int heigh
 	int imgWidth = pImage->width, imgHeight = pImage->height;
 	if (!width || !height) return;
 	
-	int yStart = y, yEnd = y + height, yStartBmp = 0, yStartRest = 0, yOffset = 0;
-	int xStart = x, xEnd = x + width,  xStartBmp = 0, xStartRest = 0, xOffset = 0;
+	int yStart = y, yEnd = y + height, yStartBmp = 0, yOffset = 0;
+	int xStart = x, xEnd = x + width,  xStartBmp = 0, xOffset = 0;
 	
 	// if the y-coord is higher than the cliprect's top
 	if (yStart < clipRect.top)
@@ -89,7 +89,6 @@ void WidgetImage_BlitImageFast(Image* pImage, int x, int y, int width, int heigh
 		yOffset = diff;
 		yStart += diff;
 		yStartBmp  = diff * imgHeight / height;
-		yStartRest = diff % height * imgHeight;
 	}
 	// if the x-coord is more to the left than the cliprect's left
 	if (xStart < clipRect.left)
@@ -98,7 +97,6 @@ void WidgetImage_BlitImageFast(Image* pImage, int x, int y, int width, int heigh
 		xOffset = diff;
 		xStart += diff;
 		xStartBmp  = diff * imgWidth / width;
-		xStartRest = diff % width * imgWidth;
 	}
 	// if the lower y coord is lower than the cliprect's bottom
 	if (yEnd > clipRect.bottom)

@@ -370,7 +370,7 @@ void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, int parm1, int 
 				
 				int item = pData->m_SelectedTheme;//ComboBoxGetSelectedItemID(pWindow, COLORS_THEMECOMBO);
 				
-				bool bRefresh = true;
+				bool bRefresh = false;
 				if (item != -1 && WouldThemeChange(item))
 				{
 					int borderSize = BORDER_SIZE, titleBarHeight = TITLE_BAR_HEIGHT;
@@ -399,7 +399,10 @@ void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, int parm1, int 
 				
 				SetThemingParameter(P_BACKGROUND_COLOR, pData->m_BgColor);
 				
-				RefreshEverything();
+				if (bRefresh)
+				{
+					RefreshEverything();
+				}
 			}
 			
 			if (parm1 == COLORS_OK || parm1 == COLORS_CANCEL)

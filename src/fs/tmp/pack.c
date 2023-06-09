@@ -31,13 +31,13 @@ void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* b
 // bPermanent - States that this memory never goes away and we don't need to duplicate it.
 void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 {
-	uint32_t epochTime = GetEpochTime();
+//	uint32_t epochTime = GetEpochTime();
 	// Add files to the root FS.
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
 		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
 		uint32_t pathLength = strlen(ramDiskTar->name);
-		uint32_t mtime = OctToBin(ramDiskTar->mtime, 11);
+		//uint32_t mtime = OctToBin(ramDiskTar->mtime, 11);
 		bool hasDotSlash = false;
 
 		if (ramDiskTar->name[0] == '.')

@@ -168,7 +168,7 @@ bool RefreshMouse()
 		{
 			int newMouseX = g_mouseX;
 			int newMouseY = g_mouseY;
-			if (lockX == -1)
+			if (lockX == -1 || lockY == -1)
 			{
 				newMouseX += QueueMouseUpdateTo.newX;
 				newMouseY += QueueMouseUpdateTo.newY;

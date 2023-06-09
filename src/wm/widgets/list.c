@@ -273,8 +273,6 @@ bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 			//draw a green rectangle:
 			Rectangle rk = this->m_rect;
 			
-			int offsetLeft = 4, offsetTop = 2;
-			
 			if (~this->m_parm1 & LISTVIEW_NOBORDER)
 			{
 				rk.left   += 2;
@@ -282,8 +280,6 @@ bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm
 				rk.right  -= 2;
 				rk.bottom -= 2;
 			}
-			else
-				offsetLeft = offsetTop = 0;
 			
 			VidFillRectangle(WINDOW_TEXT_COLOR_LIGHT, rk);
 			
