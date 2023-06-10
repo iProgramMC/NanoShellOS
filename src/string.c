@@ -420,3 +420,42 @@ bool WildcardMatches(const char* pattern, const char* candidate)
 	
 	return WildcardMatches(pattern + 1, candidate + 1);
 }
+
+size_t strlcat(char* dst, const char* src, size_t sz)
+{
+	size_t npi = 0;
+	size_t slen_src = strlen(src);
+	size_t slen_dst = sz;
+	
+	// find nullptr
+	for (; npi < sz; npi++)
+	{
+		if (dst[npi] == 0)
+			break;
+	}
+	
+	// no nullptr in the first sz bytes. Error!
+	if (npi == sz)
+		return slen_src + slen_dst;
+	
+	slen_dst = npi;
+
+	size_t return_value = slen_src + slen_dst;
+	
+	// the string is already full:
+	if (npi == sz - 1)
+		return 0;
+	
+	for (size_t idx = 0; npi < sz - 1; npi++, idx++)
+	{
+		if (src[idx] == 0)
+			break;
+		
+		dst[npi] = src[idx];
+	}
+	
+	for (; npi < sz; npi++)
+		dst[npi] = 0;
+	
+	return return_value;
+}

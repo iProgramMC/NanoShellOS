@@ -142,8 +142,6 @@ int  g_ramDiskID      = 0x00;//ATA: Prim Mas
 int  g_lastReturnCode = 0;
 bool CoPrintCharInternal (Console* this, char c, char next);
 
-extern char g_cwd[PATH_MAX+2];
-
 //extern Heap* g_pHeap;
 extern bool  g_windowManagerRunning;
 void WindowManagerShutdown ();
@@ -362,7 +360,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	}
 	else if (strcmp (token, "pwd") == 0)
 	{
-		LogMsg(g_cwd);
+		LogMsg(FiGetCwd());
 	}
 	else if (strcmp (token, "rb") == 0)
 	{
@@ -920,7 +918,8 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		
 		int switches = 0;
 		
-		const char* pPathToList = g_cwd;
+		const char* pPathToList = FiGetCwd();
+		bool bUseCWD = true;
 		
 		// parse other parameters if applicable
 		char* parm = Tokenize (&state, NULL, " ");
@@ -980,7 +979,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		
 		bool bareMode = switches & SW_BARE;
 		
-		int dd = FiOpenDir (pPathToList);
+		int dd = FiOpenDir(bUseCWD ? "." : pPathToList);
 		if (dd < 0)
 		{
 			LogMsg("ls: cannot list '%s': %s", pPathToList, GetErrNoString(dd));
@@ -1007,9 +1006,15 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			//int res = FiStatAt (dd, pDirEnt->m_name, &statResult);
 			
 			char path[2048];
-			strcpy(path, FiGetCwd());
-			if (strcmp(path, "/"))
-				strcat(path, "/");
+			path[0] = 0;
+			
+			if (!bUseCWD)
+			{
+				strcpy(path, pPathToList);
+				if (strcmp(path, "/"))
+					strcat(path, "/");
+			}
+			
 			strcat(path, pDirEnt->m_name);
 			
 			int res = FiStat(path, &statResult);
@@ -1452,7 +1457,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 
 void ShellInit()
 {
-	strcpy (g_cwd, "/");
+	//strcpy (g_cwd, "/");
 	
 	/*
 	bool b = CbCopyText("movedata /Device/Sb16 /Fat0/sup/crap.raw\n");
@@ -1484,14 +1489,14 @@ void ShellRun(UNUSED int unused_arg)
 	
 	while (!bExit)
 	{
-		//LogMsgNoCr("\e]2;Command Prompt: %s\a", g_cwd);
+		//LogMsgNoCr("\e]2;Command Prompt: %s\a", FiGetCwd());
 		
-		LogMsgNoCr("%s>", g_cwd);
+		LogMsgNoCr("%s>", FiGetCwd());
 		char buffer[256];
 		CoGetString (buffer, 256);
 		memcpy (g_lastCommandExecuted, buffer, 256);
 		
-		//LogMsgNoCr("\e]2;Command Prompt: %s - %s\a", g_cwd, buffer);
+		//LogMsgNoCr("\e]2;Command Prompt: %s - %s\a", FiGetCwd(), buffer);
 		
 		ShellExecuteCommand (buffer, &bExit);
 		

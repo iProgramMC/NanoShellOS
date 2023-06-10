@@ -282,7 +282,7 @@ void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, 
 	}
 }
 
-extern char g_cwd[];
+extern FileNode* g_pCwdNode;
 
 // Pops up a text box requesting an input string, and returns a MmAllocate'd
 // region of memory with the text inside.  Make sure to free the result,
@@ -327,8 +327,9 @@ char* FilePickerBoxEx(Window* pWindow, const char* pPrompt, const char* pCaption
 	
 	*/
 	
-	char cwd[PATH_MAX + 2];
-	strcpy(cwd, FiGetCwd());
+	// kinda hacky
+	FileNode* pOldCwdNode = g_pCwdNode;
+	FsAddReference(pOldCwdNode); // keep it hanging around
 	
 	if (FiChangeDir(pFilePath) < 0)
 	{
@@ -445,8 +446,8 @@ char* FilePickerBoxEx(Window* pWindow, const char* pPrompt, const char* pCaption
 		WmPaintWindowTitle (pWindow);
 	}
 	
-	// just change it back anyway.. If anything fails, this acts as if the directory was deleted while we were still there
-	strcpy(g_cwd, cwd);
+	g_pCwdNode = pOldCwdNode;
+	FsReleaseReference(g_pCwdNode);
 	
 	return dataReturned;
 }

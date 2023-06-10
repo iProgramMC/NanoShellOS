@@ -113,10 +113,12 @@ typedef struct FSNodeS
 	// This is used for mountpoints.
 	void*    m_pParentSpecific;
 	
+	struct FSNodeS *m_pParent;          // set for a directory, for a file it's NULL
+	uint32_t        m_parentDirIndex;   // the index where our dent is
+	
 	uint8_t  m_type;
 	uint8_t  m_perms;
 	bool     m_bHasDirCallbacks;
-	
 	
 	uint32_t m_inode;      //device specific
 	uint32_t m_length;     //file size

@@ -11,6 +11,8 @@
 
 #define EFLAGS_IF  (1 << 9)
 
+#define C_FUNCS_ON_IRQ_SWITCH_MAX (256)
+
 enum {
 	BC_EX_DIV_BY_ZERO,
 	BC_EX_DEBUG,
@@ -102,5 +104,17 @@ void PrintBackTrace (StackFrame* pFrame, uintptr_t eip, const char* pTag, void* 
  * Logs details of an exception to the screen.
  */
 void KeLogExceptionDetails (BugCheckReason reason, Registers* pRegs, void* pProcess);
+
+/**
+ * Adds a deferred procedure call when interrupts get enabled.
+ */
+typedef void(*FuncOnIRQSwitch)(void*);
+
+bool KeAddDeferredCall(FuncOnIRQSwitch func, void* parm);
+
+/**
+ * Processes deferred procedure calls on an IRQ level switch.
+ */
+void KeProcessDeferredCalls();
 
 #endif//_DEBUG_H

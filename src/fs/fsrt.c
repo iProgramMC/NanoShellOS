@@ -16,8 +16,6 @@
 #include <task.h>
 #include <misc.h>
 
-extern char g_cwd[];
-
 // Thread unsafe file system functions:
 void FrCloseAllFilesFromTask(void* task);
 int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine);
@@ -43,10 +41,20 @@ int FrChangeDir(const char *pfn);
 int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, const char* pNameNew);
 int FrMakeDir(const char* pDirName, const char* pFileName);
 int FrRemoveDir(const char* pPath);
+const char* FrGetCwd();
 
 SafeLock g_FileSystemLock;
 
 // Thread safe wrappers for thread unsafe functions:
+
+const char* FiGetCwd()
+{
+	const char* returnValue;
+	USING_LOCK(&g_FileSystemLock, {
+		returnValue = FrGetCwd();
+	});
+	return returnValue;
+}
 
 static int FiOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
@@ -223,20 +231,7 @@ int FiUnlinkInDir(const char* pDirPath, const char* pFileName)
 
 int FiOpenD(const char* pFileName, int oflag, const char* srcFile, int srcLine)
 {
-	// if the file path isn't absolute, make it
-	if (*pFileName == '/')
-	{
-		return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
-	}
-	else
-	{
-		char path[PATH_MAX * 2];
-		strcpy(path, g_cwd);
-		if (g_cwd[1] != 0) // not just '/'
-			strcat(path, "/");
-		strcat(path, pFileName);
-		return FiOpenInternal(path, NULL, oflag, srcFile, srcLine);
-	}
+	return FiOpenInternal(pFileName, NULL, oflag, srcFile, srcLine);
 }
 
 int FiOpenFileNodeD(FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
@@ -279,33 +274,25 @@ int FiUnlinkFile (const char *pfn)
 	char buffer[PATH_MAX];
 	if (strlen (pfn) >= PATH_MAX - 1) return -ENAMETOOLONG;
 	
-	// is this a relative path?
-	if (*pfn != '/')
-	{
-		// append the relative path
-		if (strlen (pfn) + strlen (g_cwd) >= PATH_MAX - 2) return -EOVERFLOW;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfn);
-		
-		return FiUnlinkFile(buffer);
-	}
-	
 	// copy up until the last /
 	char* r = strrchr(pfn, '/');
-	
-	const char* ptr = pfn;
-	char *head = buffer;
-	
-	while (ptr != r) *head++ = *ptr++;
-	
-	// add the null terminator
-	*head = 0;
-	
-	if (buffer[0] == 0)
-		buffer[0] = '/', buffer[1] = 0;
+	if (r)
+	{
+		const char* ptr = pfn;
+		char *head = buffer;
+		
+		while (ptr != r) *head++ = *ptr++;
+		
+		// add the null terminator
+		*head = 0;
+		
+		if (buffer[0] == 0)
+			buffer[0] = '/', buffer[1] = 0;
+	}
+	else
+	{
+		strcpy(buffer, ".");
+	}
 	
 	return FiUnlinkInDir(buffer, r + 1);
 }
@@ -313,57 +300,11 @@ int FiUnlinkFile (const char *pfn)
 int FiChangeDir(const char* pfn)
 {
 	if (*pfn == '\0') return -ENOTHING;//TODO: maybe cd into their home directory instead?
-	
-	int slen = strlen (pfn);
-	if (slen >= PATH_MAX) return -EOVERFLOW;
-	
-	if (pfn[0] == '/')
-	{
-		// Already an absolute path.
-		int rv;
-		USING_LOCK(&g_FileSystemLock, {
-			rv = FrChangeDir(pfn);
-		});
-		return rv;
-	}
-	
-	if (strcmp (pfn, PATH_THISDIR) == 0) return -ENOTHING;
-	
-	char cwd_work [PATH_MAX + 2];
-	memset (cwd_work, 0, sizeof cwd_work);
-	strcpy (cwd_work, g_cwd);
-	
-	//TODO FIXME: make composite paths like "../../test/file" work -- Partially works, but only because ext2 is generous enough to give us . and .. entries
-	
-	if (strcmp (pfn, PATH_PARENTDIR) == 0)
-	{
-		for (int i = PATH_MAX - 1; i >= 0; i--)
-		{
-			//get rid of the last segment
-			if (cwd_work[i] == PATH_SEP)
-			{
-				cwd_work[i + (i == 0)] = 0;
-				break;
-			}
-		}
-	}
-	else
-	{
-		if (strlen (cwd_work) + slen + 5 >= PATH_MAX)
-			return -EOVERFLOW;//path would be too large
-		
-		if (cwd_work[1] != 0) //i.e. not just a '/'
-		{
-			strcat (cwd_work, "/");
-		}
-		strcat (cwd_work, pfn);
-	}
-	
+
 	int rv;
 	USING_LOCK(&g_FileSystemLock, {
-		rv = FrChangeDir(cwd_work);
+		rv = FrChangeDir(pfn);
 	});
-	
 	return rv;
 }
 
@@ -387,6 +328,9 @@ static int FiMakeDirSub(char* pPath)
 //note: This only works with absolute paths that have been checked for length.
 int FiRenameSub(const char* pfnOld, const char* pfnNew)
 {
+	if (strlen(pfnOld) >= PATH_MAX) return -ENAMETOOLONG;
+	if (strlen(pfnNew) >= PATH_MAX) return -ENAMETOOLONG;
+	
 	char bufferOld[PATH_MAX], bufferNew[PATH_MAX];
 	
 	strcpy(bufferOld, pfnOld);
@@ -396,12 +340,29 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	pSlashOld = strrchr(bufferOld, '/');
 	pSlashNew = strrchr(bufferNew, '/');
 	
-	//well, these SHOULD be paths with at least one slash inside.
-	ASSERT(pSlashOld && pSlashNew);
+	const char *pDirOld, *pNameOld, *pDirNew, *pNameNew;
 	
-	*pSlashOld = *pSlashNew = 0;
+	if (!pSlashOld)
+	{
+		pDirOld = ".";
+	}
+	else
+	{
+		pDirOld = bufferOld;
+		pNameOld = pSlashOld + 1;
+		*pSlashOld = 0;
+	}
 	
-	char* pDirOld = bufferOld, *pDirNew = bufferNew, *pNameOld = pSlashOld + 1, *pNameNew = pSlashNew + 1;
+	if (!pSlashNew)
+	{
+		pDirNew = ".";
+	}
+	else
+	{
+		pDirNew= bufferNew;
+		pNameNew = pSlashNew + 1;
+		*pSlashNew = 0;
+	}
 	
 	int rv;
 	USING_LOCK(&g_FileSystemLock, {
@@ -413,39 +374,6 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 
 int FiRename(const char* pfnOld, const char* pfnNew)
 {
-	// not a relative path
-	if (pfnOld[0] != '/')
-	{
-		char buffer[PATH_MAX];
-		if (strlen(pfnOld) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfnOld);
-		
-		return FiRename(buffer, pfnNew);
-	}
-	
-	if (pfnNew[0] != '/')
-	{
-		char buffer[PATH_MAX];
-		if (strlen(pfnNew) + strlen(g_cwd) + 2 >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy(buffer, g_cwd);
-		if (strcmp(g_cwd, "/") != 0)
-			strcat(buffer, "/");
-		strcat(buffer, pfnNew);
-		
-		return FiRename(pfnOld, buffer);
-	}
-	
-	if (strlen(pfnOld) >= PATH_MAX) return -ENAMETOOLONG;
-	if (strlen(pfnNew) >= PATH_MAX) return -ENAMETOOLONG;
-	
-	// If they're the same file, just don't do anything
-	if (strcmp(pfnOld, pfnNew) == 0) return -ENOTHING;
-	
 	return FiRenameSub(pfnOld, pfnNew);
 }
 
@@ -455,21 +383,9 @@ int FiMakeDir(const char* pPath)
 	
 	char buf[PATH_MAX + 1];
 	
-	if (*pPath == '/')
-	{
-		if (strlen (pPath) >= PATH_MAX) return -ENAMETOOLONG;
-		
-		strcpy( buf, pPath );
-	}
-	else
-	{
-		if (strlen (pPath) + strlen (g_cwd) + 1 >= PATH_MAX - 2) return -ENAMETOOLONG;
-		
-		strcpy( buf, g_cwd );
-		if (strcmp( g_cwd, "/" ))
-			strcat( buf, "/" );
-		strcat( buf, pPath );
-	}
+	if (strlen (pPath) >= PATH_MAX) return -ENAMETOOLONG;
+	
+	strcpy( buf, pPath );
 	
 	return FiMakeDirSub(buf);
 }

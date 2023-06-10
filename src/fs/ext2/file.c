@@ -524,7 +524,7 @@ int Ext2FindDir(FileNode* pNode, const char* pName, FileNode** pFNOut)
 	*pFNOut = NULL;
 	
 	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
-	DirEnt space; uint32_t index = 0;
+	DirEnt space; uint32_t index = 0, indexlast = 0;
 	
 	int err = 0;
 	while ((err = Ext2ReadDirInternal(pNode, &index, &space, false)) == 0)
@@ -541,10 +541,25 @@ int Ext2FindDir(FileNode* pNode, const char* pName, FileNode** pFNOut)
 			
 			FsAddReference(&pCU->m_node);
 			
-			*pFNOut =  &pCU->m_node;
+			// if we're a directory:
+			if (pCU->m_node.m_bHasDirCallbacks)
+			{
+				// if we don't have a parent pointer, and we aren't . or ..:
+				if (!pCU->m_node.m_pParent && strcmp(space.m_name, ".") && strcmp(space.m_name, ".."))
+				{
+					// set ourselves as the parent
+					pCU->m_node.m_pParent = pNode;
+					pCU->m_node.m_parentDirIndex = indexlast;
+					FsAddReference(pNode);
+				}
+			}
+			
+			*pFNOut = &pCU->m_node;
 			
 			return ERR_SUCCESS;
 		}
+		
+		indexlast = index;
 	}
 	
 	// if it stopped because we failed, return _that_ error code

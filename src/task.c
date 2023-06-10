@@ -9,6 +9,7 @@
 #include <string.h>
 #include <print.h>
 #include <time.h>
+#include <vfs.h>
 
 // The kernel task is task 0.  Other tasks are 1-indexed.
 // This means g_runningTasks[0] is unused.
@@ -37,13 +38,15 @@ static Console*       g_kernelConsoleContext = NULL;
 static void*          g_kernelFontContext = NULL;
 static uint32_t       g_kernelFontIDContext = 0;
 static char           g_kernelCwd[PATH_MAX+2];
+static void*          g_kernelCwdNode;
 static uint32_t       g_kernelSysCallNum; //honestly, kind of useless since the kernel task will never be an ELF trying to call into the system :^)
 
 extern UserHeap*      g_pCurrentUserHeap;
 extern Console*       g_currentConsole; //logmsg
+extern void*          g_pCwdNode;
 extern void*          g_pCurrentFont;
 extern uint32_t       g_nCurrentFontID;
-extern char           g_cwd[PATH_MAX+2];
+extern char           g_cwdStr[PATH_MAX+2];
 
 extern bool           g_interruptsAvailable;
 
@@ -220,7 +223,11 @@ void KeConstructTask (Task* pTask)
 	pTask->m_pCurrentHeap    = g_pCurrentUserHeap;//default kernel heap.
 	pTask->m_pConsoleContext = g_currentConsole;
 	pTask->m_pFontContext    = g_pCurrentFont;
-	strcpy (pTask->m_cwd, g_cwd); // inherit from parent
+	strcpy (pTask->m_cwd, "");
+	pTask->m_cwdNode         = g_pCwdNode;
+	
+	// Add another reference to the CWD node:
+	FsAddReference(g_pCwdNode);
 	
 	memset   (pTask->m_fpuState, 0, sizeof (pTask->m_fpuState));
 	KeFxSave (pTask->m_fpuState);
@@ -442,6 +449,16 @@ void KeDetachTask(Task* pTask)
 	pTask->m_bAttached = false;
 }
 
+void KeResetTask_ReleaseFileNode(void* parm)
+{
+	if (!parm)
+		// likely we're at init, just return
+		return;
+		
+	FileNode* pFN = parm;
+	FsReleaseReference(pFN);
+}
+
 static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 {
 	if (!interrupt)
@@ -504,6 +521,10 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 		pTask->m_featuresArgs = false;
 		pTask->m_bMarkedForDeletion = false;
 		
+		// release the reference to our CWD soon:
+		KeAddDeferredCall(KeResetTask_ReleaseFileNode, pTask->m_cwdNode);
+		pTask->m_cwdNode = NULL;
+		
 		if (pTask->m_bAttached)
 		{
 			// suspend it as SUSPENSION_ZOMBIE:
@@ -526,8 +547,6 @@ static void KeResetTask(Task* pTask, bool killing, bool interrupt)
 }
 
 void WmOnTaskCrashed(Task *pTask);
-
-void FiReleaseResourcesFromTask(Task *pTask);
 
 bool KeKillTask(Task* pTask)
 {
@@ -609,6 +628,12 @@ void KeExit()
 	}
 	
 	Task* pTask = KeGetRunningTask();
+	
+	// Close the file resources opened by this task.
+	FiReleaseResourcesFromTask(pTask);
+	
+	// Close the windows that have been opened by this task.
+	WmOnTaskCrashed(pTask);
 	
 	if (pTask->m_pProcess)
 		ExOnThreadExit ((Process*)pTask->m_pProcess, pTask);
@@ -847,7 +872,7 @@ void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 	if (pTask)
 	{
 		memcpy (& pTask -> m_state, pSaveState, sizeof(CPUSaveState));
-		memcpy   (pTask -> m_cwd,   g_cwd,      sizeof(g_cwd));
+		memcpy   (pTask -> m_cwd,   g_cwdStr,   sizeof(g_cwdStr));
 		KeFxSave (pTask -> m_fpuState);
 		pTask->m_pVBEContext     = g_vbeData;
 		pTask->m_pCurrentHeap    = g_pCurrentUserHeap;
@@ -855,11 +880,12 @@ void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 		pTask->m_pFontContext    = g_pCurrentFont;
 		pTask->m_pFontIDContext  = g_nCurrentFontID;
 		pTask->m_sysCallNum      = *pSysCallNum;
+		pTask->m_cwdNode         = g_pCwdNode;
 	}
 	else
 	{
 		memcpy (&g_kernelSaveState, pSaveState, sizeof(CPUSaveState));
-		memcpy   (g_kernelCwd,      g_cwd,      sizeof(g_cwd));
+		memcpy   (g_kernelCwd,      g_cwdStr,   sizeof(g_cwdStr));
 		KeFxSave (g_kernelFPUState); //perhaps we won't use this.
 		g_kernelVBEContext     = g_vbeData;
 		g_kernelHeapContext    = g_pCurrentUserHeap;
@@ -867,6 +893,7 @@ void KeSaveTaskInternalContext(CPUSaveState* pSaveState)
 		g_kernelFontContext    = g_pCurrentFont;
 		g_kernelFontIDContext  = g_nCurrentFontID;
 		g_kernelSysCallNum     = *pSysCallNum;
+		g_kernelCwdNode        = g_pCwdNode;
 	}
 	
 	// Revert to a standard context.
@@ -883,7 +910,8 @@ void KeRestoreTaskInternalContext()
 	if (pNewTask)
 	{
 		KeFxRestore(pNewTask->m_fpuState);
-		memcpy (g_cwd, pNewTask->m_cwd, sizeof (g_cwd));
+		memcpy (g_cwdStr, pNewTask->m_cwd, sizeof (g_cwdStr));
+		g_pCwdNode       = pNewTask->m_cwdNode;
 		g_vbeData        = pNewTask->m_pVBEContext;
 		g_currentConsole = pNewTask->m_pConsoleContext;
 		g_pCurrentFont   = pNewTask->m_pFontContext;
@@ -895,8 +923,9 @@ void KeRestoreTaskInternalContext()
 	else
 	{
 		KeFxRestore(g_kernelFPUState);
-		memcpy (g_cwd, g_kernelCwd, sizeof (g_cwd));
-		g_vbeData = g_kernelVBEContext;
+		memcpy (g_cwdStr, g_kernelCwd, sizeof (g_cwdStr));
+		g_pCwdNode       = g_kernelCwdNode;
+		g_vbeData        = g_kernelVBEContext;
 		g_currentConsole = g_kernelConsoleContext;
 		g_pCurrentFont   = g_kernelFontContext;
 		g_nCurrentFontID = g_kernelFontIDContext;

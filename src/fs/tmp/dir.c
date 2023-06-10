@@ -185,6 +185,14 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 		return -ENOSPC;
 	}
 	
+	if (pChildNode->m_bHasDirCallbacks)
+	{
+		SLogMsg("XXXXX");
+		pChildNode->m_parentDirIndex = offset;
+		pChildNode->m_pParent = pFileNode;
+		FsAddReference(pFileNode);
+	}
+	
 	// add a reference to our child.
 	FsAddReference(pChildNode);
 	

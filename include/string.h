@@ -34,6 +34,7 @@ char* strchr (const char* stringToSearch, const char characterToSearchFor);
 char* strrchr (const char* stringToSearch, const char characterToSearchFor);
 char* strdup (const char* pText);//! Make sure to free this.
 char* strncpy(char *dst, const char *src, size_t n);
+size_t strlcat(char* dst, const char* src, size_t sz);
 void fast_memcpy(void* restrict dest, const void* restrict src, int size);//aligns to 32 bytes!!
 void fmemcpy32 (void* restrict dest, const void* restrict src, int size);
 // Works like strncpy, except that the destination buffer will always contain a NULL terminator afterwards.

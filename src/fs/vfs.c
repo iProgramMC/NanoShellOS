@@ -18,12 +18,79 @@
 #include <task.h>
 #include <misc.h>
 
-char g_cwd[PATH_MAX+2];
+char g_cwdStr[PATH_MAX+2];
+FileNode* g_pCwdNode = NULL;
 
-const char* FiGetCwd ()
+FileNode* FsGetCwdNode()
 {
-	extern char g_cwd[PATH_MAX + 2];
-	return g_cwd;
+	return g_pCwdNode;
+}
+
+void FrGetCwdSub(FileNode* pNode, char* cwdPtr, size_t cwdPtrSize, int depthLvl)
+{
+	if (depthLvl == 0)
+	{
+		strncpy(cwdPtr, "...", cwdPtrSize);
+		cwdPtr[cwdPtrSize - 1] = 0;
+		return;
+	}
+	
+	// if we are the root node, we are done!
+	if (FsGetRootNode() == pNode)
+		return;
+	
+	char our_name[PATH_MAX];
+	strcpy(our_name, "???");
+	bool bHaveName = false;
+	
+	FileNode* pParent = pNode->m_pParent;
+	
+	if (pParent)
+	{
+		// we have a parent!
+		FsReleaseReference(pParent);
+		
+		uint32_t index = pNode->m_parentDirIndex;
+		
+		// Browse the parent for our name
+		DirEnt de;
+		int result = FsReadDir(pParent, &index, &de);
+		
+		if (result >= 0)
+		{
+			our_name[0] = '/';
+			strncpy(our_name + 1, de.m_name, sizeof our_name - 1);
+			our_name[sizeof our_name - 1] = 0;
+			bHaveName = true;
+		}
+		
+		if (!bHaveName)
+		{
+			SLogMsg("FrGetCwdSub I/O error %d while trying to find ourselves within the parent!!", result);
+		}
+		else
+		{
+			// Call this function recursively on the parent to get its path:
+			FrGetCwdSub(pParent, cwdPtr, cwdPtrSize, depthLvl - 1);
+		}
+		
+		FsReleaseReference(pParent);
+	}
+	
+	strlcat(cwdPtr, our_name, cwdPtrSize);
+}
+
+const char* FrGetCwd()
+{
+	g_cwdStr[0] = 0;
+	
+	FrGetCwdSub(g_pCwdNode, g_cwdStr, sizeof g_cwdStr, 32);
+	
+	// special case at the root directory
+	if (g_cwdStr[0] == 0)
+		strcpy(g_cwdStr, "/");
+	
+	return g_cwdStr;
 }
 
 void FsAddReference(FileNode* pNode)
@@ -42,6 +109,15 @@ void FsReleaseReference(FileNode* pNode)
 	
 	if (pNode->m_refCount == 0)
 	{
+		if (pNode->m_bHasDirCallbacks)
+		{
+			if (pNode->m_pParent)
+			{
+				FsReleaseReference(pNode->m_pParent);
+				pNode->m_pParent = NULL;
+			}
+		}
+		
 		if (pNode->m_pFileOps->OnUnreferenced)
 			pNode->m_pFileOps->OnUnreferenced(pNode);
 	}
@@ -307,11 +383,24 @@ FileNode* FsResolvePathInternal(FileNode* pStartNode, const char* pPath, bool bR
 		
 		FileNode* pChild = NULL;
 		
-		int result = FsFindDir(pFileNode, sCurrentFileName, &pChild);
-		if (FAILED(result))
+		if (strcmp(sCurrentFileName, ".") == 0)
 		{
-			FsReleaseReference(pFileNode);
-			return NULL;
+			pChild = pFileNode;
+			FsAddReference(pChild); // to imitate the effect that FsFindDir adds
+		}
+		else if (strcmp(sCurrentFileName, "..") == 0)
+		{
+			pChild = pFileNode->m_pParent;
+			FsAddReference(pChild); // to imitate the effect that FsFindDir adds
+		}
+		else
+		{
+			int result = FsFindDir(pFileNode, sCurrentFileName, &pChild);
+			if (FAILED(result))
+			{
+				FsReleaseReference(pFileNode);
+				return NULL;
+			}
 		}
 		
 		if (!pChild)
@@ -371,6 +460,8 @@ FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
 	if (pathLen >= PATH_MAX)
 		return NULL;
 	
+	FileNode* pStartNode = FsGetRootNode();
+	
 	char path[PATH_MAX];
 	if (*pPath == '/')
 	{
@@ -378,21 +469,16 @@ FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
 	}
 	else
 	{
-		strcpy(path, FiGetCwd() + 1);
-		
-		size_t cwdLen = strlen(path);
-		
-		if (cwdLen + 2 + pathLen >= PATH_MAX)
-			return NULL;
-		
-		if (*path != 0)
-			strcat(path, "/");
-		
-		strcat(path, pPath);
+		pStartNode = FsGetCwdNode();
+		strcpy(path, pPath);
 	}
 	
 	UNUSED int errNo = 0;
-	return FsResolvePathInternal(FsGetRootNode(), path, bResolveSymLinks, 0, &errNo);
+	FsAddReference(pStartNode);
+	
+	FileNode* pResult = FsResolvePathInternal(pStartNode, path, bResolveSymLinks, 0, &errNo);
+	
+	return pResult;
 }
 
 // Default
@@ -406,8 +492,8 @@ void FsInitializeDevicesDir();
 //First time setup of the file manager
 void FsInit ()
 {
-	strcpy(g_cwd, "/");
 	FsTempInit();
+	g_pCwdNode = FsGetRootNode();
 	FsInitializeDevicesDir();
 }
 
@@ -492,10 +578,10 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 			if ((oflag & O_CREAT) && (oflag & O_WRONLY))
 			{
 				// Resolve the directory's name
-				char fileName[strlen(pFileName) + 1];
+				char fileName[PATH_MAX + 2];
 				strcpy (fileName, pFileName);
 				
-				char* fileNameSimple = NULL;
+				const char* fileNameSimple = NULL;
 				
 				for (int i = strlen (pFileName); i >= 0; i--)
 				{
@@ -505,6 +591,13 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 						fileNameSimple = fileName + i + 1;
 						break;
 					}
+				}
+				
+				// if no slash could be removed, this is the simple file name.
+				if (fileNameSimple == NULL)
+				{
+					fileNameSimple = pFileName;
+					strcpy(fileName, ".");
 				}
 				
 				FileNode* pDir = FsResolvePath(fileName, false);
@@ -992,10 +1085,51 @@ int FrChangeDir(const char *pfn)
 		return -ENOTDIR;
 	}
 	
-	FsReleaseReference(pNode);
+	FileNode* pOldCWD = g_pCwdNode;
 	
-	//this should work!
-	strcpy (g_cwd, pfn);
+	// set the new CWD node:
+	g_pCwdNode = pNode;
+	
+	// release the old one:
+	FsReleaseReference(pOldCWD);
+	
+	// here, we didn't need to FsAddReference and FsReleaseReference, since they'd cancel each other out, and
+	// FsResolvePath() adds 1 to the reference counter anyways
+	
+	return -ENOTHING;
+}
+
+int FrFileDesChangeDir(int fd)
+{
+	if (!FrIsValidDescriptor(fd))
+		return -EBADF;
+	
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	
+	FileNode *pNode = pDesc->m_pNode;
+	
+	if (pNode->m_type == FILE_TYPE_SYMBOLIC_LINK)
+	{
+		FsReleaseReference(pNode);
+		return -ELOOP;
+	}
+	
+	if (!(pNode->m_type & FILE_TYPE_DIRECTORY))
+	{
+		FsReleaseReference(pNode);
+		return -ENOTDIR;
+	}
+	
+	FileNode* pOldCWD = g_pCwdNode;
+	
+	// add a reference to it:
+	FsAddReference(pNode);
+	
+	// set the new CWD node:
+	g_pCwdNode = pNode;
+	
+	// release the old one:
+	FsReleaseReference(pOldCWD);
 	
 	return -ENOTHING;
 }
@@ -1087,6 +1221,9 @@ int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, con
 
 int FrMakeDir(const char* pDirName, const char* pFileName)
 {
+	if (!*pDirName)
+		pDirName = ".";
+	
 	FileNode *pNode = FsResolvePath(pDirName, false);
 	if (!pNode) return -ENOENT;
 	
@@ -1189,9 +1326,18 @@ void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, Fil
 		return;
 	}
 	
-	failure = pFN->m_pFileOps->CreateFile(pFN, pFileName);
-	if (failure < 0)
-		goto _fail;
+	if (pSrcNode->m_bHasDirCallbacks)
+	{
+		failure = pFN->m_pFileOps->CreateDir(pFN, pFileName);
+		if (failure < 0)
+			goto _fail;
+	}
+	else
+	{
+		failure = pFN->m_pFileOps->CreateFile(pFN, pFileName);
+		if (failure < 0)
+			goto _fail;
+	}
 	
 	// it worked, look it up:
 	FileNode* pNewNode = NULL;
@@ -1203,7 +1349,9 @@ void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, Fil
 		goto _fail;
 	}
 	
-	void* oldParentSpecific = pNewNode->m_pParentSpecific;
+	void* oldParentSpecific  = pNewNode->m_pParentSpecific;
+	void* oldParent          = pNewNode->m_pParent;
+	uint32_t oldParentDirIdx = pNewNode->m_parentDirIndex;
 	
 	// copy the new node's contents over the old one:
 	*pNewNode = *pSrcNode;
@@ -1213,6 +1361,8 @@ void FsUtilAddArbitraryFileNode(const char* pDirPath, const char* pFileName, Fil
 	
 	// restore the old "parent specific" stuff...
 	pNewNode->m_pParentSpecific = oldParentSpecific;
+	pNewNode->m_pParent         = oldParent;
+	pNewNode->m_parentDirIndex  = oldParentDirIdx;
 	
 	// unreference the parent.
 	FsReleaseReference(pFN);

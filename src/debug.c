@@ -12,6 +12,16 @@
 #include <process.h>
 #include <elf.h>
 
+typedef struct
+{
+	int             m_count;
+	FuncOnIRQSwitch m_funcs[C_FUNCS_ON_IRQ_SWITCH_MAX];
+	void*           m_parms[C_FUNCS_ON_IRQ_SWITCH_MAX];
+}
+DPCQueue;
+
+DPCQueue g_DeferredCallQueue;
+
 bool g_bAreInterruptsEnabled       = false;
 bool g_bAreInterruptsEnabledBackup = false;
 int  g_nInterruptRecursionCount    = 0;
@@ -380,8 +390,12 @@ void KeEnableInterrupts()
 		KeStopSystem();
 	}
 	
+	// process the DPC queue first:
+	KeProcessDeferredCalls();	
+	
 	g_bAreInterruptsEnabled = true;
 	g_InterruptDisabler = NULL;
+	
 	asm("sti");
 }
 
@@ -415,4 +429,44 @@ void KeOnExitInterrupt()
 	ASSERT(g_nInterruptRecursionCount >= 0);
 }
 
+void KeProcessDeferredCalls()
+{
+	KeVerifyInterruptsDisabled;
+	
+	DPCQueue* pQueue = &g_DeferredCallQueue;
+	
+	// note: The queue count may change.
+	for (int i = 0; i < pQueue->m_count; i++)
+	{
+		g_bAreInterruptsEnabled = true;
+		asm("sti");
+		
+		pQueue->m_funcs[i](pQueue->m_parms[i]);
+		
+		asm("cli");
+		g_bAreInterruptsEnabled = false;
+	}
+	
+	pQueue->m_count = 0;
+}
 
+bool KeAddDeferredCall(FuncOnIRQSwitch func, void* parm)
+{
+	// if interrupts are disabled, just run it:
+	if (!KeCheckInterruptsDisabled())
+	{
+		func(parm);
+		return true;
+	}
+	
+	DPCQueue* pQueue = &g_DeferredCallQueue;
+	
+	if (pQueue->m_count == C_FUNCS_ON_IRQ_SWITCH_MAX)
+		return false;
+	
+	pQueue->m_funcs[pQueue->m_count] = func;
+	pQueue->m_parms[pQueue->m_count] = parm;
+	pQueue->m_count++;
+	
+	return true;
+}
