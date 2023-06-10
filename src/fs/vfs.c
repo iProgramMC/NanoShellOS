@@ -417,7 +417,6 @@ void FsInit ()
 #if 1
 
 FileDescriptor g_FileNodeToDescriptor[FD_MAX];
-DirDescriptor  g_DirNodeToDescriptor [FD_MAX];
 
 void FiPoolDebugDump(void);
 
@@ -436,8 +435,9 @@ void FiDebugDump()
 	LogMsg("Done");
 }
 
-static int FrFindFreeFileDescriptor(const char* reqPath)
+static int FrFindFreeFileDescriptor()
 {
+	/*
 	if (reqPath && *reqPath)
 	{
 		for (int i = 0; i < FD_MAX; i++)
@@ -447,21 +447,10 @@ static int FrFindFreeFileDescriptor(const char* reqPath)
 					return -EAGAIN;
 		}
 	}
-	
+	*/
 	for (int i = 0; i < FD_MAX; i++)
 	{
 		if (!g_FileNodeToDescriptor[i].m_bOpen)
-			return i;
-	}
-	
-	return -ENFILE;
-}
-
-static int FrFindFreeDirDescriptor(UNUSED const char* reqPath)
-{
-	for (int i = 0; i < FD_MAX; i++)
-	{
-		if (!g_DirNodeToDescriptor[i].m_bOpen)
 			return i;
 	}
 	
@@ -474,18 +463,12 @@ bool FrIsValidDescriptor(int fd)
 	return g_FileNodeToDescriptor[fd].m_bOpen;
 }
 
-bool FrIsValidDirDescriptor(int fd)
-{
-	if (fd < 0 || fd >= FD_MAX) return false;
-	return g_DirNodeToDescriptor[fd].m_bOpen;
-}
-
 int FrSeek (int fd, int offset, int whence);
 
 int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const char* srcFile, int srcLine)
 {
 	// find a free fd to open:
-	int fd = FrFindFreeFileDescriptor(pFileName);
+	int fd = FrFindFreeFileDescriptor();
 	if (fd < 0)
 		return fd;
 	
@@ -604,6 +587,7 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 	
 	//we have all the perms, let's write the filenode there:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	memset(pDesc, 0, sizeof *pDesc);
 	
 	if (pFileName)
 		strcpy(pDesc->m_sPath, pFileName);
@@ -611,6 +595,7 @@ int FrOpenInternal(const char* pFileName, FileNode* pFileNode, int oflag, const 
 		strcpy(pDesc->m_sPath, "");
 	
 	pDesc->m_bOpen 			= true;
+	pDesc->m_bIsDirectory   = false;
 	pDesc->m_pNode 			= pFile;
 	pDesc->m_openFile	 	= srcFile;
 	pDesc->m_openLine	 	= srcLine;
@@ -643,6 +628,9 @@ int FrClose (int fd)
 	
 	//closes the file:
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
 	pDesc->m_bOpen = false;
 	strcpy(pDesc->m_sPath, "");
 	
@@ -660,7 +648,7 @@ int FrClose (int fd)
 int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 {
 	// find a free fd to open:
-	int dd = FrFindFreeDirDescriptor(pFileName);
+	int dd = FrFindFreeFileDescriptor();
 	if (dd < 0)
 		return dd;
 	
@@ -689,8 +677,11 @@ int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 		return result; // Cannot open the directory
 	
 	//we have all the perms, let's write the filenode there:
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[dd];
+	memset(pDesc, 0, sizeof *pDesc);
+	
 	pDesc->m_bOpen 			= true;
+	pDesc->m_bIsDirectory   = true;
 	strcpy(pDesc->m_sPath, pFileName);
 	pDesc->m_pNode 			= pDir;
 	pDesc->m_openFile	 	= srcFile;
@@ -703,12 +694,16 @@ int FrOpenDirD (const char* pFileName, const char* srcFile, int srcLine)
 
 int FrCloseDir (int dd)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return -EBADF;
 	
 	//closes the file:
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return -ENOTDIR;
+	
 	pDesc->m_bOpen = false;
+	
 	strcpy(pDesc->m_sPath, "");
 	
 	FsCloseDir(pDesc->m_pNode);
@@ -724,10 +719,12 @@ int FrCloseDir (int dd)
 
 DirEnt* FrReadDirLegacy(int dd)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return NULL;
 	
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return NULL;
 	
 	int errCode = FsReadDir (pDesc->m_pNode, &pDesc->m_nStreamOffset, &pDesc->m_sCurDirEnt);
 	if (errCode != 0) // if we've reached a failure OR the end
@@ -741,23 +738,28 @@ DirEnt* FrReadDirLegacy(int dd)
 
 int FrReadDir(DirEnt* pDirEnt, int dd)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return ERR_BAD_FILE_DES;
 	
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return -ENOTDIR;
 	
 	return FsReadDir(pDesc->m_pNode, &pDesc->m_nStreamOffset, pDirEnt);
 }
 
 int FrSeekDir (int dd, int loc)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return -EBADF;
 	
 	if (loc < 0)
 		return -EOVERFLOW;
 	
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return -ENOTDIR;
+	
 	pDesc->m_nStreamOffset = loc;
 	
 	return -ENOTHING;
@@ -765,10 +767,13 @@ int FrSeekDir (int dd, int loc)
 
 int FrTellDir (int dd)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return -EBADF;
 	
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return -ENOTDIR;
+	
 	return pDesc->m_nStreamOffset;
 }
 
@@ -785,10 +790,13 @@ void FrStatFileNode(FileNode* pNode, StatResult* pOut)
 
 int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
-	if (!FrIsValidDirDescriptor(dd))
+	if (!FrIsValidDescriptor(dd))
 		return -EBADF;
 	
-	DirDescriptor *pDesc = &g_DirNodeToDescriptor[dd];
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[dd];
+	if (!pDesc->m_bIsDirectory)
+		return -ENOTDIR;
+	
 	FileNode *pNode = NULL;
 	
 	int err = FsFindDir(pDesc->m_pNode, pFileName, &pNode);
@@ -833,6 +841,7 @@ int FrFileDesStat(int fd, StatResult* pOut)
 	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
 	
+	// this can stat both file descriptors and directory descriptors alike. So no need to check
 	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
 	
 	FrStatFileNode(pDesc->m_pNode, pOut);
@@ -848,11 +857,15 @@ size_t FrRead (int fd, void *pBuf, int nBytes)
 	if (nBytes < 0)
 		return -EINVAL;
 	
-	int rv = FsRead (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	int rv = FsRead (pDesc->m_pNode, pDesc->m_nStreamOffset, (uint32_t)nBytes, pBuf, pDesc->m_bBlocking);
 	if (rv < 0) 
 		return rv;
 	
-	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	pDesc->m_nStreamOffset += rv;
 	return rv;
 }
 
@@ -864,11 +877,15 @@ size_t FrWrite (int fd, void *pBuf, int nBytes)
 	if (nBytes < 0)
 		return -EINVAL;
 	
-	int rv = FsWrite (g_FileNodeToDescriptor[fd].m_pNode, (uint32_t)g_FileNodeToDescriptor[fd].m_nStreamOffset, (uint32_t)nBytes, pBuf, g_FileNodeToDescriptor[fd].m_bBlocking);
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	int rv = FsWrite (pDesc->m_pNode, pDesc->m_nStreamOffset, (uint32_t)nBytes, pBuf, pDesc->m_bBlocking);
 	if (rv < 0)
 		return rv;
 	
-	g_FileNodeToDescriptor[fd].m_nStreamOffset += rv;
+	pDesc->m_nStreamOffset += rv;
 	return rv;
 }
 
@@ -877,7 +894,11 @@ int FrIoControl(int fd, unsigned long request, void * argp)
 	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
 	
-	return FsIoControl(g_FileNodeToDescriptor[fd].m_pNode, request, argp);
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	return FsIoControl(pDesc->m_pNode, request, argp);
 }
 
 int FrSeek (int fd, int offset, int whence)
@@ -885,7 +906,11 @@ int FrSeek (int fd, int offset, int whence)
 	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
 	
-	if (g_FileNodeToDescriptor[fd].m_bIsFIFO)
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	if (pDesc->m_bIsFIFO)
 		return -ESPIPE;
 	
 	if (whence < 0 || whence > SEEK_END)
@@ -896,17 +921,17 @@ int FrSeek (int fd, int offset, int whence)
 	switch (whence)
 	{
 		case SEEK_CUR:
-			realOffset += g_FileNodeToDescriptor[fd].m_nStreamOffset;
+			realOffset += pDesc->m_nStreamOffset;
 			break;
 		case SEEK_END:
-			realOffset += g_FileNodeToDescriptor[fd].m_nFileEnd;
+			realOffset += pDesc->m_nFileEnd;
 			break;
 	}
 	
-	if (realOffset > g_FileNodeToDescriptor[fd].m_nFileEnd)
+	if (realOffset > pDesc->m_nFileEnd)
 		return -EOVERFLOW;
 	
-	g_FileNodeToDescriptor[fd].m_nStreamOffset = realOffset;
+	pDesc->m_nStreamOffset = realOffset;
 	return -ENOTHING;
 }
 
@@ -915,7 +940,11 @@ int FrTell (int fd)
 	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
 	
-	return g_FileNodeToDescriptor[fd].m_nStreamOffset;
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	return pDesc->m_nStreamOffset;
 }
 
 int FrTellSize (int fd)
@@ -923,7 +952,11 @@ int FrTellSize (int fd)
 	if (!FrIsValidDescriptor(fd))
 		return -EBADF;
 	
-	return g_FileNodeToDescriptor[fd].m_nFileEnd;
+	FileDescriptor* pDesc = &g_FileNodeToDescriptor[fd];
+	if (pDesc->m_bIsDirectory)
+		return -EISDIR;
+	
+	return pDesc->m_nFileEnd;
 }
 
 extern char g_cwd[PATH_MAX+2];
@@ -1085,9 +1118,9 @@ void FrCloseAllFilesFromTask(void* task)
 		if (g_FileNodeToDescriptor[i].m_ownerTask == task)
 			FrClose(i);
 	}
-	for (int i = 0; i < (int)ARRAY_COUNT(g_DirNodeToDescriptor); i++)
+	for (int i = 0; i < (int)ARRAY_COUNT(g_FileNodeToDescriptor); i++)
 	{
-		if (g_DirNodeToDescriptor[i].m_ownerTask == task)
+		if (g_FileNodeToDescriptor[i].m_ownerTask == task)
 			FrCloseDir(i);
 	}
 }

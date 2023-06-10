@@ -244,25 +244,13 @@ void FsInit ();
 	//For internal use.
 	typedef struct {
 		bool      m_bOpen;
-		FileNode *m_pNode;
-		char      m_sPath[PATH_MAX+2];
-		int       m_nStreamOffset;
-		int       m_nFileEnd;
-		bool      m_bIsFIFO; //is a char device, basically
-		bool      m_bBlocking;
-		
-		const char* m_openFile;
-		int       m_openLine;
-		
-		void*     m_ownerTask;
-	}
-	FileDescriptor;
-	
-	typedef struct {
-		bool      m_bOpen;
+		bool      m_bIsDirectory;
 		FileNode *m_pNode;
 		char      m_sPath[PATH_MAX+2];
 		uint32_t  m_nStreamOffset;
+		int       m_nFileEnd;
+		bool      m_bIsFIFO; //is a char device, basically
+		bool      m_bBlocking;
 		DirEnt    m_sCurDirEnt;
 		
 		const char* m_openFile;
@@ -270,7 +258,7 @@ void FsInit ();
 		
 		void*     m_ownerTask;
 	}
-	DirDescriptor ;
+	FileDescriptor;
 	
 	typedef struct
 	{
@@ -357,7 +345,10 @@ void FsInit ();
 	int FiStat (const char *pFileName, StatResult* pOut);
 	
 	// Retrieves information about a file. If the file name points to a symbolic link, it stats the symbolic link.
-	int FiLinkStat (const char *pFileName, StatResult* pOut);
+	int FiLinkStat(const char *pFileName, StatResult* pOut);
+	
+	// Retrieves information about a file or directory descriptor.
+	int FiFileDesStat(int fd, StatResult* pOut);
 	
 	// Changes the current directory.
 	int FiChangeDir (const char *pfn);
