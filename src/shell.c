@@ -1154,6 +1154,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		if (VidIsAvailable())
 		{
+			FiChangeDir("/");
 			WindowManagerTask(0);
 		}
 		else

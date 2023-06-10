@@ -310,13 +310,20 @@ int FiChangeDir(const char* pfn)
 
 static int FiMakeDirSub(char* pPath)
 {
+	const char *pDirName, *pFileName;
+	
 	char* pSlashPtr = strrchr(pPath, '/');
 	if (!pSlashPtr)
-		return -EINVAL;
-	
-	*pSlashPtr = 0;
-	
-	char* pDirName = pPath, *pFileName = pSlashPtr + 1;
+	{
+		pDirName = ".";
+		pFileName = pPath;
+	}
+	else
+	{
+		*pSlashPtr = 0;
+		pDirName = pPath;
+		pFileName = pSlashPtr + 1;
+	}
 	
 	int rv;
 	USING_LOCK(&g_FileSystemLock, {

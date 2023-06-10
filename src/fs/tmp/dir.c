@@ -187,7 +187,6 @@ int FsTempDirAddEntry(FileNode* pFileNode, FileNode* pChildNode, const char* pNa
 	
 	if (pChildNode->m_bHasDirCallbacks)
 	{
-		SLogMsg("XXXXX");
 		pChildNode->m_parentDirIndex = offset;
 		pChildNode->m_pParent = pFileNode;
 		FsAddReference(pFileNode);
