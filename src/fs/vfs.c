@@ -96,13 +96,16 @@ const char* FrGetCwd()
 void FsAddReference(FileNode* pNode)
 {
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
+	//SLogMsg("+ Reference(%p) [%p] => %d", pNode, __builtin_return_address(0), pNode->m_refCount + 1);
 	
 	pNode->m_refCount++;
 }
+
 void FsReleaseReference(FileNode* pNode)
 {
 	// if it's permanent, return
 	if (pNode->m_refCount == NODE_IS_PERMANENT) return;
+	//SLogMsg("- Reference(%p) [%p] => %d", pNode, __builtin_return_address(0), pNode->m_refCount - 1);
 	
 	ASSERT(pNode->m_refCount > 0);
 	pNode->m_refCount--;
@@ -477,6 +480,8 @@ FileNode* FsResolvePath (const char* pPath, bool bResolveSymLinks)
 	FsAddReference(pStartNode);
 	
 	FileNode* pResult = FsResolvePathInternal(pStartNode, path, bResolveSymLinks, 0, &errNo);
+	
+	FsReleaseReference(pStartNode);
 	
 	return pResult;
 }

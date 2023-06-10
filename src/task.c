@@ -454,7 +454,7 @@ void KeResetTask_ReleaseFileNode(void* parm)
 	if (!parm)
 		// likely we're at init, just return
 		return;
-		
+	
 	FileNode* pFN = parm;
 	FsReleaseReference(pFN);
 }
