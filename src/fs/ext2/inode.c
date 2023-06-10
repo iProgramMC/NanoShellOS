@@ -12,9 +12,11 @@
 const FileNodeOps g_Ext2FileOps =
 {
 	.OnUnreferenced = Ext2FileOnUnreferenced,
-	.Read      = Ext2FileRead,
-	.Write     = Ext2FileWrite,
-	.EmptyFile = Ext2FileEmpty,
+	.Read       = Ext2FileRead,
+	.Write      = Ext2FileWrite,
+	.EmptyFile  = Ext2FileEmpty,
+	.ChangeMode = Ext2ChangeMode,
+	.ChangeTime = Ext2ChangeTime,
 };
 
 const FileNodeOps g_Ext2DirOps =
@@ -27,6 +29,8 @@ const FileNodeOps g_Ext2DirOps =
 	.CreateDir  = Ext2CreateDir,
 	.RemoveDir  = Ext2RemoveDir,
 	.RenameOp   = Ext2RenameOp,
+	.ChangeMode = Ext2ChangeMode,
+	.ChangeTime = Ext2ChangeTime,
 };
 
 // *************************

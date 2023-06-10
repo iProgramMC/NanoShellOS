@@ -37,10 +37,15 @@ int FrSeek (int fd, int offset, int whence);
 int FrTell (int fd);
 int FrTellSize(int fd);
 int FrUnlinkInDir(const char* pDirName, const char* pFileName);
+int FrFileDesChangeDir(int fd);
 int FrChangeDir(const char *pfn);
 int FrRename(const char* pDirOld, const char* pNameOld, const char* pDirNew, const char* pNameNew);
 int FrMakeDir(const char* pDirName, const char* pFileName);
 int FrRemoveDir(const char* pPath);
+int FrChangeMode(const char* pPath, int mode);
+int FrFileDesChangeMode(int fd, int mode);
+int FrChangeTime(const char* pPath, int timeAccess, int timeModify);
+int FrFileDesChangeTime(int fd, int timeAccess, int timeModify);
 const char* FrGetCwd();
 
 SafeLock g_FileSystemLock;
@@ -304,6 +309,51 @@ int FiChangeDir(const char* pfn)
 	int rv;
 	USING_LOCK(&g_FileSystemLock, {
 		rv = FrChangeDir(pfn);
+	});
+	return rv;
+}
+
+int FiFileDesChangeDir(int fd)
+{
+	int rv;
+	USING_LOCK(&g_FileSystemLock, {
+		rv = FrFileDesChangeDir(fd);
+	});
+	return rv;
+}
+
+int FiChangeMode(const char* pfn, int mode)
+{
+	int rv;
+	USING_LOCK(&g_FileSystemLock, {
+		rv = FrChangeMode(pfn, mode);
+	});
+	return rv;
+}
+
+int FiFileDesChangeMode(int fd, int mode)
+{
+	int rv;
+	USING_LOCK(&g_FileSystemLock, {
+		rv = FrFileDesChangeMode(fd, mode);
+	});
+	return rv;
+}
+
+int FiChangeTime(const char* pfn, int atime, int mtime)
+{
+	int rv;
+	USING_LOCK(&g_FileSystemLock, {
+		rv = FrChangeTime(pfn, atime, mtime);
+	});
+	return rv;
+}
+
+int FiFileDesChangeTime(int fd, int atime, int mtime)
+{
+	int rv;
+	USING_LOCK(&g_FileSystemLock, {
+		rv = FrFileDesChangeTime(fd, atime, mtime);
 	});
 	return rv;
 }

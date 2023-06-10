@@ -168,6 +168,28 @@ int FsIoControl(FileNode* pNode, unsigned long request, void * argp)
 	return pNode->m_pFileOps->IoControl(pNode, request, argp);
 }
 
+int FsChangeMode(FileNode* pNode, int mode)
+{
+	if (!pNode)
+		return -EINVAL;
+	
+	if (!pNode->m_pFileOps->ChangeMode)
+		return -ENOTSUP;
+	
+	return pNode->m_pFileOps->ChangeMode(pNode, mode);
+}
+
+int FsChangeTime(FileNode* pNode, int atime, int mtime)
+{
+	if (!pNode)
+		return -EINVAL;
+	
+	if (!pNode->m_pFileOps->ChangeTime)
+		return -ENOTSUP;
+	
+	return pNode->m_pFileOps->ChangeTime(pNode, atime, mtime);
+}
+
 int FsOpen(FileNode* pNode, bool read, bool write)
 {
 	if (!pNode)
@@ -945,6 +967,48 @@ int FrFileDesStat(int fd, StatResult* pOut)
 	FrStatFileNode(pDesc->m_pNode, pOut);
 	
 	return -ENOTHING;
+}
+
+int FrChangeMode(const char* pPath, int mode)
+{
+	FileNode* pFN = FsResolvePath(pPath, true);
+	if (!pFN)
+		return -ENOENT;
+	
+	int res = FsChangeMode(pFN, mode);
+	FsReleaseReference(pFN);
+	
+	return res;
+}
+
+int FrFileDesChangeMode(int fd, int mode)
+{
+	if (!FrIsValidDescriptor(fd))
+		return -EBADF;
+	
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	return FsChangeMode(pDesc->m_pNode, mode);
+}
+
+int FrChangeTime(const char* pPath, int atime, int mtime)
+{
+	FileNode* pFN = FsResolvePath(pPath, true);
+	if (!pFN)
+		return -ENOENT;
+	
+	int res = FsChangeTime(pFN, atime, mtime);
+	FsReleaseReference(pFN);
+	
+	return res;
+}
+
+int FrFileDesChangeTime(int fd, int atime, int mtime)
+{
+	if (!FrIsValidDescriptor(fd))
+		return -EBADF;
+	
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	return FsChangeTime(pDesc->m_pNode, atime, mtime);
 }
 
 size_t FrRead (int fd, void *pBuf, int nBytes)

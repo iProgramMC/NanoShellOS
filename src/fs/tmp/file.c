@@ -11,6 +11,26 @@
 #include <memory.h>
 #include <time.h>
 
+int FsTempFileChangeMode(FileNode* pFileNode, int mode)
+{
+	mode &= PERM_READ | PERM_WRITE | PERM_EXEC;
+	
+	pFileNode->m_perms = mode;
+	
+	return ERR_SUCCESS;
+}
+
+int FsTempFileChangeTime(FileNode* pFileNode, int atime, int mtime)
+{
+	if (atime != -1)
+		pFileNode->m_accessTime = (uint32_t)atime;
+	
+	if (mtime != -1)
+		pFileNode->m_modifyTime = (uint32_t)mtime;
+	
+	return ERR_SUCCESS;
+}
+
 int FsTempFileRead(FileNode* pFileNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool bBlock)
 {
 	if (offset >= pFileNode->m_length)

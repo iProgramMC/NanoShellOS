@@ -25,6 +25,63 @@ static int FileTypeToExt2TypeHint(int fileType)
 	return E2_DETI_UNKNOWN;
 }
 
+int Ext2ChangeMode(FileNode* pNode, int mode)
+{
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	mode &= PERM_READ | PERM_WRITE | PERM_EXEC;
+	
+	// setting the mode in the file node itself is fine...
+	pNode->m_perms = mode;
+	
+	// but we also need to set it in the inode itself:
+	uint16_t perms = pInode->m_permissions;
+	
+	// remove all the permission data, but not the type
+	perms &= E2_INO_TYPE_MASK;
+	
+	if (mode & PERM_READ)
+		perms |= E2_PERM_ANYONE_READ;
+	
+	if (mode & PERM_WRITE)
+		perms |= E2_PERM_ANYONE_WRITE;
+	
+	if (mode & PERM_EXEC)
+		perms |= E2_PERM_ANYONE_EXEC;
+	
+	pInode->m_permissions = perms;
+	Ext2FlushInode(pFS, pUnit);
+	
+	return ERR_SUCCESS;
+}
+
+int Ext2ChangeTime(FileNode* pNode, int atime, int mtime)
+{
+	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;
+	Ext2FileSystem* pFS = (Ext2FileSystem*)pNode->m_implData1;
+	Ext2Inode* pInode = &pUnit->m_inode;
+	
+	if (atime != -1)
+	{
+		pNode->m_accessTime = (uint32_t)atime;
+		pInode->m_lastAccessTime = (uint32_t)atime;
+	}
+	if (mtime != -1)
+	{
+		pNode->m_modifyTime = (uint32_t)mtime;
+		pInode->m_lastModTime = (uint32_t)mtime;
+	}
+	
+	if (atime != -1 || mtime != -1)
+	{
+		Ext2FlushInode(pFS, pUnit);
+	}
+	
+	return ERR_SUCCESS;
+}
+
 int Ext2FileRead(FileNode* pNode, uint32_t offset, uint32_t size, void* pBuffer, UNUSED bool block)
 {
 	Ext2InodeCacheUnit* pUnit = (Ext2InodeCacheUnit*)pNode->m_implData;

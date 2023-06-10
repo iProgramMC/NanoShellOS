@@ -75,6 +75,10 @@ typedef int(*FileRemoveDirFunc)  (struct FSNodeS* pDirectoryNode);
 typedef int(*FileRenameOpFunc)   (struct FSNodeS* pSourceDir, struct FSNodeS* pDestinationDir, const char* pSourceName, const char* pDestinationName);
 // Sends an I/O control request to a device file.
 typedef int(*FileIoControlFunc)  (struct FSNodeS* pFileNode, unsigned long request, void * argp);
+// Changes the permissions of a file.
+typedef int(*FileChangeModeFunc)  (struct FSNodeS* pFileNode, int mode);
+// Changes the access and modify time of a file. Pass -1 if they don't need to be changed.
+typedef int(*FileChangeTimeFunc)  (struct FSNodeS* pFileNode, int atime, int mtime);
 // Lets the underlying file system know that the file node was totally unreferenced (its reference count is now 0)
 typedef void(*FileOnUnreferencedFunc) (struct FSNodeS* pNode);
 
@@ -101,6 +105,8 @@ typedef struct FileNodeOps
 	FileUnlinkFileFunc UnlinkFile;
 	FileRemoveDirFunc  RemoveDir;
 	FileRenameOpFunc   RenameOp;
+	FileChangeModeFunc ChangeMode;
+	FileChangeTimeFunc ChangeTime;
 }
 FileNodeOps;
 
@@ -192,6 +198,8 @@ int FsCloseDir  (FileNode* pNode);
 int FsReadDir   (FileNode* pNode, uint32_t* index, DirEnt* pOutputDent);
 int FsFindDir   (FileNode* pNode, const char* pName, FileNode** pOut); //<-- Note: After using this function's output, use FsReleaseReference!!!
 int FsUnlinkFile(FileNode* pNode, const char* pName);
+int FsChangeMode(FileNode* pNode, int mode);
+int FsChangeTime(FileNode* pNode, int atime, int mtime);
 
 // If the path points to a symbolic link, depending on bResolveThroughSymLinks, it does the following:
 // - True:  Goes down the symbolic link chain (at a depth of 16), until the file is reached.
@@ -373,6 +381,21 @@ void FsInit ();
 	// Send an I/O control request to a device on a file descriptor.
 	// If the file description does not point to a device file, this returns -ENOTTY.
 	int FiIoControl(int fd, unsigned long request, void * argp);
+	
+	// Change the current directory to the directory opened by a directory descriptor.
+	int FiFileDesChangeDir(int fd);
+	
+	// Change the permissions of a file.
+	int FiChangeMode(const char* pfn, int mode);
+	
+	// Change the permissions of a file opened through a file descriptor.
+	int FiFileDesChangeMode(int fd, int mode);
+	
+	// Change the access and/or modify time of a file.
+	int FiChangeTime(const char* pfn, int atime, int mtime);
+	
+	// Change the permissions of a file opened through a file descriptor.
+	int FiFileDesChangeTime(int fd, int atime, int mtime);
 	
 	// Releases all file resources owned by a task.
 	void FiReleaseResourcesFromTask(void* task);

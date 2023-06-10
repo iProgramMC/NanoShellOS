@@ -31,13 +31,13 @@ void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* b
 // bPermanent - States that this memory never goes away and we don't need to duplicate it.
 void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 {
-//	uint32_t epochTime = GetEpochTime();
+	//uint32_t epochTime = GetEpochTime();
 	// Add files to the root FS.
 	for (Tar *ramDiskTar = (Tar *) pRamDisk; !memcmp(ramDiskTar->ustar, "ustar", 5);)
 	{
 		uint32_t fileSize = OctToBin(ramDiskTar->size, 11);
 		uint32_t pathLength = strlen(ramDiskTar->name);
-		//uint32_t mtime = OctToBin(ramDiskTar->mtime, 11);
+		uint32_t mtime = OctToBin(ramDiskTar->mtime, 11);
 		bool hasDotSlash = false;
 
 		if (ramDiskTar->name[0] == '.')
@@ -73,6 +73,12 @@ void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 						if (res < 0 && res != -EEXIST)
 						{
 							LogMsg("Could not create directory '%s': %s", buffer, GetErrNoString(res));
+						}
+						else
+						{
+							int x = FiChangeTime(buffer, -1, mtime);
+							if (x < 0)
+								SLogMsg("%d: %d", __LINE__, x);
 						}
 					}
 					
@@ -110,6 +116,8 @@ void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 						FsTempCreatePermanentFile(pNode, ptr, (uint8_t*)&ramDiskTar->buffer, fileSize);
 						
 						FsReleaseReference(pNode);
+						
+						FiChangeTime(pname, -1, mtime);
 					}
 					else
 					{
@@ -122,6 +130,7 @@ void FsInitializeInitRd(void* pRamDisk, bool bPermanent)
 						else
 						{
 							uint32_t wr = FiWrite(fd, &ramDiskTar->buffer, fileSize);
+							FiFileDesChangeTime(fd, -1, mtime);
 							if (wr != fileSize)
 								LogMsg("File %s couldn't be fully written. (%d/%d bytes)", buffer, wr, fileSize);
 							

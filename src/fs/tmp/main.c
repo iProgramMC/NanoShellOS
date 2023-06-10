@@ -14,11 +14,13 @@
 const FileNodeOps g_TmpFileOps =
 {
 	.OnUnreferenced = FsTempFileOnUnreferenced,
-	.Open      = FsTempFileOpen,
-	.Close     = FsTempFileClose,
-	.Read      = FsTempFileRead,
-	.Write     = FsTempFileWrite,
-	.EmptyFile = FsTempFileEmpty,
+	.Open       = FsTempFileOpen,
+	.Close      = FsTempFileClose,
+	.Read       = FsTempFileRead,
+	.Write      = FsTempFileWrite,
+	.EmptyFile  = FsTempFileEmpty,
+	.ChangeMode = FsTempFileChangeMode,
+	.ChangeTime = FsTempFileChangeTime,
 };
 
 const FileNodeOps g_TmpDirOps =
@@ -33,6 +35,8 @@ const FileNodeOps g_TmpDirOps =
 	.CreateDir  = FsTempDirCreateDir,
 	.RemoveDir  = FsTempDirRemoveDir,
 	.RenameOp   = FsTempDirRenameOp,
+	.ChangeMode = FsTempFileChangeMode,
+	.ChangeTime = FsTempFileChangeTime,
 };
 
 TempFSNode* FsTempCreateNode(FileNode* pParentDir, bool bDirectory)

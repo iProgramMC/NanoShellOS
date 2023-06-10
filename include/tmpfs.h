@@ -67,6 +67,8 @@ int FsTempFileWrite(FileNode* pFileNode, uint32_t offset, uint32_t size, const v
 int FsTempFileOpen(FileNode* pFileNode, bool read, bool write);
 int FsTempFileClose(FileNode* pFileNode);
 int FsTempFileEmpty(FileNode* pFileNode);
+int FsTempFileChangeMode(FileNode* pFileNode, int mode);
+int FsTempFileChangeTime(FileNode* pFileNode, int atime, int mtime);
 
 // Directory Ops
 int FsTempDirOpen   (FileNode* pFileNode);

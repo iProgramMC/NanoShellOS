@@ -427,6 +427,9 @@ int Ext2CreateDir (FileNode* pNode, const char* pName);
 
 int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName);
 
+int Ext2ChangeMode(FileNode* pNode, int mode);
+int Ext2ChangeTime(FileNode* pNode, int atime, int mtime);
+
 void Ext2FileOnUnreferenced(FileNode* pNode);
 
 #endif//_EXT2_H
