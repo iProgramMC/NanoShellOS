@@ -633,6 +633,7 @@ const void *WindowCall[] = {
 	// System Calls V2.5 - 05/06/2023
 		FiReadDir,
 		FiLinkStat,
+		FiFileDesStat,
 };
 
 

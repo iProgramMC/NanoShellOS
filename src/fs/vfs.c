@@ -772,6 +772,17 @@ int FrTellDir (int dd)
 	return pDesc->m_nStreamOffset;
 }
 
+void FrStatFileNode(FileNode* pNode, StatResult* pOut)
+{
+	pOut->m_type       = pNode->m_type;
+	pOut->m_size       = pNode->m_length;
+	pOut->m_inode      = pNode->m_inode;
+	pOut->m_perms      = pNode->m_perms;
+	pOut->m_modifyTime = pNode->m_modifyTime;
+	pOut->m_createTime = pNode->m_createTime;
+	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+}
+
 int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 {
 	if (!FrIsValidDirDescriptor(dd))
@@ -787,13 +798,7 @@ int FrStatAt (int dd, const char *pFileName, StatResult* pOut)
 	if (!pNode)
 		return -ENOENT;
 	
-	pOut->m_type       = pNode->m_type;
-	pOut->m_size       = pNode->m_length;
-	pOut->m_inode      = pNode->m_inode;
-	pOut->m_perms      = pNode->m_perms;
-	pOut->m_modifyTime = pNode->m_modifyTime;
-	pOut->m_createTime = pNode->m_createTime;
-	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	FrStatFileNode(pNode, pOut);
 	
 	FsReleaseReference(pNode);
 	return -ENOTHING;
@@ -805,13 +810,7 @@ int FrStat (const char *pFileName, StatResult* pOut)
 	if (!pNode)
 		return -ENOENT;
 	
-	pOut->m_type       = pNode->m_type;
-	pOut->m_size       = pNode->m_length;
-	pOut->m_inode      = pNode->m_inode;
-	pOut->m_perms      = pNode->m_perms;
-	pOut->m_modifyTime = pNode->m_modifyTime;
-	pOut->m_createTime = pNode->m_createTime;
-	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	FrStatFileNode(pNode, pOut);
 	
 	FsReleaseReference(pNode);
 	return -ENOTHING;
@@ -823,15 +822,21 @@ int FrLinkStat (const char *pFileName, StatResult* pOut)
 	if (!pNode)
 		return -ENOENT;
 	
-	pOut->m_type       = pNode->m_type;
-	pOut->m_size       = pNode->m_length;
-	pOut->m_inode      = pNode->m_inode;
-	pOut->m_perms      = pNode->m_perms;
-	pOut->m_modifyTime = pNode->m_modifyTime;
-	pOut->m_createTime = pNode->m_createTime;
-	pOut->m_blocks     = (pNode->m_length / 512) + ((pNode->m_length % 512) != 0);
+	FrStatFileNode(pNode, pOut);
 	
 	FsReleaseReference(pNode);
+	return -ENOTHING;
+}
+
+int FrFileDesStat(int fd, StatResult* pOut)
+{
+	if (!FrIsValidDescriptor(fd))
+		return -EBADF;
+	
+	FileDescriptor *pDesc = &g_FileNodeToDescriptor[fd];
+	
+	FrStatFileNode(pDesc->m_pNode, pOut);
+	
 	return -ENOTHING;
 }
 

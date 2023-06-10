@@ -31,6 +31,7 @@ int FrTellDir(int dd);
 int FrStatAt (int dd, const char *pFileName, StatResult* pOut);
 int FrStat(const char *pFileName, StatResult* pOut);
 int FrLinkStat(const char *pFileName, StatResult* pOut);
+int FrFileDesStat(int fd, StatResult* pOut);
 int FrRead (int fd, void *pBuf, int nBytes);
 int FrWrite(int fd, void *pBuf, int nBytes);
 int FrIoControl(int fd, unsigned long request, void * argp);
@@ -142,6 +143,15 @@ int FiLinkStat(const char *pFileName, StatResult* pOut)
 	int returnValue;
 	USING_LOCK(&g_FileSystemLock, {
 		returnValue = FrLinkStat(pFileName, pOut);
+	});
+	return returnValue;
+}
+
+int FiFileDesStat(int fd, StatResult* pOut)
+{
+	int returnValue;
+	USING_LOCK(&g_FileSystemLock, {
+		returnValue = FrFileDesStat(fd, pOut);
 	});
 	return returnValue;
 }
