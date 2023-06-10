@@ -11,10 +11,6 @@
 #define PATH_THISDIR (".")
 #define PATH_PARENTDIR ("..")
 
-#define PERM_READ  (1)
-#define PERM_WRITE (2)
-#define PERM_EXEC  (4)
-
 #define O_RDONLY   (1)
 #define O_WRONLY   (2)
 #define O_RDWR     (O_RDONLY | O_WRONLY)
@@ -28,19 +24,6 @@
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
-
-typedef struct
-{
-	uint32_t m_type;
-	uint32_t m_size;
-	uint32_t m_blocks;
-	uint32_t m_inode;
-	
-	uint32_t m_perms;
-	uint32_t m_modifyTime;
-	uint32_t m_createTime;
-}
-StatResult;
 
 enum
 {

@@ -22,6 +22,7 @@ apps/Nano/*
 apps/Nano/keep/*
 apps/nsshell/*
 apps/Reversi/*
+apps/halfix/*
 
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse

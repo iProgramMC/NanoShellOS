@@ -18,6 +18,10 @@
 #include <dirent.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/time.h>
 
 // NanoShell specifics
 #include <nanoshell/graphics.h>
