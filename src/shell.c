@@ -1480,8 +1480,6 @@ void ShellPrintMotd()
 	LogMsg("%s", pValue);
 }
 
-void *FsGetCwdNode();
-
 void ShellRun(UNUSED int unused_arg)
 {
 	LogMsgNoCr("\e]2;Command Prompt\a");
@@ -1493,7 +1491,7 @@ void ShellRun(UNUSED int unused_arg)
 	{
 		//LogMsgNoCr("\e]2;Command Prompt: %s\a", FiGetCwd());
 		
-		LogMsgNoCr("%s [%p]>", FiGetCwd(), FsGetCwdNode());
+		LogMsgNoCr("%s>", FiGetCwd());
 		char buffer[256];
 		CoGetString (buffer, 256);
 		memcpy (g_lastCommandExecuted, buffer, 256);
