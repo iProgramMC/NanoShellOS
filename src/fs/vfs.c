@@ -48,7 +48,7 @@ void FrGetCwdSub(FileNode* pNode, char* cwdPtr, size_t cwdPtrSize, int depthLvl)
 	if (pParent)
 	{
 		// we have a parent!
-		FsReleaseReference(pParent);
+		FsAddReference(pParent);
 		
 		uint32_t index = pNode->m_parentDirIndex;
 		
@@ -1094,7 +1094,7 @@ int FrSeek (int fd, int offset, int whence)
 		return -EOVERFLOW;
 	
 	pDesc->m_nStreamOffset = realOffset;
-	return -ENOTHING;
+	return pDesc->m_nStreamOffset;
 }
 
 int FrTell (int fd)
