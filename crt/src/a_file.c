@@ -17,18 +17,11 @@
 #define EOT      4      // end of transmission, aka Ctrl-D
 
 static int g_OpenedFileDes[FIMAX];
-static int g_OpenedDirDes [FIMAX];
 
 static int FileSpotToFileHandle(int spot)
 {
 	if (spot < 0 || spot >= FIMAX) return -1;
 	return g_OpenedFileDes[spot];
-}
-
-static int DirSpotToFileHandle(int spot)
-{
-	if (spot < 0 || spot >= FIMAX) return -1;
-	return g_OpenedDirDes[spot];
 }
 
 // Check if a file is opened here in this process
@@ -42,16 +35,6 @@ bool _I_IsFileOpenedHere(int fd)
 	return false;
 }
 
-// Check if a directory is opened here in this process
-bool _I_IsDirectoryOpenedHere(int dd)
-{
-	for (int i = 0; i < FIMAX; i++)
-	{
-		if (g_OpenedDirDes[i] == dd)
-			return true;
-	}
-	return false;
-}
 
 int open(const char* path, int oflag)
 {
@@ -288,18 +271,18 @@ int FiOpenDir(const char* pFileName)
 	if (fd < 0)
 		return SetErrorNumber(fd);
 	
-	g_OpenedDirDes[spot] = fd;
+	g_OpenedFileDes[spot] = fd;
 	
 	return spot;
 }
 
 int FiCloseDir(int spot)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 		return SetErrorNumber(-EBADF);
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
 	int closeRes = _I_FiCloseDir(dd);
@@ -307,8 +290,8 @@ int FiCloseDir(int spot)
 	{
 		for (int i = 0; i < FIMAX; i++)
 		{
-			if (g_OpenedDirDes[i] == dd)
-				g_OpenedDirDes[i] = -1;
+			if (g_OpenedFileDes[i] == dd)
+				g_OpenedFileDes[i] = -1;
 		}
 	}
 	else
@@ -319,14 +302,14 @@ int FiCloseDir(int spot)
 
 int FiReadDir(DirEnt* space, int spot)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 	{
 		SetErrorNumber(-EBADF);
 		return -1;
 	}
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 	{
 		SetErrorNumber(-EBADF);
 		return -1;
@@ -343,11 +326,11 @@ int FiReadDir(DirEnt* space, int spot)
 
 int FiSeekDir(int spot, int loc)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 		return SetErrorNumber(-EBADF);
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
 	int result = _I_FiSeekDir(dd, loc);
@@ -359,11 +342,11 @@ int FiSeekDir(int spot, int loc)
 
 int FiRewindDir(int spot)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 		return SetErrorNumber(-EBADF);
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
 	int result = _I_FiRewindDir(dd);
@@ -375,11 +358,11 @@ int FiRewindDir(int spot)
 
 int FiTellDir(int spot)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 		return SetErrorNumber(-EBADF);
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
 	int result = _I_FiTellDir(dd);
@@ -391,11 +374,11 @@ int FiTellDir(int spot)
 
 int FiStatAt(int spot, const char *pfn, StatResult* pres)
 {
-	int dd = DirSpotToFileHandle(spot);
+	int dd = FileSpotToFileHandle(spot);
 	if (dd < 0)
 		return SetErrorNumber(-EBADF);
 	
-	if (!_I_IsDirectoryOpenedHere(dd))
+	if (!_I_IsFileOpenedHere(dd))
 		return SetErrorNumber(-EBADF);
 	
 	int result = _I_FiStatAt(dd, pfn, pres);
@@ -430,6 +413,16 @@ int FiChDir(const char *pfn)
 		SetErrorNumber(result);
 	
 	return result;
+}
+
+int FiChangeDir(const char *pfn)
+{
+	return FiChDir(pfn);
+}
+
+int chdir(const char *pfn)
+{
+	return FiChDir(pfn);
 }
 
 // C Standard I/O
@@ -580,7 +573,7 @@ FILE *stdin, *stdout, *stderr;
 void _I_Setup()
 {
 	for (int i = 0; i < FIMAX; i++)
-		g_OpenedFileDes[i] = g_OpenedDirDes[i] = -1;
+		g_OpenedFileDes[i] = g_OpenedFileDes[i] = -1;
 	
 	g_OpenedFileDes[0] = FD_STDIO;
 	g_OpenedFileDes[1] = FD_STDIO;
@@ -826,4 +819,189 @@ struct dirent* readdir(DIR* dirp)
 	ptr->d_off    = offset;
 	
 	return ptr;
+}
+
+// stat stuff
+int FiFDStat(int spot, StatResult* pres)
+{
+	int fd = FileSpotToFileHandle(spot);
+	if (fd < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (!_I_IsFileOpenedHere(fd))
+		return SetErrorNumber(-EBADF);
+	
+	int result = _I_FiFDStat(fd, pres);
+	if (result < 0)
+		return SetErrorNumber(result);
+	
+	return 0;
+}
+
+int FiFDChangeDir(int spot)
+{
+	int fd = FileSpotToFileHandle(spot);
+	if (fd < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (!_I_IsFileOpenedHere(fd))
+		return SetErrorNumber(-EBADF);
+	
+	int result = _I_FiFDChangeDir(fd);
+	if (result < 0)
+		return SetErrorNumber(result);
+	
+	return 0;
+}
+
+int FiFDChangeMode(int spot, int mode)
+{
+	int fd = FileSpotToFileHandle(spot);
+	if (fd < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (!_I_IsFileOpenedHere(fd))
+		return SetErrorNumber(-EBADF);
+	
+	int result = _I_FiFDChangeMode(fd, mode);
+	if (result < 0)
+		return SetErrorNumber(result);
+	
+	return 0;
+}
+
+int FiFDChangeTime(int spot, int atime, int mtime)
+{
+	int fd = FileSpotToFileHandle(spot);
+	if (fd < 0)
+		return SetErrorNumber(-EBADF);
+	
+	if (!_I_IsFileOpenedHere(fd))
+		return SetErrorNumber(-EBADF);
+	
+	int result = _I_FiFDChangeTime(fd, atime, mtime);
+	if (result < 0)
+		return SetErrorNumber(result);
+	
+	return 0;
+}
+
+int FiChangeMode(const char* path, int mode)
+{
+	int res = _I_FiChangeMode(path, mode);
+	if (res < 0)
+		return SetErrorNumber(res);
+	
+	return 0;
+}
+
+int FiChangeTime(const char* path, int atime, int mtime)
+{
+	int res = _I_FiChangeTime(path, atime, mtime);
+	if (res < 0)
+		return SetErrorNumber(res);
+	
+	return 0;
+}
+
+void StatResultToStructStat(StatResult* pIn, struct stat* pOut)
+{
+	pOut->st_dev     = 0;
+	pOut->st_rdev    = 0;
+	pOut->st_uid     = 0;
+	pOut->st_gid     = 0;
+	pOut->st_size    = (off_t) pIn->m_size;
+	pOut->st_atime   = (time_t) pIn->m_modifyTime; // todo?
+	pOut->st_mtime   = (time_t) pIn->m_modifyTime;
+	pOut->st_ctime   = (time_t) pIn->m_createTime;
+	pOut->st_blksize = (blksize_t) 512; // the kernel uses this.
+	pOut->st_blocks  = (blkcnt_t)  pIn->m_blocks;
+	pOut->st_ino     = (ino_t) pIn->m_inode;
+	
+	// mode
+	
+	// so that FILE_TYPE_SYMBOLIC_LINK matches with S_IFLNK for instance
+	pOut->st_mode = (mode_t) pIn->m_type << 12;
+	
+	if (pIn->m_perms & PERM_READ)  pOut->st_mode |= S_IRUSR | S_IRGRP | S_IROTH;
+	if (pIn->m_perms & PERM_WRITE) pOut->st_mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+	if (pIn->m_perms & PERM_EXEC)  pOut->st_mode |= S_IXUSR | S_IXGRP | S_IXOTH;
+}
+
+int stat(const char* path, struct stat* buf)
+{
+	StatResult sr;
+	memset(&sr, 0, sizeof(sr));
+	
+	int res = FiStat(path, &sr);
+	if (res < 0)
+		return res; // it already set an errno
+	
+	// convert our stat result into a struct stat
+	StatResultToStructStat(&sr, buf);
+	
+	return 0; // success!
+}
+
+int lstat(const char* path, struct stat* buf)
+{
+	StatResult sr;
+	memset(&sr, 0, sizeof(sr));
+	
+	int res = FiLinkStat(path, &sr);
+	if (res < 0)
+		return res; // it already set an errno
+	
+	// convert our stat result into a struct stat
+	StatResultToStructStat(&sr, buf);
+	
+	return 0; // success!
+}
+
+int fstat(int spot, struct stat* buf)
+{
+	StatResult sr;
+	memset(&sr, 0, sizeof(sr));
+	
+	int res = FiFDStat(spot, &sr);
+	if (res < 0)
+		return res;
+	
+	// convert our stat result into a struct stat
+	StatResultToStructStat(&sr, buf);
+	
+	return 0;
+}
+
+int fchdir(int fd)
+{
+	return FiFDChangeDir(fd);
+}
+
+int PosixModeToNSMode(mode_t mode)
+{
+	int nmode = 0;
+	
+	if (mode & (S_IRUSR | S_IRGRP | S_IROTH))
+		nmode |= PERM_READ;
+	
+	if (mode & (S_IWUSR | S_IWGRP | S_IWOTH))
+		nmode |= PERM_WRITE;
+	
+	if (mode & (S_IXUSR | S_IXGRP | S_IXOTH))
+		nmode |= PERM_EXEC;
+	
+	return nmode;
+}
+
+int chmod(const char* path, mode_t mode)
+{
+	// convert the 'mode_t' to a NanoShell type mode. Note that type information will be thrown away
+	int nmode = PosixModeToNSMode(mode);
+	
+	int res = _I_FiChangeMode(path, nmode);
+	if (res < 0)
+		return SetErrorNumber(res);
+	
+	return 0;
 }

@@ -13,7 +13,7 @@
 
 #include "../include/nsstructs.h"
 
-#define WCALL_VERSION 26
+#define WCALL_VERSION 27
 enum
 {
 	// System Calls V1.0
@@ -256,6 +256,14 @@ enum
 	// System Calls V2.6
 		FI_READ_DIR,
 		FI_STAT_LINK,
+		
+	// System Calls V2.7
+		FI_STAT_FD,
+		FI_CHANGE_MODE,
+		FI_CHANGE_TIME,
+		FI_CHANGE_MODE_FD,
+		FI_CHANGE_TIME_FD,
+		FI_CHANGE_DIR_FD,
 };
 
 __attribute__((noreturn))

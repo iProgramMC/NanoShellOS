@@ -397,6 +397,8 @@ enum
 	// System Calls V2.6
 		FI_READ_DIR,
 		FI_STAT_LINK,
+		
+	// System Calls V2.7
 };
 
 const void *WindowCall[] = {
@@ -630,11 +632,11 @@ const void *WindowCall[] = {
 		LockAcquire,
 		LockFree,
 		
-	// System Calls V2.5 - 05/06/2023
+	// System Calls V2.6 - 05/06/2023
 		FiReadDir,
 		FiLinkStat,
 		
-	// System Calls V2.6 - 10/06/2023
+	// System Calls V2.7 - 10/06/2023
 		FiFileDesStat,
 		FiChangeMode,
 		FiChangeTime,

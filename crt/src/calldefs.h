@@ -604,3 +604,23 @@ CALL_END
 CALLI(FiLinkStat, FI_STAT_LINK, int, const char *pfn, StatResult* pres)
 	RARGS(pfn, pres)
 CALL_END
+
+// Calls V2.7
+CALLI(FiFDStat, FI_STAT_LINK, int, int fd, StatResult* pres)
+	RARGS(fd, pres)
+CALL_END
+CALLI(FiChangeMode, FI_CHANGE_MODE, int, const char* pfn, int mod)
+	RARGS(pfn, mod)
+CALL_END
+CALLI(FiChangeTime, FI_CHANGE_TIME, int, const char* pfn, int atime, int mtime)
+	RARGS(pfn, atime, mtime)
+CALL_END
+CALLI(FiFDChangeMode, FI_CHANGE_MODE_FD, int, int fd, int mod)
+	RARGS(fd, mod)
+CALL_END
+CALLI(FiFDChangeTime, FI_CHANGE_TIME_FD, int, int fd, int atime, int mtime)
+	RARGS(fd, atime, mtime)
+CALL_END
+CALLI(FiFDChangeDir, FI_CHANGE_DIR_FD, int, int fd)
+	RARGS(fd)
+CALL_END

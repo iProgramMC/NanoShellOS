@@ -13,6 +13,8 @@ int read  (int fd,       void* buf,    unsigned int nbyte);
 int write (int fd, const void* buf,    unsigned int nbyte);
 int lseek (int fd,       int   offset,          int whence);
 int tellf (int fd);
-int tellsz(int fd);
+int tellsz(int fd); // not standard
+int chdir (const char *pfn);
+int fchdir(int fd);
 
 #endif//_UNISTD_H
