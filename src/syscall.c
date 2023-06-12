@@ -399,6 +399,15 @@ enum
 		FI_STAT_LINK,
 		
 	// System Calls V2.7
+		FI_STAT_FD,
+		FI_CHANGE_MODE,
+		FI_CHANGE_TIME,
+		FI_CHANGE_MODE_FD,
+		FI_CHANGE_TIME_FD,
+		FI_CHANGE_DIR_FD,
+		
+		
+		SYSTEM_CALL_COUNT,
 };
 
 const void *WindowCall[] = {
@@ -645,6 +654,7 @@ const void *WindowCall[] = {
 		FiFileDesChangeDir,
 };
 
+STATIC_ASSERT(ARRAY_COUNT(WindowCall) == SYSTEM_CALL_COUNT, "These should be the same size!");
 
 // Other utils
 void UserCallStuffNotSupportedC(void)

@@ -55,5 +55,6 @@ int fgetc(FILE* stream);
 int getc(FILE* stream);
 int ungetc(int c, FILE * stream);
 int ferror(FILE* stream);
+void perror(const char* fmt, ...);
 
 #endif//_STDIO__H

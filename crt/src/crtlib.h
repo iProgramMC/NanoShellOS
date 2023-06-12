@@ -42,7 +42,7 @@ enum
 		WIN_CREATE,
 		WIN_HANDLE_MESSAGES,
 		WIN_DEFAULT_PROC,
-		WIN_DESTROY,
+		WIN_DESTROY,//don't use
 		WIN_MESSAGE_BOX,
 		WIN_ADD_CONTROL,
 	
@@ -63,9 +63,9 @@ enum
 		CON_READCHAR,
 		CON_READSTR,
 		
-		MM_ALLOCATE_D,
-		MM_FREE,
-		MM_DEBUG_DUMP,
+		MM_ALLOCATE_D, //legacy
+		MM_FREE,       //legacy
+		MM_DEBUG_DUMP, //legacy
 		
 		FI_OPEN_D,
 		FI_CLOSE,
@@ -91,17 +91,18 @@ enum
 		
 		CON_GET_CURRENT_CONSOLE,
 		
-		//V1.21
+	// System Calls V1.21
 		VID_BLIT_IMAGE_RESIZE,
+		
 		TM_SLEEP,
 		
-		//V1.22
+	// System Calls V1.22
 		WIN_SET_ICON,
 		
-		//V1.23
+	// System Calls V1.23
 		NS_GET_VERSION,
 		
-		//V1.24
+	// System Calls V1.24
 		WIN_GET_THEME_PARM,
 		WIN_SET_THEME_PARM,
 	
@@ -121,9 +122,9 @@ enum
 		WIN_SHELL_ABOUT,
 		WIN_INPUT_BOX,
 		WIN_COLOR_BOX,
-		WIN_FILE_CHOOSE_BOX,//TODO
+		WIN_FILE_CHOOSE_BOX,
 		WIN_POPUP_WINDOW,
-	
+		
 	// System Calls V1.4
 		VID_SET_VBE_DATA,//dangerous!! be careful!!
 		
@@ -156,7 +157,7 @@ enum
 		CB_CLEAR,
 		CB_COPY_TEXT,
 		CB_COPY_BLOB,
-		CB_GET_CURRENT_VARIANT,//danger!!
+		CB_GET_CURRENT_VARIANT,
 		CB_RELEASE,
 	
 	// System Calls V1.5
@@ -165,16 +166,16 @@ enum
 		VID_RENDER_ICON_SIZE,
 		VID_RENDER_ICON_SIZE_OUTLINE,
 		TM_GET_RANDOM,
-	
+		
 	// System Calls V1.6
-		MM_REALLOCATE_D,
+		MM_REALLOCATE_D, //legacy
 		SH_EXECUTE,
 		SH_EXECUTE_RESOURCE,
-	
+		
 	// System Calls V1.7
 		MM_MAP_MEMORY_USER,
 		MM_UNMAP_MEMORY_USER,
-	
+		
 	// System Calls V1.8
 		FI_RENAME,
 		FI_MAKE_DIR,
@@ -183,7 +184,7 @@ enum
 		FI_IO_CONTROL,
 		WIN_CALL_CTL_CALLBACK,
 		WIN_TEXT_INPUT_SET_MODE,
-	
+		
 	// System Calls V1.9
 		WIN_GET_SCROLL_BAR_MIN,
 		WIN_GET_SCROLL_BAR_MAX,
@@ -203,7 +204,7 @@ enum
 		VID_READ_PIXEL,
 		CFG_GET_STRING,
 		VID_GET_VBE_DATA,
-	
+		
 	// System Calls V2.1
 		WIN_GET_WINDOW_TITLE,
 		WIN_GET_WINDOW_DATA,
@@ -213,13 +214,13 @@ enum
 		WIN_CHANGE_CURSOR,
 		WIN_SET_FLAGS,
 		WIN_GET_FLAGS,
-	
+		
 	// System Calls V2.2
 		VID_SET_MOUSE_POS,
 		WIN_ADD_TIMER,
 		WIN_DISARM_TIMER,
 		WIN_CHANGE_TIMER,
-	
+		
 	// System Calls V2.3
 		WIN_UPLOAD_CURSOR,
 		WIN_RELEASE_CURSOR,
@@ -231,7 +232,7 @@ enum
 		WIN_SET_CONTROL_VISIBLE,
 		WIN_PROG_BAR_SET_PROGRESS,
 		WIN_PROG_BAR_SET_MAX_PROG,
-	
+		
 	// System Calls V2.4
 		WIN_COMBO_BOX_ADD_ITEM,
 		WIN_COMBO_BOX_GET_SELECTED_ITEM,
@@ -241,7 +242,7 @@ enum
 		WIN_IS_CONTROL_DISABLED,
 		WIN_TEXT_INPUT_SET_FONT,
 		WIN_TEXT_INPUT_REQUEST_COMMAND,
-	
+		
 	// System Calls V2.5
 		WIN_DRAW_EDGE,
 		WIN_DRAW_ARROW,
@@ -252,7 +253,7 @@ enum
 		KB_GET_KEY_STATE,
 		LCK_ACQUIRE,
 		LCK_FREE,
-	
+		
 	// System Calls V2.6
 		FI_READ_DIR,
 		FI_STAT_LINK,

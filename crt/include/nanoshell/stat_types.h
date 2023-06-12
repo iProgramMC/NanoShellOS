@@ -4,6 +4,8 @@
 #ifndef _STAT_TYPES_H
 #define _STAT_TYPES_H
 
+#include "time_types.h"
+
 #define PERM_READ  (1)
 #define PERM_WRITE (2)
 #define PERM_EXEC  (4)

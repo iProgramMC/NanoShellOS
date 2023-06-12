@@ -230,6 +230,8 @@ char* strcpy(char* ds, const char* ss)
 		*ds++ = *ss++;
 	}
 	
+	*ds++ = *ss++;
+	
 	return dso;
 }
 
@@ -300,6 +302,9 @@ char* strcat(char* dest, const char* after)
 	
 	// go to the end
 	while (*dest++);
+	
+	// subtract one since (dest++) == 0 increments dest 1 extra time
+	dest--;
 	
 	// strcpy the src string over
 	strcpy(dest, after);

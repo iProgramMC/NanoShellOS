@@ -485,6 +485,9 @@ int fclose(FILE* file)
 
 size_t fread (void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
+	if (size == 0)
+		return SetErrorNumber(-EBADF);
+	
 	SetErrorNumber(0);
 	
 	size_t nbyte = size * nmemb;
@@ -501,11 +504,14 @@ size_t fread (void* ptr, size_t size, size_t nmemb, FILE* stream)
 		stream->error = true;
 	}
 	
-	return rd;
+	return rd / size;
 }
 
 size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
+	if (size == 0)
+		return SetErrorNumber(-EBADF);
+	
 	SetErrorNumber(0);
 	
 	size_t nbyte = size * nmemb;
@@ -520,7 +526,7 @@ size_t fwrite(const void* ptr, size_t size, size_t nmemb, FILE* stream)
 		stream->error = true;
 	}
 	
-	return wr;
+	return wr / size;
 }
 
 int fseek(FILE* file, int offset, int whence)

@@ -606,7 +606,7 @@ CALLI(FiLinkStat, FI_STAT_LINK, int, const char *pfn, StatResult* pres)
 CALL_END
 
 // Calls V2.7
-CALLI(FiFDStat, FI_STAT_LINK, int, int fd, StatResult* pres)
+CALLI(FiFDStat, FI_STAT_FD, int, int fd, StatResult* pres)
 	RARGS(fd, pres)
 CALL_END
 CALLI(FiChangeMode, FI_CHANGE_MODE, int, const char* pfn, int mod)

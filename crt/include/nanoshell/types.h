@@ -23,6 +23,7 @@
 #include <nanoshell/graphics_types.h>
 #include <nanoshell/lock_types.h>
 #include <nanoshell/stat_types.h>
+#include <nanoshell/fcntl_types.h>
 #include <nanoshell/keyboard.h>
 
 #define false 0

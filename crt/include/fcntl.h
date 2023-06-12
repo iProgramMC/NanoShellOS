@@ -4,6 +4,8 @@
 #ifndef __FCNTL_H
 #define __FCNTL_H
 
+#include <nanoshell/fcntl_types.h>
+
 //TODO
 
 #endif//__FCNTL_H

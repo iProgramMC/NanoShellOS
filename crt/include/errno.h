@@ -11,6 +11,4 @@ int  geterrno(int en);
 int* geterrnoptr();
 #define errno (*geterrnoptr())
 
-void perror(const char* fmt, ...);
-
 #endif//__ERRNO_H

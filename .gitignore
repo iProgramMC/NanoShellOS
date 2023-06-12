@@ -47,6 +47,7 @@ fs/Nes/*.nes
 #files I don't want added because they're too big
 vdisk.vdi
 vdisk*.vdi
+vdisk*.vhdx
 
 todo.txt
 todo1.txt
