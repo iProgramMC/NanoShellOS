@@ -182,8 +182,12 @@ VBEData* VidGetVBEData(void);
  * Sets the current clipping rectangle.  Useful if you want to have
  * content outside of a control that you do not want to spill over.
  *
- * If this is NULL, the clipping rectangle is reset.
+ * If pRect is NULL, the clipping rectangle is reset.
+ * 
+ * VidSetClipRectEx: If pOutRect points to a valid rectangle, the old clip rectangle
+ * is placed there.
  */
+void VidSetClipRectEx(Rectangle* pOutRect, Rectangle *pRect);
 void VidSetClipRect(Rectangle *pRect);
 
 /**
@@ -317,10 +321,14 @@ void VidTextOutInternalEx(const char* pText, unsigned ox, unsigned oy, unsigned 
 /**
  * Makes the text fit in a rectangle of `xSize` width and `ySize` height,
  * and puts it in pTextOut.
- * Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
+ *
+ * WrapText: Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
+ * WrapText: The string will be truncated if it exceeds `sTextOut`.
+ *
  * Returns the y height attained.
  */
 int WrapText(char *pTextOut, const char* pTextToWrap, int xSize);
+int WrapTextEx(char *pTextOut, size_t sTextOut, const char* text, int xSize);
 
 /**
  * Draws text inside a rectangle with the specified flags.

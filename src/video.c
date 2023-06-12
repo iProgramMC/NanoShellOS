@@ -1007,8 +1007,11 @@ void VidDrawRectangle(unsigned color, Rectangle rect)
 	VidDrawRect (color, rect.left, rect.top, rect.right, rect.bottom);
 }
 
-void VidSetClipRect(Rectangle *pRect)
+void VidSetClipRectEx(Rectangle* pOutRect, Rectangle *pRect)
 {
+	if (pOutRect)
+		*pOutRect = g_vbeData->m_clipRect;
+	
 	if (pRect)
 	{
 		g_vbeData->m_clipRect = *pRect;
@@ -1026,6 +1029,11 @@ void VidSetClipRect(Rectangle *pRect)
 		clipRect.bottom = GetScreenSizeY();
 		g_vbeData->m_clipRect = clipRect;
 	}
+}
+
+void VidSetClipRect(Rectangle *pRect)
+{
+	VidSetClipRectEx(NULL, pRect);
 }
 
 VBEData* VidSetVBEData(VBEData* pData)

@@ -10,6 +10,8 @@ int  GetScreenSizeX();
 int  GetScreenSizeY();
 int  GetWidth(Rectangle* rect);
 int  GetHeight(Rectangle* rect);
+int  GetCharWidth(int chr);
+int  GetLineHeight();
 void VidPlotPixel(unsigned x, unsigned y, unsigned color);
 void VidFillScreen(unsigned color);
 void VidDrawVLine(unsigned color, int top, int bottom, int x);
@@ -34,6 +36,9 @@ void RenderIcon(int type, int x, int y);
 void RenderIconOutline(int type, int x, int y, uint32_t color);
 void RenderIconForceSize(int type, int x, int y, int size);
 void RenderIconForceSizeOutline(int type, int x, int y, int size, uint32_t color);
+void VidSetClipRectEx(Rectangle* pOutRect, Rectangle* pRect);
+void VidTextOutInternalEx(const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx, int limit);
+int  WrapText(char* pTextBufOut, size_t sTextBufOut, const char* pText, int xWidth);
 
 bool RectangleContains(Rectangle *r, Point *p);
 bool RectangleOverlap (Rectangle *r1, Rectangle *r2);

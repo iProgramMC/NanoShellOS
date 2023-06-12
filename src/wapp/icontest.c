@@ -124,7 +124,7 @@ void DtAddIcon(int icon, const char* text)
 	strncpy(pIcon->m_text, text, sizeof pIcon->m_text - 1);
 	pIcon->m_text[sizeof pIcon->m_text - 1] = 0;
 	
-	char buffer[3000];
+	char buffer[5000];
 	WrapText(buffer, pIcon->m_text, ICON_WIDTH - 8);
 	
 	strncpy(pIcon->m_shown_text, buffer, sizeof pIcon->m_shown_text - 1);

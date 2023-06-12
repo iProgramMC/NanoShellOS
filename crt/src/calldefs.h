@@ -624,3 +624,20 @@ CALL_END
 CALLI(FiFDChangeDir, FI_CHANGE_DIR_FD, int, int fd)
 	RARGS(fd)
 CALL_END
+
+// Calls V2.8
+CALL(VidSetClipRectEx, VID_SET_CLIP_RECT_EX, void, Rectangle* pOutRect, Rectangle* pRect)
+	SARGS(pOutRect, pRect)
+CALL_END
+CALL(VidTextOutInternalEx, VID_TEXT_OUT_INT_EX, void, const char* pText, unsigned ox, unsigned oy, unsigned colorFg, unsigned colorBg, bool doNotActuallyDraw, int* widthx, int* heightx, int limit)
+	SARGS(pText, ox, oy, colorFg, colorBg, doNotActuallyDraw, widthx, heightx, limit)
+CALL_END
+CALL(WrapText, VID_WRAP_TEXT, int, char* pTextBufOut, size_t sTextBufOut, const char* pText, int xWidth)
+	RARGS(pTextBufOut, sTextBufOut, pText, xWidth)
+CALL_END
+CALL(GetCharWidth, VID_GET_CHAR_WIDTH, int, int chr)
+	RARGS(chr)
+CALL_END
+CALL(GetLineHeight, VID_GET_LINE_HEIGHT, int, void)
+	RARGS()
+CALL_END

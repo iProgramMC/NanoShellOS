@@ -75,7 +75,7 @@ int MessageBox (Window* pWindow, const char* pText, const char* pCaption, uint32
 	
 	int szX, szY;
 	
-	char* test = MmAllocateK(strlen(pText) * 2);
+	char* test = MmAllocateK(strlen(pText) * 2 + 5);
 	int buttonStyle = style & 0x7;
 	if (!test)
 	{

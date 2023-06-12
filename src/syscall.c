@@ -406,6 +406,12 @@ enum
 		FI_CHANGE_TIME_FD,
 		FI_CHANGE_DIR_FD,
 		
+	// System Calls V2.8
+		VID_SET_CLIP_RECT_EX,
+		VID_TEXT_OUT_INT_EX,
+		VID_WRAP_TEXT,
+		VID_GET_CHAR_WIDTH,
+		VID_GET_LINE_HEIGHT,
 		
 		SYSTEM_CALL_COUNT,
 };
@@ -652,6 +658,13 @@ const void *WindowCall[] = {
 		FiFileDesChangeMode,
 		FiFileDesChangeTime,
 		FiFileDesChangeDir,
+		
+	// System Calls V2.8 - 12/06/2023
+		VidSetClipRectEx,
+		VidTextOutInternalEx,
+		WrapText,
+		GetCharWidth,
+		GetLineHeight,
 };
 
 STATIC_ASSERT(ARRAY_COUNT(WindowCall) == SYSTEM_CALL_COUNT, "These should be the same size!");

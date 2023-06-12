@@ -911,18 +911,21 @@ void KillFont (int fontID)
 	
 	// Makes the text fit in a rectangle of `xSize` width and `ySize` height,
 	// and puts it in pTextOut.
-	// Make sure sizeof(pTextOut passed) >= sizeof (stringIn)+5 and that xSize is sufficiently large.
+	// Make sure sizeof(pTextOut passed) >= sizeof (stringIn) * 2 (for safety) and that xSize is sufficiently large.
 	// Returns the y height attained.
-	int WrapText(char *pTextOut, const char* text, int xSize)
+	int WrapTextEx(char *pTextOut, size_t sTextOut, const char* text, int xSize)
 	{
 		bool bReachedMaxSizeBeforeEnd = false;
 		char* pto = pTextOut;
+		char* ptoend = pTextOut + sTextOut - 1;
 		const char* text2;
 		int lineHeight = g_pCurrentFont->m_charHeight;
 		int x = 0, y = lineHeight;
+		if (pto == ptoend) goto buffer_filled;
+		
 		while (1)
 		{
-			int widthWord = MeasureTextUntilSpaceOrMaxedWidth (text, &text2, &bReachedMaxSizeBeforeEnd, xSize);
+			int widthWord = MeasureTextUntilSpaceOrMaxedWidth(text, &text2, &bReachedMaxSizeBeforeEnd, xSize);
 			//can fit?
 			if (x + widthWord > xSize)
 			{
@@ -930,12 +933,16 @@ void KillFont (int fontID)
 				x = 0;
 				y += lineHeight;
 				*pto++ = '\n';
+				if (pto == ptoend) goto buffer_filled;
 			}
 			
 			x += widthWord + GetCharWidthInl(' ');
 			
 			while (text != text2)
+			{
 				*pto++ = *text++;
+				if (pto == ptoend) goto buffer_filled;
+			}
 			
 			if (bReachedMaxSizeBeforeEnd)
 			{
@@ -947,10 +954,12 @@ void KillFont (int fontID)
 				x = 0;
 				y += lineHeight;
 				*pto++ = '\n';
+				if (pto == ptoend) goto buffer_filled;
 			}
 			if (*text2 == ' ')
 			{
 				*pto++ = ' ';
+				if (pto == ptoend) goto buffer_filled;
 			}
 			if (*text2 == '\0')
 			{
@@ -961,6 +970,16 @@ void KillFont (int fontID)
 		}
 		*pto = 0;
 		return y;
+		
+	buffer_filled:
+		*ptoend = 0;
+		return y;
+	}
+	
+	int WrapText(char* pTextOut, const char* text, int xSize)
+	{
+		// This is okay as long as you don't exceed the bounds of the buffer.
+		return WrapTextEx(pTextOut, 200000000, text, xSize);
 	}
 	
 	void VidDrawText(const char* pText, Rectangle rect, unsigned drawFlags, unsigned colorFg, unsigned colorBg)
