@@ -335,7 +335,8 @@ void WmPaintWindowTitle(Window* pWindow)
 void WmPaintWindowBackgd(Window* pWindow)
 {
 	Rectangle rect = GetWindowClientRect(pWindow, false);
-	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
+	//VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
+	CallWindowCallback(pWindow, EVENT_BGREPAINT, MAKE_MOUSE_PARM(rect.left, rect.top), MAKE_MOUSE_PARM(rect.right, rect.bottom));
 }
 
 void WmPaintWindowBorder(Window* pWindow)

@@ -10,6 +10,7 @@
 
 #define EVENT_UPDATE_TASKBAR_CTLS (EVENT_USER + 1)
 #define EVENT_UPDATE_TASK_LIST    (EVENT_USER + 2)
+#define EVENT_UPDATE_TASKBAR_POS  (EVENT_USER + 3) // keep this in sync with desktop.c!!
 
 #define C_MAX_GRAPH_FRAMES (30)
 
@@ -544,6 +545,8 @@ void TaskbarGetPosition(int* x, int* y, int* width, int* height)
 void TaskbarCreateControls(Window* pWindow);
 void TaskbarRemoveControls(Window *pWindow);
 
+extern Window* GetDesktopWindow();
+
 void TaskbarPopOut(int buttonID)
 {
 	// The idea behind this is something like this:
@@ -591,8 +594,14 @@ void TaskbarPopOut(int buttonID)
 	
 	//WmOnUpdateTaskbarMargins(); // -- this would loop through all maximized windows and resize them to fit the new taskbar margins
 	
-	g_pTaskBarWindow->m_flags = TaskbarGetFlags();
+	SetWindowFlags(g_pTaskBarWindow, TaskbarGetFlags());
 	ResizeWindow(g_pTaskBarWindow, x, y, width, height);
+	
+	// send an event to the desktop window asking to move it
+	Window* pWindow = GetDesktopWindow();
+	
+	if (pWindow)
+		WindowAddEventToMasterQueue(pWindow, EVENT_UPDATE_TASKBAR_POS, 0, 0);
 }
 
 void TaskbarCreateControls(Window* pWindow)

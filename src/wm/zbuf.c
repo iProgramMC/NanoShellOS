@@ -22,9 +22,10 @@ void ResetWindowDrawOrder()
 
 SAI int GetLayer(Window* pWindow)
 {
-	if (pWindow->m_flags & WF_FOREGRND) return 2;
-	if (pWindow->m_flags & WF_BACKGRND) return 0;
-	return 1;
+	if (pWindow->m_flags & WF_FOREGRND) return 3;
+	if (pWindow->m_flags & WF_BACKGRND) return 1;
+	if (pWindow->m_flags & WF_BACKGND2) return 0;
+	return 2;
 }
 
 void DebugDumpDrawOrder()
@@ -158,6 +159,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 	VBEData* backup = g_vbeData;
 	VidSetVBEData(NULL);
 	
+	/*
 	LockAcquire (&g_BackgdLock);
 	
 	//redraw the background, if needed
@@ -172,6 +174,7 @@ void RefreshRectangle(Rectangle rect, Window* pWindowToExclude)
 	WmSplitDone();
 	
 	LockFree (&g_BackgdLock);
+	*/
 	
 	// draw the windows below it, in their z-order.
 	int sz = 0;

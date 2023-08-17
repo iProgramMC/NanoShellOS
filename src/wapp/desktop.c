@@ -8,26 +8,14 @@
 #include <wbuiltin.h>
 #include <wmenu.h>
 #include <image.h>
+#include "../wm/wi.h"
+
+#define EVENT_UPDATE_TASKBAR_POS  (EVENT_USER + 3) // keep this in sync with taskbar.c!!
 
 #define ICON_WIDTH  (80)
 #define ICON_HEIGHT (60)
 
 #define DOUBLE_CLICK_TIMING (200) // 50 ms. Ideally, this would be a theming property or something
-
-SAI int DtMax(int x, int y)
-{
-	return x > y ? x : y;
-}
-
-SAI int DtMin(int x, int y)
-{
-	return x < y ? x : y;
-}
-
-SAI int DtAbs(int x)
-{
-	return x < 0 ? -x : x;
-}
 
 typedef struct DesktopIcon
 {
@@ -54,15 +42,37 @@ typedef struct DesktopIcon
 DesktopIcon;
 
 // going to allow only one instance for now. This application is for testing, anyways.
-bool g_bIconTestRunning = false;
+bool g_bDesktopRunning = false;
 bool g_bDraggingAnIcon = false;
 bool g_bWasClickingBefore = false;
 int g_DraggingCursor = -1;
 DesktopIcon* g_pFirstIcon;         // the linked lisst
 DesktopIcon* g_pHeldIcon = NULL;   // the icon that's currently being clicked/dragged
 Image g_BlankImage = { 0, 0, NULL };
-Window* g_pIconTestWindow = NULL;
+Window* g_pDesktopWindow = NULL;
 Point g_StartedClickAt;
+
+int g_IconX, g_IconY;
+
+Window* GetDesktopWindow()
+{
+	return g_pDesktopWindow;
+}
+
+SAI int DtMax(int x, int y)
+{
+	return x > y ? x : y;
+}
+
+SAI int DtMin(int x, int y)
+{
+	return x < y ? x : y;
+}
+
+SAI int DtAbs(int x)
+{
+	return x < 0 ? -x : x;
+}
 
 void DtAddIconToList(DesktopIcon* pIcon)
 {
@@ -91,8 +101,6 @@ void DtRemoveIconFromList(DesktopIcon* pIcon)
 	MmFree(pIcon);
 }
 
-int g_IconX, g_IconY;
-
 void DtAdvanceIconCoords()
 {
 	g_IconX += ICON_WIDTH;
@@ -105,11 +113,19 @@ void DtAdvanceIconCoords()
 	}
 }
 
+extern SafeLock g_BackgdLock;
+
+void RedrawBackground2(Rectangle rect);
 void DtRedrawBackground(Rectangle rect)
 {
-	rect.right--;
-	rect.bottom--;
-	VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
+	//VidFillRectangle(WINDOW_BACKGD_COLOR, rect);
+	
+	// offset it by the current window's position, to keep consistency
+	Rectangle windowRect = GetWindowClientRect(g_pDesktopWindow, true);
+	
+	LockAcquire(&g_BackgdLock);
+	RedrawBackground2(rect);
+	LockFree(&g_BackgdLock);
 }
 
 void DtAddIcon(int icon, const char* text)
@@ -320,7 +336,7 @@ void DtOnDrag(Point pt)
 	g_DraggingCursor = UploadCursor(pImage, pt.x - iconX, pt.y - iconY);
 	
 	if (g_DraggingCursor >= 0)
-		ChangeCursor(g_pIconTestWindow, g_DraggingCursor);
+		ChangeCursor(g_pDesktopWindow, g_DraggingCursor);
 }
 
 void DtOnRelease(Point pt)
@@ -332,7 +348,7 @@ void DtOnRelease(Point pt)
 		// try double click
 		if (pIcon->m_LastClicked + DOUBLE_CLICK_TIMING > GetTickCount())
 		{
-			WindowAddEventToMasterQueue(g_pIconTestWindow, EVENT_USER, (int)pIcon, 0);
+			WindowAddEventToMasterQueue(g_pDesktopWindow, EVENT_USER, (int)pIcon, 0);
 		}
 		
 		pIcon->m_LastClicked = GetTickCount();
@@ -346,7 +362,7 @@ void DtOnRelease(Point pt)
 	pIcon->m_x = pt.x - pIcon->m_offsetX;
 	pIcon->m_y = pt.y - pIcon->m_offsetY;
 	
-	Rectangle rect = GetWindowClientRect(g_pIconTestWindow, true);
+	Rectangle rect = GetWindowClientRect(g_pDesktopWindow, true);
 	int ww = rect.right - rect.left, wh = rect.bottom - rect.top;
 	
 	if (pIcon->m_x > ww - ICON_WIDTH)
@@ -363,10 +379,10 @@ void DtOnRelease(Point pt)
 	g_bDraggingAnIcon = false;
 	
 	// set the cursor to default
-	ChangeCursor(g_pIconTestWindow, CURSOR_DEFAULT);
+	ChangeCursor(g_pDesktopWindow, CURSOR_DEFAULT);
 }
 
-void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK DesktopProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
@@ -420,47 +436,66 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 		{
 			break;
 		}
+		case EVENT_UPDATE_TASKBAR_POS:
+		{
+			WindowAddEventToMasterQueue(pWindow, EVENT_MAXIMIZE, 0, 0);
+			break;
+		}
+		case EVENT_BGREPAINT:
+		{
+			Rectangle rect = { GET_X_PARM(parm1), GET_Y_PARM(parm1), GET_X_PARM(parm2), GET_Y_PARM(parm2) };
+			DtRedrawBackground(rect);
+			break;
+		}
+		case EVENT_REPAINT_EVERYTHING:
+		{
+			DesktopProc(pWindow, EVENT_BGREPAINT, parm1, parm2);
+			DtRedrawAllIcons();
+			break;
+		}
 		case EVENT_DESTROY:
+		{
 			if (g_DraggingCursor >= 0)
 			{
 				ReleaseCursor(g_DraggingCursor);
 				g_DraggingCursor = -1;
 			}
+			// fallthrough
+		}
 		default:
 			DefaultWindowProc(pWindow, messageType, parm1, parm2);
 	}
 }
 
-void IconTestTask (__attribute__((unused)) int argument)
+void DesktopEntry(__attribute__((unused)) int argument)
 {
 	cli;
-	if (g_bIconTestRunning)
+	if (g_bDesktopRunning)
 	{
 		sti;
 		MessageBox(NULL, "Please only run one icon test application.", "Icon test", MB_OK);
 		return;
 	}
-	g_bIconTestRunning = true;
+	g_bDesktopRunning = true;
 	sti;
 	
 	// create ourself a window:
-	Window* pWindow = g_pIconTestWindow = CreateWindow ("Icon test", CW_AUTOPOSITION, CW_AUTOPOSITION, 400, 300, IconTestProc, WF_ALWRESIZ);
-	//Window* pWindow = g_pIconTestWindow = CreateWindow ("Icon test", CW_AUTOPOSITION, CW_AUTOPOSITION, 100, 100, IconTestProc, WF_NOBORDER | WF_NOTITLE | WF_MAXIMIZE);
+	Window* pWindow = g_pDesktopWindow = CreateWindow ("Desktop", CW_AUTOPOSITION, CW_AUTOPOSITION, 400, 300, DesktopProc, WF_NOBORDER | WF_NOTITLE | WF_MAXIMIZE | WF_BACKGND2 | WF_SYSPOPUP);
 	if (!pWindow)
 	{
 		DebugLogMsg("Hey, the window couldn't be created. Why?");
-		g_bIconTestRunning = false;
+		g_bDesktopRunning = false;
 		return;
 	}
 	
 	pWindow->m_iconID = ICON_INFO;
-	
+	g_pDesktopWindow = pWindow;
 	
 	// event loop:
 #if THREADING_ENABLED
 	while (HandleMessages (pWindow));
 #endif
 	
-	g_bIconTestRunning = false;
-	g_pIconTestWindow = NULL;
+	g_bDesktopRunning = false;
+	g_pDesktopWindow = NULL;
 }

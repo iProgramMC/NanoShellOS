@@ -85,7 +85,7 @@ inline void VidPlotPixelInlineRF(unsigned x, unsigned y, unsigned color)
 	}
 }
 
-void RedrawBackground (Rectangle rect)
+void RedrawBackground2(Rectangle rect)
 {
 	if (g_BackgroundSolidColorActive)
 	{
@@ -166,9 +166,19 @@ void RedrawBackground (Rectangle rect)
 	}
 }
 
+Window* GetDesktopWindow();
+void RedrawBackground(Rectangle rect)
+{
+	// Just tell the desktop to do it
+	Window* pWindow = GetDesktopWindow();
+	if (pWindow)
+		WindowAddEventToMasterQueue(pWindow, EVENT_REPAINT_EVERYTHING, MAKE_MOUSE_PARM(rect.left, rect.top), MAKE_MOUSE_PARM(rect.right, rect.bottom));
+}
+
 void RefreshScreen()
 {
 	Rectangle rect = { 0, 0, GetScreenWidth(), GetScreenHeight() };
+	RedrawBackground(rect);
 	RefreshRectangle(rect, NULL);
 }
 

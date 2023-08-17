@@ -57,7 +57,7 @@ RESOURCE_STATUS LaunchSystem()
 RESOURCE_STATUS LaunchIconTest()
 {
 	UNUSED int errorCode = 0;
-	Task* pTask = KeStartTask(IconTestTask, 0, &errorCode);
+	Task* pTask = KeStartTask(DesktopEntry, 0, &errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;

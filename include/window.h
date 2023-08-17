@@ -627,6 +627,7 @@ enum CURSORTYPE
 #define WF_MENUITEM 0x00010000//Internal flag: Menu Item
 #define WI_NEVERSEL 0x00020000//Internal flag: Never select this window.
 #define WI_MESSGBOX 0x00040000//Internal flag: This is a message box. Wait for it
+#define WF_BACKGND2 0x00080000//The window is on a separate 'background2' layer, behind normal and background windows.
 
 
 #define WI_INTEMASK 0x00000000//Internal flag mask that CreateWindow will filter

@@ -316,7 +316,9 @@ static void PreProcessEvent(Window* pWindow, int eventType, UNUSED int parm1, UN
 				g_TaskbarMargins.top + TITLE_BAR_HEIGHT - 1
 			};
 			
-			CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			if (~pWindow->m_flags & WF_NOTITLE)
+				CreateMovingRectangleEffect(old_title_rect, new_title_rect, pWindow->m_title);
+			
 			break;
 		}
 		case EVENT_UNMAXIMIZE:

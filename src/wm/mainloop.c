@@ -76,6 +76,22 @@ bool IsWindowManagerRunning()
 	return g_windowManagerRunning;
 }
 
+void WmCreateTask(TaskedFunction func)
+{
+	Task* pTask;
+	int errorCode = 0;
+	pTask = KeStartTask(func, 0, &errorCode);
+	if (!pTask)
+	{
+		LogMsg("Couldn't create task for function %p!", func);
+		return;
+	}
+	
+	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
+	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
+}
+
 void SetupWindowManager()
 {
 	LogMsg("Please wait...");
@@ -120,22 +136,8 @@ void SetupWindowManager()
 	
 	WindowCallInit ();
 	
-	//test:
-#if !THREADING_ENABLED
-	LogMsgNoCr("Huh!?? This shouldn't be on");
-	LauncherEntry(0);
-#else
-	int errorCode = 0;
-	Task* pTask;
-	
-	//create the taskbar task.
-	errorCode = 0;
-	pTask = KeStartTask(TaskbarEntry, 0, &errorCode);
-	KeUnsuspendTask(pTask);
-	KeDetachTask(pTask);
-	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
-#endif
+	WmCreateTask(TaskbarEntry);
+	WmCreateTask(DesktopEntry);
 }
 
 void HandleKeypressOnWindow(unsigned char key)
