@@ -17,7 +17,7 @@ The provided makefile has a couple functions:
 crt1.o entry point, and the libnanoshell.a archive for
 the contents of the NanoShell C library.
 
-`make update`: Does the same as `male all` and  copies
+`make update`: Does the same as `make all` and  copies
 the libraries into system root
 (`git repo root/fs/User/Library`).
 
