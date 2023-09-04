@@ -29,7 +29,7 @@ KERNEL_TARGET=$(BUILD_DIR)/kernel.bin
 INITRD_TARGET=$(BUILD_DIR)/initrd.tar
 IMAGE_TARGET=$(BUILD_DIR)/image.iso
 
-CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -mno-sse2 -mno-sse
+CFLAGS=-I $(INC_DIR) -ffreestanding -target i686-elf -O2 -Wall -Wextra -std=c99 -mno-sse2 -mno-sse -MMD
 LDFLAGS=-T link.ld -nostdlib -zmax-page-size=0x1000 -Map=$(KERNMAP_TARGET)
 ASFLAGS=-f elf32
 
@@ -37,7 +37,12 @@ KERNEL_C_FILES=$(shell find $(SRC_DIR) -type f -name '*.c')
 KERNEL_AS_FILES=$(shell find $(SRC_DIR) -type f -name '*.asm')
 KERNEL_O_FILES=$(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%.o,$(KERNEL_C_FILES) $(KERNEL_AS_FILES))
 
+KERNEL_DEP_FILES=$(KERNEL_O_FILES:.o=.d)
+
 all: kernel
+
+# include header dependencies
+-include $(KERNEL_DEP_FILES)
 
 limine:
 	git clone https://github.com/limine-bootloader/limine -b v3.0-binary --depth=1
