@@ -14,7 +14,7 @@ LD=ld
 AS=nasm
 STRIP=strip
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -DNANOSHELL -ffreestanding -target i686-elf -O2 -nostdinc -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2 $(USERCFLAGS)
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -DNANOSHELL -ffreestanding -target i686-elf -O2 -nostdinc -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2 -MMD $(USERCFLAGS)
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 
@@ -26,7 +26,11 @@ LIB_S_FILES=$(shell find $(LIS_DIR) -type f -name '*.asm')
 APP_O_FILES=$(patsubst $(SRC_DIR)/%,$(BLD_DIR)/%.o,$(APP_C_FILES) $(APP_S_FILES))
 LIB_O_FILES=$(patsubst $(LIS_DIR)/%,$(BLD_DIR)/%.o,$(LIB_C_FILES) $(LIB_S_FILES))
 
+DEP_FILES=$(LIB_O_FILES:.o=.d) $(APP_O_FILES:.o=.d)
+
 all: application
+
+-include $(DEP_FILES)
 
 clean:
 	rm -rf $(BLD_DIR)/*

@@ -158,7 +158,7 @@ int gettimeofday(struct timeval * tv, struct timezone * tz)
 	return 0;
 }
 
-int settimeofday(struct timeval * tv, struct timezone * tz)
+int settimeofday(UNUSED struct timeval * tv, UNUSED struct timezone * tz)
 {
 	// TODO: implement this
 	SetErrorNumber(-EACCES);

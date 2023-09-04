@@ -17,4 +17,7 @@ int tellsz(int fd); // not standard
 int chdir (const char *pfn);
 int fchdir(int fd);
 
+// NanoShell specifics
+const char* FiGetCwd();
+
 #endif//_UNISTD_H

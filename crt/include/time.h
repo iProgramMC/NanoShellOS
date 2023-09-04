@@ -15,6 +15,7 @@ int gettimeofday(struct timeval * tv, struct timezone * tz);
 int settimeofday(struct timeval * tv, struct timezone * tz);
 
 // NanoShell specifics
+TimeStruct* GetTime();
 void StructTmToTimeStruct(TimeStruct* out, struct tm* in);
 void TimeStructToStructTm(TimeStruct* in, struct tm* out);
 int GetEpochTimeFromTimeStruct(TimeStruct* ts);

@@ -5,6 +5,6 @@
 #define __INTTYPES_H
 
 #include <stdint.h>
-typedef signed long ssize_t;
+#include <sys/types.h>
 
 #endif//__INTTYPES_H
