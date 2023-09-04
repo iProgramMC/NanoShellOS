@@ -139,3 +139,28 @@ struct tm* localtime(const time_t* timep)
 {
 	return localtime_r(timep, &s_tm);
 }
+
+int gettimeofday(struct timeval * tv, struct timezone * tz)
+{
+	if (tz)
+	{
+		// no time zone
+		tz->tz_minuteswest = 0;
+		tz->tz_dsttime     = 0;
+	}
+	
+	if (tv)
+	{
+		tv->tv_sec  = (int)time(NULL);
+		tv->tv_usec = (GetTickCount() % 1000) * 1000;
+	}
+	
+	return 0;
+}
+
+int settimeofday(struct timeval * tv, struct timezone * tz)
+{
+	// TODO: implement this
+	SetErrorNumber(-EACCES);
+	return -1;
+}

@@ -48,6 +48,7 @@ fs/Nes/*.nes
 vdisk.vdi
 vdisk*.vdi
 vdisk*.vhdx
+vdisk*.vmdk
 
 todo.txt
 todo1.txt

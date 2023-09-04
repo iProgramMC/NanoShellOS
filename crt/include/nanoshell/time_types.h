@@ -23,7 +23,7 @@ struct timeval
 struct tm
 {
 	int tm_sec;           // Seconds after the minute. [0, 59]
-	int tm_min;           // Minutes after the hour.   [0, 59]
+	int tm_min;           // Minutes after the hour.   [0, 59]	
 	int tm_hour;          // Hours since midnight.     [0, 23]
 	int tm_mday;          // Day of the month.         [1, 31]
 	int tm_mon;           // Months since January.     [0, 11]
@@ -49,25 +49,9 @@ typedef struct
 }
 TimeStruct;
 
-TimeStruct *GetTime ();
-
-// Get the time (in milliseconds) since the OS has been started.
-int GetTickCount();
-
-int GetEpochTime();
-int GetEpochTimeFromTimeStruct(TimeStruct* ts);
-void GetHumanTimeFromEpoch(int utime, TimeStruct* pOut);
-
-// Time manipulation functions.
-/*
-TODO
-
-double difftime(time_t a, time_t b);
-time_t mktime  (struct tm* ptr);
-time_t time    (time_t* timer);
-int timespec_get(struct timespec* ptr, int base);
-struct tm* gmtime_r(const time_t* timer, struct tm* result);
-struct tm* gmtime  (const time_t* timer);
-*/
+struct timezone {
+    int tz_minuteswest; // minutes west of Greenwich
+    int tz_dsttime;     // type of DST correction
+};
 
 #endif//_TIME_TYPES_H

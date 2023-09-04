@@ -6,6 +6,6 @@
 
 #include <nanoshell/fcntl_types.h>
 
-//TODO
+// TODO
 
 #endif//__FCNTL_H

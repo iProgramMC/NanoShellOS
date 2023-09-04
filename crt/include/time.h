@@ -11,6 +11,8 @@ time_t time(time_t* timer);
 time_t mktime (struct tm * ptr);
 struct tm* localtime_r(const time_t* timep, struct tm * result);
 struct tm* localtime(const time_t* timep);
+int gettimeofday(struct timeval * tv, struct timezone * tz);
+int settimeofday(struct timeval * tv, struct timezone * tz);
 
 // NanoShell specifics
 void StructTmToTimeStruct(TimeStruct* out, struct tm* in);

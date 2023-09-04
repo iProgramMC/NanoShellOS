@@ -171,5 +171,7 @@ void* MmKernelAllocate(size_t sz);
 //note: Do not feed this function addresses from malloc().
 void MmKernelFree(void *pData);
 
+// Time
+int GetTickCount();
 
 #endif//_NANOSHELL___H
