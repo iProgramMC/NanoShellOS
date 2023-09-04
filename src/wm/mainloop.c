@@ -223,13 +223,13 @@ void WmTakeOverWindow(Window* pWindow)
 
 void WmTimerTick(Window* pWindow)
 {
-	WindowTimer timers   [C_MAX_WIN_TIMER];
-	int         tickTimes[C_MAX_WIN_TIMER] = { 0 };
+	WindowTimer timers[C_MAX_WIN_TIMER];
+	bool        tick  [C_MAX_WIN_TIMER] = { 0 };
 	
 	// get the current tick count
 	int tickCount = GetTickCount();
 	
-	// take a snapshot
+	// take a snapshot. kind of disgusting
 	cli;
 	
 	for (int i = 0; i < C_MAX_WIN_TIMER; i++)
@@ -242,24 +242,29 @@ void WmTimerTick(Window* pWindow)
 			pWindow->m_timers[i].m_nextTickAt = tickCount;
 		}
 		
-		while (pWindow->m_timers[i].m_nextTickAt <= tickCount)
+		if (!pWindow->m_timers[i].m_waitResponse)
 		{
-			pWindow->m_timers[i].m_nextTickAt += pWindow->m_timers[i].m_frequency;
-			tickTimes[i]++;
+			// I'm sure there's a faster way.
+			if (pWindow->m_timers[i].m_nextTickAt <= tickCount)
+			{
+				tick[i] = true;
+				pWindow->m_timers[i].m_nextTickAt   += pWindow->m_timers[i].m_frequency;
+				pWindow->m_timers[i].m_waitResponse  = true;
+			}
 		}
 		
 		timers[i] = pWindow->m_timers[i];
 	}
+	
 	sti;
 	
 	// look through each of the timers
 	
 	for (int i = 0; i < C_MAX_WIN_TIMER; i++)
 	{
-		while (tickTimes[i] > 0)
+		if (tick[i])
 		{
-			tickTimes[i]--;
-			WindowAddEventToMasterQueue(pWindow, timers[i].m_firedEvent, i, 0);
+			WindowAddEventToMasterQueue(pWindow, timers[i].m_firedEvent, i, C_CHECK_TIMER_EVENT_PARM2);
 		}
 	}
 }

@@ -510,9 +510,14 @@ typedef struct
 }
 CheckBoxData;
 
+// related to window timers but also a hack. Only if the parm2 is the following value, we perform the dismissal
+// of the timer that sent us the event.
+#define C_CHECK_TIMER_EVENT_PARM2 (0x20111945)
+
 typedef struct
 {
 	bool m_used;
+	bool m_waitResponse; // set if the window hasn't yet responded to our event
 	int  m_frequency;
 	int  m_nextTickAt;
 	int  m_firedEvent;

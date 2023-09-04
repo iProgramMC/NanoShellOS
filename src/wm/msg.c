@@ -457,6 +457,17 @@ static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int par
 		pWindow->m_cursorID = pWindow->m_cursorID_backup;
 	}
 	
+	// If parm2 is our magic constant (hack), then check if the parm1 is within bounds and if
+	// the message type matches.
+	if (parm2 == C_CHECK_TIMER_EVENT_PARM2 &&
+		parm1 >= 0 &&
+		parm1 < C_MAX_WIN_TIMER &&
+		pWindow->m_timers[parm1].m_firedEvent == eventType)
+	{
+		// dismiss the event!
+		pWindow->m_timers[parm1].m_waitResponse = false;
+	}
+	
 	// Perform operations before calling the window's event handler function
 	PreProcessEvent(pWindow, eventType, parm1, parm2);
 	
