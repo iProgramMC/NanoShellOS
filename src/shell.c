@@ -283,7 +283,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		LogMsg("hat          - performs a hex dump of a file");
 		LogMsg("help         - shows this list");
 		LogMsg("kill <pid>   - kill a thread with an id");
-		LogMsg("image        - displays an image in the top left of the current graphicss context");
+		LogMsg("image        - displays an image in the top left of the current graphics context");
 		LogMsg("lf           - list debugging information about the file system");
 		LogMsg("lc           - list clipboard contents");
 		LogMsg("lm           - list memory allocations");
