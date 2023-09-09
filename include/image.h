@@ -7,6 +7,8 @@
 #ifndef _IMAGE_H
 #define _IMAGE_H
 
+#include <video.h>
+
 #define BI_RGB 0 // Only supported mode
 // Can be used only with X bit bitmaps - not supported
 #define BI_RLE8 1
@@ -94,11 +96,12 @@ enum
 };
 
 // to load specific formats
-Image *LoadBitmap (void* pBmpData, int *pErrorOut);
-Image *LoadTarga (void* pTgaData, int *pErrorOut);
+Image *LoadBitmap(void* pBmpData, size_t imageSize, int *pErrorOut);
+Image *LoadTarga (void* pTgaData, size_t imageSize, int *pErrorOut);
+Image *LoadPNG   (void* pPngData, size_t imageSize, int *pErrorOut);
 
 // to load any image file
-Image *LoadImageFile(void *pImageData, int *pErrorOut);
+Image *LoadImageFile(void *pImageData, size_t imageSize, int *pErrorOut);
 
 Image *BitmapDuplicate(Image* pSourceImage);
 Image *BitmapAllocate(int width, int height, uint32_t default_color);

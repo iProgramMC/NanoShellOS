@@ -26,19 +26,21 @@ void PaintLoadImage(Window* pWindow, const char* pFN)
 		
 		return;
 	}
-	uint8_t* pData = MmAllocate(FiTellSize(fd));
+	int length = FiTellSize(fd);
+	uint8_t* pData = MmAllocate(length);
 	if (!pData)
 	{
 		MessageBox(pWindow, "Insufficient memory to complete this operation.", "Scribble", MB_OK | ICON_ERROR << 16);
 		FiClose(fd);
 		return;
 	}
-	FiRead(fd, pData, FiTellSize(fd));
+	
+	FiRead(fd, pData, length);
 	FiClose(fd);
 	
 	// try to load it as an image
 	int erc = 0;
-	Image *pImage = LoadImageFile(pData, &erc);
+	Image *pImage = LoadImageFile(pData, length, &erc);
 	if (!pImage)
 	{
 		MmFree(pData);

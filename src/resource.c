@@ -206,6 +206,7 @@ FileAssociation g_FileAssociations[] =
 	{ "*.md",  "help",     "Help Document",         ICON_FILE_MKDOWN,  0 },
 	{ "*.bmp", "image",    "BMP File",              ICON_FILE_IMAGE,   0 },
 	{ "*.tga", "image",    "TGA File",              ICON_FILE_IMAGE,   0 },
+	{ "*.png", "image",    "PNG File",              ICON_FILE_IMAGE,   0 },
 	{ "*.tar", "unknown",  "Tape Archive File",     ICON_TAR_ARCHIVE,  0 },
 };
 

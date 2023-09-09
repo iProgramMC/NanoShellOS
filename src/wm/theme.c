@@ -600,7 +600,7 @@ uint8_t* ThmLoadImageBWFile(const char *pPath, int *pSizeOut, int *pWidthOut, in
 	if (!entireFile) return NULL;
 	
 	int errorCode = -1;
-	Image* imgFile = LoadImageFile(entireFile, &errorCode);
+	Image* imgFile = LoadImageFile(entireFile, sz, &errorCode);
 	
 	// if an image didn't load, just pass its raw output. This is insane and you shouldn't do that.
 	if (!imgFile)

@@ -326,7 +326,7 @@ void WmBackgroundLoaderThread(UNUSED int parameter)
 	FiClose(fd);
 	
 	int errorCode = 0;
-	Image* pImage = LoadImageFile(pData, &errorCode);
+	Image* pImage = LoadImageFile(pData, size, &errorCode);
 	MmFree(pData);
 	
 	if (pImage)

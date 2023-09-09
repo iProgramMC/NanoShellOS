@@ -11,14 +11,23 @@
 #include <memory.h>
 #include <process.h>
 
+#include "png.h"
+
 //Note: As a specification, the image loader family of functions
 //returns the framebuffer as part of the image block, so that a
 //single MmFree(pImage) is enough.
 
 //Allocates an image on the heap and returns a pointer to it.
 //It reads data from a Windows BMP-format data block.
-Image *LoadBitmap (void* pBmpData, int *error)
+Image *LoadBitmap (void* pBmpData, size_t imageSize, int *error)
 {
+	if (sizeof(BmpHeaderStruct) > imageSize)
+	{
+		*error = BMPERR_FILE_TOO_SMALL;
+		return NULL;
+	}
+	
+	// TODO: validate imagesize
 	BmpHeaderStruct* pStruct = (BmpHeaderStruct*)pBmpData;
 	
 	if (pStruct->bitmapHeader != 0x4D42)//BM
@@ -114,12 +123,21 @@ Image *LoadBitmap (void* pBmpData, int *error)
 	*error = BMPERR_SUCCESS;
 	return pImage;
 }
-Image *LoadTarga (void* pTgaData, int *error)
+
+Image *LoadTarga (void* pTgaData, size_t imageSize, int *error)
 {
+	if (sizeof(TgaHeaderStruct) > imageSize)
+	{
+		*error = BMPERR_FILE_TOO_SMALL;
+		return NULL;
+	}
+	
+	// TODO: validate imagesize
 	TgaHeaderStruct* pStruct = (TgaHeaderStruct*)pTgaData;
 	
 	if (pStruct->width < 1 || pStruct->height < 1)
 	{
+		*error = BMPERR_INVALID_HEADER;
 		return NULL;
 	}
 	
@@ -262,7 +280,7 @@ Image *LoadTarga (void* pTgaData, int *error)
 	return pImage;
 }
 
-Image* LoadImageFile(void *pImageData, int *pErrorOut)
+Image* LoadImageFile(void *pImageData, size_t imageSize, int *pErrorOut)
 {
 	//this tries to guess the specific format to load
 	
@@ -273,7 +291,14 @@ Image* LoadImageFile(void *pImageData, int *pErrorOut)
 	if (*((uint16_t*)pImageData) == 0x4D42) // 'BM'
 	{
 		// Yes, load it as if it were a bmp file without trying others
-		return LoadBitmap (pImageData, pErrorOut);
+		return LoadBitmap (pImageData, imageSize, pErrorOut);
+	}
+	
+	// Is this a png file?
+	if (memcmp(pImageData, "\x89PNG\r\n\x1A\n", 8) == 0)
+	{
+		// Yes, load it as if it were a png file without trying others
+		return LoadPNG(pImageData, imageSize, pErrorOut);
 	}
 	
 	/// HEADERLESS FILE TYPES ///
@@ -281,7 +306,7 @@ Image* LoadImageFile(void *pImageData, int *pErrorOut)
 	// Try a Targa file
 	if (*((uint8_t*)pImageData) == 0) // The first byte must be a zero
 	{
-		Image* pImg = LoadTarga(pImageData, pErrorOut);
+		Image* pImg = LoadTarga(pImageData, imageSize, pErrorOut);
 		if (pImg) return pImg;
 		
 		//*pErrorOut = BMPERR_UNKNOWN_FORMAT;

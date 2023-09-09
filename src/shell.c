@@ -509,7 +509,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			int error = 0;
 			Image* pImg;
 			
-			pImg = LoadImageFile(pData, &error);
+			pImg = LoadImageFile(pData, length, &error);
 			if (error)
 			{
 				// can't
