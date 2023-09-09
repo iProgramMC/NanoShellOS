@@ -196,7 +196,7 @@ bool PNGDecompressIDAT(PNGState* pState, void* pOutData, size_t bufSize)
 	}
 	
 	// Decompress it
-	size_t outSize = bufSize;
+	//size_t outSize = bufSize;
 	
 	size_t bytesWritten = tinfl_decompress_mem_to_mem(pOutData, bufSize, pInput, inputSize, TINFL_FLAG_PARSE_ZLIB_HEADER);
 	if (bytesWritten == TINFL_DECOMPRESS_MEM_TO_MEM_FAILED)
@@ -209,6 +209,8 @@ bool PNGDecompressIDAT(PNGState* pState, void* pOutData, size_t bufSize)
 	MmFree(pInput);
 	return true;
 }
+
+//void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 
 Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 {
@@ -252,18 +254,27 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 	bool isTrueColor = colorType & 0x2;
 	bool hasPalette  = colorType & 0x1;
 	bool hasAlpha    = colorType & 0x4;
-	bool isGrayScale = !isTrueColor;
+	//bool isGrayScale = !isTrueColor;
 	
-	if (isGrayScale || hasPalette)
+	//SLogMsg("width: %u, height: %u, bpp: %d, color type: %d, compression: %d, filter: %d, interlace: %d\n",
+	//		 width, height, bitDepth, colorType, compression, filter, interlace);
+	
+	if (hasPalette)
 	{
 		// can't do paletted pngs right now
-		SLogMsg("Error, don't support grayscale or paletted pngs right now");
+		SLogMsg("Error, don't support paletted pngs right now");
 		goto InvalidHeader;
 	}
 	
-	size_t pixelSize = (hasAlpha ? 4 : 3) * (bitDepth / 8);
+	size_t numChannels = 1;
+	if (isTrueColor)
+		numChannels += 2;
+	if (hasAlpha)
+		numChannels++;
 	
-	if (pixelSize != 4 && pixelSize != 3 && bitDepth != 8)
+	size_t pixelSize = numChannels * (bitDepth / 8);
+	
+	if (pixelSize > 4 || pixelSize < 1 || bitDepth != 8)
 	{
 		SLogMsg("Error, don't support HDR, or bit depth higher than eight per channel");
 		*error = BMPERR_BAD_BPP;
@@ -308,6 +319,9 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 		*error = BMPERR_BAD_COLOR_PLANES;
 		return NULL;
 	}
+	
+	// dump the raw IDAT data
+	//SDumpBytesAsHex(rawData,rawSize,true);
 	
 	uint8_t* buf = rawData;
 	
@@ -370,12 +384,20 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 		{
 			uint32_t offset = pixelSize * x;
 			
-			uint8_t alpha, red = line[offset + 0], green = line[offset + 1], blue = line[offset + 2];
+			uint8_t alpha = 255, red = 0, green = 0, blue = 0;
 			
-			if (pixelSize == 3)
-				alpha = 255;
+			if (pixelSize > 2)
+			{
+				red = line[offset + 0], green = line[offset + 1], blue = line[offset + 2];
+				if (hasAlpha)
+					alpha = line[offset + 3];
+			}
 			else
-				alpha = line[offset + 3];
+			{
+				red = green = blue = line[offset];
+				if (hasAlpha)
+					alpha = line[offset + 1];
+			}
 			
 			if (alpha == 0)
 			{
