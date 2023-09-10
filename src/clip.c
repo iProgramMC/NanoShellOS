@@ -10,7 +10,7 @@
 
 ClipboardVariant g_clipboard;
 
-static void CbClearUnsafe()
+void CbClearUnsafe()
 {
 	if (g_clipboard.m_type)
 	{

@@ -220,10 +220,10 @@ SAI uint32_t MakeColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
 
 bool PNGParsePLTE(PNGState* state, uint32_t* palette, int* palSizeOut)
 {
-	// It's fine if we mutate the state. The IDAT _must_ follow PLTE and tRNS entries.
+	PNGState stateCopy = *state;
 	PNGChunk chk;
 	bool found = false;
-	while (PNGFetchNextChunk(state, &chk))
+	while (PNGFetchNextChunk(&stateCopy, &chk))
 	{
 		if (!memcmp(chk.m_type, "PLTE", 4))
 		{
@@ -258,10 +258,10 @@ bool PNGParsePLTE(PNGState* state, uint32_t* palette, int* palSizeOut)
 
 bool PNGParseTRNS(PNGState* state, uint32_t* palette, int palSize)
 {
-	// It's fine if we mutate the state. The IDAT _must_ follow PLTE and tRNS entries.
+	PNGState stateCopy = *state;
 	PNGChunk chk;
 	bool found = false;
-	while (PNGFetchNextChunk(state, &chk))
+	while (PNGFetchNextChunk(&stateCopy, &chk))
 	{
 		if (!memcmp(chk.m_type, "tRNS", 4))
 		{

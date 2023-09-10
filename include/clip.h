@@ -22,6 +22,7 @@ enum
 	CLIPBOARD_DATA_LARGE_TEXT,
 	
 	// Add more clipboard data types here.  Unknown clipboard data types will be treated as generic binaries
+	CLIPBOARD_CABINET_COPY,
 };
 
 typedef struct
@@ -59,7 +60,8 @@ bool CbPushTextIntoBuffer();
 /**
  * Clears the clipboard.
  */
-void CbClear();
+void CbClear();       // clears the current variant by grabbing it for you
+void CbClearUnsafe(); // clears the current variant, assumes that you already own it
 
 /**
  * Copies a block of text to the clipboard. If the function succeeds, it returns true.

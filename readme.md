@@ -213,4 +213,11 @@ any testing whether USB keyboards also work with PS/2 emulation, but I like to b
 
 Because it works on QEMU with TCG on my machine (which is a software emulator), I think it'll work on slower machines too.
 
+## Image Credits
+
+The provided background images are not mine. Here is a list of their sources. Note that I do not endorse the content on the sites and
+the links are only provided for reference purposes.
+
+* [fs/Res/Backgrounds/Snowy.png](https://wallhere.com/en/wallpaper/613106) - WallHere.com
+* [fs/Res/Backgrounds/Space.png](https://spaceref.com/space-stations/space-station-view-waxing-gibbous-moon-above-the-pacific-ocean/) - NASA
 

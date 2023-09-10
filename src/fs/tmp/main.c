@@ -109,7 +109,7 @@ void FsTempCreatePermanentFile(FileNode* pNode, const char* fileName, uint8_t* b
 
 void FsTempFreeNode(TempFSNode* pNode)
 {
-	SLogMsg("FsTempFreeNode(%p)", pNode);
+	//SLogMsg("FsTempFreeNode(%p)", pNode);
 	
 	// if it has any data, free that too.
 	// note that we do not allow deleting directories with files in them,
