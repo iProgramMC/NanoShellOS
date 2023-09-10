@@ -341,12 +341,28 @@ void WmBackgroundLoaderThread(UNUSED int parameter)
 	}
 }
 
+void WmIconLoaderThread(UNUSED int parameter)
+{
+	LoadIcons();
+	WmOnFinishLoadingIcons();
+}
+
 void SetDefaultBackground()
 {
 	g_background = &g_defaultBackground;
 	
 	UNUSED int errorCode = 0;
 	Task* task = KeStartTask(WmBackgroundLoaderThread, 0, &errorCode);
+	KeUnsuspendTask(task);
+	KeDetachTask(task);
+}
+
+void LoadIconsAsync()
+{
+	g_background = &g_defaultBackground;
+	
+	UNUSED int errorCode = 0;
+	Task* task = KeStartTask(WmIconLoaderThread, 0, &errorCode);
 	KeUnsuspendTask(task);
 	KeDetachTask(task);
 }

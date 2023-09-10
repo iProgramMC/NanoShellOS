@@ -210,6 +210,90 @@ bool PNGDecompressIDAT(PNGState* pState, void* pOutData, size_t bufSize)
 	return true;
 }
 
+SAI uint32_t MakeColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+{
+	if (alpha == 0)
+		return TRANSPARENT;
+	
+	return red << 16 | green << 8 | blue;
+}
+
+bool PNGParsePLTE(PNGState* state, uint32_t* palette, int* palSizeOut)
+{
+	// It's fine if we mutate the state. The IDAT _must_ follow PLTE and tRNS entries.
+	PNGChunk chk;
+	bool found = false;
+	while (PNGFetchNextChunk(state, &chk))
+	{
+		if (!memcmp(chk.m_type, "PLTE", 4))
+		{
+			found = true;
+			break;
+		}
+	}
+	
+	if (!found)
+		return false;
+	
+	if (chk.m_size % 3 != 0) // "A chunk length not divisible by 3 is an error." - libpng spec
+	{
+		SLogMsg("Error, PLTE chunk's size is not divisible by three.");
+		return false;
+	}
+	
+	int palSize;
+	*palSizeOut = palSize = (int)chk.m_size / 3;
+	
+	uint8_t* data = chk.m_data;
+	
+	// copy the palette entries:
+	for (int i = 0; i < palSize; i++)
+	{
+		*(palette++) = data[0] << 16 | data[1] << 8 | data[2];
+		data += 3;
+	}
+	
+	return true;
+}
+
+bool PNGParseTRNS(PNGState* state, uint32_t* palette, int palSize)
+{
+	// It's fine if we mutate the state. The IDAT _must_ follow PLTE and tRNS entries.
+	PNGChunk chk;
+	bool found = false;
+	while (PNGFetchNextChunk(state, &chk))
+	{
+		if (!memcmp(chk.m_type, "tRNS", 4))
+		{
+			found = true;
+			break;
+		}
+	}
+	
+	// if we don't have a tRNS chunk it's completely fine
+	if (!found)
+		return true;
+	
+	if ((int)chk.m_size != palSize) // for color type 3, 
+	{
+		SLogMsg("Error, tRNS size %d does not match palette size of %d.", (int)chk.m_size, palSize);
+		return false;
+	}
+	
+	// update the palette entries if their alpha is zero
+	uint8_t* data = chk.m_data;
+	for (int i = 0; i < palSize; i++)
+	{
+		if (*data == 0)
+			*palette = TRANSPARENT;
+		
+		data++;
+		palette++;
+	}
+	
+	return true;
+}
+
 //void SDumpBytesAsHex (void *nAddr, size_t nBytes, bool as_bytes);
 
 Image* LoadPNG(void* imgData, size_t imgSize, int* error)
@@ -259,11 +343,24 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 	//SLogMsg("width: %u, height: %u, bpp: %d, color type: %d, compression: %d, filter: %d, interlace: %d\n",
 	//		 width, height, bitDepth, colorType, compression, filter, interlace);
 	
+	if (bitDepth > 8 || (bitDepth & (bitDepth - 1)))
+	{
+		SLogMsg("Error, bit depth %d is not a power of two or is bigger than 8.", bitDepth);
+		*error = BMPERR_BAD_BPP;
+		return NULL;
+	}
+	
+	int palSize = 0;
+	uint32_t palette[256]; // palette in standard nanoshell colors
+	
 	if (hasPalette)
 	{
-		// can't do paletted pngs right now
-		SLogMsg("Error, don't support paletted pngs right now");
-		goto InvalidHeader;
+		if (!PNGParsePLTE(&state, palette, &palSize) || !PNGParseTRNS(&state, palette, palSize))
+		{
+			SLogMsg("Error, invalid palette");
+			*error = BMPERR_BAD_BPP;
+			return NULL;
+		}
 	}
 	
 	size_t numChannels = 1;
@@ -271,12 +368,14 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 		numChannels += 2;
 	if (hasAlpha)
 		numChannels++;
+	if (hasPalette)
+		numChannels = 1;
 	
 	size_t pixelSize = numChannels * (bitDepth / 8);
 	
 	if (pixelSize > 4 || pixelSize < 1 || bitDepth != 8)
 	{
-		SLogMsg("Error, don't support HDR, or bit depth higher than eight per channel");
+		SLogMsg("Error, don't support HDR, or bit depth higher than eight per channel    pixelSize=%d   bitDepth=%d   numChannels=%d",pixelSize,bitDepth,numChannels);
 		*error = BMPERR_BAD_BPP;
 		return NULL;
 	}
@@ -383,6 +482,11 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 		for (uint32_t x = 0; x < width; x++, outIndex++, outLine++)
 		{
 			uint32_t offset = pixelSize * x;
+			if (hasPalette)
+			{
+				*outLine = palette[line[offset]];
+				continue;
+			}
 			
 			uint8_t alpha = 255, red = 0, green = 0, blue = 0;
 			
@@ -399,13 +503,7 @@ Image* LoadPNG(void* imgData, size_t imgSize, int* error)
 					alpha = line[offset + 1];
 			}
 			
-			if (alpha == 0)
-			{
-				*outLine = TRANSPARENT;
-				continue;
-			}
-			
-			*outLine = red << 16 | green << 8 | blue << 0;
+			*outLine = MakeColor(red, green, blue, alpha);
 		}
 	}
 	

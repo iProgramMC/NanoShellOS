@@ -165,9 +165,10 @@ Rectangle GetWindowClientRect(Window* pWindow, bool offset);
 MenuBarData* WmCreateMenuBar();
 void DrawEdge(Rectangle rect, int style, unsigned bg);
 void WmWaitForEvent(Window* pWindow);
-
+void LoadIconsAsync();
 void WmPaintWindowBackgd(Window* pWindow);
 void WmPaintWindowTitle (Window* pWindow);
 void WmPaintWindowBorder(Window* pWindow);
+void WmOnFinishLoadingIcons();
 
 #endif//INT_WI_H

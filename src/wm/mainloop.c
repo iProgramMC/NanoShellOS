@@ -79,6 +79,7 @@ bool IsWindowManagerRunning()
 void SetupWindowManager()
 {
 	LogMsg("Please wait...");
+	LoadIconsAsync();
 	
 	g_DefaultCursorID = CURSOR_WAIT;
 	
@@ -99,9 +100,9 @@ void SetupWindowManager()
 	g_shutdownSentDestroySignals = false;
 	g_shutdownWaiting			 = false;
 	
-	LoadDefaultThemingParms ();
+	LoadDefaultThemingParms();
 	//VidFillScreen(BACKGROUND_COLOR);
-	SetDefaultBackground ();
+	SetDefaultBackground();
 	
 	//redraw background?
 	Rectangle r = {0, 0, GetScreenSizeX(), GetScreenSizeY() };
@@ -119,7 +120,10 @@ void SetupWindowManager()
 	//LogMsg("\n\n\n");
 	
 	WindowCallInit ();
-	
+}
+
+void WmOnFinishLoadingIcons()
+{
 	//test:
 #if !THREADING_ENABLED
 	LogMsgNoCr("Huh!?? This shouldn't be on");
@@ -134,7 +138,6 @@ void SetupWindowManager()
 	KeUnsuspendTask(pTask);
 	KeDetachTask(pTask);
 	DebugLogMsg("Created taskbar task. pointer returned:%x, errorcode:%x", pTask, errorCode);
-	
 #endif
 }
 

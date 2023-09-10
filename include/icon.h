@@ -312,4 +312,9 @@ void RenderIconOutline(IconType type, int x, int y, uint32_t outline);
 void RenderIconForceSize(IconType type, int x, int y, int size);
 void RenderIconForceSizeOutline(IconType type, int x, int y, int size, uint32_t color);
 
+/**
+ * Loads the icons. This can only be done once.
+ */
+void LoadIcons();
+
 #endif//_ICON_H

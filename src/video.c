@@ -851,8 +851,14 @@ void VidDrawLine(unsigned p, int x1, int y1, int x2, int y2)
 		}
 	}
 }
+
 void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 {
+	if (!pImage) return;
+	
+	if (pImage->width == 0 || pImage->height == 0)
+		return;
+	
 	// TODO: More complete fill-in of the VBEData structure
 	VBEData data;
 	data.m_bitdepth = 2;
@@ -871,9 +877,13 @@ void VidBlitImageForceOpaque(Image* pImage, int x, int y)
 	
 	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
+
 void VidBlitImage(Image* pImage, int x, int y)
 {
 	if (!pImage) return;
+	
+	if (pImage->width == 0 || pImage->height == 0)
+		return;
 	
 	const uint32_t* fb = pImage->framebuffer;
 	
@@ -888,9 +898,14 @@ void VidBlitImage(Image* pImage, int x, int y)
 	
 	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
+
 void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 {
 	if (!pImage) return;
+	
+	if (pImage->width == 0 || pImage->height == 0)
+		return;
+	
 	const uint32_t* fb = pImage->framebuffer;
 	
 	int ixe = x + pImage->width, iye = y + pImage->height;
@@ -904,14 +919,20 @@ void VidBlitImageOutline(Image* pImage, int x, int y, uint32_t color)
 	
 	DirtyRectLogger(x, y, pImage->width, pImage->height);
 }
+
 void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 {
 	if (!p) return;
+	
+	if (p->width == 0 || p->height == 0)
+		return;
+	
 	if (width == p->width && height == p->height)
 	{
 		VidBlitImage (p, gx, gy);
 		return;
 	}
+	
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -927,9 +948,14 @@ void VidBlitImageResize(Image* p, int gx, int gy, int width, int height)
 	
 	DirtyRectLogger(gx, gy, width, height);
 }
+
 void VidBlitImageResizeForceOpaque(Image* p, int gx, int gy, int width, int height)
 {
 	if (!p) return;
+	
+	if (p->width == 0 || p->height == 0)
+		return;
+	
 	if (width == p->width && height == p->height)
 	{
 		VidBlitImage (p, gx, gy);
@@ -949,9 +975,14 @@ void VidBlitImageResizeForceOpaque(Image* p, int gx, int gy, int width, int heig
 	
 	DirtyRectLogger(gx, gy, width, height);
 }
+
 void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, uint32_t outline)
 {
 	if (!p) return;
+	
+	if (p->width == 0 || p->height == 0)
+		return;
+	
 	if (width == p->width && height == p->height)
 	{
 		VidBlitImageOutline (p, gx, gy, outline);
@@ -971,6 +1002,7 @@ void VidBlitImageResizeOutline(Image* p, int gx, int gy, int width, int height, 
 	
 	DirtyRectLogger(gx, gy, width, height);
 }
+
 void VidDrawRect(unsigned color, int left, int top, int right, int bottom)
 {
 	//basic clipping:
@@ -998,10 +1030,12 @@ void VidDrawRect(unsigned color, int left, int top, int right, int bottom)
 	DirtyRectLogger(left,  bottom, right-left+1, 1);  // bottom edge
 	DirtyRectLogger(right, top,    1, bottom-top+1);  // right edge
 }
+
 void VidFillRectangle(unsigned color, Rectangle rect)
 {
 	VidFillRect (color, rect.left, rect.top, rect.right, rect.bottom);
 }
+
 void VidDrawRectangle(unsigned color, Rectangle rect)
 {
 	VidDrawRect (color, rect.left, rect.top, rect.right, rect.bottom);
