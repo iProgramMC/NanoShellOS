@@ -280,7 +280,7 @@ int FiUnlinkFile (const char *pfn)
 	if (strlen (pfn) >= PATH_MAX - 1) return -ENAMETOOLONG;
 	
 	// copy up until the last /
-	char* r = strrchr(pfn, '/');
+	const char* r = strrchr(pfn, '/');
 	if (r)
 	{
 		const char* ptr = pfn;
@@ -293,13 +293,16 @@ int FiUnlinkFile (const char *pfn)
 		
 		if (buffer[0] == 0)
 			buffer[0] = '/', buffer[1] = 0;
+		
+		r++;
 	}
 	else
 	{
 		strcpy(buffer, ".");
+		r = pfn;
 	}
 	
-	return FiUnlinkInDir(buffer, r + 1);
+	return FiUnlinkInDir(buffer, r);
 }
 
 int FiChangeDir(const char* pfn)
