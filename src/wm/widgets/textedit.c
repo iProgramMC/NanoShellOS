@@ -786,6 +786,8 @@ static void TextInput_DetermineLineEnding(Control* this)
 	SLogMsg("Line ending detected: %s%s", &"\0CR"[!!(lineEndingWinner & LEND_CR)], &"\0LF"[!!(lineEndingWinner & LEND_LF)]);
 }
 
+void TextInput_OnNavPressed(Control* this, eNavDirection dir);
+
 static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 {
 	TextInput_Clear(this);
@@ -813,6 +815,12 @@ static void TextInput_SetText(Control* this, const char* pText, bool bRepaint)
 	
 	TextInput_Select(this, -1, -1, -1, -1);
 	TextInput_DetermineLineEnding(this);
+	
+	if (~this->m_parm1 & TEXTEDIT_MULTILINE)
+	{
+		TextInputDataEx* pData = TextInput_GetData(this);
+		pData->m_cursorX = (int)pData->m_lines[pData->m_cursorY].m_length;
+	}
 }
 
 // This concatenates 'lineSrc' to the end of 'lineDst'.
