@@ -177,7 +177,7 @@ void Tokenise(const char * str)
 	{
 		char c = str[sptr++];
 
-		// If this is a hash, we're starting a new comment.
+		// If this is a hash, we're starting a line comment.
 		if (c == '#')
 		{
 			while (c != 0)
@@ -186,6 +186,9 @@ void Tokenise(const char * str)
 				if (c == '\n')
 					break;
 			}
+			
+			g_lineNum++;
+			
 			continue;
 		}
 

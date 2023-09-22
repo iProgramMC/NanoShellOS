@@ -82,7 +82,10 @@ void LoadIcons()
 	cli;
 	
 	if (g_bLoadedIcons)
+	{
+		sti;
 		return;
+	}
 	
 	g_bLoadedIcons = true;
 	

@@ -13,6 +13,8 @@
 #define CLOCK_WIDTH   (200)
 #define CLOCK_HEIGHT  (200)
 
+// The LUT is of size 60. cos(x) = cosa[(x / 6) % 60] (where x is a value in degrees)
+
 int cosa[]={    0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,   0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995,-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105 };
 int sina[]={-1000,-995,-978,-951,-914,-866,-809,-743,-669,-588,-500,-407,-309,-208,-105,   0, 105, 208, 309, 407, 500, 588, 669, 743, 809, 866, 914, 951, 978, 995,1000, 995, 978, 951, 914, 866, 809, 743, 669, 588, 500, 407, 309, 208, 105,    0,-105,-208,-309,-407,-500,-588,-669,-743,-809,-866,-914,-951,-978,-995 };
 
@@ -21,17 +23,53 @@ TimeStruct g_time;
 
 #define min(a,b) ((a)<(b)?(a):(b))
 
-void DrawHand (int deg, int len, int cenX, int cenY, unsigned color)
+void DrawHand (int deg, int len, int cenX, int cenY, unsigned color, bool fancy)
 {
-	int begPointX = cenX,                            begPointY = cenY;
-	int endPointX = cenX + (cosa[deg] * len / 1000), endPointY = cenY + (sina[deg] * len / 1000);
-	VidDrawLine (color, begPointX, begPointY, endPointX, endPointY);
+	if (!fancy)
+	{
+		int begPointX = cenX,                            begPointY = cenY;
+		int endPointX = cenX + (cosa[deg] * len / 1000), endPointY = cenY + (sina[deg] * len / 1000);
+		VidDrawLine (color, begPointX, begPointY, endPointX, endPointY);
+		return;
+	}
+	
+	// Points (positioning defined for deg=0, rotated though):
+	// 0 - Up by len pixels
+	// 1 - Down by len/10 pixels
+	// 2 - Left by len/20 pixels
+	// 3 - Right by len/20 pixels
+	int ptx[4], pty[4];
+	
+	//UP
+	ptx[0] = cenX + (cosa[deg] * len / 1000);
+	pty[0] = cenY + (sina[deg] * len / 1000);
+	//DOWN
+	ptx[1] = cenX - (cosa[deg] * len / 1000 / 5);
+	pty[1] = cenY - (sina[deg] * len / 1000 / 5);
+	//LEFT
+	ptx[2] = cenX + (cosa[(deg + 15) % 60] * len / 1000 / 20);
+	pty[2] = cenY + (sina[(deg + 15) % 60] * len / 1000 / 20);
+	//RIGHT
+	ptx[3] = cenX - (cosa[(deg + 15) % 60] * len / 1000 / 20);
+	pty[3] = cenY - (sina[(deg + 15) % 60] * len / 1000 / 20);
+	
+#define V(i) ptx[i], pty[i]
+	VidDrawLine(color, V(0), V(2));
+	VidDrawLine(color, V(0), V(3));
+	VidDrawLine(color, V(1), V(2));
+	VidDrawLine(color, V(1), V(3));
+#undef V
 }
 
 void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 {
 	switch (messageType)
 	{
+		case EVENT_CREATE:
+		{
+			AddTimer(pWindow, 1000, EVENT_PAINT);
+			break;
+		}
 		case EVENT_PAINT:
 		{
 			//calculate stuff
@@ -41,17 +79,17 @@ void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
 			int handMaxLength = (2 * diameter / 5);
 			
 			//undraw old g_time
-			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 2 * handMaxLength / 3, centerX, centerY, WINDOW_BACKGD_COLOR);
-			DrawHand(g_time.minutes,                            6 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
-			DrawHand(g_time.seconds,                            8 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR);
+			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 4 * handMaxLength / 3, centerX, centerY, WINDOW_BACKGD_COLOR, true);
+			DrawHand(g_time.minutes,                              7 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR, true);
+			DrawHand(g_time.seconds,                              8 * handMaxLength / 9, centerX, centerY, WINDOW_BACKGD_COLOR, false);
 			
 			//read in new g_time
 			g_time = *GetTime();
 			
 			//re-draw new g_time
-			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 4 * handMaxLength / 9, centerX, centerY, 0xFF0000);
-			DrawHand(g_time.minutes,                            6 * handMaxLength / 9, centerX, centerY, 0x000000);
-			DrawHand(g_time.seconds,                            8 * handMaxLength / 9, centerX, centerY, 0x000000);
+			DrawHand(g_time.hours % 12 * 5 + g_time.minutes / 12, 4 * handMaxLength / 9, centerX, centerY, 0x000000, true);
+			DrawHand(g_time.minutes,                              7 * handMaxLength / 9, centerX, centerY, 0x000000, true);
+			DrawHand(g_time.seconds,                              8 * handMaxLength / 9, centerX, centerY, 0xFF0000, false);
 			
 			//draw surrounding circle:
 			int len1 = handMaxLength, len2 = 10 * handMaxLength / 9;
@@ -99,16 +137,7 @@ int main()
 	if (!pWindow)
 		return 1;
 	
-	//memset (&g_time, 0, sizeof(g_time));
-	
-	while (HandleMessages (pWindow))
-	{
-		if (nextUpdateIn <= GetTickCount())
-		{
-			RegisterEventInsideWndProc(pWindow, EVENT_PAINT, 0, 0);
-			nextUpdateIn = GetTickCount() + 1000;
-		}
-	}
+	while (HandleMessages(pWindow));
 	
 	return 0;
 }
