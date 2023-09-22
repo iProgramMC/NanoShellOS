@@ -265,11 +265,6 @@ Ext2InodeCacheUnit* Ext2ReadInode(Ext2FileSystem* pFS, uint32_t inodeNo, bool bF
 //   Section : Inode Block Manipulation
 // **************************************
 
-static int Ext2CalculateIBlocks(int nBlocks, int nBlockSize)
-{
-	return nBlocks * (nBlockSize / 512);
-}
-
 enum
 {
 	EXT2_INODE_USE_NOTHING,
@@ -330,6 +325,23 @@ void Ext2GetInodeBlockLocation(uint32_t offset, uint32_t* useWhat, uint32_t* blo
 	return;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
+// Assigns newBlock to blockPtr, and modifies i_blocks in the process.
+// If we are setting a block to a place that had a zero, then the number of blocks will increase.
+// If we are setting a zero to a place that had a valid block, it will decrease.
+// Assumes the prior i_blocks value is valid.
+static void Ext2ModifyBlock(uint32_t* blockPtr, uint32_t newBlock, uint32_t* numBlocks, uint32_t blockSize)
+{
+	uint32_t increment = blockSize / 512;
+	if (*blockPtr)
+		(*numBlocks) -= increment;
+	if (newBlock)
+		(*numBlocks) += increment;
+	*blockPtr = newBlock;
+}
+
 //note: the offset is in <block_size> units.
 uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset, bool bWrite, uint32_t blockNo)
 {
@@ -337,6 +349,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 	
 	uint32_t useWhat = EXT2_INODE_USE_NOTHING;
 	uint32_t blockIndices[3];
+	
+	uint32_t* pNumBlocks = &pInode->m_nBlocks;
 	
 	Ext2GetInodeBlockLocation(offset, &useWhat, blockIndices, addrsPerBlock);
 	
@@ -351,7 +365,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				return pInode->m_directBlockPointer[blockIndices[0]];
 			}
 			
-			pInode->m_directBlockPointer[blockIndices[0]] = blockNo;
+			Ext2ModifyBlock(&pInode->m_directBlockPointer[blockIndices[0]], blockNo, pNumBlocks, pFS->m_blockSize);
 			
 			//TODO: Somehow mark this inode as dirty.
 			
@@ -381,7 +395,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				}
 				else
 				{
-					pInode->m_singlyIndirBlockPtr = blk;
+					Ext2ModifyBlock(&pInode->m_singlyIndirBlockPtr, blk, pNumBlocks, pFS->m_blockSize);
+					
 					//TODO: Somehow mark this inode as dirty.
 					memset(data, 0, pFS->m_blockSize);
 				}
@@ -391,7 +406,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				ASSERT(Ext2ReadBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 			}
 			
-			data[blockIndices[0]] = blockNo;
+			Ext2ModifyBlock(&data[blockIndices[0]], blockNo, pNumBlocks, pFS->m_blockSize);
+			
 			ASSERT(Ext2WriteBlocks(pFS, pInode->m_singlyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 			
 			// If the singly indirect list is full of zeroes...
@@ -408,7 +424,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			if (bIsFullOfZeroes)
 			{
 				Ext2FreeBlock(pFS, pInode->m_singlyIndirBlockPtr);
-				pInode->m_singlyIndirBlockPtr = 0;
+				Ext2ModifyBlock(&pInode->m_singlyIndirBlockPtr, 0, pNumBlocks, pFS->m_blockSize);
 			}
 			
 			return blockNo;
@@ -444,7 +460,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				}
 				else
 				{
-					pInode->m_doublyIndirBlockPtr = blk;
+					Ext2ModifyBlock(&pInode->m_doublyIndirBlockPtr, blk, pNumBlocks, pFS->m_blockSize);
 					
 					// TODO: Somehow mark this inode as dirty.
 					memset(data, 0, pFS->m_blockSize);
@@ -476,7 +492,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 					ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 					
 					// Overwrite the entry in the doubly indirect table.
-					data[blockIndices[0]] = blk;
+					Ext2ModifyBlock(&data[blockIndices[0]], blk, pNumBlocks, pFS->m_blockSize);
 					
 					// Write the doubly indirect table into memory. The 'data' pointer currently has its contents.
 					ASSERT(Ext2WriteBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
@@ -494,7 +510,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 			}
 			
 			// All good.
-			data[blockIndices[1]] = blockNo;
+			Ext2ModifyBlock(&data[blockIndices[1]], blockNo, pNumBlocks, pFS->m_blockSize);
+			
 			ASSERT(Ext2WriteBlocks(pFS, firstTurn, 1, data) == DEVERR_SUCCESS);
 			
 			// If the first turn is full of zeroes...
@@ -516,7 +533,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				ASSERT(Ext2ReadBlocks(pFS, pInode->m_doublyIndirBlockPtr, 1, data) == DEVERR_SUCCESS);
 				ASSERT(data[blockIndices[0]] == firstTurn);
 				
-				data[blockIndices[0]] = 0;
+				Ext2ModifyBlock(&data[blockIndices[0]], 0, pNumBlocks, pFS->m_blockSize);
 				
 				// Check if this is full of zeroes too.
 				bIsFullOfZeroes = true;
@@ -532,7 +549,7 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 				if (bIsFullOfZeroes)
 				{
 					Ext2FreeBlock(pFS, pInode->m_doublyIndirBlockPtr);
-					pInode->m_doublyIndirBlockPtr = 0;
+					Ext2ModifyBlock(&pInode->m_doublyIndirBlockPtr, 0, pNumBlocks, pFS->m_blockSize);
 				}
 			}
 			
@@ -543,6 +560,8 @@ uint32_t Ext2ReadWriteInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_
 	
 	return 0;
 }
+
+#pragma GCC diagnostic pop
 
 uint32_t Ext2GetInodeBlock(Ext2Inode* pInode, Ext2FileSystem* pFS, uint32_t offset)
 {
@@ -628,7 +647,8 @@ int Ext2InodeExpand(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_
 		pCacheUnit->m_inode.m_size += byHowMuch;
 		pCacheUnit->m_node.m_length += byHowMuch;
 		
-		pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(blockSizeNew, pFS->m_blockSize);
+		// now done directly by the SetInodeBlock function
+		//pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(pInodePlaceOnDisk, pFS->m_blockSize);
 		
 		// Write the block containing the inode back to disk.
 		if (Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
@@ -695,7 +715,8 @@ int Ext2InodeShrink(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pCacheUnit, uint32_
 		pCacheUnit->m_inode.m_triplyIndirBlockPtr = pInodePlaceOnDisk->m_triplyIndirBlockPtr;
 	}
 	
-	pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(blockSizeNew, pFS->m_blockSize);
+	// Now modified by SetInodeBlock
+	//pInodePlaceOnDisk->m_nBlocks = pCacheUnit->m_inode.m_nBlocks = Ext2CalculateIBlocks(blockSizeNew, pFS->m_blockSize);
 	
 	// Write the block containing the inode back to disk.
 	if (Ext2WriteBlocks(pFS, inodeTableAddr + blockInodeIsIn, 1, bytes) != DEVERR_SUCCESS)
