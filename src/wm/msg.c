@@ -397,6 +397,7 @@ static void PreProcessEvent(Window* pWindow, int eventType, UNUSED int parm1, UN
 						y = g_TaskbarMargins.top;
 						x = w = screenW / 2;
 						h = screenH / 2;
+						break;
 					case 6: // DOWN LEFT
 						x = g_TaskbarMargins.left;
 						w = screenW / 2;

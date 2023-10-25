@@ -117,12 +117,18 @@
 #define WF_NOBORDER 0x00000008//Disable border
 #define WF_NOMINIMZ 0x00000010//Disable minimize button
 #define WF_ALWRESIZ 0x00000020//Allow resize
+#define WF_EXACTPOS 0x00000040//Exact position.  Only kernel may use this
 #define WF_NOMAXIMZ 0x00000080//Disable maximize button
 #define WF_FLATBORD 0x00000100//Use a flat border instead of the regular border
 #define WF_NOWAITWM 0x00000200//Prevent waiting for the window manager to update. Useful for games (1)
 #define WF_BACKGRND 0x00000400//The window is on a separate 'background' layer, behind normal windows.
 #define WF_FOREGRND 0x00000800//The window is on a separate 'foreground' layer, in front of normal windows.
-#define WF_SYSPOPUP 0x10000000//System Popup (omit from taskbar)
+#define WF_MAXIMIZE 0x00001000//The window is maximized.
+#define WF_MINIMIZE 0x00002000//The window is minimized.
+#define WF_NOIFOCUS 0x00004000//The window won't be focused on creation.
+#define WF_SYSPOPUP 0x00008000//Internal flag: System Popup (omit from taskbar)
+#define WF_MENUITEM 0x00010000//Internal flag: Menu Item
+// (1.) This should actually be enabled automatically if the process is seen rendering, like, a lot
 
 #define WINDOWS_MAX 256
 #define WINDOW_TITLE_MAX 250
