@@ -24,7 +24,7 @@ typedef long tid_t;
 typedef long blksize_t;
 typedef long blkcnt_t;
 typedef long off_t;
-typedef long ssize_t;
+typedef ptrdiff_t ssize_t;
 typedef unsigned long fsblkcnt_t;
 typedef unsigned long fsfilcnt_t;
 typedef unsigned long ino_t;

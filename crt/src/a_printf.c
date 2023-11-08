@@ -22,7 +22,7 @@ extern FILE* stdout;
 
 // printf implementation
 
-void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
+void __UnsToStr(uint64_t num, char* str, int paddingInfo, char paddingChar)
 {
 	// print the actual digits themselves
 	int i = 0;
@@ -52,15 +52,15 @@ void uns_to_str(uint64_t num, char* str, int paddingInfo, char paddingChar)
 		end--;
 	}
 }
-void int_to_str(int64_t num, char* str, int paddingInfo, char paddingChar)
+void __IntToStr(int64_t num, char* str, int paddingInfo, char paddingChar)
 {
 	if (num < 0)
 	{
 		str[0] = '-';
-		uns_to_str((uint64_t)(-num), str + 1, paddingInfo, paddingChar);
+		__UnsToStr((uint64_t)(-num), str + 1, paddingInfo, paddingChar);
 	}
 	else
-		uns_to_str((uint64_t)  num,  str,     paddingInfo, paddingChar);
+		__UnsToStr((uint64_t)  num,  str,     paddingInfo, paddingChar);
 }
 
 // features:
@@ -174,7 +174,7 @@ int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					int num = va_arg(args, int);
 					char buffer[20];
 					
-					int_to_str(num, buffer, paddingInfo, paddingChar);
+					__IntToStr(num, buffer, paddingInfo, paddingChar);
 
 					const char* pString = buffer;
 					while (*pString)
@@ -204,7 +204,7 @@ int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					uint32_t num = va_arg(args, uint32_t);
 					char buffer[20];
 					
-					uns_to_str(num, buffer, paddingInfo, paddingChar);
+					__UnsToStr(num, buffer, paddingInfo, paddingChar);
 
 					const char* pString = buffer;
 					while (*pString)
@@ -255,12 +255,12 @@ int vsnprintf(char* buf, size_t sz, const char* fmt, va_list args)
 					if (m == 'u')
 					{
 						unsigned long long num = longlong ? va_arg(args, unsigned long long) : va_arg(args, unsigned long);
-						uns_to_str(num, buffer, paddingInfo, paddingChar);
+						__UnsToStr(num, buffer, paddingInfo, paddingChar);
 					}
 					if (m == 'd')
 					{
 						long long num = longlong ? va_arg(args, long long) : va_arg(args, long);
-						int_to_str(num, buffer, paddingInfo, paddingChar);
+						__IntToStr(num, buffer, paddingInfo, paddingChar);
 					}
 					
 					if (!pString) break;

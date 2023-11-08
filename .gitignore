@@ -24,6 +24,11 @@ apps/nsshell/*
 apps/Reversi/*
 apps/halfix/*
 
+# Available at https://github.com/NanoShellOS/sm64
+# Setup: `git clone https://github.com/NanoShellOS/sm64` in the `apps`
+# directory, then `make` or `tapp sm64` as per usual
+apps/sm64/*
+
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
 fs/Bin/nsshell.nse
@@ -31,6 +36,7 @@ fs/Bin/VBuilder.nse
 fs/Bin/Reversi.nse
 fs/Bin/test.nse
 fs/Bin/Chess.nse
+fs/Bin/sm64.nse
 fs/Tests/*.png
 fs/User/*
 
