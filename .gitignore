@@ -12,6 +12,7 @@
 # Note: This actually integrates nicely with the NanoShell build system so you
 #       can just `./tryapp.sh sm64` and it'll just work. Be aware that this will
 #       use the latest regional version you've compiled.
+apps/sm64
 apps/sm64/*
 
 # SM64 binary that I won't provide, for obvious reasons :-)
