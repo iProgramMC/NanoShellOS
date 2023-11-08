@@ -307,6 +307,13 @@ void ExJoinProcess(Process* pProc)
 	
 	// the process won't die, should wait until it does.
 	WaitProcessInternal(pProc);
+	// Upper function sets the interrupts when done.
+	
+	// detach it so it dies
+	cli;
+	ExDetachProcess(pProc);
+	pProc->bWillDie = true;
+	sti;
 }
 
 void ExSetProgramInfo(const ProgramInfo* pProgInfo)
