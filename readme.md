@@ -52,8 +52,8 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] Get a GUI running (Also in a task)
 - [x] Applications can use the GUI API
 - [x] Port DOOM
+- [X] Compile C code to an NSE file (I'll probably port TCC to NanoShell)
 - [ ] Move all applications that don't depend on features I'm not willing to expose to user applications (i.e. taskbar/systemmonitor will stay)
-- [ ] Compile C code to an NSE file (I'll probably port TCC to NanoShell)
 - [ ] Allow applications to temporarily upload and use their own resources in the kernel (icons, text, images etc)
 #### Drivers
 - [x] PS/2 Mouse and Keyboard
@@ -64,19 +64,16 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [x] PCI (Barebones support right now)
 - [x] VirtualBox/QEMU/Bochs graphics device (*not* VBE)
 - [x] VMware absolute cursor
+- [X] SoundBlaster 16 support
+- [ ] Sound devices (e.g. AC'97, Intel HD Audio)
 - [ ] VirtualBox absolute cursor
 - [ ] VMware SVGA device
-- [ ] Sound devices (e.g. SoundBlaster 16, AC'97, Intel HD Audio)
-- [ ] USB keyboard
-- [ ] USB mouse
-- [ ] Some USB storage devices
 #### Permanent memory
 - [x] Block storage abstraction base
 - [x] ATA devices (PIO mode)
 - [ ] ATA devices (using DMA)
 - [ ] AHCI devices (using DMA)
 - [ ] NVMe?
-- [ ] USB stick device driver
 #### File system
 - [x] EXT2:
 - [x] \*        Read only support.
@@ -100,11 +97,16 @@ Feel free to submit issues you may have with this OS in the Issues tab.  To disc
 - [ ] \*        Create a directory.
 - [ ] \*        Remove an empty directory.
 - [ ] \*        Do all these things with flying colors from `chkdsk`.
+#### Completed 'future'
+- [X] Port Super Mario 64
 
 #### The future
 - [ ] An installer, which deploys [Limine](https://github.com/limine-bootloader/limine) onto a system, creates a FAT32 (or EXT2?) file system and creates a working installation of NanoShell
 - [ ] An in-built IDE (which depends on the compiler thing I mentioned earlier)
-- [ ] (ultimate boss) Port Mesa and Super Mario 64 (based on the DOS port, please)
+- [ ] USB stack
+- [ ] USB keyboard
+- [ ] USB mouse
+- [ ] USB stick device driver
 
 ## Build instructions
 

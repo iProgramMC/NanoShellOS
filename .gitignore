@@ -1,3 +1,22 @@
+# NanoShellOS - Ignored Files
+
+# Available at https://github.com/NanoShellOS/sm64
+# Won't integrate into the repo even as a submodule because:
+#   1. It requires source Z64 files which I won't provide for obvious reasons
+#   2. It would break `make -C apps`
+# So you're left on your own. But don't worry! It's pretty easy to compile:
+#   Step 1. Check out the sm64 repo at apps/sm64:
+#           `cd apps && git clone https://github.com/NanoShellOS/sm64.git sm64`
+#   Step 2. Paste in your preferred baserom. Default is the US version.
+#   Step 3. Type `make -j` (or `make -j VERSION=xx` if you aren't using the US ROM)
+# Note: This actually integrates nicely with the NanoShell build system so you
+#       can just `./tryapp.sh sm64` and it'll just work. Be aware that this will
+#       use the latest regional version you've compiled.
+apps/sm64/*
+
+# SM64 binary that I won't provide, for obvious reasons :-)
+fs/Bin/sm64.nse
+
 #probably not necessary but a good thing to add just in case
 .git/*
 
