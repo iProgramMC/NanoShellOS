@@ -52,6 +52,9 @@ WaveFormatData g_wave_data = {
 
 Window * g_pWindow;
 
+const char* g_LoadSoundFile;
+bool g_LoadAndPlay;
+
 bool g_bPlaying;
 
 int g_fileFD = -1, g_fileCurrentPlace;
@@ -414,6 +417,17 @@ void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
 			RECT (r, 12 + 3 * buttonWidthGap, 64, buttonWidth, 30);
 			AddControl(pWindow, CONTROL_BUTTON, r, "Help", C_HELP_BUTTON, 0, 0);
 			
+			
+			if (g_LoadSoundFile)
+			{
+				LoadFile(g_LoadSoundFile);
+			}
+			
+			if (g_LoadAndPlay)
+			{
+				Play();
+			}
+			
 			break;
 		}
 		case EVENT_CLICKCURSOR:
@@ -474,8 +488,34 @@ void CALLBACK WndProc (Window* pWindow, int msg, int parm1, int parm2)
 	DefaultWindowProc(pWindow, msg, parm1, parm2);
 }
 
-int main()
+int main(int argc, char** argv)
 {
+	g_LoadSoundFile = NULL;
+	g_LoadAndPlay   = false;
+	
+	if (argc >= 2)
+	{
+		g_LoadSoundFile = argv[1];
+	}
+	
+	for (int i = 2; i < argc; i++)
+	{
+		if (strcmp(argv[i], "/?") == 0 ||
+		    strcmp(argv[i], "--help") == 0)
+		{
+			LogMsg("Wave Player help");
+			LogMsg("Usage: %s [optional file name] [/?] [/p]", argv[0]);
+			LogMsg("\t/p\t - Instantly loads and plays the sound file if available.");
+			LogMsg("\t/?\t - Shows this help menu.");
+		}
+		
+		if (strcmp(argv[i], "/p") == 0)
+		{
+			LogMsg("Playing instantly");
+			g_LoadAndPlay = true;
+		}
+	}
+	
 	InitSound();
 	
 	if (g_soundFD < 0)
