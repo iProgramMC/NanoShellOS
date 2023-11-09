@@ -251,7 +251,20 @@ void WmTimerTick(Window* pWindow)
 			if (pWindow->m_timers[i].m_nextTickAt <= tickCount)
 			{
 				tick[i] = true;
-				pWindow->m_timers[i].m_nextTickAt   += pWindow->m_timers[i].m_frequency;
+				
+				int freq = pWindow->m_timers[i].m_frequency;
+				
+				// check if there's a sizeable gap between the current time
+				// and the time the last tick was supposed to be received
+				
+				if (tickCount - pWindow->m_timers[i].m_nextTickAt > freq * 3)
+					// consistency is basically thrown out the window here
+					pWindow->m_timers[i].m_nextTickAt = tickCount + freq;
+				else
+					// just add the frequency, this is to keep timing
+					// consistent even though delays may have arisen
+					pWindow->m_timers[i].m_nextTickAt += freq;
+				
 				pWindow->m_timers[i].m_waitResponse  = true;
 			}
 		}
