@@ -25,11 +25,11 @@ The following third party code is also licensed under the GNU GPL version 3.
 [Coding style guidelines](doc/coding_style.md)
 [NanoShell C Library info](crt/README.md)
 
-## Demo Screenshots
+## Screenshots
 
+<img src="images/2023_11_09_22_35_47.png"/>
 <img src="images/2023_02_12_21_53_28.png"/>
 <img src="images/2022_11_07_19_35_35.png"/>
-<img src="images/2022_05_20_22_58_20.png"/>
 <img src="images/2022_08_04_00_48_25.png"/>
 [More images...](https://github.com/iProgramMC/NanoShellOS/blob/master/images)
 
