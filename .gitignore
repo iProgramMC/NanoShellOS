@@ -72,3 +72,8 @@ vdisk*.vmdk
 
 todo.txt
 todo1.txt
+
+# Nuh uh
+/apps/gamma64
+/apps/gamma64/*
+fs/Bin/gamma64.nse
