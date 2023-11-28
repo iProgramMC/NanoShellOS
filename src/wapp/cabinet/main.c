@@ -165,6 +165,8 @@ static void UpdateDirectoryListing (Window* pWindow)
 {
 	ClearFileListing(pWindow);
 	
+	OnBusy(pWindow);
+	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 	{
 		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1, false);
@@ -258,6 +260,8 @@ static void UpdateDirectoryListing (Window* pWindow)
 	//RequestRepaint(pWindow);
 	CallControlCallback(pWindow, MAIN_LISTVIEW,  EVENT_PAINT, 0, 0);
 	CallControlCallback(pWindow, MAIN_PATH_TEXT, EVENT_PAINT, 0, 0);
+	
+	OnNotBusy(pWindow);
 }
 
 void CdBack(Window* pWindow)
