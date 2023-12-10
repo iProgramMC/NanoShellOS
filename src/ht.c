@@ -51,13 +51,21 @@ SAI void HtSwapBytes(void* a1, void* a2, size_t sz)
 	}
 }
 
-static eHTForEachOp HtForEachAdd(const void* key, void* data, void* ctxvoid)
+static void HtAddItemToHashTableUnsafe(HashTable* pHT, HashTableBucketItem* pNewItem)
 {
-	HashTable* ctxHt = ctxvoid;
+	uint32_t hash = pHT->m_Hash(pNewItem->m_key);
+	uint32_t hashModulo = hash % pHT->m_bucketCount;
+	HashTableBucket* pBucket = &pHT->m_pBuckets[hashModulo];
 	
-	HtSetUnchecked(ctxHt, key, data);
+	HashTableBucketItem* pFirst = pBucket->m_pFirst;
 	
-	return FOR_EACH_NO_OP;
+	pBucket->m_pFirst = pNewItem;
+	pNewItem->m_pNext = pFirst;
+	
+	if (pFirst)
+		pFirst->m_pPrev = pNewItem;
+	
+	pBucket->m_nSize++;
 }
 
 // Resize if possible.
@@ -69,12 +77,29 @@ static bool HtResize(HashTable* pHT, int newCapacity)
 	if (!pHTNew)
 		return false;
 	
-	HtForEach(pHT, HtForEachAdd, pHTNew);
+	for (int i = 0; i < pHT->m_bucketCount; i++)
+	{
+		// for each item within the bucket:
+		HashTableBucket* pBucket = &pHT->m_pBuckets[i];
+
+		for (HashTableBucketItem* pBI = pBucket->m_pFirst; pBI;)
+		{
+			HashTableBucketItem* pCurrent = pBI;
+			pBI = pBI->m_pNext;
+			
+			// Place the 'current' into the new hash table.
+			//
+			// We backed it up and already advanced to the next one
+			// because this invalidates the linked list in the old
+			// hash table.
+			HtAddItemToHashTableUnsafe(pHTNew, pCurrent);
+		}
+	}
 
 	// just byte-wise swap them. It's fine
 	HtSwapBytes(pHT, pHTNew, sizeof(HashTable));
-
-	// delete the new one, with the old one's contents:
+	
+	// Delete the storage occupied the old hash table
 	MmFree(pHTNew->m_pBuckets);
 	MmFree(pHTNew);
 	
@@ -90,19 +115,17 @@ bool HtSetUnchecked(HashTable* pHT, const void* key, void* data)
 
 	if (pBucket->m_nSize >= C_MAX_BEFORE_RESIZE)
 	{
-		// resize in hopes that it'll spread out
-		if (!HtResize(pHT, pHT->m_bucketCount * 2))
-			return false;
-
-		// retrack
-		hashModulo = hash % pHT->m_bucketCount;
-		pBucket = &pHT->m_pBuckets[hashModulo];
+		// try to resize in hopes that it'll spread out
+		if (HtResize(pHT, pHT->m_bucketCount * 2))
+		{
+			// retrack
+			hashModulo = hash % pHT->m_bucketCount;
+			pBucket = &pHT->m_pBuckets[hashModulo];
+		}
 	}
 
 	// add to the bucket
-	HashTableBucketItem
-		* pFirst = pBucket->m_pFirst,
-		* pNewItem = MmAllocate(sizeof(HashTableBucketItem));
+	HashTableBucketItem* pNewItem = MmAllocate(sizeof(HashTableBucketItem));
 
 	if (!pNewItem)
 		return false;
@@ -111,15 +134,8 @@ bool HtSetUnchecked(HashTable* pHT, const void* key, void* data)
 	memset(pNewItem, 0, sizeof * pNewItem);
 	pNewItem->m_data = data;
 	pNewItem->m_key  = key;
-
-	pBucket->m_pFirst = pNewItem;
-	pNewItem->m_pNext = pFirst;
-
-	if (pFirst)
-		pFirst->m_pPrev = pNewItem;
-
-	pBucket->m_nSize++;
-
+	
+	HtAddItemToHashTableUnsafe(pHT, pNewItem);
 	return true;
 }
 
@@ -154,7 +170,10 @@ static void HtEraseInternal(HashTableBucket* pContainerBucket, HashTableBucketIt
 		pItem->m_pPrev->m_pNext = pItem->m_pNext;
 	if (pItem->m_pNext)
 		pItem->m_pNext->m_pPrev = pItem->m_pPrev;
-
+	
+	if (pContainerBucket->m_pFirst == pItem)
+		pContainerBucket->m_pFirst =  pItem->m_pNext;
+	
 	// call our owner's erase function
 	if (oef)
 		oef(pItem->m_key, pItem->m_data);
