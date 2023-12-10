@@ -405,6 +405,7 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	if (!pSlashOld)
 	{
 		pDirOld = ".";
+		pNameOld = pfnOld;
 	}
 	else
 	{
@@ -416,6 +417,7 @@ int FiRenameSub(const char* pfnOld, const char* pfnNew)
 	if (!pSlashNew)
 	{
 		pDirNew = ".";
+		pNameNew = pfnNew;
 	}
 	else
 	{

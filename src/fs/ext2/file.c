@@ -456,13 +456,26 @@ int Ext2RenameDirectoryEntry(Ext2FileSystem* pFS, Ext2InodeCacheUnit* pOldUnit, 
 {
 	uint32_t inodeNo       = 0;
 	uint8_t  typeIndicator = 0;
-	
-	// Add a new link.
-	int result = Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
-	if (result < 0) return result;
+	int result;
 	
 	// remove the old entry. Make sure to not actually delete the inode.
-	return Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, false, 0, &inodeNo, &typeIndicator);
+	result = Ext2RemoveDirectoryEntry(pFS, pOldUnit, pOldName, true, true, false, 0, &inodeNo, &typeIndicator);
+	if (result < 0) return result;
+	
+	// add the new entry. If fails, try to roll back.
+	result = Ext2AddDirectoryEntry(pFS, pNewUnit, pNewName, inodeNo, typeIndicator);
+	if (result < 0)
+	{
+		// note: this one had better not fail!
+		int result2 = Ext2AddDirectoryEntry(pFS, pOldUnit, pOldName, inodeNo, typeIndicator);
+		if (result2 < 0)
+		{
+			SLogMsg("Ext2RenameDirectoryEntry: Oh dear.. Removed %s but couldn't add it back", pOldName);
+			return result2;
+		}
+	}
+	
+	return result;
 }
 
 int Ext2RenameOp(FileNode* pSrcNode, FileNode* pDstNode, const char* pSrcName, const char* pDstName)
