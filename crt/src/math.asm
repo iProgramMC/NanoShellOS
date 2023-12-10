@@ -7,7 +7,7 @@ global __divdi3  ; Signed division of two 64-bit ints
 global __moddi3  ; Signed modulo of two 64-bit integers
 global __umoddi3 ; Unsigned modulo of two 64-bit integers
 global __udivdi3 ; Unsigned division of two 64-bit integers
-__udivdi3_1:
+__udivdi3:
 	push    ebx
 	mov     ebx, [esp+14h]
 	bsr     ecx, ebx

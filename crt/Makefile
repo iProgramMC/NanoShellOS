@@ -53,10 +53,12 @@ all: libnanoshell crt1 crti
 
 update: all
 	@echo "Copying the NanoShell C library to the root FS at '$(ROOT_PATH)'"
-	cp $(LIBN_TARGET) $(ROOT_PATH)/User/Library/$(LIBN_TARGET)
-	cp $(CRT1_TARGET) $(ROOT_PATH)/User/Library/$(CRT1_TARGET)
-	cp $(CRTI_TARGET) $(ROOT_PATH)/User/Library/$(CRTI_TARGET)
-	cp $(CRTN_TARGET) $(ROOT_PATH)/User/Library/$(CRTN_TARGET)
+	cp $(LIBN_TARGET) $(ROOT_PATH)/User/Library/$(notdir $(LIBN_TARGET))
+	cp $(CRT1_TARGET) $(ROOT_PATH)/User/Library/$(notdir $(CRT1_TARGET))
+	cp $(CRTI_TARGET) $(ROOT_PATH)/User/Library/$(notdir $(CRTI_TARGET))
+	cp $(CRTN_TARGET) $(ROOT_PATH)/User/Library/$(notdir $(CRTN_TARGET))
+	rm -rf ../build/initrd.tar
+	rm -rf ../build/image.iso
 	
 updinc:
 	cp -r include/* $(ROOT_PATH)/User/Include
