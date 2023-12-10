@@ -16,8 +16,6 @@
 #include <wmenu.h>
 #include <string.h>
 
-#define TASKLIST_BUTTON_HEIGHT (TITLE_BAR_HEIGHT + 4)
-
 extern Window g_windows[WINDOWS_MAX];
 extern short  g_windowDrawOrder[WINDOWS_MAX];
 
@@ -27,7 +25,17 @@ void ShowWindow (Window *pWnd);
 bool g_TaskListCompact = false;
 
 extern bool g_GlowOnHover;
+extern bool g_bUseLargeIcons;
 
+int TaskListGetIconSize()
+{
+	return g_bUseLargeIcons ? 32 : 16;
+}
+
+int TaskListGetButtonHeight()
+{
+	return TaskListGetIconSize() + 6 + (TITLE_BAR_HEIGHT - 18);
+}
 typedef struct
 {
 	bool m_clicked[WINDOWS_MAX];
@@ -48,10 +56,25 @@ static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle
 	uint32_t flgs = 0;
 	if (g_windows[windowID].m_isSelected)
 	{
+		// copied from DrawEdge..
+		unsigned colorAvg = 0;
+		colorAvg |= ((BUTTON_MIDDLE_COLOR & 0xff0000) + (BUTTON_HOVER_COLOR & 0xff0000)) >> 1;
+		colorAvg |= ((BUTTON_MIDDLE_COLOR & 0x00ff00) + (BUTTON_HOVER_COLOR & 0x00ff00)) >> 1;
+		colorAvg |= ((BUTTON_MIDDLE_COLOR & 0x0000ff) + (BUTTON_HOVER_COLOR & 0x0000ff)) >> 1;
+		
 		if (hovered)
-			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
 		else
-			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+			DrawEdge(r, DRE_FILLED | DRE_BLACKOUTER, colorAvg);
+		
+		VidDrawHLine(BUTTON_XSHADOW_COLOR, r.left + 1, r.right  - 2, r.top    + 1);
+		VidDrawVLine(BUTTON_XSHADOW_COLOR, r.top  + 1, r.bottom - 2, r.left   + 1);
+		VidDrawHLine(BUTTON_SHADOW_COLOR,  r.left + 2, r.right  - 2, r.top    + 2);
+		VidDrawVLine(BUTTON_SHADOW_COLOR,  r.top  + 2, r.bottom - 2, r.left   + 2);
+		VidDrawHLine(BUTTON_HILITE_COLOR,  r.left + 2, r.right  - 2, r.bottom - 2);
+		VidDrawVLine(BUTTON_HILITE_COLOR,  r.top  + 2, r.bottom - 2, r.right  - 2);
+		
+		clicked = true;
 		
 		flgs |= TEXT_RENDER_BOLD;
 	}
@@ -77,11 +100,14 @@ static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle
 	g_windows[windowID].m_taskbarRect = rt;
 	
 	int textX = r.left + 4;
+	
+	int iconSize = TaskListGetIconSize();
+	
 	// if this window has an icon:
 	if (iconID)
 	{
-		RenderIconForceSize(iconID, textX + clicked, r.top + 3 + (((r.bottom - r.top - 6) - 16) / 2) + clicked, 16);
-		textX += 22;
+		RenderIconForceSize(iconID, textX + clicked, r.top + 3 + (((r.bottom - r.top - 6) - iconSize) / 2) + clicked, iconSize);
+		textX += iconSize + 6;
 	}
 	
 	int btnWidth = r.right - r.left;
@@ -102,7 +128,7 @@ static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle
 
 bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
 {
-	int btnHeight = TASKLIST_BUTTON_HEIGHT, thisHeight = GetHeight(&this->m_rect), thisWidth = GetWidth(&this->m_rect);
+	int btnHeight = TaskListGetButtonHeight(), thisHeight = GetHeight(&this->m_rect), thisWidth = GetWidth(&this->m_rect);
 	
 	if (btnHeight > thisHeight)
 		btnHeight = thisHeight;
@@ -165,7 +191,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			int btns_per_row = (nWindows + nRows - 1) / nRows;
 			int btn_width = thisWidth / btns_per_row;
 			
-			int btn_max_width = g_TaskListCompact ? 28 : 200;
+			int btn_max_width = g_TaskListCompact ? (12 + TaskListGetIconSize()) : 200;
 			
 			if (btn_width > btn_max_width)
 				btn_width = btn_max_width;
@@ -221,7 +247,7 @@ bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 			int btns_per_row = (nWindows + nRows - 1) / nRows;
 			int btn_width = thisWidth / btns_per_row;
 			
-			int btn_max_width = g_TaskListCompact ? 28 : 200;
+			int btn_max_width = g_TaskListCompact ? (12 + TaskListGetIconSize()) : 200;
 			
 			if (btn_width > btn_max_width)
 				btn_width = btn_max_width;

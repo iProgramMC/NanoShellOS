@@ -17,24 +17,26 @@ enum
 	TASKBAR_POPUP_SHOWMOVINGWINS,
 	TASKBAR_POPUP_SHOWCPUUSAGE,
 	TASKBAR_POPUP_SHOWMEMUSAGE,
+	TASKBAR_POPUP_USELARGEICONS,
 	TASKBAR_POPUP_OK,
 	TASKBAR_POPUP_APPLY,
 	TASKBAR_POPUP_CANCEL,
 };
 
 #define TSKBR_POPUP_WIDTH 350
-#define TSKBR_POPUP_HEITE 380
+#define TSKBR_POPUP_HEITE 420
 
 extern bool g_GlowOnHover;
 extern bool g_TaskListCompact;
 extern bool g_bShowDate, g_bShowTimeSeconds;
 extern bool g_bShowCPUUsage, g_bShowMemUsage;
+extern bool g_bUseLargeIcons;
 extern bool     g_BackgroundSolidColorActive, g_RenderWindowContents;
 extern uint32_t g_BackgroundSolidColor;
 
 void RefreshEverything();
 
-void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList, bool bShowCPUUsage, bool bShowMEMUsage);
+void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList, bool bShowCPUUsage, bool bShowMEMUsage, bool bUseLargeIcons);
 
 void CALLBACK CplTaskbarWndProc(Window* pWindow, int messageType, int parm1, int parm2)
 {
@@ -78,23 +80,27 @@ void CALLBACK CplTaskbarWndProc(Window* pWindow, int messageType, int parm1, int
 			RECT(r, 10 + horzOffs, 10 + h * 7 + (h - m) / 2, TSKBR_POPUP_WIDTH - 20, 20);
 			AddControl(pWindow, CONTROL_CHECKBOX, r, "Show memory usage graph", TASKBAR_POPUP_SHOWMEMUSAGE, g_RenderWindowContents, 0);
 			
+			RECT(r, 10 + horzOffs, 10 + h * 8 + (h - m) / 2, TSKBR_POPUP_WIDTH - 20, 20);
+			AddControl(pWindow, CONTROL_CHECKBOX, r, "Double the size of icons on the task bar", TASKBAR_POPUP_USELARGEICONS, g_bUseLargeIcons, 0);
+			
 			// also add the icons
 			static const int icons[] = {
 				ICON_SETTING_TB_SHOW_DATE,
 				ICON_SETTING_TB_SHOW_SECS,
-				ICON_TASKBAR, // todo: I had a design for this but I didn't add it yet.
+				ICON_SETTING_COMPACT_ICONS,
 				ICON_SETTING_HOVER_GLOW,
 				ICON_SETTING_SOLID_BG,
 				ICON_SETTING_WINDOW_DRAG,
-				ICON_CHIP,   // placeholder icons
-				ICON_RESMON,
+				ICON_SETTING_GRAPH_CPU,
+				ICON_SETTING_GRAPH_MEM,
+				ICON_SETTING_ICON_SIZE,
 			};
 			
 			int iconOffset = (h - 32) / 2;
 			if (iconOffset < 0)
 				iconOffset = 0;
 			
-			for (int i = 0; i <= 7; i++)
+			for (int i = 0; i <= 8; i++)
 			{
 				RECT(r, 10, 10 + h * i + iconOffset, 32, 32);
 				AddControl(pWindow, CONTROL_ICON, r, NULL, 9999, icons[i], 0);
@@ -127,7 +133,8 @@ void CALLBACK CplTaskbarWndProc(Window* pWindow, int messageType, int parm1, int
 						CheckboxGetChecked(pWindow, TASKBAR_POPUP_TIMECHECK),
 						CheckboxGetChecked(pWindow, TASKBAR_POPUP_BUTTON_COMPACT),
 						CheckboxGetChecked(pWindow, TASKBAR_POPUP_SHOWCPUUSAGE),
-						CheckboxGetChecked(pWindow, TASKBAR_POPUP_SHOWMEMUSAGE)
+						CheckboxGetChecked(pWindow, TASKBAR_POPUP_SHOWMEMUSAGE),
+						CheckboxGetChecked(pWindow, TASKBAR_POPUP_USELARGEICONS)
 					);
 					
 					// apply the new properties too

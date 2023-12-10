@@ -226,6 +226,10 @@ void WmTakeOverWindow(Window* pWindow)
 
 void WmTimerTick(Window* pWindow)
 {
+	// pause timer ticking until unfrozen
+	if (pWindow->m_flags & WF_FROZEN)
+		return;
+	
 	WindowTimer timers[C_MAX_WIN_TIMER];
 	bool        tick  [C_MAX_WIN_TIMER] = { 0 };
 	

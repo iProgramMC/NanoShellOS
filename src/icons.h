@@ -256,3 +256,8 @@ ICON(chain_broken)
 ICON(chain_broken16)
 ICON(shortcut_overlay)
 ICON(shortcut_overlay16)
+// Icons V2.11
+ICON(icon_size)
+ICON(graph_cpu)
+ICON(graph_mem)
+ICON(compact_icons)
