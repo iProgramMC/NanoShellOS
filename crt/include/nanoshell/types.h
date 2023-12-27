@@ -469,8 +469,8 @@ Console;
 
 struct WindowStruct;
 struct ControlStruct;
-typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
-typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
+typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, long parm1, long parm2, struct WindowStruct* parentWindow);
+typedef void (*WindowProc)         (struct WindowStruct*, int, long, long);
 
 typedef struct
 {

@@ -429,7 +429,7 @@ void WidgetSweeperPaint(Control* this)
 	}
 }
 
-bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	if (eventType != EVENT_PAINT) return false;
 	
@@ -462,7 +462,7 @@ bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED int parm1, UN
 
 bool g_bRightClicking = false;
 
-bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -739,7 +739,7 @@ void ClearTimer()
 	SetNumber(g_pWindow, COMBO_LED_TIME, g_nTimer);
 }
 
-void CALLBACK PrgMineProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgMineProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

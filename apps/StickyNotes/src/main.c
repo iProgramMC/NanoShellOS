@@ -67,7 +67,7 @@ static int AddNote()
 	
 	return noteNum;
 }
-void CALLBACK MainWindowProc (Window* pWindow, int msg, int parm1, int parm2)
+void CALLBACK MainWindowProc (Window* pWindow, int msg, long parm1, long parm2)
 {
 	switch (msg)
 	{

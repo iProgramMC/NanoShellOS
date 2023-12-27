@@ -84,7 +84,7 @@ uint8_t nes_key_state_ctrl2(uint8_t b)
 }
 #define SIZE_MULT 2//more than 1 = slower.
 const uint32_t* g_screenBitmap = NULL;
-void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK WndProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

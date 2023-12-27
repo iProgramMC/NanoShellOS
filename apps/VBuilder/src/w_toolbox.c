@@ -39,7 +39,7 @@ void VbToolkitOnSelect(int toolNum)
 	CheckboxSetChecked(g_pToolboxWindow, E(toolNum), true);
 }
 
-void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgToolkitProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

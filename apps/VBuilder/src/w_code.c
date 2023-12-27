@@ -57,7 +57,7 @@ void VbRefreshCode(Window* pWindow)
 	strcpy(src, rawText);
 }
 
-void CALLBACK PrgCodeProc(Window* pWindow, int eventType, int parm1, int parm2)
+void CALLBACK PrgCodeProc(Window* pWindow, int eventType, long parm1, long parm2)
 {
 	switch (eventType)
 	{

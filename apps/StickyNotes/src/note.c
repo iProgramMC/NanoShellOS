@@ -38,7 +38,7 @@ void NoteClose(NOTE* pNote, bool alsoRemWnd)
 }
 
 #define EVENT_MAIN_MENU_THING 0x1000//there will never be 4096 events.
-void CALLBACK NoteWindowProc (Window* pWindow, int msg, int parm1, int parm2)
+void CALLBACK NoteWindowProc (Window* pWindow, int msg, long parm1, long parm2)
 {
 	NOTE* pNote = (NOTE*)GetWindowData(pWindow);
 	if (!pNote) return;

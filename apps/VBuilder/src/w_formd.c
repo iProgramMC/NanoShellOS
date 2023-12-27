@@ -319,7 +319,7 @@ void VbSelect(int L, int T, int R, int B)
 		VbSetEditedControl (pCtl);
 }
 
-void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgFormBldProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

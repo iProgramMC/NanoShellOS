@@ -61,7 +61,7 @@ void DrawHand (int deg, int len, int cenX, int cenY, unsigned color, bool fancy)
 #undef V
 }
 
-void CALLBACK WndProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK WndProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

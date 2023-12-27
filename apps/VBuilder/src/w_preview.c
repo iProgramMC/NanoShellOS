@@ -87,7 +87,7 @@ void UnfreezeWindow(Window* pWindow)
 	SetWindowFlags(pWindow, GetWindowFlags(pWindow) & ~WF_FROZEN);
 }
 
-void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgVbPreviewProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

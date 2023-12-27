@@ -298,7 +298,7 @@ void NotepadOnActionRedo(Window* pWindow)
 
 const char* g_Argument1 = NULL;
 
-void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
+void CALLBACK BigTextWndProc (Window* pWindow, int msg, long parm1, long parm2)
 {
 	switch (msg)
 	{
