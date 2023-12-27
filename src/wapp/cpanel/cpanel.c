@@ -29,7 +29,7 @@ int state=0;
 void KbSetLedStatus(uint8_t status);
 
 void PopupWindow(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags);
-void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -131,7 +131,7 @@ void CALLBACK Cpl$WndProc (Window* pWindow, int messageType, int parm1, int parm
 	}
 }
 
-void ControlEntry(__attribute__((unused)) int arg)
+void ControlEntry(UNUSED long arg)
 {
 	// create ourself a window:
 	int ww = 400, wh = 260;

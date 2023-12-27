@@ -41,7 +41,7 @@ void CabinetMountRamDisk(Window *pwnd, UNUSED const char *pfn)
 	MessageBox(pwnd, "This feature was removed.", "Cabinet", MB_OK | ICON_ERROR << 16);
 }
 
-void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CabinetMountWindowProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

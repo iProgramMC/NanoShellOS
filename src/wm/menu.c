@@ -125,7 +125,7 @@ void DestroyOpenChildWindowIfAvailable(Window* pMenuWnd)
 }
 
 void SelectWindow(Window* pWindow);
-void CALLBACK MenuProc(Window* pWindow, int eventType, int parm1, int parm2)
+void CALLBACK MenuProc(Window* pWindow, int eventType, long parm1, long parm2)
 {
 	switch (eventType)
 	{

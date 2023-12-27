@@ -22,7 +22,7 @@ enum
 
 uint8_t g_oldTypematicRepeatRate, g_oldTypematicRepeatDelay;
 
-void CALLBACK CplKeyboardWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CplKeyboardWndProc(Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

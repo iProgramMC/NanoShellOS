@@ -345,8 +345,8 @@ enum
 
 struct WindowStruct;
 struct ControlStruct;
-typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, int parm1, int parm2, struct WindowStruct* parentWindow);
-typedef void (*WindowProc)         (struct WindowStruct*, int, int, int);
+typedef bool (*WidgetEventHandler) (struct ControlStruct*, int eventType, long parm1, long parm2, struct WindowStruct* parentWindow);
+typedef void (*WindowProc)         (struct WindowStruct*, int, long, long);
 
 typedef struct
 {
@@ -544,7 +544,7 @@ typedef struct ControlStruct
 {
 	bool      m_active;
 	int       m_type;//CONTROL_XXX
-	int       m_parm1, m_parm2;
+	long      m_parm1, m_parm2;
 	int       m_comboID;
 	char      m_text[128];
 	void*     m_dataPtr;
@@ -818,15 +818,15 @@ bool RectangleOverlap(Rectangle *r1, Rectangle *r2);
 /**
  * Register an event to a certain window.
  */
-void WindowRegisterEvent(Window* pWindow, short eventType, int parm1, int parm2);
-void WindowRegisterEventUnsafe(Window* pWindow, short eventType, int parm1, int parm2);
+void WindowRegisterEvent(Window* pWindow, short eventType, long parm1, long parm2);
+void WindowRegisterEventUnsafe(Window* pWindow, short eventType, long parm1, long parm2);
 
 /**
  * Entry point of the window manager.
  *
  * For utility this can directly be put inside a KeStartTask.
  */
-void WindowManagerTask(__attribute__((unused)) int useless_argument);
+void WindowManagerTask(long useless_argument);
 
 
 //Windowing API
@@ -851,7 +851,7 @@ bool HandleMessages(Window* pWindow);
  * The default window event procedure.  Call this when you don't know
  * how to handle an event properly.
  */
-void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2);
+void DefaultWindowProc (Window* pWindow, int messageType, long parm1, long parm2);
 
 /**
  * Requests a safe window destruction from the window manager.
@@ -910,8 +910,8 @@ void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, 
  * Adds a control to the window.
  * AddControlEx is an expansion to AddControl which allows caller to set the control's anchoring mode too.
  */
-int AddControl  (Window* pWindow, int type,                    Rectangle rect, const char* text, int comboID, int p1, int p2);
-int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2);
+int AddControl  (Window* pWindow, int type,                    Rectangle rect, const char* text, int comboID, long p1, long p2);
+int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, long p1, long p2);
 
 /**
  * Removes a control with the specified comboID from the window.
@@ -926,22 +926,22 @@ int GetWindowManagerFPS();
 /**
  * Call the WindowCallback of a window.
  */
-int CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2);
+int CallWindowCallback(Window* pWindow, int eq, long eqp1, long eqp2);
 
 /**
  * Call the WindowCallback of a window and its controls.
  */
-int CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2);
+int CallWindowCallbackAndControls(Window* pWindow, int eq, long eqp1, long eqp2);
 
 /**
  * Call the ControlCallback of a specific control inside a window
  */
-void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2);
+void CallControlCallback(Window* pWindow, int comboID, int eventType, long parm1, long parm2);
 
 /**
  * Requests an event for that window in the master queue.  The window will still get it at some point.
  */
-void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2);
+void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, long parm1, long parm2);
 
 /**
  * Changes the cursor of a window.

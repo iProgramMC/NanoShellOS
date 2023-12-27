@@ -203,7 +203,7 @@ void WidgetTabPicker_ClearTab(Control* this, int tabID, bool bIsSelected)
 	VidFillRect(WINDOW_BACKGD_COLOR, rect.left,rect.top, rect.right-1, rect.bottom-1);
 }
 
-bool WidgetTabPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, Window* pWindow)
+bool WidgetTabPicker_OnEvent(Control* this, int eventType, UNUSED long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{

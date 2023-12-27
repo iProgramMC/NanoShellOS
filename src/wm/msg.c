@@ -38,7 +38,7 @@ void OnWindowHung(Window *pWindow)
 }
 
 //This is what you should use in most cases.
-void WindowRegisterEvent (Window* pWindow, short eventType, int parm1, int parm2)
+void WindowRegisterEvent (Window* pWindow, short eventType, long parm1, long parm2)
 {
 	WindowAddEventToMasterQueue(pWindow, eventType, parm1, parm2);
 }
@@ -91,7 +91,7 @@ bool IsEventDestinedForInvisibleCtlsToo(int type)
 	return false;
 }
 
-void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1, int parm2)
+void CallControlCallback(Window* pWindow, int comboID, int eventType, long parm1, long parm2)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
 	{
@@ -104,7 +104,7 @@ void CallControlCallback(Window* pWindow, int comboID, int eventType, int parm1,
 	}
 }
 
-void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
+void ControlProcessEvent (Window* pWindow, int eventType, long parm1, long parm2)
 {
 	// Go backwards, because some controls might spawn other controls
 	// They may want to be checked AFTER their children controls, so
@@ -133,13 +133,13 @@ void ControlProcessEvent (Window* pWindow, int eventType, int parm1, int parm2)
 
 //ugly hax to make calling window callback not need to preserve edi, esi, ebx
 //this was not an issue with no optimization but is now
-int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, int eqp1, int eqp2)
+int __attribute__((noinline)) CallWindowCallback(Window* pWindow, int eq, long eqp1, long eqp2)
 {
 	pWindow->m_callback(pWindow, eq, eqp1, eqp2);
 	return eq * eqp1 * eqp2;
 }
 
-int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int eq, int eqp1, int eqp2)
+int __attribute__((noinline)) CallWindowCallbackAndControls(Window* pWindow, int eq, long eqp1, long eqp2)
 {
 	if ((eq != EVENT_CLICKCURSOR && eq != EVENT_RELEASECURSOR) || eqp2 != 1)
 	{
@@ -193,9 +193,9 @@ void UpdateControlsBasedOnAnchoringModes(Window* pWindow, int oldSizeParm, int n
 	}
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2);
+static bool OnProcessOneEvent(Window* pWindow, int eventType, long parm1, long parm2);
 
-static void PreProcessEvent(Window* pWindow, int eventType, UNUSED int parm1, UNUSED int parm2)
+static void PreProcessEvent(Window* pWindow, int eventType, UNUSED long parm1, UNUSED long parm2)
 {
 	switch (eventType)
 	{
@@ -430,7 +430,7 @@ static void PreProcessEvent(Window* pWindow, int eventType, UNUSED int parm1, UN
 	}
 }
 
-static bool OnProcessOneEvent(Window* pWindow, int eventType, int parm1, int parm2)
+static bool OnProcessOneEvent(Window* pWindow, int eventType, long parm1, long parm2)
 {
 	//SLogMsg("Window \"%s\": Event %d", pWindow->m_title, eventType);
 	
@@ -569,7 +569,8 @@ bool HandleMessages(Window* pWindow)
 	//pWindow->m_renderFinished = false;
 	
 	// While we have events in the master queue...
-	int et = 0, p1 = 0, p2 = 0;
+	int et = 0;
+	long p1 = 0, p2 = 0;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2))
 	{
 		have_handled_events = true;
@@ -636,7 +637,7 @@ bool HandleMessages(Window* pWindow)
 void ResizeWindowInternal(Window* pWindow, int newPosX, int newPosY, int newWidth, int newHeight);
 void DirtyRectLogger (int x, int y, int width, int height);
 
-void DefaultWindowProc (Window* pWindow, int messageType, UNUSED int parm1, UNUSED int parm2)
+void DefaultWindowProc (Window* pWindow, int messageType, UNUSED long parm1, UNUSED long parm2)
 {
 	if (!IsWindowManagerRunning())
 		return;

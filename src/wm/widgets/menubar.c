@@ -16,7 +16,7 @@
 // Instead, when you click on a menu bar item, it fires an EVENT_COMMAND with the host control's comboID
 // in parm1, and the menu item's comboID in parm2.
 
-bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetMenuBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	Rectangle menu_bar_rect;
 	menu_bar_rect.left   = 0;

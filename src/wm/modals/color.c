@@ -4,18 +4,7 @@
 
     Window Modals - ColorPicker dialog
 ******************************************/
-#include <window.h>
-#include <widget.h>
-#include <wbuiltin.h>
-#include <icon.h>
-
-extern SafeLock
-g_CreateLock, 
-g_BackgdLock;
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmPaintWindowTitle(Window* pWindow);
-extern void SelectWindow(Window* pWindow);
-extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
+#include "../wi.h"
 
 const uint32_t g_DefaultPickColors[] = {
 	0x000000,0x00007F,0x007F00,0x007F7F,0x7F0000,0x7F007F,0x7F7F00,0x7F7F7F,
@@ -29,7 +18,7 @@ const char* g_DefaultPickColorsText[] = {
 
 STATIC_ASSERT(ARRAY_COUNT(g_DefaultPickColors) == ARRAY_COUNT(g_DefaultPickColorsText), "Change the other array too if adding colors");
 
-void CALLBACK ColorPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK ColorPopupProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	if (messageType == EVENT_COMMAND)
 	{

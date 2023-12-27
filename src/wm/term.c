@@ -32,7 +32,7 @@ void TermLoadDefaultParms()
 	g_bConsoleInitted = true;
 }
 
-void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, UNUSED int parm1, UNUSED int parm2)
+void CALLBACK TerminalHostProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	Console* pConsole = (Console*)pWindow->m_data;
 	switch (messageType)
@@ -182,7 +182,7 @@ void CALLBACK TerminalHostProc (UNUSED Window* pWindow, UNUSED int messageType, 
 }
 extern void ShellInit(void);
 
-void TermShellRun(int arg)
+void TermShellRun(long arg)
 {
 	ShellRun(arg);
 	
@@ -194,7 +194,7 @@ void TermShellRun(int arg)
 	}
 }
 
-void TerminalHostTask(int arg)
+void TerminalHostTask(long arg)
 {
 	TermLoadDefaultParms();
 	int array[] = { CW_AUTOPOSITION, CW_AUTOPOSITION, g_ConsoleDefaultWidth, g_ConsoleDefaultHeight };
@@ -288,7 +288,7 @@ void TerminalHostTask(int arg)
 	if (!hookDebugConsole)
 	{
 		int confusion = 0;
-		Task* pTask = KeStartTask(TermShellRun, (int)(&basic_console),  &confusion);
+		Task* pTask = KeStartTask(TermShellRun, (long)(&basic_console),  &confusion);
 		
 		if (!pTask)
 		{

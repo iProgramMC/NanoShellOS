@@ -70,40 +70,6 @@ void SetWidgetEventHandler (Window *pWindow, int comboID, WidgetEventHandler han
 	}
 }
 
-#define C_PARMS Control* this, int eventType, int parm1, int parm2, Window* pWindow
-
-bool WidgetHScrollBar_OnEvent   (C_PARMS);
-bool WidgetVScrollBar_OnEvent   (C_PARMS);
-bool WidgetTextEditView_OnEvent (C_PARMS);
-bool WidgetListView_OnEvent     (C_PARMS);
-bool WidgetIconView_OnEvent     (C_PARMS);
-bool WidgetIconViewDrag_OnEvent (C_PARMS);
-bool WidgetMenuBar_OnEvent      (C_PARMS);
-bool WidgetNone_OnEvent         (C_PARMS);
-bool WidgetIcon_OnEvent         (C_PARMS);
-bool WidgetText_OnEvent         (C_PARMS);
-bool WidgetTextHuge_OnEvent     (C_PARMS);
-bool WidgetTextCenter_OnEvent   (C_PARMS);
-bool WidgetSurroundRect_OnEvent (C_PARMS);
-bool WidgetSimpleLine_OnEvent   (C_PARMS);
-bool WidgetButton_OnEvent       (C_PARMS);
-bool WidgetButtonIcon_OnEvent   (C_PARMS);
-bool WidgetButtonIconBar_OnEvent(C_PARMS);
-bool WidgetButtonList_OnEvent   (C_PARMS);
-bool WidgetButtonColor_OnEvent  (C_PARMS);
-bool WidgetActionButton_OnEvent (C_PARMS);
-bool WidgetClickLabel_OnEvent   (C_PARMS);
-bool WidgetImage_OnEvent        (C_PARMS);
-bool WidgetCheckbox_OnEvent     (C_PARMS);
-bool WidgetTaskList_OnEvent     (C_PARMS);
-bool WidgetTableView_OnEvent    (C_PARMS);
-bool WidgetButtonIconChk_OnEvent(C_PARMS);
-bool WidgetTextEditView2_OnEvent(C_PARMS);
-bool WidgetTabPicker_OnEvent    (C_PARMS);
-bool WidgetProgressBar_OnEvent  (C_PARMS);
-bool WidgetComboBox_OnEvent     (C_PARMS);
-bool WidgetColorPicker_OnEvent  (C_PARMS);
-
 WidgetEventHandler g_widgetEventHandlerLUT[] = {
 	WidgetNone_OnEvent,
 	WidgetText_OnEvent,

@@ -4,16 +4,7 @@
 
      Widget library: Checkbox control
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
 #define CHECKBOX_SIZE 14
 
@@ -38,7 +29,7 @@ void CheckboxSetChecked(Window* pWindow, int comboID, bool checked)
 		}
 	}
 }
-bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetCheckbox_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	// this->rect only affects the top left position
 	
@@ -96,7 +87,7 @@ bool WidgetCheckbox_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	
 	return false;
 }
-bool WidgetButtonIconChk_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButtonIconChk_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{

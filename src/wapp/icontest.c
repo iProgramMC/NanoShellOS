@@ -366,7 +366,7 @@ void DtOnRelease(Point pt)
 	ChangeCursor(g_pIconTestWindow, CURSOR_DEFAULT);
 }
 
-void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK IconTestProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -431,7 +431,7 @@ void CALLBACK IconTestProc (Window* pWindow, int messageType, int parm1, int par
 	}
 }
 
-void IconTestTask (__attribute__((unused)) int argument)
+void IconTestTask (UNUSED long argument)
 {
 	cli;
 	if (g_bIconTestRunning)

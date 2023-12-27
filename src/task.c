@@ -235,7 +235,7 @@ void KeConstructTask (Task* pTask)
 
 void ExOnThreadExit (Process* pProc, Task* pTask);
 
-Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
+Task* KeStartTaskExUnsafeD(TaskedFunction function, long argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	Process *pProc = (Process*)pProcVoid;
 	// Pre-allocate the stack, since it depends on interrupts being on
@@ -335,7 +335,7 @@ Task* KeStartTaskExUnsafeD(TaskedFunction function, int argument, int* pErrorCod
 		return NULL;
 	}
 }
-Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
+Task* KeStartTaskExD(TaskedFunction function, long argument, int* pErrorCodeOut, void *pProcVoid, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	KeVerifyInterruptsEnabled;
 	cli; //must do this, because otherwise we can expect an interrupt to come in and load our unfinished structure
@@ -343,7 +343,7 @@ Task* KeStartTaskExD(TaskedFunction function, int argument, int* pErrorCodeOut, 
 	sti;
 	return pResult;
 }
-Task* KeStartTaskD(TaskedFunction function, int argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
+Task* KeStartTaskD(TaskedFunction function, long argument, int* pErrorCodeOut, const char* authorFile, const char* authorFunc, int authorLine)
 {
 	return KeStartTaskExD(function, argument, pErrorCodeOut, ExGetRunningProc(), authorFile, authorFunc, authorLine);
 }

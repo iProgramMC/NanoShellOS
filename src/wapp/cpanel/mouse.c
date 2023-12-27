@@ -21,7 +21,7 @@ enum
 	MOUSEP_KEYBOARD_CONTROL_MOUSE,
 };
 
-void CALLBACK CplMouseWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CplMouseWndProc(Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

@@ -10,7 +10,8 @@
 typedef struct
 {
     PWINDOW m_destWindow;
-    int m_eventType, m_parm1, m_parm2;
+    int m_eventType;
+	long m_parm1, m_parm2;
 }
 WindowEventQueueItem;
 #define MASTER_WIN_EVT_QUEUE_MAX 32768
@@ -22,7 +23,7 @@ SafeLock g_windowEventQueueLock;
 
 void OnWindowHung(Window *pWindow);
 
-void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int parm2)
+void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, long parm1, long parm2)
 {
 	int tickCount = GetTickCount();
 	if (pWindow->m_flags & WF_FROZEN)
@@ -77,7 +78,7 @@ void WindowAddEventToMasterQueue(PWINDOW pWindow, int eventType, int parm1, int 
 
 //This pops an event on the master queue with the window id.  If there isn't one, return false,
 //otherwise, return true and fill in the pointers.
-bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, int *parm1, int *parm2)
+bool WindowPopEventFromQueue(PWINDOW pWindow, int *eventType, long *parm1, long *parm2)
 {
     // Start from the window event queue tail.  Go through the queue until you hit the same point you started at.
     int offset = OFFSET_FROM_WINDOW_POINTER(pWindow);

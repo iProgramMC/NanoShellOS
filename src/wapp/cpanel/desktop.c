@@ -111,7 +111,7 @@ void CplColorsSetScrollBarColor(Window* pWindow, uint32_t color)
 		CallControlCallback(pWindow, COLORS_R_BAR + i, EVENT_PAINT, 0, 0);
 }
 
-void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CplColorsWndProc(Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

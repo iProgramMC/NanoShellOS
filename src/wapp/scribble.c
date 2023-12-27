@@ -55,7 +55,7 @@ void PaintLoadImage(Window* pWindow, const char* pFN)
 	MmFree(pData);
 }
 
-void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgPaintProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -67,7 +67,7 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 			// TODO: we shouldn't need to do this if we have the data
 			Image *pImage = BitmapAllocate(320, 200, 0x00FFFFFF);
 			
-			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_PAN | IMAGECTL_PEN);
+			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (long) pImage, IMAGECTL_PAN | IMAGECTL_PEN);
 			
 			MmFree (pImage);//no leaks!!
 			
@@ -153,7 +153,7 @@ void CALLBACK PrgPaintProc (Window* pWindow, int messageType, int parm1, int par
 	}
 }
 
-void PrgPaintTask (int argument)
+void PrgPaintTask (long argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("Scribble!", CW_AUTOPOSITION, CW_AUTOPOSITION, DEF_SCRIB_WID, DEF_SCRIB_HEI, PrgPaintProc, WF_ALWRESIZ);

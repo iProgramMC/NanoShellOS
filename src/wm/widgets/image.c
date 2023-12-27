@@ -30,7 +30,7 @@ void SetImageCtlColor (Window *pWindow, int comboID, uint32_t color)
 		}
 	}
 }
-bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, Window* pWindow);
+bool WidgetImage_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow);
 void SetImageCtlCurrentImage (Window *pWindow, int comboID, Image* pImage)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
@@ -277,7 +277,7 @@ static void OrderTwo(int* a1, int* a2)
 		Swap(a1, a2);
 }
 
-bool WidgetImage_OnEvent(Control* this, int eventType, int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetImage_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

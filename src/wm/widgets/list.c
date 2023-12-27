@@ -4,16 +4,7 @@
 
     Widget library: List view controls
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
 #define LIST_ITEM_HEIGHT (GetLineHeight() + 6)
 #define ICON_ITEM_WIDTH  (IsLowResolutionMode() ? 80 : 90)
@@ -198,7 +189,7 @@ void WidgetListView_DrawElement(Control* this, int index)
 	VidDrawText(pItem->m_contentsShown, rect, TEXTSTYLE_VCENTERED, bSelected ? SELECTED_TEXT_COLOR : WINDOW_TEXT_COLOR, TRANSPARENT);
 }
 
-bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetListView_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {	
 	switch (eventType)
 	{
@@ -427,7 +418,7 @@ static void CtlIconRemoveElementFromList(Control* pCtlIcon, int index, Window* p
 	CtlIconUpdateScrollBarSize(pCtlIcon, pWindow);
 }
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
-bool WidgetIconView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetIconView_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 go_back:
 	switch (eventType)
@@ -762,7 +753,7 @@ SAI int _Abs(int i)
 }
 
 //extern VBEData*g_vbeData,g_mainScreenVBEData;
-bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetIconViewDrag_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

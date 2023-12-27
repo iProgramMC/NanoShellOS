@@ -4,24 +4,13 @@
 
      Window Modals - Text Input dialog
 ******************************************/
-#include <window.h>
-#include <widget.h>
-#include <wbuiltin.h>
-#include <icon.h>
-
-extern SafeLock
-g_CreateLock, 
-g_BackgdLock;
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmPaintWindowTitle(Window* pWindow);
-extern void SelectWindow(Window* pWindow);
-extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
+#include "../wi.h"
 
 //Null but all 0xffffffff's. Useful
 #define FNULL ((void*)0xffffffff)
 #define POPUP_WIDTH  (400)
 #define POPUP_HEIGHT (120)
-void CALLBACK InputPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK InputPopupProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	if (messageType == EVENT_COMMAND)
 	{

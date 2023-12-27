@@ -4,16 +4,7 @@
 
     Widget library: Scroller controls
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
 void CtlSetScrollBarMin (Control *pControl, int min)
 {
@@ -105,7 +96,7 @@ int GetScrollBarMax (Window *pWindow, int comboID)
 	return -1;
 }
 
-bool WidgetHScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetHScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;
@@ -260,7 +251,7 @@ go_back:;
 	}
 	return false;//Fall through to other controls.
 }
-bool WidgetVScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetVScrollBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 go_back:;
 	Rectangle basic_rectangle = this->m_rect;

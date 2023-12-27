@@ -91,10 +91,6 @@ IconType CabGetIconBasedOnName(const char *pName, int pType)
 
 void RequestTaskbarUpdate();
 
-bool WidgetListView_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow);
-bool WidgetIconViewDrag_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow);
-void WidgetIconViewDrag_ArrangeIcons (Control *this);
-
 static void CreateListView(Window* pWindow);
 static void UpdateDirectoryListing (Window* pWindow);
 
@@ -306,7 +302,7 @@ static const char * GetFileNameFromList(Window* pWindow, int index)
 	}
 }
 
-void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -672,7 +668,7 @@ static void CreateListView(Window* pWindow)
 	}
 }
 
-void CabinetEntry (__attribute__((unused)) int argument)
+void CabinetEntry (UNUSED long argument)
 {
 	// create ourself a window:
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;

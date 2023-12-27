@@ -26,21 +26,21 @@ void OnPressAltTabOnce();
 void KillAltTab();
 
 // MISC WINDOWS
-void VersionProgramTask (int argument);
-void PrgMagnifyTask(int argument);
-void PrgMineTask  (int argument);
-void PrgPaintTask (int argument);
-void PrgVBldTask  (int argument);
-void IconTestTask (int argument);
-void ListTestTask (int argument);
-void CabinetEntry (int argument);
-void BigTextEntry (int argument);
-void ControlEntry (int argument);
-void HelpEntry    (int argument);
+void VersionProgramTask(long argument);
+void PrgMagnifyTask(long argument);
+void PrgMineTask  (long argument);
+void PrgPaintTask (long argument);
+void PrgVBldTask  (long argument);
+void IconTestTask (long argument);
+void ListTestTask (long argument);
+void CabinetEntry (long argument);
+void BigTextEntry (long argument);
+void ControlEntry (long argument);
+void HelpEntry    (long argument);
 void LaunchVersion();//ShellAbout
-void SystemMonitorEntry(int argument);
-void LauncherEntry(int arg);
-void TaskbarEntry(int arg);
+void SystemMonitorEntry(long argument);
+void LauncherEntry(long arg);
+void TaskbarEntry(long arg);
 void CrashReporterCheck();
 void ShellAbout (const char *pText, int iconID);
 

@@ -70,7 +70,7 @@ static void CabinetPropertiesSetTabVisible(Window* pWindow, int tabID, bool visi
 
 #define RECTA(r, x, y, w, h) RECT(r, x, y + TITLE_BAR_HEIGHT, w, h)
 
-static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, int parm1, int parm2)
+static void CALLBACK CabinetPropertiesProc(Window * pWindow, int eventType, long parm1, long parm2)
 {
 	switch (eventType)
 	{

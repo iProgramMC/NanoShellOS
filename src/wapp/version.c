@@ -8,7 +8,7 @@
 #include <wbuiltin.h>
 
 #define VERSION_BUTTON_OK_COMBO 0x1000
-void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK VersionProgramProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -71,7 +71,7 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, int parm1, i
 	}
 }
 
-void VersionProgramTask (int argument)
+void VersionProgramTask (long argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("NanoShell", 50, 50, 320, 125, VersionProgramProc, WF_NOMINIMZ);

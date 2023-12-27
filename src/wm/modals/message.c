@@ -4,23 +4,14 @@
 
     Window Modals - Message Box dialog
 ******************************************/
-#include <window.h>
-#include <widget.h>
-#include <icon.h>
+#include "../wi.h"
 
-extern SafeLock
-g_CreateLock, 
-g_BackgdLock;
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmPaintWindowTitle(Window* pWindow);
-extern void SelectWindow(Window* pWindow);
-
-void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	DefaultWindowProc (pWindow, messageType, parm1, parm2);
 }
 
-void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK MessageBoxCallback (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	if (messageType == EVENT_COMMAND)
 	{

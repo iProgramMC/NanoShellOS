@@ -277,7 +277,7 @@ const char * const g_IconNames[] = {
 
 STATIC_ASSERT(ARRAY_COUNT(g_IconNames) == ICON_COUNT, "Modify This if you are adding icons!");
 
-void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK ListTestProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -360,7 +360,7 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, int parm1, int par
 	}
 }
 
-void ListTestTask (__attribute__((unused)) int argument)
+void ListTestTask (UNUSED long argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("List Test", 300, 200, LISTTEST_WIDTH, LISTTEST_HEIGHT, ListTestProc, WF_ALWRESIZ);

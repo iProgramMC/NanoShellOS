@@ -367,7 +367,7 @@ void UpdateSystemMonitorGraph(Window* pWindow, int cpu_idle_time)
 	VidSetVBEData(backup);
 }
 
-void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	int wnheight = SYSMON_HEIGHT, wnwidth = SYSMON_WIDTH;
 	if (IsLowResolutionMode())
@@ -466,7 +466,7 @@ void CALLBACK SystemMonitorProc (Window* pWindow, int messageType, int parm1, in
 	}
 }
 
-void SystemMonitorEntry (__attribute__((unused)) int argument)
+void SystemMonitorEntry (UNUSED long argument)
 {
 	int imheight = 100, wnheight = SYSMON_HEIGHT, wnwidth = SYSMON_WIDTH;
 	if (IsLowResolutionMode())

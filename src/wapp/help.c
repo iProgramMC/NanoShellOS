@@ -232,7 +232,7 @@ void HelpOpen(Window* pWindow, const char* pFileName)
 #define HELP_WIDTH  500
 #define HELP_HEIGHT 400
 
-void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
+void CALLBACK HelpWndProc (Window* pWindow, int msg, long parm1, long parm2)
 {
 	switch (msg)
 	{
@@ -331,7 +331,7 @@ void CALLBACK HelpWndProc (Window* pWindow, int msg, int parm1, int parm2)
 	}
 }
 
-void HelpEntry (int arg)
+void HelpEntry (long arg)
 {
 	Window *pWindow = CreateWindow ("Help", CW_AUTOPOSITION, CW_AUTOPOSITION, HELP_WIDTH, HELP_HEIGHT, HelpWndProc, WF_ALWRESIZ);
 	
@@ -353,7 +353,7 @@ RESOURCE_STATUS HelpOpenResource(const char* pResourceID)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
 	
 	int errorCode = 0;
-	Task* pTask = KeStartTask(HelpEntry, (int)text, &errorCode);
+	Task* pTask = KeStartTask(HelpEntry, (long)text, &errorCode);
 	DebugLogMsg("Created help window. Pointer returned:%x, errorcode:%x", pTask, errorCode);
 	
 	if (!pTask)

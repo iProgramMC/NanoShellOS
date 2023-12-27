@@ -4,17 +4,7 @@
 
     Widget library: Task List controls
 ******************************************/
-
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
 extern Window g_windows[WINDOWS_MAX];
 extern short  g_windowDrawOrder[WINDOWS_MAX];
@@ -126,7 +116,7 @@ static void WidgetTaskList_PaintButton(Window* pWindow, Control* this, Rectangle
 	}
 }
 
-bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTaskList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	int btnHeight = TaskListGetButtonHeight(), thisHeight = GetHeight(&this->m_rect), thisWidth = GetWidth(&this->m_rect);
 	

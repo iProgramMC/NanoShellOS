@@ -519,7 +519,7 @@ extern Console* g_currentConsole, g_debugSerialConsole;
 
 void ElfOnExecuteFail(int errorCode, const char* fileName, bool bAsync);
 
-static void ElfExecThread(int pnLoaderBlock)
+static void ElfExecThread(long pnLoaderBlock)
 {
 	// Load the pLoaderBlock
 	ElfLoaderBlock *pBlock = (ElfLoaderBlock*)pnLoaderBlock;
@@ -657,7 +657,7 @@ int ElfRunProgram(const char *pFileName, const char *pArgs, bool bAsync, bool bG
 	
 	// Create a new process
 	int erc = 0;
-	Process *pProc = ExCreateProcess(ElfExecThread, (int)pBlock, pFileName, pBlock->nHeapSize, &erc, pBlock);
+	Process *pProc = ExCreateProcess(ElfExecThread, (long) pBlock, pFileName, pBlock->nHeapSize, &erc, pBlock);
 	if (!pProc)
 	{
 		MmFreeK (pBlock);

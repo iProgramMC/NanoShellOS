@@ -4,16 +4,7 @@
 
       Widget library: Button controls
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
 extern bool g_GlowOnHover;
 
@@ -40,7 +31,7 @@ uint32_t Blueify (uint32_t color)
 	return red_component | grn_component | blu_component;
 }
 
-bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButton_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -179,7 +170,7 @@ bool WidgetButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int
 	}
 	return false;
 }
-bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButtonIcon_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -252,7 +243,7 @@ bool WidgetButtonIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
-bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButtonIconBar_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -385,7 +376,7 @@ bool WidgetButtonIconBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNU
 	return false;
 }
 
-bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButtonList_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -560,7 +551,7 @@ bool WidgetButtonList_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	}
 	return false;
 }
-bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetButtonColor_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -616,7 +607,7 @@ bool WidgetButtonColor_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSE
 	return false;
 }
 //for the top bar of the window.  Uses this->m_parm1 as the event type.
-bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetActionButton_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -673,7 +664,7 @@ bool WidgetActionButton_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	}
 	return false;
 }
-bool WidgetClickLabel_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetClickLabel_OnEvent(Control* this, int eventType, long parm1, UNUSED long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{

@@ -1690,7 +1690,7 @@ void TextInput_ShowContextMenu(Control* this, Window* pWindow, int x, int y)
 	SpawnMenu(pWindow, &rootEnt, x, y);
 }
 
-bool WidgetTextEditView2_OnEvent(Control* this, int eventType, int parm1, int parm2, Window* pWindow)
+bool WidgetTextEditView2_OnEvent(Control* this, int eventType, long parm1, long parm2, Window* pWindow)
 {
 	switch (eventType)
 	{

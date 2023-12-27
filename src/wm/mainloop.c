@@ -197,8 +197,6 @@ void WmOnTaskCrashed(Task *pTask)
 	}
 }
 
-bool WidgetNone_OnEvent(Control* pCtl, int eventType, int parm1, int parm2, Window* pWindow);
-
 // Takes over a window. Simple enough, this will make the window inert (i.e. the default
 // steps will be taken for every event.) Good if you want to destroy it later.
 void WmTakeOverWindow(Window* pWindow)
@@ -337,7 +335,7 @@ Cursor* GetWindowCursor(Window* pWindow, int x, int y)
 void WindowCheckButtons(Window* pWindow, int eventType, int x, int y);
 
 int g_oldMouseX = -1, g_oldMouseY = -1;
-void WindowManagerTask(__attribute__((unused)) int useless_argument)
+void WindowManagerTask(UNUSED long useless_argument)
 {
 	if (g_windowManagerRunning)
 	{

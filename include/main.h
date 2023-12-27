@@ -42,10 +42,8 @@ void KeEnableInterrupts();
 #define cli KeDisableInterrupts()  //asm("cli")
 #define sti KeEnableInterrupts ()  //asm("sti")
 
-// December 4, 2022. This marks Version 1.00 of the operating system,
-// simply because I decided to make it 1.00 now. :-)
-#define VersionNumber 101
-#define VersionString "V1.01"
+#define VersionNumber 102
+#define VersionString "V1.02"
 
 #define UNUSED __attribute__((unused))
 
@@ -97,8 +95,6 @@ void KeVerifyInterruptsEnabledD(const char * file, int line);
 void StopwatchStart();
 int  StopwatchEnd();
 
-
-
 // LogMsg - Log a message to the current console. Must have interrupts enabled.
 void LogMsg (const char* fmt, ...);
 void LogMsgNoCr (const char* fmt, ...);
@@ -110,5 +106,7 @@ void ILogMsgNoCr (const char* fmt, ...);
 // SLogMsg - Log a message to the debug console (0xE9 port). Can have interrupts disabled.
 void SLogMsg (const char* fmt, ...);
 void SLogMsgNoCr (const char* fmt, ...);
+
+STATIC_ASSERT(sizeof(long) == sizeof(uintptr_t), "Size of long and uintptr_t must match");
 
 #endif//_MAIN_H

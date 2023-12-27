@@ -17,7 +17,7 @@
 #define DEF_MAGNIFY_HEI (MAGHEI*MAGSCALE)
 
 unsigned VidReadPixelU (unsigned x, unsigned y);
-void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{
@@ -31,7 +31,7 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 			// a la C#'s  new Bitmap(320,200);
 			Image *pImage = BitmapAllocate(MAGWID, MAGHEI, 0x00FFFFFF);
 			
-			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (int) pImage, IMAGECTL_ZOOM);
+			AddControlEx (pWindow, CONTROL_IMAGE, ANCHOR_RIGHT_TO_RIGHT | ANCHOR_BOTTOM_TO_BOTTOM, r, NULL, 1000, (long) pImage, IMAGECTL_ZOOM);
 			
 			MmFree(pImage);
 			
@@ -102,7 +102,7 @@ void CALLBACK PrgMagnifyProc (Window* pWindow, int messageType, int parm1, int p
 	}
 }
 
-void PrgMagnifyTask (__attribute__((unused)) int argument)
+void PrgMagnifyTask (UNUSED long argument)
 {
 	// create ourself a window:
 	Window* pWindow = CreateWindow ("Magnifier", CW_AUTOPOSITION, CW_AUTOPOSITION, DEF_MAGNIFY_WID, DEF_MAGNIFY_HEI, PrgMagnifyProc, WF_NOMINIMZ);

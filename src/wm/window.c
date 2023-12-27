@@ -467,7 +467,8 @@ void NukeWindowUnsafe (Window* pWindow)
 	
 	MuUseHeap (pHeapBackup);
 	
-	int et, p1, p2;
+	int et;
+	long p1, p2;
 	while (WindowPopEventFromQueue(pWindow, &et, &p1, &p2));//flush queue
 	
 	if (pWindow->m_isSelected)

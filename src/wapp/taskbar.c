@@ -395,7 +395,7 @@ void RunPopupError(Window* pWindow, const char* pResource, RESOURCE_STATUS erc)
 	MmFree(pString);
 }
 
-void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK RunPopupProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -444,7 +444,7 @@ void CALLBACK RunPopupProc (Window* pWindow, int messageType, int parm1, int par
 	}
 }
 
-void RunPopupEntry(__attribute__((unused)) int arg)
+void RunPopupEntry(UNUSED long arg)
 {
 	// create ourself a window:
 	int ww = 400, wh = 150-18;//, sh = GetScreenHeight();
@@ -838,7 +838,7 @@ RESOURCE_STATUS LaunchLauncher();
 RESOURCE_STATUS LaunchControlPanel();
 RESOURCE_STATUS LaunchSystem();
 
-void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK TaskbarProgramProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -1040,7 +1040,7 @@ void RequestTaskbarUpdate()
 	WindowAddEventToMasterQueue(g_pTaskBarWindow, EVENT_UPDATE_TASK_LIST, 0, 0);
 }
 
-void TaskbarEntry(__attribute__((unused)) int arg)
+void TaskbarEntry(UNUSED long arg)
 {
 	if (g_pTaskBarWindow) return;
 	

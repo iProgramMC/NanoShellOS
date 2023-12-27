@@ -25,7 +25,7 @@ typedef struct
 }
 UserKillWndControlBlock;
 
-void CALLBACK ShuttingDownWindowCallback (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK ShuttingDownWindowCallback (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	DefaultWindowProc (pWindow, messageType, parm1, parm2);
 	if (messageType == EVENT_CREATE)
@@ -48,12 +48,15 @@ void FurtherShutdownProcessing()
 	);
 	pWindow->m_bWindowManagerUpdated = true;
 	
+	// delay a bit so that the message shows up
+	WaitMS(50);
+	
 	KeOnShutDownSaveData();
 	
 	DestroyWindow (pWindow);
 }
 
-void ShutdownProcessing(UNUSED int parameter)
+void ShutdownProcessing(UNUSED long parameter)
 {
 	KeTaskAssignTag(KeGetRunningTask(), "Shutting down");
 	g_shutdownProcessing = true;
@@ -153,7 +156,7 @@ void ShutdownProcessing(UNUSED int parameter)
 
 Window* g_pShutdownMessage = NULL;
 
-void WindowManagerOnShutdownTask (__attribute__((unused)) int useless)
+void WindowManagerOnShutdownTask (UNUSED long useless)
 {
 	if (g_shutdownWantReb || MessageBox (NULL, "It is now safe to shut down your computer.", "Shutdown Computer", MB_RESTART | ICON_SHUTDOWN << 16) == MBID_OK)
 	{

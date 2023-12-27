@@ -6,9 +6,6 @@
 ******************************************/
 #include "wi.h"
 
-//Forward declarations
-void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
-
 void PopupWindowEx(Window* pWindow, const char* newWindowTitle, int newWindowX, int newWindowY, int newWindowW, int newWindowH, WindowProc newWindowProc, int newFlags, void* data)
 {
 	bool wasSelectedBefore = false;

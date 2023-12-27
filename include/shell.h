@@ -7,6 +7,6 @@
 #ifndef _SHELL_H
 #define _SHELL_H
 
-void ShellRun(int unused_arg);
+void ShellRun(long unused_arg);
 
 #endif//_SHELL_H

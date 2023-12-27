@@ -1477,7 +1477,7 @@ void ShellPrintMotd()
 	LogMsg("%s", pValue);
 }
 
-void ShellRun(UNUSED int unused_arg)
+void ShellRun(UNUSED long unused_arg)
 {
 	LogMsgNoCr("\e]2;Command Prompt\a");
 	ShellPrintMotd();

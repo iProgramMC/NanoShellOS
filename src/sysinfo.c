@@ -236,7 +236,7 @@ bool KiEmergencyMode()
 	return textMode;
 }
 
-void KiLoop(int arg)
+void KiLoop(long arg)
 {
 	TaskedFunction func = (TaskedFunction)arg;
 	
@@ -253,7 +253,7 @@ void KiLaunch (TaskedFunction func)
 {
 	int err_code = 0;
 	//TODO: spawn a process instead
-	Task* pTask = KeStartTaskD(KiLoop, (int)func, &err_code, __FILE__, "Init", __LINE__);
+	Task* pTask = KeStartTaskD(KiLoop, (long)func, &err_code, __FILE__, "Init", __LINE__);
 	
 	if (!pTask)
 		KeBugCheck(BC_EX_INIT_NOT_SPAWNABLE, NULL);

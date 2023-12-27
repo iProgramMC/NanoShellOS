@@ -4,23 +4,14 @@
 
       Widget library: Basic controls
 ******************************************/
-#include <widget.h>
-#include <video.h>
-#include <image.h>
-#include <icon.h>
-#include <clip.h>
-#include <print.h>
-#include <misc.h>
-#include <keyboard.h>
-#include <wmenu.h>
-#include <string.h>
+#include "../wi.h"
 
-bool WidgetNone_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetNone_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	return false;
 }
 
-bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -31,7 +22,7 @@ bool WidgetText_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 	return false;
 }
 
-bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -47,7 +38,7 @@ bool WidgetTextCenter_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED
 	return false;
 }
 
-bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -69,7 +60,7 @@ bool WidgetTextHuge_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED i
 	return false;
 }
 
-bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -81,7 +72,7 @@ bool WidgetIcon_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int p
 	return false;
 }
 
-bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -103,7 +94,7 @@ bool WidgetSurroundRect_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUS
 	return false;
 }
 
-bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetSimpleLine_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{
@@ -151,6 +142,7 @@ void SetLabelText (Window *pWindow, int comboID, const char* pText)
 		}
 	}
 }
+
 void SetIcon (Window *pWindow, int comboID, int icon)
 {
 	for (int i = 0; i < pWindow->m_controlArrayLen; i++)

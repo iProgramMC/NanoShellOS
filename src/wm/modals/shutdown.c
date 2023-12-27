@@ -4,20 +4,9 @@
 
   Window Modals - Shutdown Picker dialog
 ******************************************/
-#include <window.h>
-#include <widget.h>
-#include <wbuiltin.h>
-#include <icon.h>
+#include "../wi.h"
 
-extern SafeLock
-g_CreateLock, 
-g_BackgdLock;
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmPaintWindowTitle(Window* pWindow);
-extern void SelectWindow(Window* pWindow);
-extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
-
-void CALLBACK ShutdownBoxCallback (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK ShutdownBoxCallback (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	if (messageType == EVENT_COMMAND || messageType == EVENT_CHECKBOX)
 	{

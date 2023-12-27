@@ -4,9 +4,7 @@
 
     Widget library: Table view control
 ******************************************/
-#include <widget.h>
-#include <keyboard.h>
-#include <icon.h>
+#include "../wi.h"
 
 // NOTE: Damn, this is a pretty heavy control. 144 KB for 34 entries.
 // This is probably a sign we need to optimize the memory allocator for sub-page-size allocations!
@@ -486,7 +484,7 @@ void WidgetTableView_SetScrollPos(Control* this, int pos)
 	WidgetTableView_UpdateBottomView(this, updateRect);
 }
 
-bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetTableView_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

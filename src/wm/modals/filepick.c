@@ -4,11 +4,7 @@
 
     Window Modals - File Picker dialog
 ******************************************/
-#include <window.h>
-#include <widget.h>
-#include <vfs.h>
-#include <wbuiltin.h>
-#include <icon.h>
+#include "../wi.h"
 
 enum
 {
@@ -17,14 +13,6 @@ enum
 	FP_DIR_LISTING,
 	FP_PROMPT_TEXT,
 };
-
-extern SafeLock
-g_CreateLock, 
-g_BackgdLock;
-extern VBEData* g_vbeData, g_mainScreenVBEData;
-extern void WmPaintWindowTitle(Window* pWindow);
-extern void SelectWindow(Window* pWindow);
-extern void CALLBACK MessageBoxWindowLightCallback (Window* pWindow, int messageType, int parm1, int parm2);
 
 IconType CabGetIconBasedOnName(const char *pName, int pType);//btw
 
@@ -133,7 +121,7 @@ void FilePickerChangeDirectory(Window* pWindow, const char* cwd, bool bTakeToRoo
 	RequestRepaint   (pWindow);
 }
 
-void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK FilePickerPopupProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

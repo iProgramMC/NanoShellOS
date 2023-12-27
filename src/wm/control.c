@@ -73,7 +73,7 @@ bool IsControlIDTicking(int id)
 }
 
 //Returns an index, because we might want to relocate the m_pControlArray later.
-int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, int p1, int p2)
+int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, const char* text, int comboID, long p1, long p2)
 {
 	if (type == CONTROL_SIMPLE_VLINE)
 	{
@@ -204,7 +204,7 @@ int AddControlEx(Window* pWindow, int type, int anchoringMode, Rectangle rect, c
 	return index;
 }
 
-int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, int p1, int p2)
+int AddControl(Window* pWindow, int type, Rectangle rect, const char* text, int comboID, long p1, long p2)
 {
 	return
 	AddControlEx(pWindow, type, 0, rect, text, comboID, p1, p2);

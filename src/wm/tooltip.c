@@ -25,7 +25,7 @@ void TooltipDismiss()
 	return;
 }
 
-void TooltipWindowProc(Window* pWindow, int eventType, int parm1, int parm2)
+void TooltipWindowProc(Window* pWindow, int eventType, long parm1, long parm2)
 {
 	switch (eventType)
 	{

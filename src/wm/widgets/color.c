@@ -604,7 +604,7 @@ void WidgetColorPicker_SetShownValue(Control* this, int propName, int value)
 	}
 }
 
-bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetColorPicker_OnEvent(Control* this, int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

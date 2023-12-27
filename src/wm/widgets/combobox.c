@@ -4,7 +4,6 @@
 
     Widget library:  Combo Box control
 ******************************************/
-
 #include "../wi.h"
 
 typedef struct
@@ -162,7 +161,7 @@ void ComboBox_AddItem(Control* this, const char* item, int itemID, int iconID)
 	ComboBox_Paint(this, true, false, false);
 }
 
-void WidgetComboBox_SubMenuEventProc(Window* pWindow, int eventType, int parm1, int parm2)
+void WidgetComboBox_SubMenuEventProc(Window* pWindow, int eventType, long parm1, long parm2)
 {
 	switch (eventType)
 	{
@@ -324,7 +323,7 @@ void ComboBox_ClearItems(Control* this)
 	ComboBox_Paint(this, true, false, false);
 }
 
-bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetComboBox_OnEvent(Control* this, int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

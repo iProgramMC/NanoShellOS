@@ -4,8 +4,7 @@
 
    Widget library: Progress Bar control
 ******************************************/
-#include <widget.h>
-#include <print.h>
+#include "../wi.h"
 
 void CtlSetProgressBarProg(Control *this, int progress)
 {
@@ -39,7 +38,7 @@ void ProgBarSetMaxProg(Window* pWindow, int comboID, int prog)
 	}
 }
 
-bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED int parm1, UNUSED int parm2, UNUSED Window* pWindow)
+bool WidgetProgressBar_OnEvent(UNUSED Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
 	{

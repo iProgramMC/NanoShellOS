@@ -285,7 +285,7 @@ void GenerateBackground()
 	MmFree(pImage);
 }
 
-void WmBackgroundLoaderThread(UNUSED int parameter)
+void WmBackgroundLoaderThread(UNUSED long parameter)
 {
 	ConfigEntry *pEntry = CfgGetEntry ("Theming::BackgroundFile");
 	const char *pFileName = NULL;	
@@ -341,7 +341,7 @@ void WmBackgroundLoaderThread(UNUSED int parameter)
 	}
 }
 
-void WmIconLoaderThread(UNUSED int parameter)
+void WmIconLoaderThread(UNUSED long parameter)
 {
 	LoadIcons();
 	WmOnFinishLoadingIcons();

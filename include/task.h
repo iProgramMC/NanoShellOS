@@ -28,7 +28,7 @@
 	
 ************************************************************/
 
-typedef void (*TaskedFunction) (int arg);
+typedef void (*TaskedFunction) (long arg);
 
 // Of course this does not save memory - only register states.
 // The memory area should stay the same anyway across taskswitches.
@@ -168,7 +168,7 @@ enum {
 	through errorCodeOut. You can pass in arguments via
 	pPassedVarlist.
     
-	The function needs to have a "void (int)" header.
+	The function needs to have a "void (long)" header.
 	pPassedArgument may be null, if the TaskedFunction does
 	not require any arguments.
     
@@ -177,9 +177,9 @@ enum {
 	actually care (although, this is recommended against)
 ***********************************************************/
 // note that the void pointer is there because I really do not want to include <process.h>, which includes us...
-Task* KeStartTaskExD(TaskedFunction function, int argument, int *pErrorCodeOut, void* pProc, const char* a, const char* b, int c);
+Task* KeStartTaskExD(TaskedFunction function, long argument, int *pErrorCodeOut, void* pProc, const char* a, const char* b, int c);
 
-Task* KeStartTaskD(TaskedFunction function, int argument, int *pErrorCodeOut, const char* a, const char* b, int c);
+Task* KeStartTaskD(TaskedFunction function, long argument, int *pErrorCodeOut, const char* a, const char* b, int c);
 #define KeStartTask(function, argument, errorPtr) \
         KeStartTaskD(function, argument, errorPtr, __FILE__, #function, __LINE__)
 

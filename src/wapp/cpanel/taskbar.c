@@ -38,7 +38,7 @@ void RefreshEverything();
 
 void TaskbarSetProperties(bool bShowDate, bool bShowTimeSecs, bool bCompactTaskList, bool bShowCPUUsage, bool bShowMEMUsage, bool bUseLargeIcons);
 
-void CALLBACK CplTaskbarWndProc(Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK CplTaskbarWndProc(Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
 	{

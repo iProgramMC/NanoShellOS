@@ -31,7 +31,7 @@ RESOURCE_STATUS LaunchVersionApplet(const char *pTextIn, int iconID)
 		*((int*)pText) = iconID;
 	}
 	
-	Task* pTask = KeStartTask(VersionProgramTask, (int) pText, &errorCode);
+	Task* pTask = KeStartTask(VersionProgramTask, (long) pText, &errorCode);
 	
 	if (!pTask)
 		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
@@ -363,7 +363,7 @@ void HomeMenu$LoadConfig(Window* pWindow)
 
 // Main program
 
-void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int parm2)
+void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	//int npp = GetNumPhysPages(), nfpp = GetNumFreePhysPages();
 	switch (messageType)
@@ -473,7 +473,7 @@ void CALLBACK HomeMenu$WndProc (Window* pWindow, int messageType, int parm1, int
 	}
 }
 
-void LauncherEntry(__attribute__((unused)) int arg)
+void LauncherEntry(UNUSED long arg)
 {
 	// create ourself a window:
 	int ww = 400, wh = 270, sw = GetScreenSizeX(), sh = GetScreenSizeY();

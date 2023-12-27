@@ -314,7 +314,7 @@ void NotepadOnTextInputAction(Window* pWindow, int parm1)
 	TextInputRequestCommand(pWindow, NOTEP_TEXTVIEW, cmd, NULL);
 }
 
-void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
+void CALLBACK BigTextWndProc (Window* pWindow, int msg, long parm1, long parm2)
 {
 	switch (msg)
 	{
@@ -453,7 +453,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 					break;
 				case CB$COPY:
 				case CB$PASTE:
-					NotepadOnTextInputAction(pWindow, parm1);
+					NotepadOnTextInputAction(pWindow, (int)parm1);
 					break;
 				case NOTEP_MENUBAR:
 				{
@@ -566,7 +566,7 @@ void CALLBACK BigTextWndProc (Window* pWindow, int msg, int parm1, int parm2)
 	}
 }
 
-void BigTextEntry (int arg)
+void BigTextEntry (long arg)
 {
 	Window *pWindow = CreateWindow ("Notepad", CW_AUTOPOSITION, CW_AUTOPOSITION, NOTEP_WIDTH, NOTEP_HEIGHT, BigTextWndProc, WF_ALWRESIZ);
 	

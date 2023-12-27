@@ -12,6 +12,6 @@
 #include <task.h>
 #include <shell.h>
 
-void TerminalHostTask(int arg);
+void TerminalHostTask(long arg);
 
 #endif//_WTERM_H
