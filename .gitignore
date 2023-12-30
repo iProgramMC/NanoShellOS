@@ -1,5 +1,8 @@
 # NanoShellOS - Ignored Files
 
+# Ignore resource compiler executable
+/tools/rc
+
 # Available at https://github.com/NanoShellOS/sm64
 # Won't integrate into the repo even as a submodule because:
 #   1. It requires source Z64 files which I won't provide for obvious reasons
