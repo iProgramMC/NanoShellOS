@@ -455,9 +455,10 @@ bool FsExt2KeyEquals(const void* key1, const void* key2)
 
 void FsExt2OnErase(const void* key, void* data);
 
-void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
+// returns whether or not this is actually the correct file system to use for the drive
+bool FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSizeSec)
 {
-	// Find a Fat32 structure in the list of Fat32 structures.
+	// Find an Ext2 structure in the list of Ext2 structures.
 	int FreeArea = -1;
 	for (size_t i = 0; i < ARRAY_COUNT(s_ext2FileSystems); i++)
 	{
@@ -468,7 +469,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 		}
 	}
 	
-	if (FreeArea == -1) return;
+	if (FreeArea == -1) return false;
 	
 	Ext2FileSystem *pFS = &s_ext2FileSystems[FreeArea];
 	pFS->m_lbaStart    = partitionStart;
@@ -480,7 +481,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	{
 		// this isn't even good! Bleh, go away.
 		// We didn't do anything bad like allocate stuff or mark it as mounted. So a return is safe
-		return;
+		return false;
 	}
 	
 	// Ensure we have the correct feature set.
@@ -493,7 +494,7 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	if (requiredFeatures & E2_REQ_UNSUPPORTED_FLAGS)
 	{
 		LogMsg("Warning: An Ext2 partition implements unsupported features. Good-bye! (requiredFeatures: %x)", requiredFeatures);
-		return;
+		return true; // but it is an ext2 file system
 	}
 	if (readOnlyFeatures & E2_ROF_UNSUPPORTED_FLAGS)
 	{
@@ -566,6 +567,8 @@ void FsMountExt2Partition(DriveID driveID, int partitionStart, int partitionSize
 	
 	// Get its filenode, and copy it. This will add the file system to the root directory.
 	FsUtilAddArbitraryFileNode("/", name, &pCacheUnit->m_node);
+	
+	return true;
 }
 
 #define SAFE_DELETE(thing) do { if (thing) { MmFree(thing); thing = NULL; } } while (0)
@@ -579,43 +582,4 @@ void FsExt2Cleanup(Ext2FileSystem* pFS)
 	SAFE_DELETE(pFS->m_pInodeBitmapPtr);
 	
 	pFS->m_bMounted = false;
-}
-
-void FsExt2Init()
-{
-	// probe each drive
-	for (int i = 0; i < 0x100; i++)
-	{
-		if (!StIsDriveAvailable(i)) continue;
-		
-		union
-		{
-			uint8_t bytes[512];
-			MasterBootRecord s;
-		} mbr;
-		
-		memset(mbr.bytes, 0, sizeof mbr.bytes);
-		
-		// read one sector from block 0
-		DriveStatus ds = StDeviceRead( 0, mbr.bytes, i, 1 );
-		if (ds != DEVERR_SUCCESS)
-		{
-			LogMsg("Device failure %x on drive %d while trying to find an Ext2 file system! Not proceeding!", ds);
-			continue;
-		}
-		
-		// probe each partition
-		for (int pi = 0; pi < 4; pi++)
-		{
-			Partition* pPart = &mbr.s.m_Partitions[pi];
-			
-			if (pPart->m_PartTypeDesc != 0)
-			{
-				// This is a valid partition.  Mount it.
-				FsMountExt2Partition (i, pPart->m_StartLBA, pPart->m_PartSizeSectors);
-			}
-		}
-		
-		// well, we could try without an MBR here too, but I'm too lazy to get the size of the drive itself right now.
-	}
 }
