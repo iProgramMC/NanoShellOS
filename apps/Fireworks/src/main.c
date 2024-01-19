@@ -166,7 +166,7 @@ void OnExplode(Particle* pPart)
 
 int g_lastDelta = UPDATE_MS;
 
-void UpdateParticle(Particle* part)
+bool UpdateParticle(Particle* part)
 {
 	double deltaSec = ((double)g_lastDelta / 1000.0);
 	
@@ -184,11 +184,16 @@ void UpdateParticle(Particle* part)
 			OnExplode(part);
 		else
 			RemoveParticle(part);
+		
+		return false;
 	}
-	else if (part->m_bCanExplode && part->m_y < (GetScreenSizeY() / 6))
+	if (part->m_bCanExplode && part->m_y < (GetScreenSizeY() / 6))
 	{
 		OnExplode(part);
+		return false;
 	}
+	
+	return true;
 }
 
 void RenderParticle(Particle* part)
@@ -208,28 +213,13 @@ void Update()
 	Particle* part = g_first;
 	while (part)
 	{
-		UpdateParticle(part);
+		Particle* p = part;
 		part = part->m_next;
-	}
-}
-
-void Unrender()
-{
-	Particle* part = g_first;
-	while (part)
-	{
-		UnrenderParticle(part);
-		part = part->m_next;
-	}
-}
-
-void Render()
-{
-	Particle* part = g_first;
-	while (part)
-	{
-		RenderParticle(part);
-		part = part->m_next;
+		
+		UnrenderParticle(p);
+		if (!UpdateParticle(p))
+			continue;
+		RenderParticle(p);
 	}
 }
 
@@ -266,9 +256,7 @@ int main()
 	{
 		int start = GetTickCount();
 		
-		Unrender();
 		Update();
-		Render();
 		
 		int end1 = GetTickCount();
 		
