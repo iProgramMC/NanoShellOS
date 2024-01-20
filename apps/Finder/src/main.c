@@ -138,6 +138,7 @@ void StartSearch(const char* path, const char* query)
 	HaltSearchImmediately();
 	
 	g_pSearchQueue = QueueCreate();
+	g_nBrowsed = g_nFound = 0;
 	
 	// push the path to the search queue
 	QueuePush(g_pSearchQueue, strdup(path));
@@ -263,6 +264,8 @@ void ProcessOneSearchQueueItem()
 	{
 		SetProcessingTextWithFormatting(ptr);
 		
+		g_nBrowsed++;
+		
 		// inspect this directory entry.
 		if (pDirEnt->m_type & FILE_TYPE_DIRECTORY)
 		{
@@ -275,6 +278,7 @@ void ProcessOneSearchQueueItem()
 		{
 			char* fn = ConcatenateFileName(ptr, pDirEnt->m_name);
 			AddSearchResult(fn, pDirEnt->m_name);
+			g_nFound++;
 			free(fn);
 		}
 	}
