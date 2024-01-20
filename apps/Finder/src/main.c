@@ -137,6 +137,8 @@ void StartSearch(const char* path, const char* query)
 	// halt the pre-existing search
 	HaltSearchImmediately();
 	
+	ChangeCursor (g_pMainWindow, CURSOR_WAIT);
+	
 	g_pSearchQueue = QueueCreate();
 	g_nBrowsed = g_nFound = 0;
 	
@@ -313,6 +315,8 @@ void HaltSearchImmediately()
 		SetProcessingText(buf);
 	}
 	
+	ChangeCursor (g_pMainWindow, CURSOR_DEFAULT);
+	
 	free(g_pSearchQuery);
 	g_pSearchQuery = NULL;
 }
@@ -400,8 +404,11 @@ void CALLBACK WndProc (Window* pWindow, int messageType, long parm1, long parm2)
 				const char* fn = GetFileNameFromList(GetSelectedFileIndex());
 				if (!fn) break;
 				
-				//TODO
-				LogMsg("Hey! You just clicked %s.", fn);
+				// Launch the resource!
+				ChangeCursor (pWindow, CURSOR_WAIT);
+				LogMsg("Launching %s", fn);
+				ShellExecuteResource(fn);
+				ChangeCursor (pWindow, CURSOR_DEFAULT);
 				
 				break;
 			}
