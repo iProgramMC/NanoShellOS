@@ -16,23 +16,10 @@
 #include <memory.h>
 #include <storabs.h>
 
-#define FSDEBUG
-
-#ifdef FSDEBUGX
-#define DebugLogMsg LogMsg
-#elif defined(FSDEBUG)
-#define DebugLogMsg SLogMsg
-#else
-#define DebugLogMsg(...)
-#endif
-
 // Credits: https://github.com/knusbaum/kernel/blob/master/fat32.c
 
-#define ADD_TIMESTAMP_TO_FILES
-
-
 // should use this when generating NanoShell-specific permissions for this file
-#define FAT_READONLY (1<<0)
+#define FAT_READONLY  (1<<0)
 
 #define FAT_HIDDEN    (1<<1)
 #define FAT_SYSTEM    (1<<2)
@@ -55,9 +42,12 @@
 // This is just like the NULL pointer in most singly linked list implementations.
 #define FAT_END_OF_CHAIN 0x0FFFFFF8
 
-// Extensions that Microsoft uses
-#define FAT_MSFLAGS_NAMELOWER (1 << 3) // 0x08
-#define FAT_MSFLAGS_EXTELOWER (1 << 4) // 0x10
+// Directory entry extension on the NT byte
+#define FAT_NTBYTE_NAMELOWER (1 << 3) // 0x08
+#define FAT_NTBYTE_EXTELOWER (1 << 4) // 0x10
+
+// Arbitrary.  Specifies the maximum amount of directory entries.
+#define MAX_DIR_ENTRIES 16
 
 typedef struct
 {
@@ -93,43 +83,6 @@ BiosParameterBlock;
 
 typedef struct
 {
-	char     m_pName[128];
-	uint8_t  m_dirFlags;
-	uint32_t m_firstCluster,
-	         m_fileSize;
-}
-FatDirEntry;
-
-typedef struct
-{
-	uint32_t     m_startCluster;
-	FatDirEntry* m_pEntries;
-	uint32_t     m_nEntries;
-}
-FatDirectory;
-
-typedef struct
-{
-	bool         m_bMounted;
-	uint32_t*    m_pFat;
-	bool*        m_pbFatModified;
-	bool         m_bFatLock;
-	bool         m_bReportErrors;
-	int          m_nReportedErrors;
-	FileNode*    m_pRoot;
-	BiosParameterBlock m_bpb;
-	uint32_t     m_fatBeginSector,
-	             m_clusBeginSector,
-				 m_clusSize,
-				 m_clusAllocHint, //! to avoid fragmentation
-				 m_partStartSec,
-				 m_partSizeSec,
-				 m_driveID;
-}
-FatFileSystem;
-
-typedef struct
-{
 	uint8_t  m_BootIndicator;
 	uint8_t  m_StartCHS[3]; //not used
 	uint8_t  m_PartTypeDesc;
@@ -149,19 +102,81 @@ typedef struct
 __attribute__((packed))
 MasterBootRecord;
 
-extern FatFileSystem s_Fat32Structures[32];
+// ======= FAT FILE SYSTEM SPECIFIC DEFINITIONS =======
 
-enum
+typedef struct
 {
-	MOUNT_SUCCESS,
-	MOUNT_ERR_TOO_MANY_PARTS_MOUNTED = 0x7000,
-	MOUNT_ERR_NOT_FAT32,
-};
+	char m_name[11];
+	uint8_t m_attributes;
+	uint8_t m_ntReserved; // reserved for use by Windows NT.. my ass
+	uint8_t m_createTimeTenth;
+	uint16_t m_createTime;
+	uint16_t m_createDate;
+	uint16_t m_lastAccessDate;
+	uint16_t m_firstClusterHigh;
+	uint16_t m_modifyTime;
+	uint16_t m_modifyDate;
+	uint16_t m_firstClusterLow;
+	uint32_t m_fileSize;
+}
+__attribute__((packed))
+FatDirectoryEntry;
 
-#ifdef EXPERIMENTAL
-void CheckDiskFatMain(int fat_number);
-#else
-#define CheckDiskFatMain(c) LogMsg("Check disk not implemented in non-experimental mode.")
-#endif
+STATIC_ASSERT(sizeof(FatDirectoryEntry) == 32, "Sizeof FAT dirent should be 32");
+
+
+// ======= FAT32 IMPLEMENTATION SPECIFIC DEFINITIONS =======
+
+typedef struct FatFileCacheUnit
+{
+	uint32_t  m_startingCluster;
+	FileNode  m_node;
+	
+	// directory entry cache
+	// these store a pointer to the directory that the file belongs to (referenced of course),
+	// as well as the LFN entry's data and place within the parent directory.
+	struct FatFileCacheUnit* m_pParent;
+	uint32_t m_offset;
+	int m_numEntries;
+	FatDirectoryEntry m_entryCache[MAX_DIR_ENTRIES];
+	
+	// duplicate entry in case the file is deleted (m_numEntries is zero)
+	FatDirectoryEntry m_sfnEntry;
+}
+FatFileCacheUnit;
+
+typedef union FatClusterPage
+{
+	uint32_t m_fat32[4096 / 4];
+	uint16_t m_fat16[4096 / 2];
+	uint8_t  m_fat12[4096]; // extraction and implantation is going to be non trivial on FAT12
+}
+FatClusterPage;
+
+typedef struct FatClusterList
+{
+	uint32_t m_sizePages;
+	
+	// if an entry is null, need to load the cluster page there
+	FatClusterPage** m_pPages;
+}
+FatClusterList;
+
+typedef struct FatFileSystem
+{
+	bool     m_bMounted;
+	DriveID  m_driveID;
+	uint32_t m_lbaStart;
+	uint32_t m_sectorCount;
+	bool     m_bIsReadOnly;
+	BiosParameterBlock m_bpb; // BPB cache
+	
+	FatClusterList m_clusterList;
+	
+	uint8_t* m_pClusBuffer1;
+	uint8_t* m_pClusBuffer2;
+	uint8_t* m_pClusBuffer3;
+}
+FatFileSystem;
 
 #endif//_FAT_H
