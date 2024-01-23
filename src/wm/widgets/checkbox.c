@@ -50,7 +50,7 @@ bool WidgetCheckbox_OnEvent(Control* this, int eventType, long parm1, UNUSED lon
 			//if checked, mark it as "checked"
 			if (this->m_checkBoxData.m_checked)
 			{
-				VidTextOut("\x15", check_rect.left + 3, check_rect.top + 3, WINDOW_TEXT_COLOR, TRANSPARENT);
+				VidTextOut("\x15", check_rect.left + 3, check_rect.top + 2, WINDOW_TEXT_COLOR, TRANSPARENT);
 			}
 			
 			VidDrawText(this->m_text, text_rect, TEXTSTYLE_WORDWRAPPED, WINDOW_TEXT_COLOR, WINDOW_BACKGD_COLOR);
