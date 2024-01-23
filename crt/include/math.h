@@ -5,5 +5,6 @@
 #define __MATH_H
 
 //TODO
+double fabs(double x);
 
 #endif//__MATH_H

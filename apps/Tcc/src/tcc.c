@@ -283,6 +283,10 @@ static char *default_outputfile(TCCState *s, const char *first_file)
     return tcc_strdup(buf);
 }
 
+#ifdef NANOSHELL
+unsigned GetTickCount();
+#endif
+
 static unsigned getclock_ms(void)
 {
 #if defined(_WIN32) || defined(NANOSHELL)

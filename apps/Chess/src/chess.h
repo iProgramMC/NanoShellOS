@@ -158,4 +158,6 @@ void SetGameOver(bool);
 
 void ClearFlashingTiles();
 
+void ChessUpdateMoveList();
+
 #endif//CHESS_H

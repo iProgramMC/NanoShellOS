@@ -280,7 +280,7 @@ Line* GetCurrentLine()
 
 void EditorMovePrevLine()
 {
-	int conheight = GetConsole()->height;
+	//int conheight = GetConsole()->height;
 	// If the current line is the scroll line
 	if (GetCurrentLine() == g_scrollLine)
 	{
@@ -383,10 +383,13 @@ void EditorHandleBackspace()
 	
 }
 
-void EditorHandleCharacter(char c)
+void EditorHandleCharacter(UNUSED char c)
 {
 	
 }
+
+// TODO: fix dependency on internal CRT function
+char _I_ReadChar();
 
 void EditorRun()
 {

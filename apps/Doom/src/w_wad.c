@@ -340,6 +340,7 @@ int W_LumpLength (unsigned int lump)
 // Loads the lump into the given buffer,
 //  which must be >= W_LumpLength().
 //
+void I_EndRead (void);
 void W_ReadLump(unsigned int lump, void *dest)
 {
     int c;

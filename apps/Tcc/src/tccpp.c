@@ -3268,11 +3268,6 @@ static int macro_subst_tok(
     Sym **nested_list,
     Sym *s)
 {
-	if (s == (Sym*)0x4000)
-	{
-		SLogMsg("Sym Address: %p", s);
-	}
-	
     Sym *args, *sa, *sa1;
     int parlevel, t, t1, spc;
     TokenString str;

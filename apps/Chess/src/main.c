@@ -369,8 +369,8 @@ void ChessReleaseCursor(int x, int y)
 	
 	eErrorCode err = ERROR_SUCCESS;
 	
-	bool bPromotePawn = false;
-	int nPawnPromotedFile = 0;
+	//bool bPromotePawn = false;
+	//int nPawnPromotedFile = 0;
 	eColor col = BLACK;
 	
 	if (g_DraggedPieceRow != -1 && g_DraggedPieceCol != -1)
@@ -381,8 +381,8 @@ void ChessReleaseCursor(int x, int y)
 		BoardPiece* pPc = GetPiece(g_CurrentState, g_DraggedPieceRow, g_DraggedPieceCol);
 		if (pPc)
 		{
-			nPawnPromotedFile = boardCol;
-			bPromotePawn = true;
+			//nPawnPromotedFile = boardCol;
+			//bPromotePawn = true;
 			
 			col = pPc->color;
 			err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);

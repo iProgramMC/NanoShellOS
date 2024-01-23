@@ -139,6 +139,11 @@ void Pause()
 
 void CloseFile();
 
+int GetFileSize()
+{
+	return g_FileSize;
+}
+
 void TickOnce()
 {
 	if (!g_bPlaying) return;
@@ -206,11 +211,6 @@ void TickOnce()
 	
 	if (bAtEnd)
 		g_bPlaying = false;
-}
-
-int GetFileSize()
-{
-	return g_FileSize;
 }
 
 void WaveFileProcessing()
