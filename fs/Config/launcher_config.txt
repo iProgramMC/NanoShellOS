@@ -11,12 +11,14 @@ add_item|1|1|File cabinet|shell:cabinet
 add_item|96|1|Text editor|shell:notepad
 add_item|121|1|System monitor|shell:sysmon
 
+//add_item|123|1|3d test|exwindow:/Bin/3DTest.nse
+
 // Extra Tools
 add_item|118|0|Magnifier|shell:magnify
 
 // Pre-packaged applications that aren't built into the kernel
-add_item|226|1|Chess|exwindow:/Bin/Chess.nse
-add_item|162|1|Finder|exwindow:/Bin/Finder.nse
+add_item|226|0|Chess|exwindow:/Bin/Chess.nse
+add_item|162|0|Finder|exwindow:/Bin/Finder.nse
 add_item|93|0|Codename V-Builder|exwindow:/Bin/VBuilder.nse
 add_item|38|0|Minesweeper|exwindow:/Bin/Minesweeper.nse
 add_item|65|0|Clock|exwindow:/Bin/Clock.nse
