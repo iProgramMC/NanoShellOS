@@ -205,6 +205,10 @@ void CALLBACK MenuProc(Window* pWindow, int eventType, long parm1, long parm2)
 			}
 			break;
 		}
+		case EVENT_KEYRAW:
+			if (parm1 != KEY_ESC)
+				break;
+			// fall through
 		case EVENT_KILLFOCUS:
 		{
 			if (!pWindow->m_data) break;

@@ -156,6 +156,15 @@ void HandleKeypressOnWindow(unsigned char key)
 	{
 		OnPressAltTabOnce();
 	}
+	else if (key == KEY_ESC)
+	{
+		// for each window that's a system popup, send an ESC key message
+		for (int i = 0; i < WINDOWS_MAX; i++)
+		{
+			if (g_windows[i].m_used && (g_windows[i].m_flags & WF_SYSPOPUP))
+				WindowAddEventToMasterQueue(&g_windows[i], EVENT_KEYRAW, key, 0);
+		}
+	}
 }
 
 void WmOnTaskDied(Task *pTask)
