@@ -1872,27 +1872,24 @@ void RefreshPixels(int oldX, int oldY, int oldWidth, int oldHeight)
 	int ys =           + oldY;
 	int ye = oldHeight + oldY;
 	if (ys < 0)
-	{
 		ys = 0;
-	}
 	if (ye >= GetScreenHeight())
 		ye =  GetScreenHeight();
 	int xs =          + oldX;
 	int xe = oldWidth + oldX;
 	if (xs < 0)
-	{
 		xs = 0;
-	}
 	if (xe >= GetScreenSizeX())
 		xe =  GetScreenSizeX();
 	int xd = (xe - xs) * sizeof(uint32_t);
+	if (xd == 0)
+		return;
 	for (int y = ys; y < ye; y++)
 	{
 		int ky = y * g_vbeData->m_width + xs;
 		//just memcpy shit
 		align4_memcpy (&g_vbeData->m_framebuffer32[y * g_vbeData->m_pitch32 + xs], &g_framebufferCopy[ky], xd);
 	}
-	return;
 }
 void RedrawOldPixelsFull(int oldX, int oldY)
 {

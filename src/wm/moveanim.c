@@ -104,6 +104,7 @@ void RunOneEffectFrame()
 }
 void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text)
 {
+	VBEData* pOld = VidSetVBEData(NULL);
 	KillEffect();
 	g_EffectRunning = true;
 	g_EffectDest = dest;
@@ -129,4 +130,6 @@ void CreateMovingRectangleEffect(Rectangle src, Rectangle dest, const char* text
 	if (sl > 999) sl = 999;
 	memcpy(g_EffectText, text, sl + 1);
 	g_EffectText[sl] = 0;
+	
+	VidSetVBEData(pOld);
 }
