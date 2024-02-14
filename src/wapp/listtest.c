@@ -323,7 +323,9 @@ void CALLBACK ListTestProc (Window* pWindow, int messageType, long parm1, long p
 			
 			for (int i = 0; i < ICON_COUNT; i++)
 			{
-				ComboBoxAddItem(pWindow, 2, g_IconNames[i], i, i);
+				char Buf[256];
+				sprintf(Buf, "%s (%d)", g_IconNames[i], i);
+				ComboBoxAddItem(pWindow, 2, Buf, i, i);
 			}
 			
 			/*RECT (r, 20, 20, 1, 240-40);
