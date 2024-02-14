@@ -755,6 +755,20 @@ void ClearTimer()
 	SetNumber(g_pWindow, COMBO_LED_TIME, g_nTimer);
 }
 
+void OnBossKey()
+{
+	if (GetWindowFlags(g_pWindow) & WF_MINIMIZE)
+		return;
+	
+	// Your boss just showed up? Press escape to minimize the game and
+	// rename it to look inconspicuous. I mean, your boss doesn't have
+	// "fool" written on his head, but still!
+	
+	SetWindowTitle(g_pWindow, "Not A Game");
+	SetWindowIcon(g_pWindow, ICON_JOURNAL);
+	RegisterEvent(g_pWindow, EVENT_MINIMIZE, 0, 0);
+}
+
 void CALLBACK PrgMineProc (Window* pWindow, int messageType, long parm1, long parm2)
 {
 	switch (messageType)
@@ -762,6 +776,23 @@ void CALLBACK PrgMineProc (Window* pWindow, int messageType, long parm1, long pa
 		case EVENT_USER:
 		{
 			TickTimer();
+			break;
+		}
+		case EVENT_UNMINIMIZE:
+		{
+			DefaultWindowProc(pWindow, messageType, parm1, parm2);
+			
+			// undo the effect of boss key
+			SetWindowTitle(g_pWindow, "Minesweeper");
+			SetWindowIcon(g_pWindow, ICON_BOMB);
+			break;
+		}
+		case EVENT_KEYRAW:
+		{
+			if (parm1 == KEY_ESC)
+			{
+				OnBossKey();
+			}
 			break;
 		}
 		case EVENT_CREATE:
