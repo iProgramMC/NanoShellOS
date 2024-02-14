@@ -30,8 +30,8 @@ CALL_END
 CALL (VidDrawLine, VID_DRAW_LINE, void, unsigned p, int x1, int y1, int x2, int y2)
 	SARGS(p,x1,y1,x2,y2)
 CALL_END
-CALL (VidSetFont, VID_SET_FONT, void, unsigned fontType)
-	SARGS(fontType)
+CALL (VidSetFont, VID_SET_FONT, unsigned, unsigned fontType)
+	RARGS(fontType)
 CALL_END
 CALL (VidPlotChar, VID_PLOT_CHAR, void, char c,unsigned ox,unsigned oy,unsigned colorFg,unsigned colorBg)
 	SARGS(c,ox,oy,colorFg,colorBg)
