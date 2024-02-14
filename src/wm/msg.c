@@ -596,6 +596,13 @@ bool HandleMessages(Window* pWindow)
 			if (sensible)
 				OnProcessOneEvent(pWindow, EVENT_KEYPRESS, sensible, 0);
 		}
+		
+		if (out == KEY_F4 && KbGetKeyState(KEY_ALT) == KEY_PRESSED)
+		{
+			// send a close request, unless the window has specifically requested not to
+			if (~pWindow->m_flags & WF_NOCLOSE)
+				OnProcessOneEvent(pWindow, EVENT_CLOSE, 0, 0);
+		}
 	}
 	
 	bool bIsNotWM = !IsWindowManagerTask();
