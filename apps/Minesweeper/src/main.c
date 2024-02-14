@@ -462,6 +462,36 @@ bool WidgetNumDisplay_OnEvent(Control* this, int eventType, UNUSED long parm1, U
 
 bool g_bRightClicking = false;
 
+void MinePerformChord(int xcl, int ycl)
+{
+	// Check mines that are around this tile
+	int mines_around = 0, flags_around = 0;
+	
+	for (int x1 = xcl-1; x1 <= xcl+1; x1++)
+		for (int y1 = ycl-1; y1 <= ycl+1; y1++)
+		{
+			if (IsMine (x1, y1)) {
+				mines_around++;
+			}
+			if (IsFlag (x1, y1)) {
+				flags_around++;
+			}
+		}
+	
+	if (mines_around == flags_around)
+	{
+		// We "know" all the mine tiles that are around this empty tile; uncover all the unflagged tiles
+		for (int x1 = xcl-1; x1 <= xcl+1; x1++)
+			for (int y1 = ycl-1; y1 <= ycl+1; y1++)
+			{
+				if (!IsFlag (x1, y1))
+					MineUncoverTile(x1, y1);
+			}
+	}
+}
+
+int g_lastClickedTick = 0;
+
 bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm1, UNUSED long parm2, UNUSED Window* pWindow)
 {
 	switch (eventType)
@@ -605,32 +635,7 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
 			if (m_leftClickHeld)
-			{
-				// Check mines that're around this tile
-				int mines_around = 0, flags_around = 0;
-				
-				for (int x1 = xcl-1; x1 <= xcl+1; x1++)
-					for (int y1 = ycl-1; y1 <= ycl+1; y1++)
-					{
-						if (IsMine (x1, y1)) {
-							mines_around++;
-						}
-						if (IsFlag (x1, y1)) {
-							flags_around++;
-						}
-					}
-				
-				if (mines_around == flags_around)
-				{
-					// We "know" all the mine tiles that are around this empty tile; uncover all the unflagged tiles
-					for (int x1 = xcl-1; x1 <= xcl+1; x1++)
-						for (int y1 = ycl-1; y1 <= ycl+1; y1++)
-						{
-							if (!IsFlag (x1, y1))
-								MineUncoverTile(x1, y1);
-						}
-				}
-			}
+				MinePerformChord(xcl, ycl);
 			else
 				MineFlagTile (xcl, ycl);
 			
@@ -671,7 +676,18 @@ bool WidgetSweeper_OnEvent(Control* this, UNUSED int eventType, UNUSED long parm
 			
 			if (xcl < 0 || ycl < 0 || xcl >= BoardWidth || ycl >= BoardHeight) return false;
 			
-			MineUncoverTile (xcl, ycl);
+			if (m_unco[xcl][ycl])
+			{
+				// have to have clicked before in X ms to count as a double click
+				if (g_lastClickedTick + 500 >= GetTickCount())
+					MinePerformChord(xcl, ycl);
+				
+				g_lastClickedTick = GetTickCount();
+			}
+			else
+			{
+				MineUncoverTile (xcl, ycl);
+			}
 			
 			MineCheckWin ();
 			
