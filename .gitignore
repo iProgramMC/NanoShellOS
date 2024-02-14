@@ -46,6 +46,7 @@ apps/Nano/keep/*
 apps/nsshell/*
 apps/Reversi/*
 apps/halfix/*
+apps/HexEditor/*
 
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
@@ -54,6 +55,7 @@ fs/Bin/VBuilder.nse
 fs/Bin/Reversi.nse
 fs/Bin/test.nse
 fs/Bin/Chess.nse
+fs/Bin/HexEditor.nse
 fs/Tests/*.png
 fs/User/*
 
