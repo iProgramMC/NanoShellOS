@@ -50,6 +50,9 @@ RESOURCE_STATUS CabinetExecute(const char* filename)
 
 RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 {
+	if (strlen(pFileName) >= 500)
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
 	char *buffer = (char*)MmAllocate(512);
 	strcpy (buffer, "ec ");
 	strcat (buffer, pFileName);
@@ -57,7 +60,7 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 	
 	// Create the Launch Executable thread with the file descriptor as its parameter.
 	int errorCode = 0;
-    Task* pTask = KeStartTask (TerminalHostTask, (int)buffer, &errorCode);
+    Task* pTask = KeStartTask (TerminalHostTask, (long)buffer, &errorCode);
     if (errorCode != TASK_SUCCESS)
     {
 		MmFree(buffer);
@@ -77,13 +80,41 @@ RESOURCE_STATUS CabinetExecuteScript(const char* pFileName)
 	return RESOURCE_LAUNCH_SUCCESS;
 }
 
+RESOURCE_STATUS CabinetLaunchDirectory(const char* pFileName)
+{
+	if (strlen(pFileName) >= 511)
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+	
+	char *buffer = (char*)MmAllocate(512);
+	strcpy (buffer, pFileName);
+	
+	// Create the Launch Executable thread with the file descriptor as its parameter.
+	int errorCode = 0;
+    Task* pTask = KeStartTask (CabinetEntry, (long)buffer, &errorCode);
+    if (errorCode != TASK_SUCCESS)
+    {
+		MmFree(buffer);
+		char buffer1[1024];
+        sprintf (buffer1, "Cannot create thread to execute '%s'. Out of memory?", pFileName);
+        MessageBox(NULL, buffer1, "Error", ICON_ERROR << 16 | MB_OK);
+		
+		return RESOURCE_LAUNCH_OUT_OF_MEMORY;
+    }
+	
+	KeUnsuspendTask(pTask);
+	KeDetachTask(pTask);
+	
+	// Consider it done.  CabinetEntry task shall now MmFree the string allocated.
+	return RESOURCE_LAUNCH_SUCCESS;
+}
+
 RESOURCE_STATUS NotepadLaunchResource(const char* pResource)
 {
 	char *buffer = (char*)MmAllocate(512);
 	strcpy (buffer, pResource);
 	
 	int errorCode = 0;
-	Task* pTask = KeStartTask(BigTextEntry, (int)buffer, &errorCode);
+	Task* pTask = KeStartTask(BigTextEntry, (long)buffer, &errorCode);
 	if (errorCode != TASK_SUCCESS)
 	{
 		MmFree(buffer);
@@ -109,7 +140,7 @@ RESOURCE_STATUS ScribbleLaunchResource(const char* pResource)
 	strcpy (buffer, pResource);
 	
 	int errorCode = 0;
-	Task* pTask = KeStartTask(PrgPaintTask, (int)buffer, &errorCode);
+	Task* pTask = KeStartTask(PrgPaintTask, (long)buffer, &errorCode);
 	if (errorCode != TASK_SUCCESS)
 	{
 		MmFree(buffer);
@@ -147,6 +178,7 @@ const RESOURCE_INVOKE g_ResourceInvokes[] = {
 	CabinetExecute,//RESOURCE_EXWINDOW
 	HelpOpenResource,//RESOURCE_HELP
 	ScribbleLaunchResource,//RESOURCE_IMAGE
+	CabinetLaunchDirectory,//RESOURCE_DIRECTORY
 };
 
 RESOURCE_TYPE ResolveProtocolString(const char* protocol)
@@ -159,6 +191,7 @@ RESOURCE_TYPE ResolveProtocolString(const char* protocol)
 	if (STREQ(protocol, "exwindow"))   return RESOURCE_EXWINDOW;
 	if (STREQ(protocol, "help"))       return RESOURCE_HELP;
 	if (STREQ(protocol, "image"))      return RESOURCE_IMAGE;
+	if (STREQ(protocol, "cabinet"))    return RESOURCE_DIRECTORY;
 	return RESOURCE_NONE;
 }
 
@@ -248,9 +281,16 @@ RESOURCE_STATUS LaunchFileOrResource(const char* pResource)
 	if (res < 0)
 		return RESOURCE_LAUNCH_NOT_FOUND;
 	
-	FileAssociation* pAssoc = ResolveAssociation(pResource, sr.m_type);
-	
-	RESOURCE_TYPE resourceType = ResolveProtocolString(pAssoc->protocol);
+	RESOURCE_TYPE resourceType;
+	if (sr.m_type & FILE_TYPE_DIRECTORY)
+	{
+		resourceType = RESOURCE_DIRECTORY;
+	}
+	else
+	{
+		FileAssociation* pAssoc = ResolveAssociation(pResource, sr.m_type);
+		resourceType = ResolveProtocolString(pAssoc->protocol);
+	}
 	if (resourceType == RESOURCE_NONE)
 		return RESOURCE_LAUNCH_INVALID_PROTOCOL;
 	

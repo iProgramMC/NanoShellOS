@@ -954,7 +954,7 @@ int main()
 		bRequestingNewSize = false;
 		
 		Window* pWindow = g_pWindow = CreateWindow ("Minesweeper", minesweeperX, minesweeperY, MINESW_WIDTH, MINESW_HEIGHT, PrgMineProc, 0);
-		SetWindowIcon (pWindow, ICON_BOMB);
+		SetWindowIcon (pWindow, ICON_BOMB_SPIKEY);
 		
 		if (!pWindow)
 		{

@@ -13,7 +13,7 @@
 // This is still a work in progress.
 #define C_MAX_STATS_BEFORE_QUIT (256)
 
-#define TABLE_COLUMNS (3)
+#define TABLE_COLUMNS (4)
 
 //TODO: Move this to its own space.
 typedef struct
@@ -21,6 +21,7 @@ typedef struct
 	char m_cabinetCWD[PATH_MAX+2];
 	char m_cbntOldCWD[PATH_MAX+2];
 	bool m_bUsingTableView;
+	char*m_pDestCWD;
 }
 CabData;
 
@@ -45,6 +46,7 @@ void FormatSizeDetailed(uint32_t size, char* size_buf)
 
 #define g_cabinetCWD (((CabData*)pWindow->m_data)->m_cabinetCWD)
 #define g_cbntOldCWD (((CabData*)pWindow->m_data)->m_cbntOldCWD)
+#define g_pDestCWD   (((CabData*)pWindow->m_data)->m_pDestCWD)
 #define g_bUsingTableView (((CabData*)pWindow->m_data)->m_bUsingTableView)
 
 enum
@@ -103,6 +105,7 @@ static void ClearFileListing(Window * pWindow)
 		AddTableColumn(pWindow, MAIN_LISTVIEW, "Name", 200);
 		AddTableColumn(pWindow, MAIN_LISTVIEW, "Size", 100);
 		AddTableColumn(pWindow, MAIN_LISTVIEW, "Last modified date", 150);
+		AddTableColumn(pWindow, MAIN_LISTVIEW, "File type", 150);
 	}
 	else
 	{
@@ -123,7 +126,7 @@ static void ChangeListViewMode(Window* pWindow)
 }
 
 // size = -1, means don't show anything to the file
-static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size, int last_modified_date, bool is_symlink)
+static void AddFileElementToList(Window* pWindow, const char * text, int icon, uint32_t file_size, int last_modified_date, bool is_symlink, const char * description)
 {
 	if (is_symlink)
 		icon |= ICON_SHORTCUT_FLAG;
@@ -148,6 +151,7 @@ static void AddFileElementToList(Window* pWindow, const char * text, int icon, u
 		table[0] = text;
 		table[1] = size_buf;
 		table[2] = date_buf;
+		table[3] = description;
 		
 		AddTableRow(pWindow, MAIN_LISTVIEW, table, icon);
 	}
@@ -165,7 +169,7 @@ static void UpdateDirectoryListing (Window* pWindow)
 	
 	if (strcmp (g_cabinetCWD, "/")) //if can go to parent, add a button
 	{
-		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1, false);
+		AddFileElementToList(pWindow, "..", ICON_FOLDER_PARENT, -1, -1, false, "Up one level");
 	}
 	
 	DirEnt ent, *pEnt = &ent;
@@ -205,8 +209,8 @@ static void UpdateDirectoryListing (Window* pWindow)
 		if (res < 0)
 		{
 			char buf[512];
-			sprintf(buf, "%s (can't stat -- %s)", pEnt->m_name, GetErrNoString(res));
-			AddFileElementToList(pWindow, buf, ICON_ERROR, -1, -1, false);
+			sprintf(buf, "%s (cannot stat)", pEnt->m_name, GetErrNoString(res));
+			AddFileElementToList(pWindow, buf, ICON_ERROR, -1, -1, false, GetErrNoString(res));
 		}
 		else if (pEnt->m_type == FILE_TYPE_SYMBOLIC_LINK && filesDone < C_MAX_STATS_BEFORE_QUIT)
 		{
@@ -215,7 +219,7 @@ static void UpdateDirectoryListing (Window* pWindow)
 			if (res < 0)
 			{
 				// TODO: ICON_CHAIN_BROKEN
-				AddFileElementToList(pWindow, pEnt->m_name, ICON_CHAIN_BROKEN, (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, true);
+				AddFileElementToList(pWindow, pEnt->m_name, ICON_CHAIN_BROKEN, (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, true, "Broken symbolic link");
 			}
 			else
 			{
@@ -226,8 +230,11 @@ static void UpdateDirectoryListing (Window* pWindow)
 		}
 		else
 		{
+			FileAssociation* pAssoc;
 		stat_done:
-			AddFileElementToList(pWindow, pEnt->m_name, CabGetIconBasedOnName(pName, pEnt->m_type), (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, bIsSymLink);
+			pAssoc = ResolveAssociation(pName, pEnt->m_type);
+			
+			AddFileElementToList(pWindow, pEnt->m_name, pAssoc->icon, (pEnt->m_type != FILE_TYPE_FILE) ? (-1) : statResult.m_size, statResult.m_modifyTime, bIsSymLink, pAssoc->description);
 		}
 	}
 	
@@ -543,7 +550,16 @@ void CALLBACK CabinetWindowProc (Window* pWindow, int messageType, long parm1, l
 				AddMenuBarItem(pWindow, MAIN_MENU_BAR, MENU$HELP, MENU$HELP$ABOUT, "About File Cabinet");
 			}
 			
-			CabinetChangeDirectory(pWindow, "/", false);
+			if (g_pDestCWD)
+			{
+				CabinetChangeDirectory(pWindow, g_pDestCWD, true);
+				MmFree(g_pDestCWD);
+				g_pDestCWD = NULL;
+			}
+			else
+			{
+				CabinetChangeDirectory(pWindow, "/", false);
+			}
 			
 			// Add the cool bar widgets
 			int i = 0;
@@ -668,7 +684,7 @@ static void CreateListView(Window* pWindow)
 	}
 }
 
-void CabinetEntry (UNUSED long argument)
+void CabinetEntry (long argument)
 {
 	// create ourself a window:
 	int xPos = (GetScreenSizeX() - CABINET_WIDTH)  / 2;
@@ -684,12 +700,23 @@ void CabinetEntry (UNUSED long argument)
 	
 	pWindow->m_iconID = ICON_CABINET;
 	
-	pWindow->m_data = MmAllocate(sizeof(CabData));
+	CabData* pData = pWindow->m_data = MmAllocate(sizeof(CabData));
+	if (!pData)
+	{
+		if (argument)
+			MmFree((char*)argument);
+		
+		SLogMsg("Cabinet data couldn't be allocated!!");
+		DestroyWindow(pWindow);
+		while (HandleMessages(pWindow));
+		return;
+	}
+	
+	g_pDestCWD = NULL;
+	if (argument)
+		g_pDestCWD = (char*) argument;
 	
 	g_bUsingTableView = true;
-	
-	// setup:
-	//ShowWindow(pWindow);
 	
 	// event loop:
 #if THREADING_ENABLED
