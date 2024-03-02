@@ -35,7 +35,10 @@ keep/*
 apps/**/build/*
 apps/**/*.nse
 
-#apps I don't want out yet because I do not like embedding third party code or experiments into the OS repo
+#apps I don't want to embed yet because of either:
+# - they have third party code
+# - they are experiments
+# - they are incomplete
 apps/ArduNS/*
 fs/Bin/ArduNS.nse
 fs/Bin/Dink.nse
@@ -47,6 +50,7 @@ apps/nsshell/*
 apps/Reversi/*
 apps/halfix/*
 apps/HexEditor/*
+apps/SkiTest/*
 
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
@@ -56,6 +60,7 @@ fs/Bin/Reversi.nse
 fs/Bin/test.nse
 fs/Bin/Chess.nse
 fs/Bin/HexEditor.nse
+fs/Bin/SkiTest.nse
 fs/Tests/*.png
 fs/User/*
 

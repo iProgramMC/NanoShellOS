@@ -10,6 +10,7 @@ add_item|46|1|Command prompt|shell:cmdshell
 add_item|1|1|File cabinet|shell:cabinet
 add_item|96|1|Text editor|shell:notepad
 add_item|121|1|System monitor|shell:sysmon
+//add_item|1|1|game|exwindow:/Bin/SkiTest.nse
 
 //add_item|123|1|3d test|exwindow:/Bin/3DTest.nse
 
