@@ -27,10 +27,10 @@ The following third party code is also licensed under the GNU GPL version 3.
 
 ## Screenshots
 
+<img src="images/2024_03_02_15_03_24.png"/>
 <img src="images/2023_11_09_22_35_47.png"/>
 <img src="images/2023_02_12_21_53_28.png"/>
 <img src="images/2022_11_07_19_35_35.png"/>
-<img src="images/2022_08_04_00_48_25.png"/>
 [More images...](https://github.com/iProgramMC/NanoShellOS/blob/master/images)
 
 ## Goals

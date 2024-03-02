@@ -2099,9 +2099,9 @@ void VidInit()
 		}
 		
 		uint32_t pointer = pInfo->framebuffer_addr;
-		void *final_address = MhMapPhysicalMemory(pointer, MAX_VIDEO_PAGES, true);
-		
 		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
+		void *final_address = MhMapPhysicalMemory(pointer, (p + 4095) / 4096, true);
+		
 		g_framebufferCopy = MmAllocateInternal(p, ALLOCATE_BUT_DONT_WRITE_PHYS, false);
 		
 		// initialize the VBE data:
