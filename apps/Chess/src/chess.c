@@ -202,7 +202,8 @@ bool ChessCheckLegalBasedOnRank(BoardState* pState, int rowSrc, int colSrc, int 
 					for (int i = 0; i < NPLAYERS; i++)
 					{
 						if (pcSrc->color == (eColor)i) continue;
-						if (pState->m_PlayerState[i].m_nEnPassantColumn == colDst)
+						
+						if (pState->m_PlayerState[i].m_nEnPassantColumn == colDst && ((i == WHITE && rowDst == 2) || (i == BLACK && rowDst == BOARD_SIZE - 2)))
 						{
 							// would do en passant
 							*bWouldDoEP = true;
