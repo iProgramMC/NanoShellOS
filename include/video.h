@@ -487,5 +487,15 @@ void ScrollRect(Rectangle* pRect, int amountX, int amountY);
  */
 bool RectangleIntersect(Rectangle* pRectOut, const Rectangle* r1, const Rectangle* r2);
 
+/**
+ * Offsets a rectangle by an X/Y coordonate pair.
+ */
+SAI void OffsetRect(Rectangle* pRect, int x, int y)
+{
+	pRect->left   += x;
+	pRect->top    += y;
+	pRect->right  += x;
+	pRect->bottom += y;
+}
 
 #endif//_VIDEO_H

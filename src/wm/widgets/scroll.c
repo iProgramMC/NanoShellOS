@@ -22,6 +22,10 @@ void CtlSetScrollBarPos (Control *pControl, int pos)
 {
 	pControl->m_scrollBarData.m_pos = pos;
 }
+void CtlSetScrollBarPageSize(Control* pControl, int pos)
+{
+	
+}
 int CtlGetScrollBarPos (Control *pControl)
 {
 	return pControl->m_scrollBarData.m_pos;
@@ -64,6 +68,17 @@ void SetScrollBarPos (Window *pWindow, int comboID, int pos)
 		if (pWindow->m_pControlArray[i].m_comboID == comboID)
 		{
 			CtlSetScrollBarPos (&pWindow->m_pControlArray[i], pos);
+			return;
+		}
+	}
+}
+void SetScrollBarPageSize(Window* pWindow, int comboID, int pageSize)
+{
+	for (int i = 0; i < pWindow->m_controlArrayLen; i++)
+	{
+		if (pWindow->m_pControlArray[i].m_comboID == comboID)
+		{
+			CtlSetScrollBarPageSize(&pWindow->m_pControlArray[i], pageSize);
 			return;
 		}
 	}
@@ -128,8 +143,16 @@ go_back:;
 	
 	switch (eventType)
 	{
+		case EVENT_CREATE:
+		{
+			this->m_scrollBarData.m_pageSize = 0;
+			break;
+		}
 		case EVENT_CLICKCURSOR:
 		{
+			if (this->m_bDisabled)
+				break;
+			
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			if (RectangleContains(&basic_rectangle, &p) || this->m_scrollBarData.m_clickedBefore)
 			{
@@ -175,6 +198,9 @@ go_back:;
 		}
 		case EVENT_RELEASECURSOR:
 		{
+			if (this->m_bDisabled)
+				break;
+			
 			if (this->m_scrollBarData.m_isBeingDragged || this->m_scrollBarData.m_yMinButton || this->m_scrollBarData.m_yMaxButton)
 			{
 				eventType = EVENT_PAINT;
@@ -219,10 +245,13 @@ go_back:;
 			else
 				DrawEdge(right_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			if (this->m_scrollBarData.m_isBeingDragged)
-				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
-			else
-				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+			if (!this->m_bDisabled)
+			{
+				if (this->m_scrollBarData.m_isBeingDragged)
+					DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+				else
+					DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+			}
 			
 			//left_button.top++;
 			//right_button.top++;
@@ -243,8 +272,29 @@ go_back:;
 			VidDrawText ("\x1D",   scroller,     TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
 			*/
 			
-			DrawArrow(left_button,  DRA_LEFT,  DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
-			DrawArrow(right_button, DRA_RIGHT, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			if (this->m_bDisabled)
+			{
+				//small hack
+				uint8_t b[4];
+				*((uint32_t*)b) = BUTTONMIDD;
+				b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+				uint32_t color = *((uint32_t*) b);
+				
+				OffsetRect(&left_button,  1, 1);
+				OffsetRect(&right_button, 1, 1);
+				DrawArrow(left_button,  DRA_LEFT,  DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR_LIGHT);
+				DrawArrow(right_button, DRA_RIGHT, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR_LIGHT);
+				
+				OffsetRect(&left_button,  -1, -1);
+				OffsetRect(&right_button, -1, -1);
+				DrawArrow(left_button,  DRA_LEFT,  DRA_CENTERALL | DRA_IGNORESIZE, color);
+				DrawArrow(right_button, DRA_RIGHT, DRA_CENTERALL | DRA_IGNORESIZE, color);
+			}
+			else
+			{
+				DrawArrow(left_button,  DRA_LEFT,  DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+				DrawArrow(right_button, DRA_RIGHT, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			}
 			
 			break;
 		}
@@ -281,8 +331,16 @@ go_back:;
 	
 	switch (eventType)
 	{
+		case EVENT_CREATE:
+		{
+			this->m_scrollBarData.m_pageSize = 0;
+			break;
+		}
 		case EVENT_RELEASECURSOR:
 		{
+			if (this->m_bDisabled)
+				break;
+			
 			if (this->m_scrollBarData.m_isBeingDragged || this->m_scrollBarData.m_yMinButton || this->m_scrollBarData.m_yMaxButton)
 			{
 				this->m_scrollBarData.m_isBeingDragged = false;
@@ -314,6 +372,9 @@ go_back:;
 		}
 		case EVENT_CLICKCURSOR:
 		{
+			if (this->m_bDisabled)
+				break;
+			
 			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
 			
 			if (RectangleContains(&basic_rectangle, &p) || this->m_scrollBarData.m_clickedBefore)
@@ -372,10 +433,13 @@ go_back:;
 			else
 				DrawEdge(bottom_button, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
 			
-			if (this->m_scrollBarData.m_isBeingDragged)
-				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
-			else
-				DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+			if (!this->m_bDisabled)
+			{
+				if (this->m_scrollBarData.m_isBeingDragged)
+					DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER | DRE_HOT, BUTTON_HOVER_COLOR);
+				else
+					DrawEdge(scroller, DRE_FILLED | DRE_RAISEDINNER | DRE_RAISEDOUTER, BUTTONMIDD);
+			}
 			
 			if (this->m_scrollBarData.m_yMinButton)
 				top_button   .left++, top_button   .right++, top_button   .bottom++, top_button   .top++;
@@ -383,14 +447,30 @@ go_back:;
 			if (this->m_scrollBarData.m_yMaxButton)
 				bottom_button.left++, bottom_button.right++, bottom_button.bottom++, bottom_button.top++;
 			
-			/*
-			VidDrawText ("\x18",   top_button,    TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-			VidDrawText ("\x19",   bottom_button, TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-			VidDrawText ("\x12",   scroller,      TEXTSTYLE_HCENTERED|TEXTSTYLE_VCENTERED, WINDOW_TEXT_COLOR, TRANSPARENT);
-			*/
-			
-			DrawArrow(top_button,    DRA_UP,   DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
-			DrawArrow(bottom_button, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			if (this->m_bDisabled)
+			{
+				//small hack
+				uint8_t b[4];
+				*((uint32_t*)b) = BUTTONMIDD;
+				b[0] >>= 1; b[1] >>= 1; b[2] >>= 1; b[3] >>= 1;
+				uint32_t color = *((uint32_t*) b);
+				
+				OffsetRect(&top_button,    1, 1);
+				OffsetRect(&bottom_button, 1, 1);
+				DrawArrow(top_button,    DRA_UP,   DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR_LIGHT);
+				DrawArrow(bottom_button, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR_LIGHT);
+
+				OffsetRect(&top_button,    -1, -1);
+				OffsetRect(&bottom_button, -1, -1);
+				DrawArrow(top_button,    DRA_UP,   DRA_CENTERALL | DRA_IGNORESIZE, color);
+				DrawArrow(bottom_button, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, color);
+
+			}
+			else
+			{
+				DrawArrow(top_button,    DRA_UP,   DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+				DrawArrow(bottom_button, DRA_DOWN, DRA_CENTERALL | DRA_IGNORESIZE, WINDOW_TEXT_COLOR);
+			}
 			
 			break;
 		}

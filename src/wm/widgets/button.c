@@ -37,32 +37,31 @@ bool WidgetButton_OnEvent(Control* this, int eventType, long parm1, UNUSED long 
 	{
 		case EVENT_RELEASECURSOR:
 		{
-			if (!this->m_bDisabled)
-			{
-				Rectangle r = this->m_rect;
-				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-				if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
-				{
-					//send a command event to the window:
-					CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, 0);
-				}
-				this->m_buttonData.m_clicked = false;
-				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
-			}
+			if (this->m_bDisabled)
+				break;
 			
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && this->m_buttonData.m_clicked)
+			{
+				//send a command event to the window:
+				CallWindowCallback(pWindow, EVENT_COMMAND, this->m_comboID, 0);
+			}
+			this->m_buttonData.m_clicked = false;
+			WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			break;
 		}
 		case EVENT_CLICKCURSOR:
 		{
-			if (!this->m_bDisabled)
+			if (this->m_bDisabled)
+				break;
+			
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
 			{
-				Rectangle r = this->m_rect;
-				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-				if (RectangleContains (&r, &p) && !this->m_buttonData.m_clicked)
-				{
-					this->m_buttonData.m_clicked = true;
-					WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
-				}
+				this->m_buttonData.m_clicked = true;
+				WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			break;
 		}
@@ -73,29 +72,28 @@ bool WidgetButton_OnEvent(Control* this, int eventType, long parm1, UNUSED long 
 			break;
 		case EVENT_MOVECURSOR:
 		{
-			if (!this->m_bDisabled)
+			if (this->m_bDisabled)
 			{
-				Rectangle r = this->m_rect;
-				Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
-				if (RectangleContains (&r, &p))
+				this->m_buttonData.m_hovered = false;
+				break;
+			}
+			
+			Rectangle r = this->m_rect;
+			Point p = { GET_X_PARM(parm1), GET_Y_PARM(parm1) };
+			if (RectangleContains (&r, &p))
+			{
+				if (!this->m_buttonData.m_hovered)
 				{
-					if (!this->m_buttonData.m_hovered)
-					{
-						this->m_buttonData.m_hovered = true;
-						if (g_GlowOnHover)
-							WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
-					}
-				}
-				else if (this->m_buttonData.m_hovered)
-				{
-					this->m_buttonData.m_hovered = false;
+					this->m_buttonData.m_hovered = true;
 					if (g_GlowOnHover)
 						WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 				}
 			}
-			else
+			else if (this->m_buttonData.m_hovered)
 			{
 				this->m_buttonData.m_hovered = false;
+				if (g_GlowOnHover)
+					WidgetButton_OnEvent (this, EVENT_PAINT, 0, 0, pWindow);
 			}
 			break;
 		}
