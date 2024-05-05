@@ -204,9 +204,9 @@ void VbGuestInit()
 	}
 	
 	// BAR0 is the IO port
-	gVbPort    = PciGetBar (pDevice, 0) & 0xFFFFFFFC;
+	gVbPort    = PciGetBarIo(pDevice, 0);
 	// BAR1 is the memory-mapped VmmDevMem area
-	gVbVmmDevP = PciGetBar (pDevice, 1) & 0xFFFFFFF0;
+	gVbVmmDevP = PciGetBarAddress(pDevice, 1);
 	
 	// Setup acknowledgement packet
 	VbSetupAcknowledge();

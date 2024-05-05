@@ -153,7 +153,7 @@ void AhciOnDeviceFound (PciDevice *pPCI)
 {
 	//AHCI Base Address is BAR5.
 	
-	uintptr_t nAHCIBaseAddr = PciGetBar (pPCI, 5);
+	uintptr_t nAHCIBaseAddr = PciGetBarAddress(pPCI, 5);
 	
 	SLogMsg("The AHCI Controller's base address is %x.", nAHCIBaseAddr);
 	

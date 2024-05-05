@@ -44,43 +44,26 @@ void PciUConfigWriteDword (uint8_t bus, uint8_t slot, uint8_t func, uint8_t offs
 
 uint16_t PciUGetVendorID(uint8_t bus, uint8_t slot, uint8_t func)
 {
-	return PciUConfigReadWord (bus, slot, func, 0);
+	return PciUConfigReadWord (bus, slot, func, PCI_OFF_VENDOR_ID);
 }
 
 uint16_t PciUGetDeviceID(uint8_t bus, uint8_t slot, uint8_t func)
 {
-	return PciUConfigReadWord (bus, slot, func, 2);
+	return PciUConfigReadWord (bus, slot, func, PCI_OFF_DEVICE_ID);
 }
 uint16_t PciUGetClassID(uint8_t bus, uint8_t slot, uint8_t func)
 {
-	uint32_t value = PciUConfigReadWord (bus, slot, func, 10);
+	uint32_t value = PciUConfigReadWord (bus, slot, func, PCI_OFF_CLASSID);
 	return (value & 0xFF00) >> 8;
 }
 uint16_t PciUGetSubClassID(uint8_t bus, uint8_t slot, uint8_t func)
 {
-	uint32_t value = PciUConfigReadWord (bus, slot, func, 10);
+	uint32_t value = PciUConfigReadWord (bus, slot, func, PCI_OFF_CLASSID);
 	return (value & 0x00FF);
 }
 uint32_t PciUGetBar(uint8_t bus, uint8_t slot, uint8_t func, uint8_t bar_id)
 {
-	uint32_t bar_address = PciUConfigReadDword (bus, slot, func, 16 + 4 * bar_id);
-	uint8_t type = (bar_address >> 1) & 3;
-	
-	switch (type)
-	{
-		case 0x0000:
-			//32-bit MMIO
-			return bar_address & 0xFFFFFFF0u;
-		case 0x0002:
-			//64-bit MMIO. TODO
-			//Also get BAR1
-			return bar_address & 0xFFFFFFF0u;//|(BAR1<<32) <-- BAR1 as raw value.
-		default:
-			//Reserved:
-			return 0x00000000;
-	}
-	
-	//return (value & ~0xF);
+	return PciUConfigReadDword (bus, slot, func, PCI_OFF_BAR_START + 4 * bar_id);
 }
 extern bool     g_IsBGADevicePresent;
 extern uint32_t g_BGADeviceBAR0;
@@ -181,9 +164,30 @@ uint16_t PciGetSubClassID(PciDevice *pDevice)
 {
 	return PciUGetSubClassID(pDevice->bus, pDevice->slot, pDevice->func);
 }
-uint32_t PciGetBar       (PciDevice *pDevice, uint8_t bar_id)
+uint32_t PciGetBar(PciDevice *pDevice, uint8_t bar_id)
 {
 	return PciUGetBar(pDevice->bus, pDevice->slot, pDevice->func, bar_id);
+}
+uint32_t PciGetBarAddress(PciDevice *pDevice, uint8_t bar_id)
+{
+	uint32_t bar = PciGetBar(pDevice, bar_id);
+	if (bar & 1) return 0; // this is an I/O space BAR
+	
+	uint8_t type = (bar >> 1) & 3;
+	if (type == 0) return bar & 0xFFFFFFF0;
+	if (type == 2) return bar & 0xFFFFFFF0; // also read bar_id+1 here
+	return 0; // reserved kind of BAR
+}
+uint32_t PciGetBarIo(PciDevice *pDevice, uint8_t bar_id)
+{
+	uint32_t bar = PciGetBar(pDevice, bar_id);
+	if (~bar & 1) return 0; // this is an address space BAR
+	
+	return bar & 0xFFFFFFFC;
+}
+uint16_t PciGetIrqData(PciDevice *pDevice)
+{
+	return PciConfigReadWord (pDevice, PCI_OFF_INTDATA);
 }
 
 const char* PciGetVendorIDText(uint16_t venid)
@@ -200,6 +204,7 @@ const char* PciGetVendorIDText(uint16_t venid)
 		case 0x10DE: return "NVIDIA Corporation";
 		case 0x1022: return "Advanced Micro Devices, Inc.";
 		case 0x106B: return "Apple, Inc.";
+		case 0x10EC: return "Realtek Semiconductor Co., Ltd.";
 		//TODO
 		
 		//default
@@ -230,5 +235,14 @@ void PciInit()
 	PciProbe();
 }
 
-
-
+void PciEnableBusMastering(PciDevice *pDevice)
+{
+	// Read status and command.
+	uint32_t commandAndStatus = PciConfigReadDword (pDevice, PCI_OFF_COMMAND);
+	
+	// Set the bit.
+	commandAndStatus |= PCI_CMD_BUSMASTER;
+	
+	// Write the status and command. The status write should be ignored
+	PciConfigWriteDword(pDevice, PCI_OFF_COMMAND, commandAndStatus);
+}

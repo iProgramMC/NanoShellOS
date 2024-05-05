@@ -10,10 +10,12 @@
 #define VENDORID_INTEL          0x8086
 #define VENDORID_VIRTUALBOX     0x80EE
 #define VENDORID_QEMU           0x1234
+#define VENDORID_REALTEK        0x10EC
 
 #define DEVICEID_BXGFX          0x1111
 #define DEVICEID_BXGFXVBOX      0xBEEF
 #define DEVICEID_VBXGUESTDEVICE 0xCAFE
+#define DEVICEID_RTL8139        0x8139
 
 typedef struct PciDevice {
 	union {
@@ -141,8 +143,37 @@ uint16_t PciGetVendorID  (PciDevice *pDevice);
 uint16_t PciGetDeviceID  (PciDevice *pDevice);
 uint16_t PciGetClassID   (PciDevice *pDevice);
 uint16_t PciGetSubClassID(PciDevice *pDevice);
+uint32_t PciGetBarAddress(PciDevice *pDevice, uint8_t bar_id);
+uint32_t PciGetBarIo     (PciDevice *pDevice, uint8_t bar_id);
 uint32_t PciGetBar       (PciDevice *pDevice, uint8_t bar_id);
+uint16_t PciGetIrqData   (PciDevice *pDevice);
 
 PciDevice* PciFindDevice (uint16_t vendorid, uint16_t deviceid);
+
+void PciEnableBusMastering(PciDevice *pDevice);
+
+// Offsets in the PCI device structure
+#define PCI_OFF_VENDOR_ID (0)
+#define PCI_OFF_DEVICE_ID (2)
+#define PCI_OFF_COMMAND   (4)
+#define PCI_OFF_STATUS    (6)
+#define PCI_OFF_REVPROG   (8)  // Revision Id, Prog If
+#define PCI_OFF_CLASSID   (10) // Class Id, Subclass Id
+
+// For general devices (type 0x0):
+#define PCI_OFF_BAR_START (16)
+#define PCI_OFF_INTDATA   (0x3C)
+
+// Command Word
+#define PCI_CMD_IOSPACE    (1 << 0)
+#define PCI_CMD_MEMSPACE   (1 << 1)
+#define PCI_CMD_BUSMASTER  (1 << 2)
+#define PCI_CMD_SPECCYCLE  (1 << 3)
+#define PCI_CMD_MEMWRINV   (1 << 4)
+#define PCI_CMD_VGAPALSNP  (1 << 5)
+#define PCI_CMD_PARERRRES  (1 << 6)
+#define PCI_CMD_SERRNENAB  (1 << 8)
+#define PCI_CMD_FASTB2BEN  (1 << 9)
+#define PCI_CMD_INTDISABLE (1 << 10)
 
 #endif//_PCI_H

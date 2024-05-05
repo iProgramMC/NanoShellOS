@@ -54,6 +54,7 @@ void KiLaunch(TaskedFunction func);
 bool KiEmergencyMode();
 void KiInitializeSlabs();
 void CrashReporterInit();
+void Rtl8139Init();
 
 static int s_stopwatchStart;
 
@@ -150,6 +151,7 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	VbInitIfApplicable();
 	#endif
 	MouseInit();
+	Rtl8139Init();
 	VmwInitIfApplicable();
 	ShellInit();
 	//TestFontInit();
