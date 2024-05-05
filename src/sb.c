@@ -283,17 +283,14 @@ static void SbSetupDma(uintptr_t buf1, u32 len)
     WritePort(0xD4, DMA_CHANNEL_16 % 4);
 }
 
-void SbIrqHandler()
+void Sb16InterruptHandler()
 {
     gBufferFlip = !gBufferFlip;
-
+	
     SbFillBuffer(
         &gSoundBuffer[gBufferFlip ? 0 : (BUFFER_SIZE / 2)],
         (BUFFER_SIZE / 2)
     );
-
-	WritePort (0x20, 0x20);
-	WritePort (0xA0, 0x20);
 	
     ReadPort(DSP_READ_STATUS);
     ReadPort(DSP_ACK_16);
@@ -309,6 +306,8 @@ static void SbSetupIrq() {
 		ILogMsg("SB16 has incorrect IRQ: %d", v);
 		return;
     }
+	
+	KeRegisterIrqHandler(MIXER_IRQ, Sb16InterruptHandler, false);
 }
 
 void SbSetUpFile();

@@ -48,6 +48,24 @@ extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
 extern void WaitMS(int ms);
-extern void SetupPicInterrupt (int intNum, void* isrHandler);
+//extern void SetupPicInterrupt (int intNum, void* isrHandler);
+
+
+// Registers an IRQ handler.
+//
+// Note that the IRQ might be fired for other reasons, e.g. if you have a network
+// card and a sound card in the same slot.  So your dispatcher must check with the
+// device it supports in order to see if it was even for your device.
+typedef void(*InterruptDispatcher)();
+void KeRegisterIrqHandler(int irqNo, InterruptDispatcher dispatcher, bool interruptsDisabled);
+
+#define IRQ_TIMER    (0)
+#define IRQ_KEYBOARD (1)
+#define IRQ_CASCADE  (2)
+#define IRQ_COM2     (3)
+#define IRQ_COM1     (4)
+#define IRQ_LPT1     (7)
+#define IRQ_CLOCK    (8)
+#define IRQ_MOUSE    (12)
 
 #endif//_IDT_H

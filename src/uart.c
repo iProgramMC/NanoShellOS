@@ -7,6 +7,7 @@
 #include <uart.h>
 #include <string.h>
 #include <vfs.h>
+#include <idt.h>
 
 const short g_uart_port_bases[] = { 0x3F8, 0x2F8 };//, 0x3E8, 0x2E8 };
 
@@ -89,32 +90,72 @@ const short g_uart_port_bases[] = { 0x3F8, 0x2F8 };//, 0x3E8, 0x2E8 };
 bool UartIsTransmitEmpty(uint8_t comNum)
 {
 	short Port = g_uart_port_bases[comNum];
-	return((ReadPort(Port + 5) & 0x20) != 0);
+	return((ReadPort(Port + S_LSR) & 0x20) != 0);
 }
 
 bool UartIsReceiveEmpty(uint8_t comNum)
 {
 	short Port = g_uart_port_bases[comNum];
-	return((ReadPort(Port + 5) & 0x01) == 0);
+	return((ReadPort(Port + S_LSR) & 0x01) == 0);
+}
+
+void UartOnCharacterRead(uint8_t com_num, char chr)
+{
+	SLogMsg("Got character %d from port %d", chr, com_num);
 }
 
 void UartOnInterrupt(uint8_t com_num)
 {
-	// PIC EOI
-	WritePort (0x20, 0x20);
-	WritePort (0xA0, 0x20);
-	
-	uint8_t status = ReadPort (S_IIR);
-	
-	//SLogMsg("Got uart interrupt on COM%d. Status: %b", com_num + 1, status);
-	
+	short Port = g_uart_port_bases[com_num];
+	uint8_t status = ReadPort(Port + S_IIR);
 	status &= 0xF;
+	SLogMsg("Received uart interrupt for port %d. Status %d", com_num, status);
 	
-	if (status == 0x4) // Receiver
+	switch (status)
 	{
-		while (!UartIsReceiveEmpty(com_num))
-			ReadPort (S_RBR);
+		case 0x0: // One of the delta flags in the MSR set. 
+		{
+			ReadPort(Port + S_MSR);
+			break;
+		}
+		case 0x1: // no interrupt pending
+		{
+			break;
+		}
+		
+		case 0x2: // THRE
+		{
+			// serviced already by reading S_IIR
+			break;
+		}
+		
+		case 0x4: // DR or trigger level reached
+		{
+			while (!UartIsReceiveEmpty(com_num)) {
+				UartOnCharacterRead(com_num, ReadPort(Port + S_RBR));
+			}
+			break;
+		}
+		
+		case 0x6: // OE, PE, FE or BI of the LSR set.
+		{
+			uint8_t lsr = ReadPort(Port + S_LSR);
+			break;
+		}
+		
+		case 0xC: // no receiver FIFO action
+		{
+			UartOnCharacterRead(com_num, ReadPort(Port + S_RBR));
+			break;
+		}
 	}
+}
+
+void UartCom1InterruptHandler() {
+	UartOnInterrupt(0);
+}
+void UartCom2InterruptHandler() {
+	UartOnInterrupt(1);
 }
 
 short UartGetPortBase(uint8_t com_num)
@@ -173,6 +214,10 @@ void UartInit(uint8_t com_num)
 	}
 	
 	short Port = g_uart_port_bases[com_num];
+	
+	// Register interrupt(s)
+	KeRegisterIrqHandler(IRQ_COM1, UartCom1InterruptHandler, false);
+	KeRegisterIrqHandler(IRQ_COM2, UartCom2InterruptHandler, false);
 	
 	// Disable All Interrupts
 	WritePort (Port+1, IER_NOINTS);
@@ -238,7 +283,6 @@ void UartInit(uint8_t com_num)
 		UartWriteSingleChar(com_num, *pnText, true);
 		pnText++;
 	}
-	
 }
 
 bool UartWriteSingleChar(uint8_t com_num, char c, bool bBlock)

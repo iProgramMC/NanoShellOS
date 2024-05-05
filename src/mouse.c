@@ -6,6 +6,7 @@
 ******************************************/
 #include <mouse.h>
 #include <config.h>
+#include <idt.h>
 
 enum
 {
@@ -114,12 +115,8 @@ void SetMouseSampleRate(int spd)
 
 //mouse irq//
 #if 1
-void IrqMouse()
+void MouseInterruptHandler()
 {
-	//acknowledge interrupt
-	WritePort(0x20, 0x20);
-	WritePort(0xA0, 0x20); // irq 12!!!
-	
 	uint8_t b = MouseRead();
 	if (g_commandRunning)
 	{
@@ -293,6 +290,9 @@ void MouseInit()
 	
 	ILogMsg("Initializing PS/2 mouse driver... (If on real hardware, the OS may stop at this point)");
 	//return;//don't have it for now
+	
+	KeRegisterIrqHandler(IRQ_MOUSE, MouseInterruptHandler, false);
+	
 	uint8_t _status;
 	
 	// Enable the auxiliary mouse device

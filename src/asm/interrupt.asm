@@ -34,72 +34,57 @@ global OnSyscallReceivedA
 
 section .text
 
-IrqSb16A:
-	pusha
-	call KeOnEnterInterrupt
-	call SbIrqHandler
-	call KeOnExitInterrupt
-	popa
-	iretd
+; IRQ handler macro.  This defines a special handler for a particular IRQ,
+; which allows KeHandleIrq to tell apart different IRQ numbers.
+;
+; Arguments:
+; 0 - IRQ# in hexadecimal
+%macro DEFINE_IRQ_HANDLER 1
+global KiTrapIrq%1
+KiTrapIrq%1:
+	pushad                   ; push all general purpose registers
+	push dword 0x%1          ; push the interrupt number for use with KeHandleIrq
+	jmp KiIrqCommon          ; jump to the common part
+%endmacro
+
+; void KeHandleIrq (uint32_t irqNo)  -- src/idt.c
+extern KeHandleIrq
+
+KiIrqCommon:
+	call KeOnEnterInterrupt  ; preserve interrupt enabled state
+	call KeHandleIrq         ; call the special IRQ handler
+	call KeOnExitInterrupt   ; retrieve old interrupt enabled state
+	add  esp, 4              ; pop the argument
+	popad                    ; pop all general purpose registers
+	iretd                    ; return from the interrupt
+
+DEFINE_IRQ_HANDLER 01
+DEFINE_IRQ_HANDLER 03
+DEFINE_IRQ_HANDLER 04
+DEFINE_IRQ_HANDLER 05
+DEFINE_IRQ_HANDLER 06
+DEFINE_IRQ_HANDLER 07
+DEFINE_IRQ_HANDLER 08
+DEFINE_IRQ_HANDLER 09
+DEFINE_IRQ_HANDLER 0A
+DEFINE_IRQ_HANDLER 0B
+DEFINE_IRQ_HANDLER 0C
+DEFINE_IRQ_HANDLER 0D
+DEFINE_IRQ_HANDLER 0E
+DEFINE_IRQ_HANDLER 0F
 
 IrqVirtualBoxA:
-	;pusha
+	;pushad
 	;call IrqVirtualBox
-	;popa
-	iretd
-
-IrqSerialCom1A:
-	pusha
-	push 0
-	call KeOnEnterInterrupt
-	call UartOnInterrupt
-	call KeOnExitInterrupt
-	add  esp, 4
-	popa
-	iretd
-
-IrqSerialCom2A:
-	pusha
-	push 1
-	call KeOnEnterInterrupt
-	call UartOnInterrupt
-	call KeOnExitInterrupt
-	add  esp, 4
-	popa
+	;popad
 	iretd
 
 IrqTimerA:
-	pusha
+	pushad
 	call KeOnEnterInterrupt
 	call IrqTimer
 	call KeOnExitInterrupt
-	popa
-	iretd
-
-IrqKeyboardA:
-	pusha
-	push esp
-	call KeOnEnterInterrupt
-	call IrqKeyboard
-	call KeOnExitInterrupt
-	add esp, 4
-	popa
-	iretd
-
-IrqClockA:
-	pusha
-	call KeOnEnterInterrupt
-	call IrqClock
-	call KeOnExitInterrupt
-	popa
-	iretd
-
-IrqMouseA:
-	pusha
-	call KeOnEnterInterrupt
-	call IrqMouse
-	call KeOnExitInterrupt
-	popa
+	popad
 	iretd
 
 IrqCascadeA:
@@ -108,7 +93,7 @@ IrqCascadeA:
 OnSyscallReceivedA:
 	; Allow interrupts to come in again. Nested interrupts are supported by the CPU
 	push 0
-	pusha
+	pushad
 	
 	; call isrSoftware with our one and only parm:
 	push esp
@@ -117,7 +102,7 @@ OnSyscallReceivedA:
 	call KeOnExitInterrupt
 	add esp, 4
 	
-	popa
+	popad
 	add esp, 4 ;remove the zero from the stack
 	
 	iretd
@@ -127,7 +112,7 @@ extern IsrExceptionCommon
 global IsrStub%+%1
 IsrStub%+%1:
 	push 0
-	pusha
+	pushad
 	mov  eax, cr2
 	push eax
 	push esp
@@ -144,7 +129,7 @@ extern IsrExceptionCommon
 %macro ExceptionErrorCode 1
 global IsrStub%+%1
 IsrStub%+%1:
-	pusha
+	pushad
 	mov  eax, cr2
 	push eax
 	push esp
@@ -162,7 +147,7 @@ global IsrStub14
 extern MmOnPageFault
 IsrStub14:
 	; the error code has already been pushed
-	pusha                         ; back up all registers
+	pushad                         ; back up all registers
 	mov eax, cr2                  ; push cr2 (the faulting address), to complete the 'registers' struct
 	push eax
 	push esp                      ; push esp - a pointer to the registers* struct
@@ -170,7 +155,7 @@ IsrStub14:
 	call MmOnPageFault            ; call the page fault handler
 	call KeOnExitInterrupt        ; tell us we exited that interrupt
 	add  esp, 8                   ; pop away esp and cr2
-	popa                          ; restore the registers, then return from the page fault
+	popad                          ; restore the registers, then return from the page fault
 	add  esp, 4                   ; pop away the error code
 	iretd
 

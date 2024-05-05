@@ -11,6 +11,7 @@
 #include <time.h>
 #include <string.h>
 #include <print.h>
+#include <idt.h>
 
 #define CURRENT_YEAR 2022
 
@@ -391,11 +392,8 @@ void KiTimingWait()
 	}
 }
 
-void IrqClock()
+void TimerInterruptHandler()
 {
-	//acknowledge interrupt
-	WritePort(0x20, 0x20);
-	WritePort(0xA0, 0x20);
 	//also read register C, may be useful later:
 	WritePort(0x70, 0x0C);
 	
@@ -419,6 +417,7 @@ void IrqClock()
 		g_trustRtcUpdateFinishFlag = true; // yeah, trust me from now on
 		
 		TmGetTime(TmReadTime());
+		g_nEpochTime = CalculateEpochTime();
 	}
 	//(temporarily) load time like so, until (and if) a flag UPDATE_FINISHED interrupt comes
 	if (!g_trustRtcUpdateFinishFlag)
@@ -431,4 +430,33 @@ void IrqClock()
 			g_nEpochTime = CalculateEpochTime();
 		}
 	}
+}
+
+/**
+ * RTC initialization routine.
+ */
+void KeClockInit()
+{
+	WritePort(0x70, 0x8A);
+	WritePort(0x71, 0x20);
+	
+	WritePort(0x70, 0x8B);
+	char flags = ReadPort(0x71);
+	WritePort(0x70, 0x8B);
+	WritePort(0x71, flags | 0x40);
+	
+	//32768>>(14-1) = 4 hz.
+	//I'll enable this in order to get second-periodic interrupts
+	int divisionRate = 13;
+	WritePort(0x70, 0x8A);
+	flags = ReadPort(0x71);
+	WritePort(0x70, 0x8A);
+	WritePort(0x71, (flags & 0xF0) | divisionRate);
+	
+	// hack: https://forum.osdev.org/viewtopic.php?f=1&t=30091
+	WritePort(0x70, 0x0C);
+	ReadPort(0x71);
+	//sti;
+	
+	KeRegisterIrqHandler(IRQ_CLOCK, TimerInterruptHandler, true);
 }

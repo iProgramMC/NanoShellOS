@@ -47,19 +47,21 @@ void SetupSoftInterrupt (int intNum, void *pIsrHandler)
 	pEntry->type_attr = INTGATE;
 	pEntry->selector = KECODESEG;
 }
-void SetupPicInterrupt (int intNum, void* isrHandler)
+static void KiUnmaskIrq(int intNum)
 {
-	IdtEntry* pEntry = &g_idt[0x20 + intNum];
+	int picFlag = intNum & 7;
+	int whichPic = intNum >= 8;
+	
+	*(whichPic ? &gPicMask2 : &gPicMask1) &= ~(1<<picFlag);
+}
+void SetupPicInterrupt (int irqNo, void* isrHandler)
+{
+	IdtEntry* pEntry = &g_idt[0x20 + irqNo];
 	pEntry->offset_lowerbits  = ((int)(isrHandler) & 0xffff);
 	pEntry->offset_higherbits = ((int)(isrHandler) >> 16);
 	pEntry->zero = 0;
 	pEntry->type_attr = INTGATE;
 	pEntry->selector = KECODESEG;
-	
-	int picFlag = intNum & 7;
-	int whichPic = intNum >= 8;
-	
-	*(whichPic ? &gPicMask2 : &gPicMask1) &= ~(1<<picFlag);
 }
 void SetupExceptionInterrupt (int intNum, void* isrHandler)
 {
@@ -300,7 +302,7 @@ void KeTimerInit()
  */
 void IrqTimer()
 {
-	//ILogMsg("Timer!");
+	SLogMsg("Timer!");
 	WritePort(0x20, 0x20);
 	WritePort(0xA0, 0x20);
 }
@@ -309,13 +311,7 @@ unsigned long idtPtr[2];
 // some forward declarations
 extern void IrqTaskA();
 extern void IrqTaskB();
-extern void IrqClockA();
-extern void IrqMouseA();
-extern void IrqSb16A();
-extern void IrqVirtualBoxA();
 extern void IrqCascadeA();
-extern void IrqSerialCom1A();
-extern void IrqSerialCom2A();
 extern void OnSyscallReceivedA();
 void KeClockInit();
 
@@ -330,21 +326,43 @@ void KeIdtLoad1(IdtPointer *ptr)
 }
 bool VmwDetect();
 void VmwAbsCursorIrqA();
+
+extern void KiTrapIrq01();
+extern void KiTrapIrq03();
+extern void KiTrapIrq04();
+extern void KiTrapIrq05();
+extern void KiTrapIrq06();
+extern void KiTrapIrq07();
+extern void KiTrapIrq08();
+extern void KiTrapIrq09();
+extern void KiTrapIrq0A();
+extern void KiTrapIrq0B();
+extern void KiTrapIrq0C();
+extern void KiTrapIrq0D();
+extern void KiTrapIrq0E();
+extern void KiTrapIrq0F();
+
 void KiIdtInit()
-{	
-	// Allow a bit of leeway before task switching is allowed
-	SetupPicInterrupt (0x0, IrqTimerA);
-	SetupPicInterrupt (0x1, IrqKeyboardA);
-	SetupPicInterrupt (0x2, IrqClockA); // IRQ2: Cascade. Never triggered
-	SetupPicInterrupt (0x3, IrqSerialCom2A);
-	SetupPicInterrupt (0x4, IrqSerialCom1A);
-	SetupPicInterrupt (0x5, IrqSb16A);
-	SetupPicInterrupt (0x8, IrqClockA);
-	SetupPicInterrupt (0xC, IrqMouseA);
-	//prim and sec IDE drives.  Enable IRQs to avoid spending all the
-	//CPU time polling and heating up the shit out of our CPU.
-	//SetupInterrupt (&mask1, &mask2, 0xE, IrqCascadeA);
-	//SetupInterrupt (&mask1, &mask2, 0xF, IrqCascadeA);
+{
+	SetupPicInterrupt(0x0, IrqTimerA);
+	SetupPicInterrupt(0x1, KiTrapIrq01);
+	SetupPicInterrupt(0x2, IrqCascadeA);
+	SetupPicInterrupt(0x3, KiTrapIrq03);
+	SetupPicInterrupt(0x4, KiTrapIrq04);
+	SetupPicInterrupt(0x5, KiTrapIrq05);
+	SetupPicInterrupt(0x6, KiTrapIrq06);
+	SetupPicInterrupt(0x7, KiTrapIrq07);
+	SetupPicInterrupt(0x8, KiTrapIrq08);
+	SetupPicInterrupt(0x9, KiTrapIrq09);
+	SetupPicInterrupt(0xA, KiTrapIrq0A);
+	SetupPicInterrupt(0xB, KiTrapIrq0B);
+	SetupPicInterrupt(0xC, KiTrapIrq0C);
+	SetupPicInterrupt(0xD, KiTrapIrq0D);
+	SetupPicInterrupt(0xE, KiTrapIrq0E);
+	SetupPicInterrupt(0xF, KiTrapIrq0F);
+	
+	KiUnmaskIrq(IRQ_TIMER);
+	KiUnmaskIrq(IRQ_CASCADE);
 	
 #ifdef HAS_EXCEPTION_HANDLERS
 	SetupExceptionInterrupt (0x00, IsrStub0 );
@@ -394,12 +412,17 @@ void KiIdtInit()
 
 void KiPermitTaskSwitching()
 {
-	SetupPicInterrupt (0x0, IrqTaskA);
+	SetupPicInterrupt(0x0, IrqTaskA);
+}
+
+void KiUpdatePicMasks()
+{
+	WritePort(0x21, gPicMask1);
+	WritePort(0xA1, gPicMask2);
 }
 
 void KiPicInit()
 {
-	
 	//initialize the pics
 	WritePort (0x20, 0x11);
 	WritePort (0xa0, 0x11);
@@ -419,8 +442,7 @@ void KiPicInit()
 	WritePort (0x21, 0x01);
 	WritePort (0xA1, 0x01);
 	
-	WritePort (0x21, gPicMask1);
-	WritePort (0xA1, gPicMask2);
+	KiUpdatePicMasks();
 	
 	// Load the IDT
 	
@@ -448,29 +470,78 @@ void KiIrqEnable()
 	g_bRtcInitialized = true;
 }
 
-/**
- * RTC initialization routine.
- */
-void KeClockInit()
+void KeClockInit(); // time.c
+
+// kind of bad, but deal with it
+typedef struct
 {
-	WritePort(0x70, 0x8A);
-	WritePort(0x71, 0x20);
+	InterruptDispatcher m_dispatchers[16];
+	int m_dispatcherCount;
+}
+IrqDispatchList;
+
+IrqDispatchList g_irqDispatchers[16];
+
+static bool KiIsBadIrqNo(int irqNo)
+{
+	// IRQ #0 (PIT) is reserved.
+	return irqNo == IRQ_TIMER;
+}
+
+void KeHandleIrq (int irqNo)
+{
+	IrqDispatchList* pList = &g_irqDispatchers[irqNo];
 	
-	WritePort(0x70, 0x8B);
-	char flags = ReadPort(0x71);
-	WritePort(0x70, 0x8B);
-	WritePort(0x71, flags | 0x40);
+	// send the PIC an acknowledgement
+	WritePort(0x20, 0x20);
 	
-	//32768>>(14-1) = 4 hz.
-	//I'll enable this in order to get second-periodic interrupts
-	int divisionRate = 13;
-	WritePort(0x70, 0x8A);
-	flags = ReadPort(0x71);
-	WritePort(0x70, 0x8A);
-	WritePort(0x71, (flags & 0xF0) | divisionRate);
+	if (irqNo >= 8)
+		// second PIC too
+		WritePort(0xA0, 0x20);
 	
-	// hack: https://forum.osdev.org/viewtopic.php?f=1&t=30091
-	WritePort(0x70, 0x0C);
-	ReadPort(0x71);
-	//sti;
+	if (pList->m_dispatcherCount == 0)
+	{
+		SLogMsg("WARNING: Got IRQ# %d has no dispatchers registered", irqNo);
+		return;
+	}
+	
+	// Invoke each dispatcher
+	for (int i = 0; i < pList->m_dispatcherCount; i++)
+		pList->m_dispatchers[i] ();
+}
+
+void KeRegisterIrqHandler(int irqNo, InterruptDispatcher dispatcher, bool interruptsDisabled)
+{
+	if (!interruptsDisabled)
+		cli;
+	
+	IrqDispatchList* pList = &g_irqDispatchers[irqNo];
+	if (irqNo < 0 || irqNo >= (int)ARRAY_COUNT(g_irqDispatchers)) {
+		if (!interruptsDisabled) sti;
+		SLogMsg("Error, irqNo of %d can't be registered as an IRQ handler yet", irqNo);
+		return;
+	}
+	
+	if (KiIsBadIrqNo(irqNo)) {
+		if (!interruptsDisabled) sti;
+		SLogMsg("Error, irqNo of %d is reserved", irqNo);
+		return;
+	}
+	
+	if (pList->m_dispatcherCount >= (int)ARRAY_COUNT(pList->m_dispatchers)) {
+		if (!interruptsDisabled) sti;
+		SLogMsg("IRQ CONFLICT: Can't add more than %d handlers to IRQ# %d", pList->m_dispatcherCount, irqNo);
+		return;
+	}
+	
+	pList->m_dispatchers[pList->m_dispatcherCount++] = dispatcher;
+	
+	uint8_t oldMask1 = gPicMask1, oldMask2 = gPicMask2;
+	KiUnmaskIrq(irqNo);
+	
+	if (oldMask1 != gPicMask1 || oldMask2 != gPicMask2)
+		KiUpdatePicMasks();
+	
+	if (!interruptsDisabled)
+		sti;
 }

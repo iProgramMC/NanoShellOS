@@ -8,7 +8,7 @@
 #include <string.h>
 #include <window.h>
 #include <clip.h>
-
+#include <idt.h>
 
 #define inb(a) ReadPort(a)
 #define outb(a,b) WritePort(a,b)
@@ -368,25 +368,6 @@ void RevertKeyboardProperties()
 {
 }
 
-void KbInit()
-{
-	//setup keyboard
-	//this shows that everything is setup alright
-	/*KbSetLedStatus(7);
-	
-	//enable scancodes.
-	//This is not necessary as the BIOS already does this for you, but
-	//what if it gets disabled before boot for whatever reason!?
-	KbEnableScanning();
-	
-	KbSetUseScanCodeSet(1);//By default it's 1
-	//^^TODO this does not work as scancodes don't mess up
-	
-	KbSetTypematicParms(0x14, 0x1);//10.9 chars/sec, 500ms delay before repeat.
-	
-	KbSetLedStatus(0);*/
-}
-
 //mappings: F11-Left Click, F12-Right Click, F9-make it slower, F10-make it faster
 void UpdateFakeMouse()
 {
@@ -455,9 +436,11 @@ char KbMapAtCodeToChar(char kc)
 		return KeyboardMap[(kc) + (ShiftPressed() ? 0x80 : 0x00)];
 	}
 }
+
 //extern void WmTest();
-extern void KeTaskTest();
-void IrqKeyboard()
+//extern void KeTaskTest();
+
+void KeyboardInterruptHandler()
 {
 	// acknowledge interrupt:
 	WritePort(0x20, 0x20);
@@ -528,4 +511,25 @@ void IrqKeyboard()
 			UpdateFakeMouse();
 		}
 	}
+}
+
+void KbInit()
+{
+	//setup keyboard
+	//this shows that everything is setup alright
+	/*KbSetLedStatus(7);
+	
+	//enable scancodes.
+	//This is not necessary as the BIOS already does this for you, but
+	//what if it gets disabled before boot for whatever reason!?
+	KbEnableScanning();
+	
+	KbSetUseScanCodeSet(1);//By default it's 1
+	//^^TODO this does not work as scancodes don't mess up
+	
+	KbSetTypematicParms(0x14, 0x1);//10.9 chars/sec, 500ms delay before repeat.
+	
+	KbSetLedStatus(0);*/
+	
+	KeRegisterIrqHandler(IRQ_KEYBOARD, KeyboardInterruptHandler, true);
 }
