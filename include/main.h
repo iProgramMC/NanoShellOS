@@ -109,4 +109,6 @@ void SLogMsgNoCr (const char* fmt, ...);
 
 STATIC_ASSERT(sizeof(long) == sizeof(uintptr_t), "Size of long and uintptr_t must match");
 
+#define CONTAINING_RECORD(Pointer, Type, Field) ((Type*)((uintptr_t)(Pointer) - (uintptr_t)offsetof(Type, Field)))
+
 #endif//_MAIN_H

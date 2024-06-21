@@ -148,8 +148,6 @@ static void AddProcessToList(Window* pWindow, int tid, int pid, const char * nam
 			buf[COL_STATUS] = "Idle";
 			break;
 		case SUSPENSION_NONE:
-		case SUSPENSION_UNTIL_OBJECT_EVENT:
-		case SUSPENSION_UNTIL_WM_UPDATE:
 			buf[COL_STATUS] = "Running";
 			break;
 		case SUSPENSION_TOTAL:
@@ -162,7 +160,9 @@ static void AddProcessToList(Window* pWindow, int tid, int pid, const char * nam
 		case SUSPENSION_UNTIL_PIPE_READ:
 		case SUSPENSION_UNTIL_PROCESS_EXPIRY:
 		case SUSPENSION_UNTIL_TASK_EXPIRY:
-			buf[COL_STATUS] = "Blocked";
+		case SUSPENSION_UNTIL_OBJECT_EVENT:
+		case SUSPENSION_UNTIL_WM_UPDATE:
+			buf[COL_STATUS] = "Waiting";
 			break;
 		default:
 			buf[COL_STATUS] = "Unknown";

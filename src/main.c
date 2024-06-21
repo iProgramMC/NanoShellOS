@@ -28,7 +28,8 @@
 #include <video.h>
 #include <wcall.h>
 #include <window.h>
-#include <main.h>
+#include <net/eth.h>
+#include <net/arp.h>
 
 // definitions we don't really want out there:
 void MbSetup(uint32_t check, uint32_t mbaddr);
@@ -54,7 +55,6 @@ void KiLaunch(TaskedFunction func);
 bool KiEmergencyMode();
 void KiInitializeSlabs();
 void CrashReporterInit();
-void Rtl8139Init();
 
 static int s_stopwatchStart;
 
@@ -151,7 +151,8 @@ void KiStartupSystem(uint32_t check, uint32_t mbaddr)
 	VbInitIfApplicable();
 	#endif
 	MouseInit();
-	Rtl8139Init();
+	EthInit();
+	ArpInit();
 	VmwInitIfApplicable();
 	ShellInit();
 	//TestFontInit();
