@@ -532,4 +532,8 @@ void KbInit()
 	KbSetLedStatus(0);*/
 	
 	KeRegisterIrqHandler(IRQ_KEYBOARD, KeyboardInterruptHandler, true);
+	
+	// Clear input buffer.  This is so that the mouse device will not read garbage data from the keyboard during boot.
+	while (ReadPort(0x64) & 2)
+		ReadPort (0x60);
 }
