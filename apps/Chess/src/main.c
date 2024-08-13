@@ -385,7 +385,7 @@ void ChessReleaseCursor(int x, int y)
 			//bPromotePawn = true;
 			
 			col = pPc->color;
-			err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
+			err = ChessCommitMove(g_CurrentState, g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
 		}
 	}
 	

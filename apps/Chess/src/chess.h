@@ -138,7 +138,7 @@ extern BoardState* g_CurrentState;
 extern BoardPiece g_pieces[BOARD_SIZE][BOARD_SIZE];
 extern Window* g_pWindow;
 
-eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst);
+eErrorCode ChessCommitMove(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst);
 eErrorCode ChessCheckMove(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst, eCastleType* castleType, bool * bWouldDoEP, bool bFlashTiles);
 
 // Check if a color is in checkmate or stalemate.
