@@ -947,6 +947,18 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	}
 }
 
+void PerformBestMove()
+{
+	BoardMove bm = FindBestMove(g_CurrentState);
+	
+	if (bm.rowSrc < 0)
+		return;
+	
+	eErrorCode ec = ChessCommitMove(bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst);
+	if (ec != ERROR_SUCCESS)
+		LogMsg("ERROR: couldn't perform move %d, %d -> %d, %d", bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst);
+}
+
 extern int g_nMoveNumber;
 void SetupBoard(BoardState* pState)
 {

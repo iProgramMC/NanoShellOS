@@ -78,8 +78,8 @@ eColor;
 
 typedef struct
 {
-	eColor color;
-	ePiece piece;
+	eColor color : 2;
+	ePiece piece : 6;
 }
 BoardPiece;
 
@@ -125,9 +125,16 @@ typedef struct
 }
 BoardState;
 
+typedef struct
+{
+	int rowSrc;
+	int colSrc;
+	int rowDst;
+	int colDst;
+}
+BoardMove;
+
 extern BoardState* g_CurrentState;
-
-
 extern BoardPiece g_pieces[BOARD_SIZE][BOARD_SIZE];
 extern Window* g_pWindow;
 
@@ -159,5 +166,10 @@ void SetGameOver(bool);
 void ClearFlashingTiles();
 
 void ChessUpdateMoveList();
+
+void PerformBestMove();
+
+// Engine
+BoardMove FindBestMove(BoardState* pState);
 
 #endif//CHESS_H
