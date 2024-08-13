@@ -7,6 +7,8 @@ BLD_DIR=build
 LIS_DIR=../../crt/src
 LII_DIR=../../crt/include
 
+OPTIMIZATIONS ?= -O2
+
 LGCC=../../tools/libgcc-i686.a
 
 CC=clang
@@ -14,7 +16,7 @@ LD=ld
 AS=nasm
 STRIP=strip
 
-CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -DNANOSHELL -ffreestanding -target i686-elf -O2 -nostdinc -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2 -MMD $(USERCFLAGS)
+CFLAGS=-I $(INC_DIR) -I $(LII_DIR) -DNANOSHELL -ffreestanding -target i686-elf -nostdinc -fno-exceptions -Wall -Wextra -std=c99 -mno-sse2 -MMD $(OPTIMIZATIONS) $(USERCFLAGS)
 LDFLAGS=-T link.ld -g -nostdlib -zmax-page-size=0x1000
 ASFLAGS=-f elf32
 
