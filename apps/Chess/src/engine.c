@@ -1,22 +1,37 @@
 #include "chess.h"
 
-typedef struct
-{
-	
-} x;
+const int nPieceValues[] = {
+	0,   // None
+	999, // King
+	9,   // Queen
+	3,   // Bishop
+	3,   // Knight
+	5,   // Rook
+	1,   // Pawn
+};
 
-BoardMove FindBestMove(BoardState* pState)
+int EvaluateBoardState(BoardState* pState)
 {
-	BoardState state;
+	int State = 0;
 	
+	for (int i = 0; i < BOARD_SIZE * BOARD_SIZE; i++)
+	{
+		int iRow = i % BOARD_SIZE, iCol = i / BOARD_SIZE;
+		BoardPiece* pPiece = GetPiece(pState, iRow, iCol);
+		
+		int value = nPieceValues[pPiece->piece];
+		if (pPiece->color == BLACK)
+			value = -value;
+		
+		State += value;
+	}
+	
+	return State;
+}
+
 #define MAX_MOVES 256
-	BoardMove* pMoves = calloc(MAX_MOVES, sizeof(BoardMove));
-	int nMoves = 0;
-	
-	// backup the current state pointer, we'll modify itoa
-	BoardState * pCurrentState = g_CurrentState;
-	g_CurrentState = &state;
-
+BoardMove* GetAllMoves(BoardState* pState, int* outMoveCount)
+{
 #define ADD_MOVE(a, b, c, d) do {         \
 	if (nMoves == MAX_MOVES) {            \
 		LogMsg("ERROR: too many moves!"); \
@@ -26,6 +41,14 @@ BoardMove FindBestMove(BoardState* pState)
 	}                                     \
 } while (0)
 	
+	// backup the current state pointer, we'll modify it
+	BoardState state;
+	BoardState * pOldCurrentState = g_CurrentState;
+	g_CurrentState = &state;
+	
+	int nMoves = 0;
+	BoardMove* pMoves = calloc(MAX_MOVES, sizeof(BoardMove));
+
 	// Enumerate every possible move that the current player can make.
 	for (int i = 0; i < BOARD_SIZE * BOARD_SIZE; i++)
 	{
@@ -51,21 +74,35 @@ BoardMove FindBestMove(BoardState* pState)
 		}
 	}
 	
-	free(pMoves);
+	g_CurrentState = pOldCurrentState;
 	
-	g_CurrentState = pCurrentState;
+	*outMoveCount = nMoves;
+	return pMoves;
+}
+
+int NegativeMax(BoardState* pState, int Depth)
+{
+	if (Depth == 0)
+		return EvaluateBoardState(pState);
 	
-	// TODO: evaluate each one
+	return 0;
+}
+
+BoardMove FindBestMove(BoardState* pState)
+{
+	BoardMove* pMoves = NULL;
+	int nMoves = 0;
 	
+	pMoves = GetAllMoves(pState, &nMoves);
 	
+	BoardMove bm = { -1, -1, -1, -1 };
 	if (nMoves == 0)
-	{
 		LogMsg("No moves available!");
-		BoardMove bm = { -1, -1, -1, -1 };
-		return bm;
-	}
+	else
+		bm = pMoves[rand() % nMoves];
 	
-	return pMoves[rand() % nMoves];
+	free(pMoves);
+	return bm;
 }
 
 
