@@ -160,7 +160,7 @@ BoardMove* GetAllMoves(BoardState* pState, int* outMoveCount)
 	return pMoves;
 }
 
-int MinMax(BoardState* pState, int Depth, BoardMove* winningMoveOut, bool isMaxing)
+int MinMax(BoardState* pState, int Depth, BoardMove* winningMoveOut, bool isMaxing, int alpha, int beta)
 {
 	BoardMove winningMove = { -1, -1, -1, -1 };
 	
@@ -199,14 +199,13 @@ int MinMax(BoardState* pState, int Depth, BoardMove* winningMoveOut, bool isMaxi
 		
 		// the move has been performed. control was passed to the other player. call the MinMax again
 		
-		int score = MinMax(&state, Depth - 1, &bm, !isMaxing);
+		int score = MinMax(&state, Depth - 1, &bm, !isMaxing, alpha, beta);
 		
 		bm = pMoves[i];
 		
+		// For debugging and tracking:
 		if (Depth == g_InitialDepth)
-		{
 			LogMsg(">> Eval predicted after %d,%d -> %d,%d ==> %d [%d/%d]", bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst, score, i+1, nMoves);
-		}
 		
 		if (isMaxing)
 		{
@@ -214,6 +213,8 @@ int MinMax(BoardState* pState, int Depth, BoardMove* winningMoveOut, bool isMaxi
 				max = score;
 				winningMove = pMoves[i];
 			}
+			if (alpha < score)
+				alpha = score;
 		}
 		else
 		{
@@ -221,7 +222,12 @@ int MinMax(BoardState* pState, int Depth, BoardMove* winningMoveOut, bool isMaxi
 				min = score;
 				winningMove = pMoves[i];
 			}
+			if (beta > score)
+				beta = score;
 		}
+		
+		if (beta <= alpha)
+			break;
 	}
 	
 	free(pMoves);
@@ -234,7 +240,7 @@ BoardMove FindBestMove(BoardState* pState)
 	BoardMove bm = { -1, -1, -1, -1 };
 	
 	BoardState bs = *pState;
-	int eval = MinMax(&bs, g_InitialDepth, &bm, bs.m_Player == WHITE);
+	int eval = MinMax(&bs, g_InitialDepth, &bm, bs.m_Player == WHITE, -INF, INF);
 	
 	LogMsg("Eval after %d,%d -> %d,%d ==> %d", bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst, eval);
 	
