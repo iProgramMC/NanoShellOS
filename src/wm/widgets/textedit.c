@@ -83,6 +83,7 @@ typedef struct
 	int       m_cursorY;
 	char*     m_cachedData; // every time you call TextInput_GetRawText, this gets updated.
 	bool      m_bShiftHeld;
+	bool      m_ignoreNextKeyCode;
 	bool      m_dirty;
 	int       m_knownScrollBarX;
 	int       m_knownScrollBarY;
@@ -783,7 +784,7 @@ static void TextInput_DetermineLineEnding(Control* this)
 	}
 	
 	pData->m_currentLineEnding = lineEndingWinner;
-	SLogMsg("Line ending detected: %s%s", &"\0CR"[!!(lineEndingWinner & LEND_CR)], &"\0LF"[!!(lineEndingWinner & LEND_LF)]);
+	//SLogMsg("Line ending detected: %s%s", &"\0CR"[!!(lineEndingWinner & LEND_CR)], &"\0LF"[!!(lineEndingWinner & LEND_LF)]);
 }
 
 void TextInput_OnNavPressed(Control* this, eNavDirection dir);
@@ -1929,12 +1930,26 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, long parm1, long 
 			
 			TextInputDataEx* pData = TextInput_GetData(this);
 			
+			// TODO: handle these better.  Ignore 0xE0 for now.
+			if (parm1 == 0xE0) {
+				pData->m_ignoreNextKeyCode = true;
+				break;
+			}
+			else if (pData->m_ignoreNextKeyCode) {
+				pData->m_ignoreNextKeyCode = false;
+				
+				// don't actually if it's a press. Better safe than sorry
+				if (parm1 & 0x80)
+					break;
+			}
+			
 			// If the key was released, break; we don't really need to process release events
 			if (parm1 & 0x80)
 			{
 				int code = (int)(unsigned char)parm1;
-				if ((code & 0x7F) == KEY_LSHIFT || (code & 0x7F) == KEY_RSHIFT)
+				if ((code & 0x7F) == KEY_LSHIFT || (code & 0x7F) == KEY_RSHIFT) {
 					pData->m_bShiftHeld = false;
+				}
 				break;
 			}
 			
@@ -2011,7 +2026,6 @@ bool WidgetTextEditView2_OnEvent(Control* this, int eventType, long parm1, long 
 					break;
 				}
 			}
-			
 			break;
 		}
 		case EVENT_COMMAND:
