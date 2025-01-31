@@ -49,7 +49,7 @@ void CALLBACK VersionProgramProc (Window* pWindow, int messageType, long parm1, 
 			AddControl (pWindow, CONTROL_ICON, r, NULL, 2, icon, 0);
 			
 			RECT(r, 0, 75, 320, 10);
-			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2023, iProgramInCpp", 3, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
+			AddControl (pWindow, CONTROL_TEXTCENTER, r, "Copyright (C) 2019-2025, iProgramInCpp", 3, WINDOW_TEXT_COLOR, TEXTSTYLE_HCENTERED | TEXTSTYLE_VCENTERED);
 			
 			RECT(r, (320-70)/2, 95, 70, 20);
 			AddControl (pWindow, CONTROL_BUTTON, r, "OK", VERSION_BUTTON_OK_COMBO, 0, 0);
