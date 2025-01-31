@@ -1,8 +1,0 @@
-// NanoShell Resource File
-SubSystem Gui
-Version   1 1 0
-
-AppName      "NES Emulator for NanoShell"
-AppAuthor    "Franz Flasch, iProgramInCpp"
-AppCopyright "Copyright (C) 2019 Franz Flasch. Licensed under the GNU GPLv3."
-ProjectName  "The NanoShell(TM) OS Port Collection"

@@ -26,8 +26,9 @@
 #include <nanoshell/fcntl_types.h>
 #include <nanoshell/keyboard.h>
 
-#define false 0
-#define true 1
+// note: maybe we should let stdbool define these instead of us.
+//#define false 0
+//#define true 1
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof(*array))
 
