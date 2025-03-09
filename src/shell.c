@@ -903,6 +903,71 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		KePrintMemoryMapInfo();
 	}
+	else if (strcmp (token, "cp") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+
+		char* fileName2 = Tokenize (&state, NULL, " ");
+		int fd = FiOpen(fileName, O_RDONLY);
+		if(fd<0) {
+			LogMsg("File not found: %s", fileName);
+			FiClose(fd);
+			return;
+		}
+		else {
+		
+		FiSeek(fd, 0, SEEK_END);
+		
+		unsigned int sz;
+		sz = FiTell(fd);
+		FiSeek(fd, 0, SEEK_SET);
+		char* data = (char*)MmAllocate(sz+1);
+		FiRead(fd, data, sz);
+ 		FiClose (fd);
+
+ 		fd = FiOpen(fileName2, O_CREAT | O_RDWR);
+		FiWrite(fd, data, sz);
+		FiClose (fd);
+		LogMsg("Done.");
+		return;
+		}
+	}
+	
+	else if (strcmp (token, "mv") == 0)
+	{
+		char* fileName = Tokenize (&state, NULL, " ");
+		char* fileName2 = Tokenize (&state, NULL, " ");
+		int fd = FiOpen(fileName, O_RDONLY);
+		if(fd<0) {
+			LogMsg("File not found: %s", fileName);
+			FiClose(fd);
+			return;
+		}
+		else {
+		
+		FiSeek(fd, 0, SEEK_END);
+		
+		unsigned int sz;
+		sz = FiTell(fd);
+		FiSeek(fd, 0, SEEK_SET);
+		char* data = (char*)MmAllocate(sz+1);
+		FiRead(fd, data, sz);
+ 		FiClose (fd);
+
+ 		fd = FiOpen(fileName2, O_CREAT | O_RDWR);
+		FiWrite(fd, data, sz);
+		FiClose (fd);
+		// Get rid of the file.
+		int io = FiUnlinkFile (fileName);
+		if (io < 0)
+		{
+			LogMsg("mv: couldn't remove %s: %s", fileName, GetErrNoString(io));
+			return;
+		}
+		
+		LogMsg("Done");
+		}
+	}
 	else if (strcmp (token, "ls") == 0)
 	{
 		enum
