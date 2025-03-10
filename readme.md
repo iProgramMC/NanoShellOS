@@ -8,6 +8,8 @@ NanoShell is a preemptively multi-tasked 32-bit operating system with a windowed
 
 #### Be advised that this is beta-level software and you should not expect any stability from it.
 
+#### NanoShell isn't being actively developed anymore.  While I may come back to it sometimes to work on it, development is currently inactive. For an active OS project, see https://github.com/iProgramMC/Boron
+
 ## Third-party attributions
 
 This software is licensed under the GNU General Public License version 3 or later, except in the following components:
