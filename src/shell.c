@@ -906,21 +906,41 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	else if (strcmp (token, "cp") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
-
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
 		char* fileName2 = Tokenize (&state, NULL, " ");
+		if (!fileName2)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
+		else if (*fileName2 == 0)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
 		int fd = FiOpen(fileName, O_RDONLY);
 		if(fd<0) {
 			LogMsg("File not found: %s", fileName);
 			FiClose(fd);
 			return;
 		}
-		else {
-		
+		else
+		{
 		FiSeek(fd, 0, SEEK_END);
 		
 		unsigned int sz;
 		sz = FiTell(fd);
 		FiSeek(fd, 0, SEEK_SET);
+		//TODO: allocate/r+w in blocks
 		char* data = (char*)MmAllocate(sz+1);
 		FiRead(fd, data, sz);
  		FiClose (fd);
@@ -936,20 +956,42 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	else if (strcmp (token, "mv") == 0)
 	{
 		char* fileName = Tokenize (&state, NULL, " ");
+		if (!fileName)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
+		else if (*fileName == 0)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
 		char* fileName2 = Tokenize (&state, NULL, " ");
+		if (!fileName2)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
+		else if (*fileName2 == 0)
+		{
+			LogMsg("Expected filename");
+			return;
+		}
+		//TODO: try using FiRenameFile here?
 		int fd = FiOpen(fileName, O_RDONLY);
 		if(fd<0) {
 			LogMsg("File not found: %s", fileName);
 			FiClose(fd);
 			return;
 		}
-		else {
-		
+		else 
+		{
 		FiSeek(fd, 0, SEEK_END);
 		
 		unsigned int sz;
 		sz = FiTell(fd);
 		FiSeek(fd, 0, SEEK_SET);
+		//TODO: allocate/r+w in blocks
 		char* data = (char*)MmAllocate(sz+1);
 		FiRead(fd, data, sz);
  		FiClose (fd);
