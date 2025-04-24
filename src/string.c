@@ -200,9 +200,9 @@ size_t strnlen(const char* str, size_t nchars)
 		len++, nchars--;
 	return len;
 }
-void* strcpy(const char* ds, const char* ss)
+char* strcpy(char* ds, const char* ss)
 {
-	return memcpy((void*)ds, (void*)ss, strlen(ss) + 1);
+	return memcpy(ds, ss, strlen(ss) + 1);
 }
 void strtolower(char* as)
 {
