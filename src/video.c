@@ -1288,6 +1288,8 @@ static inline void RenderCursorTransparent(void)
 		}
 		if (xe >= GetScreenSizeX())
 			xe = GetScreenSizeX();
+		if (ye >= GetScreenSizeY())
+			ye = GetScreenSizeY();
 		//int xd = (xe - xs) * sizeof(uint32_t);
 		int off11 = 0;
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
@@ -1393,8 +1395,6 @@ static inline void RenderCursorOpaque(void)
 			kzs -= ys;
 			ys = 0;
 		}
-		if (ye >= GetScreenHeight())
-			ye =  GetScreenHeight();
 		int xs =                         - g_currentCursor->leftOffs+ g_mouseX;
 		int xe = g_currentCursor->width  - g_currentCursor->leftOffs+ g_mouseX;
 		int off = 0;
@@ -1405,6 +1405,8 @@ static inline void RenderCursorOpaque(void)
 		}
 		if (xe >= GetScreenSizeX())
 			xe =  GetScreenSizeX();
+		if (ye >= GetScreenSizeY())
+			ye =  GetScreenSizeY();
 		int xd = (xe - xs) * sizeof(uint32_t);
 		for (int y = ys, ky = kys, kz = kzs; y < ye; y++, kz++)
 		{
@@ -2099,7 +2101,7 @@ void VidInit()
 		}
 		
 		uint32_t pointer = pInfo->framebuffer_addr;
-		size_t p = pInfo->framebuffer_width * pInfo->framebuffer_height * 4;
+		size_t p = pInfo->framebuffer_pitch * pInfo->framebuffer_height;
 		void *final_address = MhMapPhysicalMemory(pointer, (p + 4095) / 4096, true);
 		
 		g_framebufferCopy = MmAllocateInternal(p, ALLOCATE_BUT_DONT_WRITE_PHYS, false);
