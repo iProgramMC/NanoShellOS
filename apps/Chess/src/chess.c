@@ -862,10 +862,8 @@ void ChessGeneratePGN(char* pgnOut, BoardState* pState, int rowSrc, int colSrc, 
 	strcpy(pgnOut, moveList);
 }
 
-eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
+eErrorCode ChessCommitMove(BoardState* pState, int rowSrc, int colSrc, int rowDst, int colDst)
 {
-	BoardState* pState = g_CurrentState;
-	
 	BoardPiece* pcSrc = GetPiece(pState, rowSrc, colSrc);
 	
 	eColor col = pcSrc->color;
@@ -881,29 +879,31 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	if (errCode != ERROR_SUCCESS)
 		return errCode;
 	
-	if (g_CurrentState != &g_History[g_HistorySize - 1])
+	if (g_CurrentState == pState)
 	{
-		if (g_CurrentState < g_History || g_History + g_HistorySize <= g_CurrentState)
+		if (g_CurrentState != &g_History[g_HistorySize - 1])
 		{
-			return ERROR_CANT_OVERWRITE_HISTORY;
-		}
-		// Show a message box asking whether the user wants to overwrite the history.
-		if (ChessMessageBox("Performing this move will overwrite the move history.\n\nDo you wish to perform the move?", "Chess", MB_YESNO | ICON_WARNING << 16) != MBID_YES)
-		{
-			return ERROR_CANT_OVERWRITE_HISTORY;
+			if (g_CurrentState < g_History || g_History + g_HistorySize <= g_CurrentState)
+			{
+				return ERROR_CANT_OVERWRITE_HISTORY;
+			}
+			// Show a message box asking whether the user wants to overwrite the history.
+			if (ChessMessageBox("Performing this move will overwrite the move history.\n\nDo you wish to perform the move?", "Chess", MB_YESNO | ICON_WARNING << 16) != MBID_YES)
+			{
+				return ERROR_CANT_OVERWRITE_HISTORY;
+			}
+			
+			// this ptr diff should be fine, since we already check the bounds...
+			g_HistorySize = (int)(g_CurrentState - g_History) + 1;
 		}
 		
-		// this ptr diff should be fine, since we already check the bounds...
-		g_HistorySize = (int)(g_CurrentState - g_History) + 1;
+		// commit the move!!
+		AddHistoryFrame();
+		
+		pState = g_CurrentState;
 	}
 	
-	// commit the move!!
-	AddHistoryFrame();
-	
-	pState = g_CurrentState;
-	
 	pState->m_PlayerState[pcSrc->color].m_nEnPassantColumn = -1;
-	
 	pState->m_PlayerState[pcSrc->color].m_bKingInCheck = false;
 	
 	bool bCapture = false;
@@ -933,9 +933,11 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 	// fill in the move struct
 	MoveInfo* pmi = &pState->m_MoveInfo;
 	
-	ChessGeneratePGN(pmi->pgn, pState, rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
-	
-	ChessUpdateMoveList();
+	if (g_CurrentState == pState)
+	{
+		ChessGeneratePGN(pmi->pgn, pState, rowSrc, colSrc, rowDst, colDst, castleType, bCheck, bCapture, bEnPassant, mateType);
+		ChessUpdateMoveList();
+	}
 	
 	pState->m_Player = GetNextPlayer(pState->m_Player);
 	
@@ -945,6 +947,18 @@ eErrorCode ChessCommitMove(int rowSrc, int colSrc, int rowDst, int colDst)
 		case MATE_STALE: return ERROR_STALEMATE;
 		default:         return ERROR_SUCCESS;
 	}
+}
+
+void PerformBestMove()
+{
+	BoardMove bm = FindBestMove(g_CurrentState);
+	
+	if (bm.rowSrc < 0)
+		return;
+	
+	eErrorCode ec = ChessCommitMove(g_CurrentState, bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst);
+	if (ec != ERROR_SUCCESS)
+		LogMsg("ERROR: couldn't perform move %d, %d -> %d, %d", bm.rowSrc, bm.colSrc, bm.rowDst, bm.colDst);
 }
 
 extern int g_nMoveNumber;
