@@ -24,7 +24,7 @@ int atoi(const char* str);
 int atoihex(const char* str);
 size_t strlen(const char* str);
 size_t strnlen(const char* str, size_t nchars);
-void* strcpy(const char* ds, const char* ss);
+char* strcpy(char* ds, const char* ss);
 void strtolower(char* as);
 void strtoupper(char* as);
 int strcmp(const char* as, const char* bs);
