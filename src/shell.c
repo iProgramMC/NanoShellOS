@@ -906,24 +906,14 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		LogMsg("Starting to copy...");
 		char* fileNameIn = Tokenize (&state, NULL, " ");
-		if (!fileNameIn)
-		{
-			LogMsg("Usage: cp <input> <output>");
-			return;
-		}
-		if (*fileNameIn == 0)
+		if (!fileNameIn || (*fileNameIn == 0))
 		{
 			LogMsg("Usage: cp <input> <output>");
 			return;
 		}
 		
 		char* fileNameOut = Tokenize (&state, NULL, " ");
-		if (!fileNameOut)
-		{
-			LogMsg("Usage: cp <input> <output>");
-			return;
-		}
-		if (*fileNameOut == 0)
+		if (!fileNameOut || (*fileNameOut == 0))
 		{
 			LogMsg("Usage: cp <input> <output>");
 			return;
@@ -954,10 +944,10 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		//write 512 byte blocks
 		for (size_t i = 0; i < sz; i += MOVEDATA_PRECISION)
 		{
-			size_t read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
-			if ((int)read_in < 0)
+			int read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
+			if (read_in < 0)
 			{
-				LogMsg("cp: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString((int)read_in));
+				LogMsg("cp: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString(read_in));
 				FiClose(fd_in);
 				FiClose(fd_out);
 				return;
@@ -972,10 +962,10 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		int last_x_block_size = (sz % MOVEDATA_PRECISION);
 		for (int i = 0; i < last_x_block_size; i++)
 		{
-			size_t read_in = FiRead(fd_in, chunk_of_data, 1);
-			if ((int)read_in < 0)
+			int read_in = FiRead(fd_in, chunk_of_data, 1);
+			if (read_in < 0)
 			{
-				LogMsg("cp: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString((int)read_in));
+				LogMsg("cp: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString(read_in));
 				FiClose(fd_in);
 				FiClose(fd_out);
 				return;
@@ -996,33 +986,24 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	else if (strcmp (token, "mv") == 0)
 	{
 		char* fileNameIn = Tokenize (&state, NULL, " ");
-		if (!fileNameIn)
-		{
-			LogMsg("Usage: mv <origin> <dest>");
-			return;
-		}
-		if (*fileNameIn == 0)
+		if (!fileNameIn || (*fileNameIn == 0))
 		{
 			LogMsg("Usage: mv <origin> <dest>");
 			return;
 		}
 		
 		char* fileNameOut = Tokenize (&state, NULL, " ");
-		if (!fileNameOut)
-		{
-			LogMsg("Usage: mv <origin> <dest>");
-			return;
-		}
-		if (*fileNameOut == 0)
+		if (!fileNameOut || (*fileNameOut == 0))
 		{
 			LogMsg("Usage: mv <origin> <dest>");
 			return;
 		}
 		int result = FiRename(fileNameIn, fileNameOut);
-		if(result == -ENXIO) {
+		if (result == -ENXIO)
+		{
 			LogMsg("FiRename failed, trying move+delete");
 			// Get rid of the file.
-					int fd_in = FiOpen (fileNameIn, O_RDONLY);
+			int fd_in = FiOpen (fileNameIn, O_RDONLY);
 			if (fd_in < 0)
 			{
 				LogMsg("mv: Could not open %s for reading: %s", fileNameIn, GetErrNoString(fd_in));
@@ -1047,10 +1028,10 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			//write 512 byte blocks
 			for (size_t i = 0; i < sz; i += MOVEDATA_PRECISION)
 			{
-				size_t read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
-				if ((int)read_in < 0)
+				int read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
+				if (read_in < 0)
 				{
-					LogMsg("mv: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString((int)read_in));
+					LogMsg("mv: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString(read_in));
 					FiClose(fd_in);
 					FiClose(fd_out);
 					return;
@@ -1065,8 +1046,8 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 			int last_x_block_size = (sz % MOVEDATA_PRECISION);
 			for (int i = 0; i < last_x_block_size; i++)
 			{
-				size_t read_in = FiRead(fd_in, chunk_of_data, 1);
-				if ((int)read_in < 0)
+				int read_in = FiRead(fd_in, chunk_of_data, 1);
+				if (read_in < 0)
 				{
 					LogMsg("mv: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString((int)read_in));
 					FiClose(fd_in);
