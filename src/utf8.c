@@ -11,14 +11,16 @@
 
 SAI int Utf8DecodeCharacterInline(const char* pByteSeq, int* pSizeOut)
 {
-	const uint8_t * chars = (const uint8_t*)pByteSeq;
+	// default to 1 to prevent broken UTF-8 characters from causing
+	// an infinite loop
+	*pSizeOut = 1;
 	
+	const uint8_t * chars = (const uint8_t*)pByteSeq;
 	uint8_t char0 = chars[0];
 	
 	if (char0 < 0x80)
 	{
 		// 1 byte ASCII character. Fine
-		if (pSizeOut) *pSizeOut = 1;
 		return char0;
 	}
 	
@@ -86,7 +88,7 @@ void Utf8EncodeCharacter(char * pByteSeq, int * pSizeOut, int codePoint)
 	
 	if (codePoint < 0x10000)
 	{
-		*(pByteSeq++) = 0b11000000 | (codePoint >> 12);
+		*(pByteSeq++) = 0b11100000 | (codePoint >> 12);
 		*(pByteSeq++) = 0b10000000 | ((codePoint >> 6) & 0x3F);
 		*(pByteSeq++) = 0b10000000 | (codePoint & 0x3F);
 		*pSizeOut = 3;
@@ -95,7 +97,7 @@ void Utf8EncodeCharacter(char * pByteSeq, int * pSizeOut, int codePoint)
 	
 	if (codePoint < 0x110000)
 	{
-		*(pByteSeq++) = 0b11000000 | (codePoint >> 18);
+		*(pByteSeq++) = 0b11110000 | (codePoint >> 18);
 		*(pByteSeq++) = 0b10000000 | ((codePoint >> 12) & 0x3F);
 		*(pByteSeq++) = 0b10000000 | ((codePoint >> 6) & 0x3F);
 		*(pByteSeq++) = 0b10000000 | (codePoint & 0x3F);
