@@ -385,7 +385,7 @@ void ChessReleaseCursor(int x, int y)
 			//bPromotePawn = true;
 			
 			col = pPc->color;
-			err = ChessCommitMove(g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
+			err = ChessCommitMove(g_CurrentState, g_DraggedPieceRow, g_DraggedPieceCol, boardRow, boardCol);
 		}
 	}
 	
@@ -496,15 +496,17 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, long parm1, long p
 			RECT(rect, 10, g_BoardY + (BOARD_SIZE * PIECE_SIZE / 2) + 5, 40, (BOARD_SIZE * PIECE_SIZE / 2) - 5);
 			AddControl(pWindow, CONTROL_LISTVIEW, rect, NULL, CHESS_CAPTURES_BLACK, 0, 0);
 			
-			int btnWidth = RIGHT_BAR_WIDTH / 2;
+			int btnWidth = RIGHT_BAR_WIDTH;
 			RECT(rect, CHESS_WIDTH - btnWidth - 5, 10, btnWidth - 5, 20);
-			AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_BLACK, ICON_RESIGN, 0);
+			//AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_BLACK, ICON_RESIGN, 0);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Find Best Move", CHESS_RESIGN_BLACK, ICON_RESIGN, 0);
 			RECT(rect, CHESS_WIDTH - btnWidth * 2 - 10, 10, btnWidth - 5, 20);
 			AddControl(pWindow, CONTROL_BUTTON, rect, "Draw",   CHESS_DRAW_BLACK,   ICON_SCALE16, 0);
 			SetControlDisabled(pWindow, CHESS_DRAW_BLACK, true);
 			
 			RECT(rect, CHESS_WIDTH - btnWidth - 5, CHESS_HEIGHT - 30, btnWidth - 5, 20);
-			AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_WHITE, ICON_RESIGN, 0);
+			//AddControl(pWindow, CONTROL_BUTTON, rect, "Resign", CHESS_RESIGN_WHITE, ICON_RESIGN, 0);
+			AddControl(pWindow, CONTROL_BUTTON, rect, "Find Best Move", CHESS_RESIGN_WHITE, ICON_RESIGN, 0);
 			RECT(rect, CHESS_WIDTH - btnWidth * 2 - 10, CHESS_HEIGHT - 30, btnWidth - 5, 20);
 			AddControl(pWindow, CONTROL_BUTTON, rect, "Draw",   CHESS_DRAW_WHITE,   ICON_SCALE16, 0);
 			SetControlDisabled(pWindow, CHESS_DRAW_WHITE, true);
@@ -542,10 +544,13 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, long parm1, long p
 						break;
 					}
 					
+					/*
 					if (MessageBox(pWindow, "Are you sure you want to resign as white?", "Chess", ICON_QUES << 16 | MB_YESNO) == MBID_YES)
 					{
 						ChessOnGameEnd(ERROR_RESIGNATION_WHITE, BLACK);
 					}
+					*/
+					PerformBestMove();
 					break;
 				}
 				case CHESS_RESIGN_BLACK:
@@ -556,10 +561,13 @@ void CALLBACK ChessWndProc (Window* pWindow, int messageType, long parm1, long p
 						break;
 					}
 					
+					/*
 					if (MessageBox(pWindow, "Are you sure you want to resign as black?", "Chess", ICON_QUES << 16 | MB_YESNO) == MBID_YES)
 					{
 						ChessOnGameEnd(ERROR_RESIGNATION_BLACK, WHITE);
 					}
+					*/
+					PerformBestMove();
 					break;
 				}
 			}
