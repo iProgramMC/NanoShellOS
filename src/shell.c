@@ -29,7 +29,7 @@
 #include <clip.h>
 #include <image.h>
 #include <ansi.h>
-
+#define MOVEDATA_PRECISION 4096
 char g_lastCommandExecuted[256] = {0};
 
 void FsPipeTest();
@@ -720,7 +720,7 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		
 		LogMsg("Progress...");
 		
-		#define MOVEDATA_PRECISION 4096
+		
 		
 		uint8_t chunk_of_data[MOVEDATA_PRECISION];
 		size_t sz = FiTellSize(fd_in);
@@ -764,9 +764,8 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 		
 		FiClose(fd_out);
 		FiClose(fd_in);
+		fail_movedata:;
 		LogMsg("Done");
-		
-	fail_movedata:;
 	}
 	else if (strcmp (token, "rmdir") == 0)
 	{
@@ -902,6 +901,176 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	else if (strcmp (token, "lr") == 0)
 	{
 		KePrintMemoryMapInfo();
+	}
+	else if (strcmp (token, "cp") == 0)
+	{
+		LogMsg("Starting to copy...");
+		char* fileNameIn = Tokenize (&state, NULL, " ");
+		if (!fileNameIn || (*fileNameIn == 0))
+		{
+			LogMsg("Usage: cp <input> <output>");
+			return;
+		}
+		
+		char* fileNameOut = Tokenize (&state, NULL, " ");
+		if (!fileNameOut || (*fileNameOut == 0))
+		{
+			LogMsg("Usage: cp <input> <output>");
+			return;
+		}
+		
+		int fd_in = FiOpen (fileNameIn, O_RDONLY);
+		if (fd_in < 0)
+		{
+			LogMsg("cp: Could not open %s for reading: %s", fileNameIn, GetErrNoString(fd_in));
+			return;
+		}
+		
+		int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT | O_TRUNC);
+		if (fd_out < 0)
+		{
+			LogMsg("cp: Could not open %s for writing: %s", fileNameOut, GetErrNoString(fd_out));
+			FiClose(fd_in);
+			return;
+		}
+		
+		LogMsg("Progress...");
+		
+		
+		
+		uint8_t chunk_of_data[MOVEDATA_PRECISION];
+		size_t sz = FiTellSize(fd_in);
+		
+		//write 512 byte blocks
+		for (size_t i = 0; i < sz; i += MOVEDATA_PRECISION)
+		{
+			int read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
+			if (read_in < 0)
+			{
+				LogMsg("cp: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString(read_in));
+				FiClose(fd_in);
+				FiClose(fd_out);
+				return;
+			}
+			
+			FiWrite(fd_out, chunk_of_data, read_in);
+			
+			LogMsgNoCr("\rProgress: %d/%d", i, sz);
+		}
+		
+		// write the last few bytes
+		int last_x_block_size = (sz % MOVEDATA_PRECISION);
+		for (int i = 0; i < last_x_block_size; i++)
+		{
+			int read_in = FiRead(fd_in, chunk_of_data, 1);
+			if (read_in < 0)
+			{
+				LogMsg("cp: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString(read_in));
+				FiClose(fd_in);
+				FiClose(fd_out);
+				return;
+			}
+			
+			FiWrite(fd_out, chunk_of_data, read_in);
+			
+			LogMsgNoCr("\rProgress: %d/%d", i, sz);
+		}
+		
+		LogMsg("");
+		
+		FiClose(fd_out);
+		FiClose(fd_in);
+		LogMsg("Done");
+	}
+	
+	else if (strcmp (token, "mv") == 0)
+	{
+		char* fileNameIn = Tokenize (&state, NULL, " ");
+		if (!fileNameIn || (*fileNameIn == 0))
+		{
+			LogMsg("Usage: mv <origin> <dest>");
+			return;
+		}
+		
+		char* fileNameOut = Tokenize (&state, NULL, " ");
+		if (!fileNameOut || (*fileNameOut == 0))
+		{
+			LogMsg("Usage: mv <origin> <dest>");
+			return;
+		}
+		int result = FiRename(fileNameIn, fileNameOut);
+		if (result == -ENXIO)
+		{
+			LogMsg("FiRename failed, trying move+delete");
+			// Get rid of the file.
+			int fd_in = FiOpen (fileNameIn, O_RDONLY);
+			if (fd_in < 0)
+			{
+				LogMsg("mv: Could not open %s for reading: %s", fileNameIn, GetErrNoString(fd_in));
+				return;
+			}
+			
+			int fd_out = FiOpen (fileNameOut, O_WRONLY | O_CREAT | O_TRUNC);
+			if (fd_out < 0)
+			{
+				LogMsg("mv: Could not open %s for writing: %s", fileNameOut, GetErrNoString(fd_out));
+				FiClose(fd_in);
+				return;
+			}
+			
+			LogMsg("Progress...");
+			
+			
+			
+			uint8_t chunk_of_data[MOVEDATA_PRECISION];
+			size_t sz = FiTellSize(fd_in);
+			
+			//write 512 byte blocks
+			for (size_t i = 0; i < sz; i += MOVEDATA_PRECISION)
+			{
+				int read_in = FiRead(fd_in, chunk_of_data, MOVEDATA_PRECISION);
+				if (read_in < 0)
+				{
+					LogMsg("mv: Could not write all %d bytes to %s - only wrote %d: %s", MOVEDATA_PRECISION, fileNameOut, read_in, GetErrNoString(read_in));
+					FiClose(fd_in);
+					FiClose(fd_out);
+					return;
+				}
+				
+				FiWrite(fd_out, chunk_of_data, read_in);
+				
+				LogMsgNoCr("\rProgress: %d/%d", i, sz);
+			}
+			
+			// write the last few bytes
+			int last_x_block_size = (sz % MOVEDATA_PRECISION);
+			for (int i = 0; i < last_x_block_size; i++)
+			{
+				int read_in = FiRead(fd_in, chunk_of_data, 1);
+				if (read_in < 0)
+				{
+					LogMsg("mv: Could not write 1 byte to %s - only wrote %d: %s", fileNameOut, read_in, GetErrNoString((int)read_in));
+					FiClose(fd_in);
+					FiClose(fd_out);
+					return;
+				}
+				
+				FiWrite(fd_out, chunk_of_data, read_in);
+				
+				LogMsgNoCr("\rProgress: %d/%d", i, sz);
+			}
+			
+			LogMsg("");
+			
+			FiClose(fd_out);
+			FiClose(fd_in);
+			int io = FiUnlinkFile (fileNameIn);
+			if (io < 0)
+			{
+				LogMsg("mv: couldn't remove %s: %s", fileNameOut, GetErrNoString(io));
+				return;
+			}
+		}
 	}
 	else if (strcmp (token, "ls") == 0)
 	{
