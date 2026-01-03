@@ -453,7 +453,7 @@ FILE* fopen (const char* file, const char* mode)
 		case'r':case'R':flags |= O_RDONLY;break;
 		case'w':case'W':flags |= O_WRONLY;break;
 		case'a':case'A':flags |= O_APPEND;break;
-		case'+':        flags &=~O_CREAT; break;
+		case'+':        flags  = (flags & ~O_CREAT) | O_WRONLY; break;
 		}
 		mode++;
 	}
@@ -1010,4 +1010,28 @@ int chmod(const char* path, mode_t mode)
 		return SetErrorNumber(res);
 	
 	return 0;
+}
+
+char* fgets(char* buffer, int buffer_size, FILE* stream)
+{
+	if (buffer_size <= 1)
+		return NULL;
+	
+	int i = 0;
+	while (i + 1 < buffer_size)
+	{
+		int readIn = fgetc(stream);
+		if (readIn == EOF) {
+			if (i == 0)
+				return NULL;
+			break;
+		}
+		
+		buffer[i++] = readIn;
+		if (readIn == '\n')
+			break;
+	}
+	
+	buffer[i] = 0;
+	return buffer;
 }

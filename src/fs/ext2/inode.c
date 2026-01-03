@@ -76,7 +76,7 @@ void Ext2InodeToFileNode(FileNode* pFileNode, Ext2Inode* pInode, uint32_t inodeN
 	pFileNode->m_perms |= PERM_EXEC;
 	
 	// If the file is too big we probably shouldn't try to modify it.
-	if (pInode->m_size > 64*1024*1024 || pInode->m_upperSize > 0)
+	if (pInode->m_size > 256*1024*1024 || pInode->m_upperSize > 0)
 	{
 		pFileNode->m_perms &= ~PERM_WRITE;
 	}

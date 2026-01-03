@@ -10,7 +10,7 @@ set path=%path%;%NSPath%
 qemu-system-i386.exe                            ^
 -device sb16                                    ^
 -d cpu_reset                                    ^
--m 256M                                         ^
+-m 1024M                                        ^
 -boot d                                         ^
 -cdrom %nspath%\build\image.iso                 ^
 -debugcon stdio                                 ^

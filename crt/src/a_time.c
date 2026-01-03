@@ -164,3 +164,32 @@ int settimeofday(UNUSED struct timeval * tv, UNUSED struct timezone * tz)
 	SetErrorNumber(-EACCES);
 	return -1;
 }
+
+int clock_gettime(int clockid, struct timespec *ts)
+{
+	// TODO: timer is currently too coarse
+	if (clockid == CLOCK_REALTIME)
+	{
+		ts->tv_sec  = (int)time(NULL);
+		ts->tv_nsec = (GetTickCount() % 1000) * 1000000;
+	}
+	else
+	{
+		int tickCount = GetTickCount();
+		ts->tv_sec = tickCount / 1000;
+		ts->tv_nsec = (tickCount % 1000) * 1000000;
+	}
+	
+	return 0;
+}
+
+int usleep(int microseconds)
+{
+	if (microseconds < 1000) {
+		__asm__("pause");
+		return 0;
+	}
+	
+	sleep(microseconds / 1000);
+	return 0;
+}

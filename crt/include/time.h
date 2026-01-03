@@ -13,6 +13,7 @@ struct tm* localtime_r(const time_t* timep, struct tm * result);
 struct tm* localtime(const time_t* timep);
 int gettimeofday(struct timeval * tv, struct timezone * tz);
 int settimeofday(struct timeval * tv, struct timezone * tz);
+int clock_gettime(int clockid, struct timespec *out);
 
 // NanoShell specifics
 TimeStruct* GetTime();

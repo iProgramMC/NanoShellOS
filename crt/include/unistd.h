@@ -20,6 +20,8 @@ int unlink(const char *pfn);
 
 char* getcwd(char* buf, size_t sz);
 
+int usleep(int microseconds);
+
 // NanoShell specifics
 const char* FiGetCwd();
 

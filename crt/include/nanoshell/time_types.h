@@ -54,4 +54,11 @@ struct timezone {
     int tz_dsttime;     // type of DST correction
 };
 
+enum {
+	CLOCK_REALTIME,
+	CLOCK_MONOTONIC,
+	CLOCK_PROCESS_CPUTIME_ID,
+	CLOCK_THREAD_CPUTIME_ID,
+};
+
 #endif//_TIME_TYPES_H

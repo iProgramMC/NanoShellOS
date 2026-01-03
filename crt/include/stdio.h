@@ -54,6 +54,7 @@ int putchar(int c);
 int fgetc(FILE* stream);
 int getc(FILE* stream);
 int ungetc(int c, FILE * stream);
+char* fgets(char* buffer, int buffer_size, FILE* stream);
 int ferror(FILE* stream);
 void perror(const char* fmt, ...);
 
