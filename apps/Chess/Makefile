@@ -5,5 +5,6 @@ SRC_DIR=src
 APP_C_FILES=$(shell find $(SRC_DIR) -type f -name '*.c')
 APP_S_FILES=$(shell find $(SRC_DIR) -type f -name '*.asm')
 USERCFLAGS=-Wno-switch
+OPTIMIZATIONS = -O3
 
 include ../CommonMakefile
