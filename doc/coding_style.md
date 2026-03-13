@@ -4,7 +4,7 @@
 The coding style of NanoShell mostly follows a certain set of rules that ensures cleanliness:
 
 #### Variables
-Use `pascalCase`. For global variables, use `g_`, for statics use `s_`. If a pointer, denote it with a `p` prefix.
+Use `camelCase`. For global variables, use `g_`, for statics use `s_`. If a pointer, denote it with a `p` prefix.
 
 ###### Right:
 ```c
@@ -20,7 +20,7 @@ static int g_some_dumb_variable;
 ```
 
 #### Function names
-For function names, use `CamelCase`. Preferably, add a short namespace string such as `Ke` or `Mm` to separate it from other code. Use `Ke` if it modifies the kernel's state significantly
+For function names, use `PascalCase`. Preferably, add a short namespace string such as `Ke` or `Mm` to separate it from other code. Use `Ke` if it modifies the kernel's state significantly
 
 Use descriptive verbs in function names, and use verbose names unless it's more appropriate to not do so.
 
@@ -164,4 +164,5 @@ I'm still a little frustrated that C doesn't support function-style casts (i.e. 
 #### File Structure
 File names are all lowercase, preferably less than 8 characters long (except the extension). If part of any of the predefined categories, such as window applications (`wapp`),
 widgets (`widget`), the memory manager (`mm`) etc, place your source there.
+
 
