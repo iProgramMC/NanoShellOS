@@ -320,6 +320,11 @@ void ShellExecuteCommand(char* p, bool* pbExit)
 	{
 		*pbExit = true;
 	}
+	else if (strcmp (token, "att") == 0)
+	{
+		extern bool VidChangeScreenResolution(int xSize, int ySize);
+		VidChangeScreenResolution(320,480);
+	}
 	else if (strcmp (token, "fac") == 0)
 	{
 		StFlushAllCaches();

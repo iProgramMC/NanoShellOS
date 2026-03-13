@@ -48,7 +48,7 @@ extern void IrqKeyboardA(void);
 extern void IrqTimerA(void);
 extern void KeIdtLoad(IdtPointer *idt_ptr);
 extern void WaitMS(int ms);
-//extern void SetupPicInterrupt (int intNum, void* isrHandler);
+extern void SetupPicInterrupt (int intNum, void* isrHandler);
 
 
 // Registers an IRQ handler.

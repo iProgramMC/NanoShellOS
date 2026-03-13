@@ -11,6 +11,7 @@
 #include <memory.h>
 #include <fpu.h>
 #include <vfs.h>
+#include <idt.h>
 
 typedef unsigned char u8;
 typedef unsigned short u16;

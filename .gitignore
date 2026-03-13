@@ -54,6 +54,10 @@ apps/HexEditor/*
 apps/SkiTest/*
 apps/NesEmu
 apps/NesEmu/*
+apps/HerbEngine
+apps/HerbEngine/*
+apps/tiny386
+apps/tiny386/*
 
 fs/Bin/Doom.nse
 fs/Bin/LimnEmu.nse
@@ -65,8 +69,12 @@ fs/Bin/Chess.nse
 fs/Bin/HexEditor.nse
 fs/Bin/SkiTest.nse
 fs/Bin/NesEmu.nse
+fs/Bin/HerbEngine.nse
+fs/Bin/tiny386.nse
 fs/Tests/*.png
 fs/User/*
+fs/tiny386/*
+fs/config.ini
 
 crt/build_libnanoshell
 crt/build_crt1
