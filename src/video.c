@@ -11,6 +11,7 @@
 #include <icon.h>
 #include <task.h>
 #include <misc.h>
+#include <vbeinfo.h>
 
 #define VISIBLE_DRAW_BORDER_THICKNESS 1
 
@@ -2091,12 +2092,25 @@ void VidInit()
 	g_vbeData = &g_mainScreenVBEData;
 	g_vbeData->m_version = 0;
 	
+	if ((pInfo->flags & MULTIBOOT_INFO_VIDEO_INFO) &&
+		!(pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO))
+	{
+		PVBE_MODE_INFO_BLOCK ModeInfoBlock = (void*)(0xC0000000 + pInfo->vbe_mode_info);
+		
+		pInfo->flags |= MULTIBOOT_INFO_FRAMEBUFFER_INFO;
+		pInfo->framebuffer_addr = ModeInfoBlock->FrameBufferAddress;
+		pInfo->framebuffer_pitch = ModeInfoBlock->Pitch;
+		pInfo->framebuffer_width = ModeInfoBlock->Width;
+		pInfo->framebuffer_height = ModeInfoBlock->Height;
+		pInfo->framebuffer_bpp = ModeInfoBlock->Bpp;
+		pInfo->framebuffer_type = 1;
+	}
+	
 	if (pInfo->flags & MULTIBOOT_INFO_FRAMEBUFFER_INFO)
 	{
 		if (pInfo->framebuffer_type != 1)
 		{
 			SLogMsg("Need direct RGB framebuffer!");
-			sti;
 			return;
 		}
 		
